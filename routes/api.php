@@ -27,9 +27,10 @@ use Illuminate\Support\Facades\Route;
     }
 );*/
 
-Route::get('product','App\Http\Controllers\ProductController@index');
-
+Route::resource('product','App\Http\Controllers\ProductController');
 Route::resource('category','App\Http\Controllers\CategoryController');
+Route::resource('client','App\Http\Controllers\ClientController');
+Route::resource('service','App\Http\Controllers\ServiceController');
 
 
 Route::group([

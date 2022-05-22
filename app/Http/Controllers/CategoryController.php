@@ -18,17 +18,26 @@ class CategoryController extends Controller
     public function store(Request $request)
     {
         $category =new Category();
-        $category->descripcion = $request->descripcion;
+        $category->active = 1;
         $category->name = $request->name;
+        $category->description = $request->description;
         $category->save();
+        return response()->json([
+            'ok'=>true,
+            'category' => $category,
+        ]);
     }
 
     public function update(Request $request)
     {
         $category = category::findOrFail($request->id);
-        $category->descripcion = $request->descripcion;
+        $category->description = $request->description;
         $category->name = $request->name;
         $category->save();
+        return response()->json([
+            'ok'=>true,
+            'category' => $category,
+        ]);
     }
 
 

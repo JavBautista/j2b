@@ -31,6 +31,8 @@ Route::resource('product','App\Http\Controllers\ProductController');
 Route::resource('category','App\Http\Controllers\CategoryController');
 Route::resource('client','App\Http\Controllers\ClientController');
 Route::resource('service','App\Http\Controllers\ServiceController');
+Route::resource('plan','App\Http\Controllers\PlanController');
+Route::resource('receipt','App\Http\Controllers\ReceiptController');
 
 
 Route::group([

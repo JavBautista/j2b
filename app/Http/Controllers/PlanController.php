@@ -13,6 +13,15 @@ class PlanController extends Controller
         return $plans;
     }
 
+    public function all()
+    {
+        $plans = Plan::where('active',1)->get();
+        return response()->json([
+            'ok'=>true,
+            'data' => $plans,
+        ]);
+    }
+
     public function store(Request $request)
     {
         $plan = new Plan;

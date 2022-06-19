@@ -31,7 +31,7 @@ class CreateClientsTable extends Migration
             $table->string('reference')->nullable();
             $table->string('detail')->nullable();
             $table->text('observations')->nullable();
-            $table->string('plan_descripcion')->nullable();
+            $table->string('plan_name')->nullable();
             $table->string('plan_price')->nullable();
             $table->string('plan_cutoff')->nullable();
             $table->timestamps();

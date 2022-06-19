@@ -23,5 +23,16 @@ class DatabaseSeeder extends Seeder
          \App\Models\Product::factory(20)->create();
          \App\Models\Client::factory(50)->create();
          \App\Models\Service::factory(5)->create();
+
+        \App\Models\Plan::create([
+            'name'=>'FREE',
+            'description'=>'Gratuito',
+            'price'=>'0',
+        ]);
+        \App\Models\Plan::create([
+            'name'=>'BASIC',
+            'description'=>'Standar',
+            'price'=>'99.99',
+        ]);
     }
 }

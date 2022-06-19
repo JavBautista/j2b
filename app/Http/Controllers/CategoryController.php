@@ -14,6 +14,15 @@ class CategoryController extends Controller
         return $categories;
     }
 
+    public function all()
+    {
+        $categories = Category::where('active',1)->get();
+        return response()->json([
+            'ok'=>true,
+            'data' => $categories,
+        ]);
+    }
+
 
     public function store(Request $request)
     {

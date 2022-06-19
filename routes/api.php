@@ -27,12 +27,39 @@ use Illuminate\Support\Facades\Route;
     }
 );*/
 
-Route::resource('product','App\Http\Controllers\ProductController');
-Route::resource('category','App\Http\Controllers\CategoryController');
+/*CLIENTES*/
 Route::resource('client','App\Http\Controllers\ClientController');
+Route::post('client/edit/update','App\Http\Controllers\ClientController@update');
+
+/*RENTAS*/
+Route::get('rents/{client_id}','App\Http\Controllers\RentController@index');
+
+Route::post('rent/store','App\Http\Controllers\RentController@store');
+Route::post('rent/update','App\Http\Controllers\RentController@update');
+Route::post('rent/delete','App\Http\Controllers\RentController@destroy');
+
+Route::post('rent/store-detail','App\Http\Controllers\RentController@storeDetail');
+Route::post('rent/update-detail','App\Http\Controllers\RentController@updateDetail');
+Route::post('rent/delete-detail','App\Http\Controllers\RentController@destroyDetail');
+
+/*RECIBOS*/
+Route::get('receipt/{client_id}','App\Http\Controllers\ReceiptController@index');
+Route::post('receipt/store','App\Http\Controllers\ReceiptController@store');
+
+Route::get('receipt/detail/{receipt_id}','App\Http\Controllers\ReceiptDetailController@getDetail');
+
+/*PRODUCTOS*/
+Route::resource('product','App\Http\Controllers\ProductController');
+Route::post('product/edit/update','App\Http\Controllers\ProductController@update');
+
+/*CATEGORIAS*/
+Route::resource('category','App\Http\Controllers\CategoryController');
+
 Route::resource('service','App\Http\Controllers\ServiceController');
 Route::resource('plan','App\Http\Controllers\PlanController');
 Route::resource('receipt','App\Http\Controllers\ReceiptController');
+Route::get('/plan/get/all','App\Http\Controllers\PlanController@all');
+Route::get('/category/get/all','App\Http\Controllers\CategoryController@all');
 
 
 Route::group([

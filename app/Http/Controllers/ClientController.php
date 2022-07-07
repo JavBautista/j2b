@@ -10,7 +10,7 @@ class ClientController extends Controller
 
     public function index()
     {
-        $clients = Client::orderBy('id','desc')->paginate(10);
+        $clients = Client::where('active',1)->orderBy('id','desc')->paginate(10);
         return $clients;
 
     }
@@ -31,7 +31,7 @@ class ClientController extends Controller
         ]);
     }
 
-    public function update(Request $request/*, Client $client*/)
+    public function update(Request $request)
     {
         $client = Client::findOrFail($request->id);
         $client->name=$request->name;
@@ -46,8 +46,13 @@ class ClientController extends Controller
         ]);
     }
 
-    public function destroy(Client $client)
+    public function inactive(Request $request)
     {
-        //
+        $client = Client::findOrFail($request->id);
+        $client->active = 0;
+        $client->save();
+        return response()->json([
+            'ok'=>true
+        ]);
     }
 }

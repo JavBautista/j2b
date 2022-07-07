@@ -19,6 +19,31 @@ class RentController extends Controller
         return $rents;
     }//.index
 
+    public function getByCutoff(Request $request){
+        $date_today     = Carbon::now();
+        $date_tomorrow  = new Carbon('tomorrow');
+
+        $dd_today = $date_today->day;
+        $dd_tomorrow = $date_tomorrow->day;
+
+        $rents_today    = Rent::with('client')
+                        ->where('active',1)
+                        ->where('cutoff',$dd_today)
+                        ->get();
+        $rents_tomorrow = Rent::with('client')
+                        ->where('active',1)
+                        ->where('cutoff',$dd_tomorrow)
+                        ->get();
+        return [
+            'dd_today'      =>$dd_today,
+            'dd_tomorrow'   =>$dd_tomorrow,
+            'date_today'    =>$date_today,
+            'date_tomorrow' =>$date_tomorrow,
+            'rents_today'   =>$rents_today,
+            'rents_tomorrow'=>$rents_tomorrow
+        ];
+    }//.index
+
     public function store(Request $request)
     {
         $rent =new Rent();

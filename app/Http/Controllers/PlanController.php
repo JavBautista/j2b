@@ -9,7 +9,7 @@ class PlanController extends Controller
 {
     public function index()
     {
-        $plans = Plan::orderBy('id','desc')->paginate(10);
+        $plans = Plan::where('active',1)->orderBy('id','desc')->paginate(10);
         return $plans;
     }
 
@@ -49,8 +49,13 @@ class PlanController extends Controller
         ]);
     }
 
-    public function destroy(Plan $plan)
+    public function inactive(Request $request)
     {
-        //
+        $plan = Plan::findOrFail($request->id);
+        $plan->active = 0;
+        $plan->save();
+        return response()->json([
+            'ok'=>true
+        ]);
     }
 }

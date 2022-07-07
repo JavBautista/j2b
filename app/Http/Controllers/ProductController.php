@@ -10,7 +10,7 @@ class ProductController extends Controller
 
     public function index(Request $request)
     {
-        $products = Product::orderBy('id','desc')->paginate(10);
+        $products = Product::where('active',1)->orderBy('id','desc')->paginate(10);
         return $products;
     }
 
@@ -37,7 +37,7 @@ class ProductController extends Controller
             ]);
     }
 
-    public function update(Request $request, Product $product)
+    public function update(Request $request)
     {
         $product = Product::findOrFail($request->id);
 
@@ -62,8 +62,15 @@ class ProductController extends Controller
 
     }
 
-    public function destroy(Product $product)
+
+
+    public function inactive(Request $request)
     {
-        //
+        $product = Product::findOrFail($request->id);
+        $product->active = 0;
+        $product->save();
+        return response()->json([
+            'ok'=>true
+        ]);
     }
 }

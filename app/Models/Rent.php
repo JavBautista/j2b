@@ -12,4 +12,9 @@ class Rent extends Model
     public function rentDetail(){
         return $this->hasMany(RentDetail::class);
     }
+
+    public function client()
+    {
+        return $this->belongsTo(Client::class);
+    }
 }

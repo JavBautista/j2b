@@ -13,4 +13,12 @@ class Receipt extends Model
     public function detail(){
         return $this->hasMany(ReceiptDetail::class);
     }
+
+    public function partialPayments(){
+        return $this->hasMany(PartialPayments::class);
+    }
+
+    public function client(){
+        return $this->belongsTo(Client::class);
+    }
 }

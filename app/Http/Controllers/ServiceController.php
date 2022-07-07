@@ -9,7 +9,7 @@ class ServiceController extends Controller
 {
     public function index()
     {
-        $services = Service::orderBy('id','desc')->paginate(10);
+        $services = Service::where('active',1)->orderBy('id','desc')->paginate(10);
         return $services;
     }
 
@@ -27,7 +27,7 @@ class ServiceController extends Controller
         ]);
     }
 
-    public function update(Request $request, Service $service)
+    public function update(Request $request)
     {
         $service = Service::findOrFail($request->id);
         $service->name = $request->name;
@@ -40,8 +40,13 @@ class ServiceController extends Controller
         ]);
     }
 
-    public function destroy(Service $service)
+    public function inactive(Request $request)
     {
-        //
+        $service = Service::findOrFail($request->id);
+        $service->active = 0;
+        $service->save();
+        return response()->json([
+            'ok'=>true
+        ]);
     }
 }

@@ -6,6 +6,8 @@ use App\Models\Receipt;
 use Illuminate\Http\Request;
 use App\Models\ReceiptDetail;
 use App\Models\RentDetail;
+use App\Models\PartialPayments;
+use Illuminate\Support\Carbon;
 
 class ReceiptController extends Controller
 {
@@ -18,9 +20,23 @@ class ReceiptController extends Controller
         return $receipts;
     }//.index
 
+    public function getAll(Request $request)
+    {
+        $receipts = Receipt::with('partialPayments')
+                        ->with('client')
+                        -> orderBy('id','desc')
+                        ->paginate(10);
+        return $receipts;
+    }//.index
+
     public function store(Request $request)
     {
         $rcp = $request->receipt;
+        $date_today     = Carbon::now();
+
+        //calculamos si el pago recibido es mayor o igual que el total de la nota
+        //finalizamos la nota, si no se tomara como un abono
+        $finished = ($rcp['received'] >= $rcp['total'])?1:0;
 
         $receipt = new Receipt();
         $receipt->client_id   = $rcp['client_id'];
@@ -33,8 +49,19 @@ class ReceiptController extends Controller
         $receipt->discount    = $rcp['discount'];
         $receipt->received    = $rcp['received'];
         $receipt->total       = $rcp['total'];
+        $receipt->finished    = $finished;
         $receipt->discount_concept = $rcp['discount_concept'];
         $receipt->save();
+
+        //si la nota no es finalizada porque el pago es menor que total
+        //guardaremos el abono como un pago parcial de la nota
+        if(!$finished){
+            $partial= new PartialPayments();
+            $partial->receipt_id = $receipt->id;
+            $partial->amount = $receipt->received;
+            $partial->payment_date = $date_today;
+            $partial->save();
+        }
 
         $details = json_decode($request->detail);
 
@@ -65,6 +92,47 @@ class ReceiptController extends Controller
         ]);
     }
 
+    public function updateStatus(Request $request){
+        $receipt = Receipt::findOrFail($request->receipt_id);
+        $receipt->status=$request->new_status;
+        $receipt->save();
+        return response()->json([
+                'ok'=>true,
+                'receipt' => $receipt,
+        ]);
+    }
+
+    public function updateInfo(Request $request){
+        $rcp = $request->receipt;
+
+        $receipt = Receipt::findOrFail($rcp['id']);
+        $receipt->status      = $rcp['status'];
+        $receipt->payment     = $rcp['payment'];
+        $receipt->subtotal    = $rcp['subtotal'];
+        $receipt->discount    = $rcp['discount'];
+        $receipt->received    = $rcp['received'];
+        $receipt->total       = $rcp['total'];
+        $receipt->description = $rcp['description'];
+        $receipt->observation = $rcp['observation'];
+        $receipt->save();
+
+        $details = json_decode($request->detail);
+
+        foreach($details as $data){
+            $detail = ReceiptDetail::findOrFail($data->id);
+            $detail->qty         = $data->qty;
+            $detail->price       = $data->price;
+            $detail->subtotal    = $data->subtotal;
+            $detail->save();
+        }
+
+        return response()->json([
+                'ok'=>true,
+                'receipt' => $receipt,
+        ]);
+    }
+
+
     public function test(Request $reques){
         /*
         //$var = "[{"cost":52,"qty":1,"name":"Luis"},{"cost":51,"qty":1,"name":"Luigi Bros"}]";
@@ -73,16 +141,5 @@ class ReceiptController extends Controller
         foreach($var as $detail){
             echo $detail->name.', '.$detail->qty.'<br>';
         }*/
-    }
-
-    public function update(Request $request, Receipt $receipt)
-    {
-        //
-    }
-
-
-    public function destroy(Receipt $receipt)
-    {
-        //
     }
 }

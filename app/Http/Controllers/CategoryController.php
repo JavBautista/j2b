@@ -10,7 +10,7 @@ class CategoryController extends Controller
 {
     public function index()
     {
-        $categories = Category::orderBy('id','desc')->paginate(10);
+        $categories = Category::where('active',1)->orderBy('id','desc')->paginate(10);
         return $categories;
     }
 
@@ -39,7 +39,7 @@ class CategoryController extends Controller
 
     public function update(Request $request)
     {
-        $category = category::findOrFail($request->id);
+        $category = Category::findOrFail($request->id);
         $category->description = $request->description;
         $category->name = $request->name;
         $category->save();
@@ -50,8 +50,13 @@ class CategoryController extends Controller
     }
 
 
-    public function destroy($id)
+    public function inactive(Request $request)
     {
-        $category=category::destroy($id);
+        $category = Category::findOrFail($request->id);
+        $category->active = 0;
+        $category->save();
+        return response()->json([
+            'ok'=>true
+        ]);
     }
 }

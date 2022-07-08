@@ -26,11 +26,15 @@ class RentController extends Controller
         $dd_today = $date_today->day;
         $dd_tomorrow = $date_tomorrow->day;
 
-        $rents_today    = Rent::with('client')
+        $rents_today    = Rent::with(['client'=>function($query){
+                                $query->where('active',1);
+                        }])
                         ->where('active',1)
                         ->where('cutoff',$dd_today)
                         ->get();
-        $rents_tomorrow = Rent::with('client')
+        $rents_tomorrow = Rent::with(['client'=>function($query){
+                                $query->where('active',1);
+                        }])
                         ->where('active',1)
                         ->where('cutoff',$dd_tomorrow)
                         ->get();

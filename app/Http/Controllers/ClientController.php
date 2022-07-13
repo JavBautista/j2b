@@ -10,7 +10,10 @@ class ClientController extends Controller
 
     public function index()
     {
-        $clients = Client::where('active',1)->orderBy('id','desc')->paginate(10);
+        $clients = Client::with('rents')
+                    ->where('active',1)
+                    ->orderBy('id','desc')
+                    ->paginate(10);
         return $clients;
 
     }

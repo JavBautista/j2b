@@ -14,7 +14,8 @@ class ReceiptController extends Controller
     public function index(Request $request)
     {
         $client_id = $request->client_id;
-        $receipts = Receipt::where('client_id',$client_id)
+        $receipts = Receipt::with('detail')
+                        ->where('client_id',$client_id)
                         ->orderBy('id','desc')
                         ->paginate(10);
         return $receipts;
@@ -22,10 +23,22 @@ class ReceiptController extends Controller
 
     public function getAll(Request $request)
     {
-        $receipts = Receipt::with('partialPayments')
-                        ->with('client')
-                        -> orderBy('id','desc')
-                        ->paginate(10);
+        $filtro_status = $request->status;
+        $filtro_buscar = $request->buscar;
+
+        if($filtro_status=='TODOS'){
+            $receipts = Receipt::with('partialPayments')
+                            ->with('client')
+                            ->orderBy('id','desc')
+                            ->paginate(10);
+
+        }else{
+            $receipts = Receipt::with('partialPayments')
+                            ->where('status',$filtro_status)
+                            ->with('client')
+                            ->orderBy('id','desc')
+                            ->paginate(10);
+        }
         return $receipts;
     }//.index
 
@@ -40,6 +53,7 @@ class ReceiptController extends Controller
 
         $receipt = new Receipt();
         $receipt->client_id   = $rcp['client_id'];
+        $receipt->rent_id   = $rcp['rent_id'];
         $receipt->type        = $rcp['type'];
         $receipt->description = $rcp['description'];
         $receipt->observation = $rcp['observation'];
@@ -68,6 +82,7 @@ class ReceiptController extends Controller
         foreach($details as $data){
             $detail = new ReceiptDetail();
             $detail->receipt_id  = $receipt->id;
+            $detail->product_id  = $data->id;
             $detail->descripcion = $data->name;
             $detail->qty         = $data->qty;
             $detail->price       = $data->cost;

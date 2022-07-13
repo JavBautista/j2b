@@ -21,6 +21,7 @@ Route::post('client/delete','App\Http\Controllers\ClientController@inactive');
 
 /*RENTAS*/
 Route::get('rents/{client_id}','App\Http\Controllers\RentController@index');
+Route::get('rent/get/{id}','App\Http\Controllers\RentController@getRentByID');
 
 Route::get('rents/get/by-cutoff','App\Http\Controllers\RentController@getByCutoff');
 

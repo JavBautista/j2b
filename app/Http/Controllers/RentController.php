@@ -19,6 +19,12 @@ class RentController extends Controller
         return $rents;
     }//.index
 
+    public function getRentByID(Request $request){
+        $id = $request->id;
+        $rent = Rent::with('rentDetail')->findOrFail($id);
+        return $rent;
+    }//.getRentByID
+
     public function getByCutoff(Request $request){
         $date_today     = Carbon::now();
         $date_tomorrow  = new Carbon('tomorrow');

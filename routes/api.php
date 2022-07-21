@@ -41,6 +41,8 @@ Route::get('receipt/detail/{receipt_id}','App\Http\Controllers\ReceiptDetailCont
 Route::post('receipt/store','App\Http\Controllers\ReceiptController@store');
 Route::post('receipt/edit/update-status','App\Http\Controllers\ReceiptController@updateStatus');
 Route::post('receipt/edit/update-info','App\Http\Controllers\ReceiptController@updateInfo');
+Route::post('receipt/delete','App\Http\Controllers\ReceiptController@delete');
+
 
 /*PartialPayments*/
 Route::post('receipt/partial-payment/store','App\Http\Controllers\PartialPaymentsController@store');

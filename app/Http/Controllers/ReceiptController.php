@@ -63,6 +63,7 @@ class ReceiptController extends Controller
         $receipt->discount    = $rcp['discount'];
         $receipt->received    = $rcp['received'];
         $receipt->total       = $rcp['total'];
+        $receipt->iva         = $rcp['iva'];
         $receipt->finished    = $finished;
         $receipt->discount_concept = $rcp['discount_concept'];
         $receipt->save();
@@ -156,5 +157,15 @@ class ReceiptController extends Controller
         foreach($var as $detail){
             echo $detail->name.', '.$detail->qty.'<br>';
         }*/
+    }
+
+    public function delete(Request $request)
+    {
+        ReceiptDetail::where('receipt_id', $request->id)->delete();
+
+        $receipt=Receipt::destroy($request->id);
+        return response()->json([
+            'ok'=>true
+        ]);
     }
 }

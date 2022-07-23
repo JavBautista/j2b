@@ -85,11 +85,13 @@ class ReceiptController extends Controller
         //si la nota no es finalizada porque el pago es menor que total
         //guardaremos el abono como un pago parcial de la nota
         if(!$finished){
-            $partial= new PartialPayments();
-            $partial->receipt_id = $receipt->id;
-            $partial->amount = $receipt->received;
-            $partial->payment_date = $date_today;
-            $partial->save();
+            if($receipt->received>0){
+                $partial= new PartialPayments();
+                $partial->receipt_id = $receipt->id;
+                $partial->amount = $receipt->received;
+                $partial->payment_date = $date_today;
+                $partial->save();
+            }
         }
 
         $details = json_decode($request->detail);

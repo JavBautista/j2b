@@ -8,6 +8,7 @@ use App\Models\ReceiptDetail;
 use App\Models\RentDetail;
 use App\Models\PartialPayments;
 use Illuminate\Support\Carbon;
+use PDF;
 
 class ReceiptController extends Controller
 {
@@ -20,6 +21,19 @@ class ReceiptController extends Controller
                         ->paginate(10);
         return $receipts;
     }//.index
+
+    public function printReceiptRent(Request $request){
+        if(!isset($request->id)) return null;
+        $id= $request->id;
+        $receipt = Receipt::with('partialPayments')
+                            ->with('detail')
+                            ->with('client')
+                            ->findOrFail($id);
+
+        $pdf = PDF::loadView('receipt_rent_pdf',['receipt'=>$receipt]);
+        return $pdf->stream('recibo_'.$id.'.pdf',array("Attachment" => false));
+    }
+
 
     public function getAll(Request $request)
     {
@@ -162,6 +176,7 @@ class ReceiptController extends Controller
     public function delete(Request $request)
     {
         ReceiptDetail::where('receipt_id', $request->id)->delete();
+        PartialPayments::where('receipt_id', $request->id)->delete();
 
         $receipt=Receipt::destroy($request->id);
         return response()->json([

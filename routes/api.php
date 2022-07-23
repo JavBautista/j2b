@@ -37,12 +37,14 @@ Route::post('rent/delete-detail','App\Http\Controllers\RentController@destroyDet
 //Route::resource('receipt','App\Http\Controllers\ReceiptController');
 Route::get('receipt/all','App\Http\Controllers\ReceiptController@getAll');
 Route::get('receipt/{client_id}','App\Http\Controllers\ReceiptController@index');
+
 Route::get('receipt/detail/{receipt_id}','App\Http\Controllers\ReceiptDetailController@getDetail');
 Route::post('receipt/store','App\Http\Controllers\ReceiptController@store');
 Route::post('receipt/edit/update-status','App\Http\Controllers\ReceiptController@updateStatus');
 Route::post('receipt/edit/update-info','App\Http\Controllers\ReceiptController@updateInfo');
 Route::post('receipt/delete','App\Http\Controllers\ReceiptController@delete');
-
+    /*PRINT PDF*/
+    Route::get('receipt/pdf/print-receipt-rent', 'App\Http\Controllers\ReceiptController@printReceiptRent');
 
 /*PartialPayments*/
 Route::post('receipt/partial-payment/store','App\Http\Controllers\PartialPaymentsController@store');

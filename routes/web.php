@@ -19,3 +19,5 @@ Route::get('/', function () {
 
 //Route::get('/test','App\Http\Controllers\ReceiptController@test');
 
+Route::get('/print-receipt-rent', 'App\Http\Controllers\ReceiptController@printReceiptRent');
+

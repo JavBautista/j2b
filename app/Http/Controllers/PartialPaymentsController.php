@@ -26,17 +26,17 @@ class PartialPaymentsController extends Controller
             $suma_pagos+= $data['amount'];
         }
 
-        $receipt = Receipt::findOrFail($request->receipt_id);
+        $receipt = Receipt::with('partialPayments')->findOrFail($request->receipt_id);
         $receipt->received = $suma_pagos;
         if($suma_pagos >= $receipt->total){
             $receipt->finished=1;
+            $receipt->status='PAGADA';
         }
         $receipt->save();
 
         return response()->json([
             'ok'=>true,
-            'receipt' => $receipt,
-            'payment' => $payment,
+            'receipt' => $receipt
         ]);
     }
 }

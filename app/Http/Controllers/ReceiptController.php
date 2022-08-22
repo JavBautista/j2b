@@ -22,16 +22,22 @@ class ReceiptController extends Controller
         return $receipts;
     }//.index
 
+    private function removeSpecialChar($str)
+    {
+        $res = preg_replace('/[@\.\;\" "]+/', '_', $str);
+        return $res;
+    }
     public function printReceiptRent(Request $request){
         if(!isset($request->id)) return null;
         $id= $request->id;
+        $name_file = $this->removeSpecialChar($request->name_file);
         $receipt = Receipt::with('partialPayments')
                             ->with('detail')
                             ->with('client')
                             ->findOrFail($id);
 
         $pdf = PDF::loadView('receipt_rent_pdf',['receipt'=>$receipt]);
-        return $pdf->stream('recibo_'.$id.'.pdf',array("Attachment" => false));
+        return $pdf->stream($name_file.'.pdf',array("Attachment" => false));
     }
 
 

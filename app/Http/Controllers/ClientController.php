@@ -8,12 +8,21 @@ use Illuminate\Http\Request;
 class ClientController extends Controller
 {
 
-    public function index()
+    public function index(Request $request)
     {
-        $clients = Client::with('rents')
+        $buscar = $request->buscar;
+        if($buscar==''){
+            $clients = Client::with('rents')
                     ->where('active',1)
                     ->orderBy('id','desc')
                     ->paginate(10);
+        }else{
+            $clients = Client::with('rents')
+                    ->where('active',1)
+                    ->where('name', 'like', '%'.$buscar.'%')
+                    ->orderBy('id','desc')
+                    ->paginate(10);
+        }
         return $clients;
 
     }

@@ -8,9 +8,19 @@ use Illuminate\Http\Request;
 
 class CategoryController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $categories = Category::where('active',1)->orderBy('id','desc')->paginate(10);
+        $buscar = $request->buscar;
+        if($buscar==''){
+            $categories = Category::where('active',1)
+                    ->orderBy('id','desc')
+                    ->paginate(10);
+        }else{
+            $categories = Category::where('active',1)
+                    ->where('name', 'like', '%'.$buscar.'%')
+                    ->orderBy('id','desc')
+                    ->paginate(10);
+        }
         return $categories;
     }
 

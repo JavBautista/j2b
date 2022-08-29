@@ -10,7 +10,20 @@ class ProductController extends Controller
 
     public function index(Request $request)
     {
-        $products = Product::where('active',1)->orderBy('id','desc')->paginate(10);
+        $buscar = $request->buscar;
+        if($buscar==''){
+            $products = Product::with('category')
+                    ->where('active',1)
+                    ->orderBy('id','desc')
+                    ->paginate(10);
+        }else{
+            $products = Product::with('category')
+                    ->where('active',1)
+                    ->where('name', 'like', '%'.$buscar.'%')
+                    ->orderBy('id','desc')
+                    ->paginate(10);
+        }
+
         return $products;
     }
 
@@ -22,18 +35,24 @@ class ProductController extends Controller
             $product->key           = $request->key;
             $product->name          = $request->name;
             $product->description   = $request->description;
+
+            $product->cost          = $request->cost;
             $product->retail        = $request->retail;
+            $product->stock         = $request->stock;
+            $product->reserve       = $request->reserve;
             /*
-            $product->cost = $request->cost;
             $product->wholesale = $request->wholesale;
             $product->image = $request->image;
             $product->url_video = $request->url_video;
             $product->barcode = $request->barcode;
             */
             $product->save();
+
+            $product_insert = Product::with('category')->findOrFail($product->id);
+
             return response()->json([
                 'ok'=>true,
-                'product' => $product,
+                'product' => $product_insert,
             ]);
     }
 
@@ -45,14 +64,31 @@ class ProductController extends Controller
         $product->key         = $request->key;
         $product->name        = $request->name;
         $product->description = $request->description;
-        $product->retail      = $request->retail;
+        $product->cost          = $request->cost;
+        $product->retail        = $request->retail;
+        $product->stock         = $request->stock;
+        $product->reserve       = $request->reserve;
         /*
         $product->barcode     = $request->barcode;
-        $product->cost        = $request->cost;
+
         $product->wholesale   = $request->wholesale;
         $product->image       = $request->image;
         $product->url_video   = $request->url_video;
         */
+        $product->save();
+
+        return response()->json([
+            'ok'=>true,
+            'product' => $product,
+        ]);
+
+    }
+
+    public function updateStock(Request $request)
+    {
+        $product = Product::findOrFail($request->id);
+        $product->stock   = $request->stock;
+        $product->reserve = $request->reserve;
         $product->save();
 
         return response()->json([

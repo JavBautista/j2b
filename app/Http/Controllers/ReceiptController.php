@@ -73,7 +73,7 @@ class ReceiptController extends Controller
 
         $receipt = new Receipt();
         $receipt->client_id   = $rcp['client_id'];
-        $receipt->rent_id   = $rcp['rent_id'];
+        $receipt->rent_id     = $rcp['rent_id'];
         $receipt->type        = $rcp['type'];
         $receipt->description = $rcp['description'];
         $receipt->observation = $rcp['observation'];
@@ -113,15 +113,16 @@ class ReceiptController extends Controller
             $detail->save();
         }
 
-        $eq_new_counts = json_decode($request->eq_new_counts);
-        foreach($eq_new_counts as $enc){
-            $rent_equipo = RentDetail::findOrFail( $enc->equipo_id);
-            if($rent_equipo->monochrome)
-                $rent_equipo->counter_mono  =  $enc->equipo_new_count_monochrome;
-            if($rent_equipo->color)
-                $rent_equipo->counter_color =  $enc->equipo_new_count_color;
-
-            $rent_equipo->save();
+        if($rcp['type']=='renta'){
+            $eq_new_counts = json_decode($request->eq_new_counts);
+            foreach($eq_new_counts as $enc){
+                $rent_equipo = RentDetail::findOrFail( $enc->equipo_id);
+                if($rent_equipo->monochrome)
+                    $rent_equipo->counter_mono  =  $enc->equipo_new_count_monochrome;
+                if($rent_equipo->color)
+                    $rent_equipo->counter_color =  $enc->equipo_new_count_color;
+                $rent_equipo->save();
+            }
         }
 
         return response()->json([

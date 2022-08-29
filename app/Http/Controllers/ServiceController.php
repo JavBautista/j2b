@@ -7,9 +7,20 @@ use Illuminate\Http\Request;
 
 class ServiceController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $services = Service::where('active',1)->orderBy('id','desc')->paginate(10);
+        $buscar = $request->buscar;
+        if($buscar==''){
+            $services = Service::where('active',1)
+                    ->orderBy('id','desc')
+                    ->paginate(10);
+        }else{
+            $services = Service::where('active',1)
+                    ->where('name', 'like', '%'.$buscar.'%')
+                    ->orderBy('id','desc')
+                    ->paginate(10);
+        }
+
         return $services;
     }
 

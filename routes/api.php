@@ -52,6 +52,7 @@ Route::post('receipt/partial-payment/store','App\Http\Controllers\PartialPayment
 /*PRODUCTOS*/
 Route::resource('product','App\Http\Controllers\ProductController');
 Route::post('product/edit/update','App\Http\Controllers\ProductController@update');
+Route::post('product/edit/update-stock','App\Http\Controllers\ProductController@updateStock');
 Route::post('product/delete','App\Http\Controllers\ProductController@inactive');
 
 /*CATEGORIAS*/
@@ -70,6 +71,11 @@ Route::post('service/delete','App\Http\Controllers\ServiceController@inactive');
 Route::resource('plan','App\Http\Controllers\PlanController');
 
 Route::get('/plan/get/all','App\Http\Controllers\PlanController@all');
+
+/* SHOP */
+Route::get('/shop/{shop_id}','App\Http\Controllers\ShopController@getShop');
+Route::post('shop/update','App\Http\Controllers\ShopController@update');
+
 
 
 

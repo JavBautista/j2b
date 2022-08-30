@@ -43,7 +43,7 @@ class ReceiptController extends Controller
 
         //$shop = Shop::findOrFail($shop_id);
 
-        $pdf = PDF::loadView('receipt_rent_pdf',['receipt'=>$receipt,'shop'=>$shop]);
+        $pdf = PDF::loadView('receipt_rent_pdf',['receipt'=>$receipt]);
         return $pdf->stream($name_file.'.pdf',array("Attachment" => false));
     }
 

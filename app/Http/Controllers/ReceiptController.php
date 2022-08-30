@@ -8,6 +8,7 @@ use App\Models\ReceiptDetail;
 use App\Models\RentDetail;
 use App\Models\PartialPayments;
 use App\Models\Shop;
+use App\Models\Product;
 use Illuminate\Support\Carbon;
 use PDF;
 
@@ -110,14 +111,27 @@ class ReceiptController extends Controller
         $details = json_decode($request->detail);
 
         foreach($details as $data){
+
+            if($data->type=='product'){
+
+                $qty=$data->qty;
+                $product = Product::find($data->id);
+                $new_stock = $product->stock - $qty;
+                $product->stock = $new_stock;
+                $product->save();
+            }
+
             $detail = new ReceiptDetail();
             $detail->receipt_id  = $receipt->id;
             $detail->product_id  = $data->id;
+            $detail->type  = $data->type;
             $detail->descripcion = $data->name;
             $detail->qty         = $data->qty;
             $detail->price       = $data->cost;
             $detail->subtotal    = $data->subtotal;
             $detail->save();
+
+
         }
 
         if($rcp['type']=='renta'){

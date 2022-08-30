@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\ReceiptDetail;
 use App\Models\RentDetail;
 use App\Models\PartialPayments;
+use App\Models\Shop;
 use Illuminate\Support\Carbon;
 use PDF;
 
@@ -29,6 +30,10 @@ class ReceiptController extends Controller
     }
     public function printReceiptRent(Request $request){
         if(!isset($request->id)) return null;
+        /*ESTE DEBE LLEGAR POR REQUEST O OBTENERSE DEL RECEIPT*/
+        //$shop_id = 1;
+        /*....*/
+
         $id= $request->id;
         $name_file = $this->removeSpecialChar($request->name_file);
         $receipt = Receipt::with('partialPayments')
@@ -36,7 +41,9 @@ class ReceiptController extends Controller
                             ->with('client')
                             ->findOrFail($id);
 
-        $pdf = PDF::loadView('receipt_rent_pdf',['receipt'=>$receipt]);
+        //$shop = Shop::findOrFail($shop_id);
+
+        $pdf = PDF::loadView('receipt_rent_pdf',['receipt'=>$receipt,'shop'=>$shop]);
         return $pdf->stream($name_file.'.pdf',array("Attachment" => false));
     }
 

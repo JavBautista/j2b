@@ -35,7 +35,7 @@
                     SANTIAGO DE QUERETARO, QRO<br>
                     CP. 76125<br>
                     BANCOMER<br>
-                    283807135<br>
+                    2838071535<br>
                     4152 3134 4248 6580</P>
                 </td>
                 <td align="right">

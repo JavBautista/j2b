@@ -41,6 +41,8 @@ class ShopController extends Controller
         $shop->mission = $request->mission;
         $shop->vision = $request->vision;
         $shop->values = $request->values;
+        $shop->bank_number_secondary = $request->bank_number_secondary;
+        $shop->owner_name = $request->owner_name;
         $shop->save();
 
         return response()->json([

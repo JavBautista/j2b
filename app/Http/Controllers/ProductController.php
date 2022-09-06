@@ -11,7 +11,18 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         $buscar = $request->buscar;
-        if($buscar==''){
+        $category_id = isset($request->category_id)?$request->category_id:0;
+
+        $array_where =[ ['active','=','1'] ];
+        if ($buscar!='')     array_push($array_where,['name', 'like', '%'.$buscar.'%']);
+        if ($category_id!=0) array_push($array_where,['category_id', '=', $category_id]);
+
+        $products = Product::with('category')
+                    ->where($array_where)
+                    ->orderBy('id','desc')
+                    ->paginate(10);
+
+        /*if($buscar==''){
             $products = Product::with('category')
                     ->where('active',1)
                     ->orderBy('id','desc')
@@ -22,7 +33,7 @@ class ProductController extends Controller
                     ->where('name', 'like', '%'.$buscar.'%')
                     ->orderBy('id','desc')
                     ->paginate(10);
-        }
+        }*/
 
         return $products;
     }

@@ -59,7 +59,7 @@
                     <p>Status: {{$receipt->status}}<br>Forma de pago: {{$receipt->payment}}</p>
                 </td>
                 <td style="padding: 10px;">
-                    <p>{{$receipt->descripction}}</p>
+                    <p>{{$receipt->description }}</p>
                     <p><pre>{{$receipt->observation}}</pre></p>
                 </td>
             </tr>

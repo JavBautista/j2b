@@ -19,6 +19,14 @@ Route::resource('client','App\Http\Controllers\ClientController');
 Route::post('client/edit/update','App\Http\Controllers\ClientController@update');
 Route::post('client/delete','App\Http\Controllers\ClientController@inactive');
 
+/*PROVEEDORES*/
+Route::get('supplier','App\Http\Controllers\SupplierController@index');
+Route::post('supplier/store','App\Http\Controllers\SupplierController@store');
+Route::post('supplier/update','App\Http\Controllers\SupplierController@update');
+Route::post('supplier/delete','App\Http\Controllers\SupplierController@inactive');
+Route::post('supplier/inactive','App\Http\Controllers\SupplierController@inactive');
+Route::post('supplier/active','App\Http\Controllers\SupplierController@active');
+
 /*RENTAS*/
 Route::get('rents/{client_id}','App\Http\Controllers\RentController@index');
 Route::get('rent/get/{id}','App\Http\Controllers\RentController@getRentByID');

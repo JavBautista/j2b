@@ -54,9 +54,12 @@
                     <img src="{{asset('img/copigama_qr.png')}}" alt="QR" width="50%">
                 </td>
                 <td width="30%">
-                    <h2>Folio #{{$receipt->id}}</h2>
-                    <h3>{{$receipt->created_at}}</h3>
+                    <h2>COTIZACIÓN #{{$receipt->id}}</h2>
+                    <h3>Vencimiento: {{$receipt->quotation_expiration}}</h3>
+                    <h3>Creación: {{$receipt->created_at}}</h3>
+                    @if(!$receipt->quotation)
                     <p>Status: {{$receipt->status}}<br>Forma de pago: {{$receipt->payment}}</p>
+                    @endif
                 </td>
                 <td style="padding: 10px;">
                     <p>{{$receipt->description }}</p>
@@ -95,42 +98,43 @@
             @endif
             <p>Total a pagar <strong>MXN $ {{number_format($receipt->total,2)}}</strong></p>
         </div>
+        @if(!$receipt->quotation)
+            <hr>
+            <h2>Detalle de pagos</h2>
+            <table width="50%">
+                <thead>
+                    <tr>
+                        <th width="25%">Fecha</th>
+                        <th>Monto</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach($receipt->partialPayments as $data)
+                    <tr>
+                        <td>
+                            {{$data->payment_date}}
+                        </td>
+                        <td align="center">
+                            MXN $ {{ number_format($data->amount,2)}}
+                        </td>
+                    </tr>
+                @endforeach
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <th>RECIBIDO</th>
+                        <th>MXN $ {{number_format($receipt->received,2)}}</th>
+                    </tr>
+                    @if($receipt->received < $receipt->total )
+                    <tr>
+                        <th>ADEUDO</th>
+                        <th>MXN $ {{number_format(($receipt->total-$receipt->received),2)}}</th>
+                    </tr>
+                    @endif
 
-        <hr>
-        <h2>Detalle de pagos</h2>
-        <table width="50%">
-            <thead>
-                <tr>
-                    <th width="25%">Fecha</th>
-                    <th>Monto</th>
-                </tr>
-            </thead>
-            <tbody>
-            @foreach($receipt->partialPayments as $data)
-                <tr>
-                    <td>
-                        {{$data->payment_date}}
-                    </td>
-                    <td align="center">
-                        MXN $ {{ number_format($data->amount,2)}}
-                    </td>
-                </tr>
-            @endforeach
-            </tbody>
-            <tfoot>
-                <tr>
-                    <th>RECIBIDO</th>
-                    <th>MXN $ {{number_format($receipt->received,2)}}</th>
-                </tr>
-                @if($receipt->received < $receipt->total )
-                <tr>
-                    <th>ADEUDO</th>
-                    <th>MXN $ {{number_format(($receipt->total-$receipt->received),2)}}</th>
-                </tr>
-                @endif
-
-            </tfoot>
-        </table>
+                </tfoot>
+            </table>
+        @endif
 
     </body>
 </html>

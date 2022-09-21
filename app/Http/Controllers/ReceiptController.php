@@ -53,15 +53,18 @@ class ReceiptController extends Controller
     {
         $filtro_status = $request->status;
         $filtro_buscar = $request->buscar;
+        $quotation=(isset($request->type)&&$request->type=='true')?1:0;
 
         if($filtro_status=='TODOS'){
             $receipts = Receipt::with('partialPayments')
+                            ->where('quotation',$quotation)
                             ->with('client')
                             ->orderBy('id','desc')
                             ->paginate(10);
 
         }else{
             $receipts = Receipt::with('partialPayments')
+                            ->where('quotation',$quotation)
                             ->where('status',$filtro_status)
                             ->with('client')
                             ->orderBy('id','desc')
@@ -74,67 +77,89 @@ class ReceiptController extends Controller
     {
         $rcp = $request->receipt;
         $date_today     = Carbon::now();
+        //Obtenemos el valor que nos dira si es una cotizacion, si no existe ponemos en 0 el valor
+        $es_cotizacion  = isset($rcp['quotation'])?$rcp['quotation']:0;
+        //La nota no sera finalizada por default (en caso que sea cotizacion se quedara como 0)
+        $finished=0;
+        //Solo si no es cotizacion avaluaremos si estara finalizada o no
+        if(!$es_cotizacion){
+            //calculamos si el pago recibido es mayor o igual que el total de la nota
+            //finalizamos la nota, si no se tomara como un abono
+            $finished = ($rcp['received'] >= $rcp['total'])?1:0;
+        }
 
-        //calculamos si el pago recibido es mayor o igual que el total de la nota
-        //finalizamos la nota, si no se tomara como un abono
-        $finished = ($rcp['received'] >= $rcp['total'])?1:0;
-
+        //Guardamos todos los datos de la NOTA, deben de venir desde la APP con algun valor
         $receipt = new Receipt();
         $receipt->client_id   = $rcp['client_id'];
         $receipt->rent_id     = $rcp['rent_id'];
         $receipt->type        = $rcp['type'];
         $receipt->description = $rcp['description'];
         $receipt->observation = $rcp['observation'];
-        $receipt->status      = $rcp['status'];
-        $receipt->payment     = $rcp['payment'];
-        $receipt->subtotal    = $rcp['subtotal'];
         $receipt->discount    = $rcp['discount'];
-        $receipt->received    = $rcp['received'];
+        $receipt->discount_concept = $rcp['discount_concept'];
+        //---
+        $receipt->subtotal    = $rcp['subtotal'];
         $receipt->total       = $rcp['total'];
         $receipt->iva         = $rcp['iva'];
         $receipt->finished    = $finished;
-        $receipt->discount_concept = $rcp['discount_concept'];
-        $receipt->save();
 
-        //si la nota no es finalizada porque el pago es menor que total
-        //guardaremos el abono como un pago parcial de la nota
-        if(!$finished){
-            if($receipt->received>0){
-                $partial= new PartialPayments();
-                $partial->receipt_id = $receipt->id;
-                $partial->amount = $receipt->received;
-                $partial->payment_date = $date_today;
-                $partial->save();
-            }
+        //Campos para ventas (Renta o Ventas)
+        $receipt->status      = $rcp['status'];
+        $receipt->payment     = $rcp['payment'];
+        $receipt->received    = $rcp['received'];
+        //Campos para cotizaciones
+        $receipt->quotation   = $es_cotizacion;
+        //Solo si es una cotizacion guardemos la fecha, si no se guarda por default NULL en el insert BD
+        if($es_cotizacion){
+            $ff = Carbon::parse($rcp['quotation_expiration']);
+            $exp = Carbon::createFromFormat('Y-m-d H:i:s', $ff )->format('Y-m-d');
+            $receipt->quotation_expiration = $exp;
         }
 
+
+        $receipt->save();
+
+        //Guardaremos pagos parciales solo si:
+        //1 NO es cotizacion
+        //2 NO este finalizada (que lo recibido se menor que total de la nota)
+        //3 El RECIBIDO sea mayor que 0 (recordar que la nota si se puede guadar con 0, pero 0 no es un pago parcial)
+        if(!$es_cotizacion){
+            if(!$finished){
+                if($receipt->received>0){
+                    $partial= new PartialPayments();
+                    $partial->receipt_id = $receipt->id;
+                    $partial->amount = $receipt->received;
+                    $partial->payment_date = $date_today;
+                    $partial->save();
+                }
+            }
+        }//.ifs(Pagos Parciales)
+
+        //Guardaremos el detalle de la nota
         $details = json_decode($request->detail);
 
         foreach($details as $data){
-
-            if($data->type=='product'){
-
+            //Solo alteraremos el Stock si el item es un producto y la nota NO es un cotizacion
+            if(!$es_cotizacion && $data->type=='product'){
                 $qty=$data->qty;
                 $product = Product::find($data->id);
                 $new_stock = $product->stock - $qty;
                 $product->stock = $new_stock;
                 $product->save();
-            }
-
+            }//.if(stock)
             $detail = new ReceiptDetail();
             $detail->receipt_id  = $receipt->id;
             $detail->product_id  = $data->id;
-            $detail->type  = $data->type;
+            $detail->type        = $data->type;
             $detail->descripcion = $data->name;
             $detail->qty         = $data->qty;
             $detail->price       = $data->cost;
             $detail->subtotal    = $data->subtotal;
             $detail->save();
+        }//.foreach
 
-
-        }
-
-        if($rcp['type']=='renta'){
+        //Actualizamos ocntadores solo si es una renta y por si las moscas que no sea una cotizacion
+        if(!$es_cotizacion && $rcp['type']=='renta'){
             $eq_new_counts = json_decode($request->eq_new_counts);
             foreach($eq_new_counts as $enc){
                 $rent_equipo = RentDetail::findOrFail( $enc->equipo_id);
@@ -143,8 +168,8 @@ class ReceiptController extends Controller
                 if($rent_equipo->color)
                     $rent_equipo->counter_color =  $enc->equipo_new_count_color;
                 $rent_equipo->save();
-            }
-        }
+            }//. foreach($eq_new_counts as $enc)
+        }//.if(renta)
 
         return response()->json([
             'ok'=>true,

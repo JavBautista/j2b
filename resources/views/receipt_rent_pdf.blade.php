@@ -54,7 +54,7 @@
                     <img src="{{asset('img/copigama_qr.png')}}" alt="QR" width="50%">
                 </td>
                 <td width="30%">
-                    <h2>COTIZACIÓN #{{$receipt->id}}</h2>
+                    <h2>{{$receipt->quotation?'COTIZACIÓN':'FOLIO'}} #{{$receipt->id}}</h2>
                     <h3>Vencimiento: {{$receipt->quotation_expiration}}</h3>
                     <h3>Creación: {{$receipt->created_at}}</h3>
                     @if(!$receipt->quotation)

@@ -49,6 +49,9 @@ Route::get('receipt/{client_id}','App\Http\Controllers\ReceiptController@index')
 Route::get('receipt/detail/{receipt_id}','App\Http\Controllers\ReceiptDetailController@getDetail');
 Route::post('receipt/store','App\Http\Controllers\ReceiptController@store');
 Route::post('receipt/edit/update-status','App\Http\Controllers\ReceiptController@updateStatus');
+Route::post('receipt/edit/cancel','App\Http\Controllers\ReceiptController@cancel');
+Route::post('receipt/edit/devolucion','App\Http\Controllers\ReceiptController@devolucion');
+
 Route::post('receipt/edit/update-info','App\Http\Controllers\ReceiptController@updateInfo');
 Route::post('receipt/delete','App\Http\Controllers\ReceiptController@delete');
     /*PRINT PDF*/

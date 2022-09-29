@@ -11,6 +11,7 @@ use App\Models\Shop;
 use App\Models\Product;
 use Illuminate\Support\Carbon;
 use PDF;
+use Illuminate\Database\Eloquent\Builder;
 
 class ReceiptController extends Controller
 {
@@ -52,21 +53,27 @@ class ReceiptController extends Controller
     public function getAll(Request $request)
     {
         $filtro_status = $request->status;
-        $filtro_buscar = $request->buscar;
+        $filtro_buscar = isset($request->buscar)?trim($request->buscar):'';
         $quotation=(isset($request->type)&&$request->type=='true')?1:0;
 
         if($filtro_status=='TODOS'){
             $receipts = Receipt::with('partialPayments')
-                            ->where('quotation',$quotation)
                             ->with('client')
+                            ->whereHas('client', function (Builder $query) use($filtro_buscar) {
+                                $query->where('name', 'like', '%'.$filtro_buscar.'%');
+                            })
+                            ->where('quotation',$quotation)
                             ->orderBy('id','desc')
                             ->paginate(10);
 
         }else{
             $receipts = Receipt::with('partialPayments')
+                            ->with('client')
+                            ->whereHas('client', function (Builder $query) use($filtro_buscar) {
+                                $query->where('name', 'like', '%'.$filtro_buscar.'%');
+                            })
                             ->where('quotation',$quotation)
                             ->where('status',$filtro_status)
-                            ->with('client')
                             ->orderBy('id','desc')
                             ->paginate(10);
         }
@@ -154,6 +161,8 @@ class ReceiptController extends Controller
             $detail->descripcion = $data->name;
             $detail->qty         = $data->qty;
             $detail->price       = $data->cost;
+            $detail->discount    = $data->discount;
+            $detail->discount_concept = $data->discount_concept;
             $detail->subtotal    = $data->subtotal;
             $detail->save();
         }//.foreach
@@ -186,6 +195,8 @@ class ReceiptController extends Controller
                 'receipt' => $receipt,
         ]);
     }
+
+
 
     public function updateInfo(Request $request){
         $rcp = $request->receipt;
@@ -236,6 +247,36 @@ class ReceiptController extends Controller
         $receipt=Receipt::destroy($request->id);
         return response()->json([
             'ok'=>true
+        ]);
+    }
+
+    public function cancel(Request $request){
+        $receipt = Receipt::findOrFail($request->receipt_id);
+        $receipt->status='CANCELADA';
+        $receipt->save();
+        return response()->json([
+                'ok'=>true,
+                'receipt' => $receipt,
+        ]);
+    }
+
+    public function devolucion(Request $request){
+        $receipt = Receipt::findOrFail($request->receipt_id);
+        $receipt->status='DEVOLUCION';
+        $receipt->save();
+
+        $detail = ReceiptDetail::where('receipt_id',$receipt->id)->get();
+        foreach($detail as $data){
+            $qty = $data->qty;
+            $product   = Product::find($data->product_id);
+            $new_stock = $product->stock + $qty;
+            $product->stock = $new_stock;
+            $product->save();
+        }
+
+        return response()->json([
+                'ok'=>true,
+                'receipt' => $receipt,
         ]);
     }
 }

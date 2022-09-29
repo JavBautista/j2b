@@ -72,18 +72,27 @@
             <thead>
                 <tr>
                     <th>Descripción</th>
-                    <th>Qty</th>
                     <th>Costo/Unidad</th>
+                    <th>Qty</th>
+
                     <th>Subtotal</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach($receipt->detail as $data)
                 <tr>
+
                     <td>{{$data->descripcion}}</td>
-                    <td>{{$data->qty}}</td>
-                    <td>MXN $ {{ number_format($data->price,2) }}</td>
-                    <td>MXN $ {{ number_format($data->subtotal,2) }}</td>
+                    @if($data->discount_concept=='')
+                        <td>MXN $ {{ number_format($data->price,2) }}</td>
+                    @else
+                        <td>MXN $ {{ number_format($data->price,2) }}
+                            - {{ ($data->discount_concept=='$')?('$'.$data->discount):$data->discount_concept }}
+                        </td>
+                    @endif
+
+                    <td> MXN ${{ number_format($data->price - $data->discount) }} x{{$data->qty}}</td>
+                    <td> MXN ${{$data->subtotal}}</td>
                 </tr>
                 @endforeach
             </tbody>

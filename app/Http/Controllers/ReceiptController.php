@@ -180,9 +180,13 @@ class ReceiptController extends Controller
             }//. foreach($eq_new_counts as $enc)
         }//.if(renta)
 
+        $rr = Receipt::with('partialPayments')
+                    ->with('client')
+                    ->findOrFail($receipt->id);
+
         return response()->json([
             'ok'=>true,
-            'receipt' => $receipt,
+            'receipt' => $rr,
         ]);
     }
 

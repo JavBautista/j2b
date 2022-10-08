@@ -57,6 +57,8 @@ Route::post('receipt/delete','App\Http\Controllers\ReceiptController@delete');
     /*PRINT PDF*/
     Route::get('receipt/pdf/print-receipt-rent', 'App\Http\Controllers\ReceiptController@printReceiptRent');
 
+Route::post('receipt/edit/update/quotation-to-sale','App\Http\Controllers\ReceiptController@updateQuotationToSale');
+
 /*PartialPayments*/
 Route::post('receipt/partial-payment/store','App\Http\Controllers\PartialPaymentsController@store');
 
@@ -87,6 +89,9 @@ Route::get('/plan/get/all','App\Http\Controllers\PlanController@all');
 Route::get('/shop/{shop_id}','App\Http\Controllers\ShopController@getShop');
 Route::post('shop/update','App\Http\Controllers\ShopController@update');
 
+/* PRUCHASE ORDER*/
+Route::get('purchase-order/all','App\Http\Controllers\PurchaseOrderController@getAll');
+Route::post('purchase-order/store','App\Http\Controllers\PurchaseOrderController@store');
 
 
 

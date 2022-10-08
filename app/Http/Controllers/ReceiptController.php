@@ -180,6 +180,7 @@ class ReceiptController extends Controller
             }//. foreach($eq_new_counts as $enc)
         }//.if(renta)
 
+        //Obtenemos el recibo recien guardado para obtener la relacion de de pagos parciales
         $rr = Receipt::with('partialPayments')
                     ->with('client')
                     ->findOrFail($receipt->id);
@@ -194,6 +195,32 @@ class ReceiptController extends Controller
         $receipt = Receipt::findOrFail($request->receipt_id);
         $receipt->status=$request->new_status;
         $receipt->save();
+        return response()->json([
+                'ok'=>true,
+                'receipt' => $receipt,
+        ]);
+    }
+
+    public function updateQuotationToSale(Request $request){
+        $receipt = Receipt::findOrFail($request->receipt_id);
+        $receipt->quotation = 0;
+        $receipt->quotation_expiration = null;
+        $receipt->save();
+
+        //Al pasar la nota de Cotizacion a venta, descontamos el stock
+        $detail = ReceiptDetail::where('receipt_id',$receipt->id)->get();
+        foreach($detail as $data){
+            //solo con los items que sean productos
+            if($data->type=='product'){
+                $product   = Product::find($data->product_id);
+                $new_stock = $product->stock - $data->qty;
+                //solo en caso que la resta de numeros negativos
+                if($new_stock<0) $new_stock=0;
+                $product->stock = $new_stock;
+                $product->save();
+            }
+        }
+
         return response()->json([
                 'ok'=>true,
                 'receipt' => $receipt,
@@ -271,11 +298,14 @@ class ReceiptController extends Controller
 
         $detail = ReceiptDetail::where('receipt_id',$receipt->id)->get();
         foreach($detail as $data){
-            $qty = $data->qty;
-            $product   = Product::find($data->product_id);
-            $new_stock = $product->stock + $qty;
-            $product->stock = $new_stock;
-            $product->save();
+            //solo con los items que sean productos
+            if($data->type=='product'){
+                $qty = $data->qty;
+                $product   = Product::find($data->product_id);
+                $new_stock = $product->stock + $qty;
+                $product->stock = $new_stock;
+                $product->save();
+            }
         }
 
         return response()->json([

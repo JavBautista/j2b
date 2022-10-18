@@ -2,15 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use PDF;
-use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
-use Illuminate\Database\Eloquent\Builder;
-
 use App\Models\Product;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderDetail;
 use App\Models\PurchaseOrderPayments;
+use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Database\Eloquent\Builder;
+use PDF;
+
 
 class PurchaseOrderController extends Controller
 {
@@ -65,16 +65,88 @@ class PurchaseOrderController extends Controller
             $detail = new PurchaseOrderDetail();
             $detail->purchase_order_id  = $purchase_order->id;
             $detail->product_id  = $data->id;
-            $detail->descripcion = $data->descripcion;
+            $detail->description = $data->description;
             $detail->qty         = $data->qty;
             $detail->price       = $data->price;
             $detail->subtotal    = $data->subtotal;
             $detail->save();
         }//.foreach
 
+        $po = PurchaseOrder::with('partialPayments')
+                    ->with('supplier')
+                    ->findOrFail($purchase_order->id);
+
         return response()->json([
             'ok'=>true,
-            'purchase_order' => $purchase_order,
+            'purchase_order' => $po,
         ]);
+    }
+
+    public function updateStatus(Request $request){
+        $purchase_order = PurchaseOrder::findOrFail($request->purchase_order_id);
+        $purchase_order->status=$request->new_status;
+        $purchase_order->save();
+        return response()->json([
+                'ok'=>true,
+                'purchase_order' => $purchase_order,
+        ]);
+    }
+
+    public function updateCompletePurchaseOrder(Request $request){
+
+        $purchase_order = PurchaseOrder::findOrFail($request->purchase_order_id);
+        $purchase_order->status = 'COMPLETA';
+        $purchase_order->expiration = null;
+        $purchase_order->save();
+
+        //Al pasar la PO a completa, sumamos el stock
+        $detail = PurchaseOrderDetail::where('purchase_order_id',$purchase_order->id)->get();
+        foreach($detail as $data){
+            //solo con los items que sean productos
+            $product   = Product::find($data->product_id);
+            $new_stock = $product->stock + $data->qty;
+            $product->stock = $new_stock;
+            $product->save();
+        }
+
+        return response()->json([
+                'ok'=>true,
+                'purchase_order' => $purchase_order,
+        ]);
+
+    }//.updateCompletePurchaseOrder()
+
+    public function cancel(Request $request){
+        $purchase_order = PurchaseOrder::findOrFail($request->purchase_order_id);
+        $purchase_order->status='CANCELADA';
+        $purchase_order->save();
+        return response()->json([
+                'ok'=>true,
+                'purchase_order' => $purchase_order,
+        ]);
+    }//.cancel()
+
+    private function removeSpecialChar($str)
+    {
+        $res = preg_replace('/[@\.\;\" "]+/', '_', $str);
+        return $res;
+    }
+
+    public function printPurchaseOrder(Request $request){
+        if(!isset($request->id)) return null;
+        /*ESTE DEBE LLEGAR POR REQUEST O OBTENERSE DEL RECEIPT*/
+        //$shop_id = 1;
+        /*....*/
+        $id= $request->id;
+        $name_file = $this->removeSpecialChar($request->name_file);
+        $purchase_order = PurchaseOrder::with('partialPayments')
+                            ->with('detail')
+                            ->with('supplier')
+                            ->findOrFail($id);
+
+        //$shop = Shop::findOrFail($shop_id);
+
+        $pdf = PDF::loadView('purchase_order_pdf',['purchase_order'=>$purchase_order]);
+        return $pdf->stream($name_file.'.pdf',array("Attachment" => false));
     }
 }

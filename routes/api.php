@@ -92,6 +92,14 @@ Route::post('shop/update','App\Http\Controllers\ShopController@update');
 /* PRUCHASE ORDER*/
 Route::get('purchase-order/all','App\Http\Controllers\PurchaseOrderController@getAll');
 Route::post('purchase-order/store','App\Http\Controllers\PurchaseOrderController@store');
+Route::get('purchase-order/detail/{purchase_order_id}','App\Http\Controllers\PurchaseOrderDetailController@getDetail');
+
+Route::post('purchase-order/edit/update-status','App\Http\Controllers\PurchaseOrderController@updateStatus');
+Route::post('purchase-order/edit/update/complete-purchase-order','App\Http\Controllers\PurchaseOrderController@updateCompletePurchaseOrder');
+
+Route::post('puchase-order/edit/cancel','App\Http\Controllers\PurchaseOrderController@cancel');
+
+Route::post('purchase-order/partial-payment/store','App\Http\Controllers\PurchaseOrderPartialPaymentsController@store');
 
 
 

@@ -80,7 +80,7 @@
                 @foreach($purchase_order->detail as $data)
                 <tr>
 
-                    <td>{{$data->descripcion}}</td>
+                    <td>{{$data->description}}</td>
                     <td>MXN $ {{ number_format($data->price,2) }}</td>
                     <td> MXN ${{ number_format($data->price) }} x {{$data->qty}}</td>
                     <td> MXN ${{$data->subtotal}}</td>

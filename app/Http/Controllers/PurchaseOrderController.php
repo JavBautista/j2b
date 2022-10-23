@@ -43,16 +43,17 @@ class PurchaseOrderController extends Controller
 
     public function store(Request $request)
     {
+        date_default_timezone_set('America/Mexico_City');
         $po = $request->purchase_order;
         $date_today     = Carbon::now();
         //formateamos la fecha de vencimiento
-        $ff =Carbon::parse($po['expiration']);
-        $exp=Carbon::createFromFormat('Y-m-d H:i:s',$ff)->format('Y-m-d');
+        $fecha_exp_request =Carbon::parse($po['expiration']);
+        $expiration=Carbon::createFromFormat('Y-m-d H:i:s',$fecha_exp_request)->format('Y-m-d');
         //Guardamos todos los datos de la PO, deben de venir desde la APP con algun valor
         $purchase_order = new PurchaseOrder();
         $purchase_order->supplier_id = $po['supplier_id'];
         $purchase_order->status      = $po['status'];
-        $purchase_order->expiration  = $exp;
+        $purchase_order->expiration  = $expiration;
         $purchase_order->observation = $po['observation'];
         $purchase_order->payment     = $po['payment'];
         $purchase_order->total       = $po['total'];
@@ -80,7 +81,50 @@ class PurchaseOrderController extends Controller
             'ok'=>true,
             'purchase_order' => $po,
         ]);
-    }
+    }//.store()
+
+    public function update(Request $request)
+    {
+        date_default_timezone_set('America/Mexico_City');
+        $po = $request->purchase_order;
+        $date_today     = Carbon::now();
+        //formateamos la fecha de vencimiento
+        $fecha_exp_request =Carbon::parse($po['expiration']);
+        $expiration=Carbon::createFromFormat('Y-m-d H:i:s',$fecha_exp_request)->format('Y-m-d');
+        //Guardamos todos los datos de la PO, deben de venir desde la APP con algun valor
+        $purchase_order = PurchaseOrder::findOrFail($po['purchase_order_id']);
+        $purchase_order->supplier_id = $po['supplier_id'];
+        $purchase_order->status      = $po['status'];
+        $purchase_order->expiration  = $expiration;
+        $purchase_order->observation = $po['observation'];
+        $purchase_order->payment     = $po['payment'];
+        $purchase_order->total       = $po['total'];
+        $purchase_order->save();
+
+        PurchaseOrderDetail::where('purchase_order_id', $purchase_order->id)->delete();
+
+        //Guardaremos el detalle de la orden
+        $details = json_decode($request->detail);
+        foreach($details as $data){
+            $detail = new PurchaseOrderDetail();
+            $detail->purchase_order_id  = $purchase_order->id;
+            $detail->product_id  = $data->product_id;
+            $detail->description = $data->description;
+            $detail->qty         = $data->qty;
+            $detail->price       = $data->price;
+            $detail->subtotal    = $data->subtotal;
+            $detail->save();
+        }//.foreach
+
+        $po = PurchaseOrder::with('partialPayments')
+                    ->with('supplier')
+                    ->findOrFail($purchase_order->id);
+
+        return response()->json([
+            'ok'=>true,
+            'purchase_order' => $po,
+        ]);
+    }//.update()
 
     public function updateStatus(Request $request){
         $purchase_order = PurchaseOrder::findOrFail($request->purchase_order_id);
@@ -106,6 +150,7 @@ class PurchaseOrderController extends Controller
             $product   = Product::find($data->product_id);
             $new_stock = $product->stock + $data->qty;
             $product->stock = $new_stock;
+            $product->cost = $data->price;
             $product->save();
         }
 

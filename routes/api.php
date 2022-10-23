@@ -92,6 +92,8 @@ Route::post('shop/update','App\Http\Controllers\ShopController@update');
 /* PRUCHASE ORDER*/
 Route::get('purchase-order/all','App\Http\Controllers\PurchaseOrderController@getAll');
 Route::post('purchase-order/store','App\Http\Controllers\PurchaseOrderController@store');
+Route::post('purchase-order/update','App\Http\Controllers\PurchaseOrderController@update');
+
 Route::get('purchase-order/detail/{purchase_order_id}','App\Http\Controllers\PurchaseOrderDetailController@getDetail');
 
 Route::post('purchase-order/edit/update-status','App\Http\Controllers\PurchaseOrderController@updateStatus');
@@ -100,6 +102,11 @@ Route::post('purchase-order/edit/update/complete-purchase-order','App\Http\Contr
 Route::post('puchase-order/edit/cancel','App\Http\Controllers\PurchaseOrderController@cancel');
 
 Route::post('purchase-order/partial-payment/store','App\Http\Controllers\PurchaseOrderPartialPaymentsController@store');
+
+Route::get('report/mes','App\Http\Controllers\ReportsController@mensual');
+Route::get('report/clientes-adeudos','App\Http\Controllers\ReportsController@clientesAdeudos');
+
+
 
 
 

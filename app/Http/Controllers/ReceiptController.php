@@ -15,21 +15,20 @@ use Illuminate\Database\Eloquent\Builder;
 
 class ReceiptController extends Controller
 {
-    public function index(Request $request)
-    {
+    private function removeSpecialChar($str){
+        $res = preg_replace('/[@\.\;\" "]+/', '_', $str);
+        return $res;
+    }//removeSpecialChar()
+
+    public function index(Request $request){
         $client_id = $request->client_id;
         $receipts = Receipt::with('detail')
                         ->where('client_id',$client_id)
                         ->orderBy('id','desc')
                         ->paginate(10);
         return $receipts;
-    }//.index
+    }//index()
 
-    private function removeSpecialChar($str)
-    {
-        $res = preg_replace('/[@\.\;\" "]+/', '_', $str);
-        return $res;
-    }
     public function printReceiptRent(Request $request){
         if(!isset($request->id)) return null;
         /*ESTE DEBE LLEGAR POR REQUEST O OBTENERSE DEL RECEIPT*/
@@ -47,11 +46,9 @@ class ReceiptController extends Controller
 
         $pdf = PDF::loadView('receipt_rent_pdf',['receipt'=>$receipt]);
         return $pdf->stream($name_file.'.pdf',array("Attachment" => false));
-    }
+    }//printReceiptRent()
 
-
-    public function getAll(Request $request)
-    {
+    public function getAll(Request $request){
         $filtro_status = $request->status;
         $filtro_buscar = isset($request->buscar)?trim($request->buscar):'';
         $quotation=(isset($request->type)&&$request->type=='true')?1:0;
@@ -78,10 +75,9 @@ class ReceiptController extends Controller
                             ->paginate(10);
         }
         return $receipts;
-    }//.index
+    }//getAll()
 
-    public function store(Request $request)
-    {
+    public function store(Request $request){
         $rcp = $request->receipt;
         $date_today     = Carbon::now();
         //Obtenemos el valor que nos dira si es una cotizacion, si no existe ponemos en 0 el valor
@@ -189,7 +185,128 @@ class ReceiptController extends Controller
             'ok'=>true,
             'receipt' => $rr,
         ]);
-    }
+    }//store()
+
+    public function updateReceiptVentas(Request $request){
+        $rcp = $request->receipt;
+        $date_today     = Carbon::now();
+        //Obtenemos el valor que nos dira si es una cotizacion, si no existe ponemos en 0 el valor
+        $es_cotizacion  = isset($rcp['quotation'])?$rcp['quotation']:0;
+        //La nota no sera finalizada por default (en caso que sea cotizacion se quedara como 0)
+        $finished=0;
+        //Solo si no es cotizacion avaluaremos si estara finalizada o no
+        if(!$es_cotizacion){
+            //calculamos si el pago recibido es mayor o igual que el total de la nota
+            //finalizamos la nota, si no se tomara como un abono
+            $finished = ($rcp['received'] >= $rcp['total'])?1:0;
+        }
+
+        //ACtualizamos todos los datos de la NOTA,
+        //deben de venir desde la APP con algun valor
+        $receipt = Receipt::findOrFail($rcp['receipt_id']);
+        $receipt->client_id   = $rcp['client_id'];
+        $receipt->rent_id     = $rcp['rent_id'];
+        $receipt->type        = $rcp['type'];
+        $receipt->description = $rcp['description'];
+        $receipt->observation = $rcp['observation'];
+        $receipt->discount    = $rcp['discount'];
+        $receipt->discount_concept = $rcp['discount_concept'];
+        //---
+        $receipt->subtotal    = $rcp['subtotal'];
+        $receipt->total       = $rcp['total'];
+        $receipt->iva         = $rcp['iva'];
+        $receipt->finished    = $finished;
+
+        //Campos para ventas (Renta o Ventas)
+        $receipt->status      = $rcp['status'];
+        $receipt->payment     = $rcp['payment'];
+        //$receipt->received    = $rcp['received'];
+        //Campos para cotizaciones
+        $receipt->quotation   = $es_cotizacion;
+        //Si es una cotizacion guardemos la fecha, si no debe ser NULL
+        if($es_cotizacion){
+            $ff = Carbon::parse($rcp['quotation_expiration']);
+            $exp = Carbon::createFromFormat('Y-m-d H:i:s', $ff )->format('Y-m-d');
+            $receipt->quotation_expiration = $exp;
+        }else{
+            $receipt->quotation_expiration = null;
+        }
+
+
+        $receipt->save();
+
+
+        /*-----------------------------------------*/
+        //ELIMINAR EL DETAIL Y VOLVER A GUARDAR
+        //PERO HAY QUE VER QUE PEDO CON EL STOCK
+        //Si no es cotizacion devolveremos el stock temnporalmente el stock
+        if(!$es_cotizacion){
+            //obtenemos el detalle actua de la BD
+            $detail_bd=ReceiptDetail::where('receipt_id', $receipt->id)->get();
+            foreach ($detail_bd as $dt_bd){
+                //solo si item del detalle es producto
+                if($dt_bd->type=='product'){
+                    $qty = $dt_bd->qty;
+                    $product = Product::find($dt_bd->product_id);
+                    $new_stock = $product->stock + $qty;
+                    $product->stock = $new_stock;
+                    $product->save();
+                }//.if(stock)
+            }
+        }
+        /*-----------------------------------------*/
+
+        //Eliminamos el detail actual para luego agregar el nuevo
+        ReceiptDetail::where('receipt_id', $receipt->id)->delete();
+        //Guardaremos el detalle de la nota
+        $details = json_decode($request->detail);
+        foreach($details as $data){
+            //Solo alteraremos el Stock si el item es un producto y la nota NO es un cotizacion
+            if(!$es_cotizacion && $data->type=='product'){
+                $qty=$data->qty;
+                $product = Product::find($data->id);
+                $new_stock = $product->stock - $qty;
+                $product->stock = $new_stock;
+                $product->save();
+            }//.if(stock)
+            $detail = new ReceiptDetail();
+            $detail->receipt_id  = $receipt->id;
+            $detail->product_id  = $data->id;
+            $detail->type        = $data->type;
+            $detail->descripcion = $data->name;
+            $detail->qty         = $data->qty;
+            $detail->price       = $data->cost;
+            $detail->discount    = $data->discount;
+            $detail->discount_concept = $data->discount_concept;
+            $detail->subtotal    = $data->subtotal;
+            $detail->save();
+        }//.foreach
+
+        //Actualizamos ocntadores solo si es una renta y por si las moscas que no sea una cotizacion
+        /*
+        if(!$es_cotizacion && $rcp['type']=='renta'){
+            $eq_new_counts = json_decode($request->eq_new_counts);
+            foreach($eq_new_counts as $enc){
+                $rent_equipo = RentDetail::findOrFail( $enc->equipo_id);
+                if($rent_equipo->monochrome)
+                    $rent_equipo->counter_mono  =  $enc->equipo_new_count_monochrome;
+                if($rent_equipo->color)
+                    $rent_equipo->counter_color =  $enc->equipo_new_count_color;
+                $rent_equipo->save();
+            }//. foreach($eq_new_counts as $enc)
+        }//.if(renta)
+        */
+
+        //Obtenemos el recibo recien guardado para obtener la relacion de de pagos parciales
+        $rr = Receipt::with('partialPayments')
+                    ->with('client')
+                    ->findOrFail($receipt->id);
+
+        return response()->json([
+                'ok'=>true,
+                'receipt' => $receipt,
+        ]);
+    }//updateReceiptVentas()
 
     public function updateStatus(Request $request){
         $receipt = Receipt::findOrFail($request->receipt_id);
@@ -199,7 +316,7 @@ class ReceiptController extends Controller
                 'ok'=>true,
                 'receipt' => $receipt,
         ]);
-    }
+    }//updateStatus()
 
     public function updateQuotationToSale(Request $request){
         $receipt = Receipt::findOrFail($request->receipt_id);
@@ -225,9 +342,7 @@ class ReceiptController extends Controller
                 'ok'=>true,
                 'receipt' => $receipt,
         ]);
-    }
-
-
+    }//updateQuotationToSale()
 
     public function updateInfo(Request $request){
         $rcp = $request->receipt;
@@ -257,8 +372,7 @@ class ReceiptController extends Controller
                 'ok'=>true,
                 'receipt' => $receipt,
         ]);
-    }
-
+    }//updateInfo()
 
     public function test(Request $reques){
         /*
@@ -268,10 +382,9 @@ class ReceiptController extends Controller
         foreach($var as $detail){
             echo $detail->name.', '.$detail->qty.'<br>';
         }*/
-    }
+    }//test()
 
-    public function delete(Request $request)
-    {
+    public function delete(Request $request){
         ReceiptDetail::where('receipt_id', $request->id)->delete();
         PartialPayments::where('receipt_id', $request->id)->delete();
 
@@ -279,7 +392,7 @@ class ReceiptController extends Controller
         return response()->json([
             'ok'=>true
         ]);
-    }
+    }//delete()
 
     public function cancel(Request $request){
         $receipt = Receipt::findOrFail($request->receipt_id);
@@ -289,7 +402,7 @@ class ReceiptController extends Controller
                 'ok'=>true,
                 'receipt' => $receipt,
         ]);
-    }
+    }//cancel()
 
     public function devolucion(Request $request){
         $receipt = Receipt::findOrFail($request->receipt_id);
@@ -312,5 +425,5 @@ class ReceiptController extends Controller
                 'ok'=>true,
                 'receipt' => $receipt,
         ]);
-    }
+    }//devolucion()
 }

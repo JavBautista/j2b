@@ -26,4 +26,14 @@ class ReceiptDetailController extends Controller
             'detail' => $detail,
         ]);
     }
+
+    /*public function getDetail(Request $request)
+    {
+        $detail = ReceiptDetail::where('receipt_id',$request->receipt_id)->get();
+        return response()->json([
+            'ok'=>true,
+            'detail' => $detail,
+        ]);
+    }*/
+
 }

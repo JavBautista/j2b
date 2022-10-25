@@ -53,6 +53,10 @@ Route::post('receipt/edit/cancel','App\Http\Controllers\ReceiptController@cancel
 Route::post('receipt/edit/devolucion','App\Http\Controllers\ReceiptController@devolucion');
 
 Route::post('receipt/edit/update-info','App\Http\Controllers\ReceiptController@updateInfo');
+
+Route::post('receipt/edit/update-venta/','App\Http\Controllers\ReceiptController@updateReceiptVentas');
+
+
 Route::post('receipt/delete','App\Http\Controllers\ReceiptController@delete');
     /*PRINT PDF*/
     Route::get('receipt/pdf/print-receipt-rent', 'App\Http\Controllers\ReceiptController@printReceiptRent');

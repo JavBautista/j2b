@@ -238,7 +238,6 @@ class ReceiptController extends Controller
 
         /*-----------------------------------------*/
         //ELIMINAR EL DETAIL Y VOLVER A GUARDAR
-        //PERO HAY QUE VER QUE PEDO CON EL STOCK
         //Si no es cotizacion devolveremos el stock temnporalmente el stock
         if(!$es_cotizacion){
             //obtenemos el detalle actua de la BD
@@ -304,7 +303,7 @@ class ReceiptController extends Controller
 
         return response()->json([
                 'ok'=>true,
-                'receipt' => $receipt,
+                'receipt' => $rr,
         ]);
     }//updateReceiptVentas()
 

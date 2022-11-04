@@ -5,15 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class RentDetail extends Model
+class Notification extends Model
 {
     use HasFactory;
     protected $guarded=[];
-
-
-
-    public function consumables(){
-        return $this->hasMany(Consumables::class);
-    }
-
 }

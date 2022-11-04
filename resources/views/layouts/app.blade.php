@@ -41,10 +41,10 @@
                 <li class="nav-item dropdown">
                   <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" aria-haspopup="true"  data-bs-toggle="dropdown" aria-expanded="false">
                     <span class="fa fa-user img-avatar"></span>
-                    <span class="d-md-down-none">{{ auth()->user()->name }} </span>
+                    <span class="d-md-down-none">{{ auth()->user()->name  }} </span>
                   </a>
                   <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
-                    <li><a class="dropdown-item" href="{{ route('home') }}">Dahsboard</a></li>
+
                     <li><a class="dropdown-item" href="{{ route('password.reset') }}">Reset Password</a></li>
                     <li><hr class="dropdown-divider"></li>
                     <li><a class="dropdown-item" href="{{ route('logout') }}"

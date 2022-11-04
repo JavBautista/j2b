@@ -83,6 +83,7 @@
                 <tr>
 
                     <td>{{$data->descripcion}}</td>
+
                     @if($data->discount_concept=='')
                         <td>MXN $ {{ number_format($data->price,2) }}</td>
                     @else
@@ -91,7 +92,12 @@
                         </td>
                     @endif
 
-                    <td> MXN ${{ number_format($data->price - $data->discount) }} x{{$data->qty}}</td>
+                    @if($receipt->type=='renta')
+                        <td> {{$data->qty}} </td>
+                    @else
+                        <td> MXN ${{ number_format($data->price - $data->discount) }} x{{$data->qty}}</td>
+                    @endif
+
                     <td> MXN ${{$data->subtotal}}</td>
                 </tr>
                 @endforeach

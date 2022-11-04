@@ -8,7 +8,7 @@
    <!-- CSRF Token -->
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-  <title>OSESACH</title>
+  <title>COPIGAMA</title>
   <link rel="icon" href="{{ asset('/images/favicon.ico') }}">
 
   <link href="{{ asset('css/app.css') }}" rel="stylesheet">

@@ -13,7 +13,7 @@ class DatabaseSeeder extends Seeder
      */
     public function run()
     {
-        \App\Models\User::create([
+        /*\App\Models\User::create([
             'name'=>'dev',
             'email'=>'dev@me',
             'password'=> bcrypt('secret')
@@ -34,5 +34,8 @@ class DatabaseSeeder extends Seeder
             'description'=>'Standar',
             'price'=>'99.99',
         ]);
+        */
+
+        $this->call(RoleTableSeeder::class);
     }
 }

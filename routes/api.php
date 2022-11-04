@@ -47,6 +47,8 @@ Route::get('receipt/all','App\Http\Controllers\ReceiptController@getAll');
 Route::get('receipt/{client_id}','App\Http\Controllers\ReceiptController@index');
 
 Route::get('receipt/detail/{receipt_id}','App\Http\Controllers\ReceiptDetailController@getDetail');
+Route::get('receipt/detail/get-stock-current/{receipt_id}','App\Http\Controllers\ReceiptDetailController@getgetStockCurrentDetail');
+
 Route::post('receipt/store','App\Http\Controllers\ReceiptController@store');
 Route::post('receipt/edit/update-status','App\Http\Controllers\ReceiptController@updateStatus');
 Route::post('receipt/edit/cancel','App\Http\Controllers\ReceiptController@cancel');
@@ -111,8 +113,15 @@ Route::get('report/mes','App\Http\Controllers\ReportsController@mensual');
 Route::get('report/clientes-adeudos','App\Http\Controllers\ReportsController@clientesAdeudos');
 
 
+/*CONSUMABLES*/
+Route::get('consumables/get-history-rent-deatil/{rent_detail_id}','App\Http\Controllers\ConsumablesController@getHistoryRendtDeatil');
+Route::post('consumables/store','App\Http\Controllers\ConsumablesController@store');
 
+/*NOTIFICATIONS*/
+Route::get('notifications/get/{user_id}','App\Http\Controllers\NotificationController@get');
+Route::post('notifications/read','App\Http\Controllers\NotificationController@read');
 
+Route::get('notifications/get/client/{client_id}','App\Http\Controllers\NotificationController@getClientxID');
 
 Route::group([
     'prefix' => 'auth'

@@ -12,6 +12,7 @@ use App\Models\Client;
 class NotificationController extends Controller
 {
     public function get(Request $request){
+
         $user_id=$request->user_id;
 
         //buscamos si se crearon las notificaciones de hoy para el usuario
@@ -20,6 +21,7 @@ class NotificationController extends Controller
         $notificationUserToday = NotificationUserToday::where('user_id',$user_id)
                                     ->whereDate('created_at', Carbon::today())
                                     ->get();
+
         //si no se han creado las de hoy, debemos crearlas
         if($notificationUserToday->isEmpty()){
             $new_ntf_usr_today = new NotificationUserToday();
@@ -29,7 +31,7 @@ class NotificationController extends Controller
             $this->storeNotificationsRentsByUser($user_id);
         }
         //Traemos todas la notoficaciones sin leer del usuario
-        $notifications = Notification::where('user_id',$user_id)->where('read',0)->orderBy('created_at','desc')->get();
+        $notifications = Notification::where('user_id',$user_id)->where('read',0)->orderBy('created_at','desc')->paginate(10);
 
         return response()->json([
             'ok'=>true,

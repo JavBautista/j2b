@@ -16,6 +16,7 @@ class ConsumablesController extends Controller
         $consumable->description        = $request->description;
         $consumable->counter  = $request->counter;
         $consumable->qty  = $request->qty;
+        $consumable->observation  = $request->observation;
         $consumable->save();
 
         $product = Product::find($request->product_id);
@@ -31,10 +32,29 @@ class ConsumablesController extends Controller
 
     public function getHistoryRendtDeatil(Request $request){
 
-        $consumables = Consumables::where('rent_detail_id',$request->rent_detail_id)->get();
+        $consumables = Consumables::where('rent_detail_id',$request->rent_detail_id)
+                        ->orderBy('created_at','desc')
+                        ->get();
+
         return response()->json([
             'ok'=>true,
             'consumables' => $consumables
         ]);
+    }
+
+    public function updateObservation(Request $request){
+        $consumable_id   = $request->consumable_id;
+        $new_observation = $request->new_observation;
+
+        $consumable = Consumables::findOrFail($consumable_id);
+        $consumable->observation = $new_observation;
+        $consumable->save();
+
+        return response()->json([
+            'ok'=>true,
+            'consumable' => $consumable,
+        ]);
+
+
     }
 }

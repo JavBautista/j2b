@@ -116,9 +116,10 @@ Route::get('report/clientes-adeudos','App\Http\Controllers\ReportsController@cli
 /*CONSUMABLES*/
 Route::get('consumables/get-history-rent-deatil/{rent_detail_id}','App\Http\Controllers\ConsumablesController@getHistoryRendtDeatil');
 Route::post('consumables/store','App\Http\Controllers\ConsumablesController@store');
+Route::post('consumables/update-observation','App\Http\Controllers\ConsumablesController@updateObservation');
 
 /*NOTIFICATIONS*/
-Route::get('notifications/get/{user_id}','App\Http\Controllers\NotificationController@get');
+Route::get('notifications/get','App\Http\Controllers\NotificationController@get');
 Route::post('notifications/read','App\Http\Controllers\NotificationController@read');
 
 Route::get('notifications/get/client/{client_id}','App\Http\Controllers\NotificationController@getClientxID');

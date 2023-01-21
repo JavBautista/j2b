@@ -33,10 +33,12 @@ class NotificationController extends Controller
         //Traemos todas la notoficaciones sin leer del usuario
         $notifications = Notification::where('user_id',$user_id)->where('read',0)->orderBy('created_at','desc')->paginate(10);
 
-        return response()->json([
+        /*return response()->json([
             'ok'=>true,
             'data' => $notifications,
-        ]);
+        ]);*/
+
+        return $notifications;
     }//.get()
 
     public function storeNotificationsRentsByUser($user_id){

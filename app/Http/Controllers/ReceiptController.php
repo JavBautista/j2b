@@ -22,7 +22,8 @@ class ReceiptController extends Controller
 
     public function index(Request $request){
         $client_id = $request->client_id;
-        $receipts = Receipt::with('detail')
+        $receipts = Receipt::with('partialPayments')
+                        ->with('detail')
                         ->where('client_id',$client_id)
                         ->orderBy('id','desc')
                         ->paginate(10);

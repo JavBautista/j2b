@@ -49,6 +49,8 @@ class ProductController extends Controller
 
             $product->cost          = $request->cost;
             $product->retail        = $request->retail;
+            $product->wholesale        = $request->wholesale;
+            $product->wholesale_premium = $request->wholesale_premium;
             $product->stock         = $request->stock;
             $product->reserve       = $request->reserve;
             /*
@@ -77,6 +79,8 @@ class ProductController extends Controller
         $product->description = $request->description;
         $product->cost          = $request->cost;
         $product->retail        = $request->retail;
+        $product->wholesale        = $request->wholesale;
+        $product->wholesale_premium = $request->wholesale_premium;
         $product->stock         = $request->stock;
         $product->reserve       = $request->reserve;
         /*

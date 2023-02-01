@@ -36,10 +36,13 @@ class ClientController extends Controller
         $client->email=$request->email;
         $client->movil=$request->movil;
         $client->address=$request->address;
+        $client->level=$request->level;
         $client->save();
+
+        $client_new = Client::with('rents')->findOrFail($client->id);
         return response()->json([
                 'ok'=>true,
-                'client' => $client,
+                'client' => $client_new,
         ]);
     }
 
@@ -51,6 +54,7 @@ class ClientController extends Controller
         $client->email=$request->email;
         $client->movil=$request->movil;
         $client->address=$request->address;
+        $client->level=$request->level;
         $client->save();
         return response()->json([
                 'ok'=>true,

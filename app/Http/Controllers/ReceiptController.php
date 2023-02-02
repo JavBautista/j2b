@@ -8,6 +8,7 @@ use App\Models\ReceiptDetail;
 use App\Models\RentDetail;
 use App\Models\PartialPayments;
 use App\Models\Shop;
+use App\Models\Rent;
 use App\Models\Product;
 use Illuminate\Support\Carbon;
 use PDF;
@@ -92,11 +93,46 @@ class ReceiptController extends Controller
             $finished = ($rcp['received'] >= $rcp['total'])?1:0;
         }
 
+        $rent_periodo='';
+        if($rcp['type']=='renta'){
+            $rnt = Rent::findOrFail($rcp['rent_id']);
+
+            $dia_corte= $rnt->cutoff;
+
+            $_m= ($rcp['rent_mm']>9)?$rcp['rent_mm']:'0'.$rcp['rent_mm'];
+            $_d= ($dia_corte>9)?$dia_corte:'0'.$dia_corte;
+
+            $f_ini = $rcp['rent_yy'].'-'.$_m.'-'.$_d;
+            $f_fin = $rcp['rent_yy'].'-'.$_m.'-'.$_d;
+
+            $fecha_corte_ini = Carbon::createFromFormat('Y-m-d', $f_ini);
+            $fecha_corte_fin = Carbon::createFromFormat('Y-m-d', $f_fin);
+
+            $fecha_corte_ini = $fecha_corte_ini->subMonth()->addDay();
+            $fecha_corte_ini = $fecha_corte_ini->format('Y-m-d');
+            $fecha_corte_ini = Carbon::createFromFormat('Y-m-d', $fecha_corte_ini);
+
+            setlocale(LC_TIME, 'es_ES.UTF-8');
+            Carbon::setLocale('es');
+            $fecha_corte_ini->locale('es');
+            $fecha_corte_fin->locale('es');
+            $desc1 = $fecha_corte_ini->formatLocalized('%d de %B del %Y');
+            $desc2 = $fecha_corte_fin->formatLocalized('%d de %B del %Y');
+
+            $rent_periodo = 'Periodo del  '.$desc1.' al '.$desc2;
+
+            $rent_periodo=strtoupper($rent_periodo);
+        }
         //Guardamos todos los datos de la NOTA, deben de venir desde la APP con algun valor
         $receipt = new Receipt();
         $receipt->client_id   = $rcp['client_id'];
         $receipt->rent_id     = $rcp['rent_id'];
         $receipt->type        = $rcp['type'];
+
+        $receipt->rent_yy     = $rcp['rent_yy'];
+        $receipt->rent_mm     = $rcp['rent_mm'];
+        $receipt->rent_periodo= $rent_periodo;
+
         $receipt->description = $rcp['description'];
         $receipt->observation = $rcp['observation'];
         $receipt->discount    = $rcp['discount'];

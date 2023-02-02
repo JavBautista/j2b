@@ -53,7 +53,7 @@
                 <td width="20%">
                     <img src="{{asset('img/copigama_qr.png')}}" alt="QR" width="50%">
                 </td>
-                <td width="30%">
+                <td width="40%">
                     <h2>{{$receipt->quotation?'COTIZACIÓN':'FOLIO'}} #{{$receipt->id}}</h2>
                     <h3>Vencimiento: {{$receipt->quotation_expiration}}</h3>
                     <h3>Creación: {{$receipt->created_at}}</h3>
@@ -66,6 +66,13 @@
                     <p><pre>{{$receipt->observation}}</pre></p>
                 </td>
             </tr>
+            @if ($receipt->type=='renta')
+                <tr>
+                    <td colspan="3">
+                            <h3>Periodo: {{$receipt->rent_periodo}}</h3>
+                    </td>
+                </tr>
+            @endif
         </table>
         <hr>
         <table width="100%">

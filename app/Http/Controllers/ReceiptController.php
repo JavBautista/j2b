@@ -94,6 +94,8 @@ class ReceiptController extends Controller
         }
 
         $rent_periodo='';
+        $rent_yy = 0;
+        $rent_mm = 0;
         if($rcp['type']=='renta'){
             $rnt = Rent::findOrFail($rcp['rent_id']);
 
@@ -122,6 +124,9 @@ class ReceiptController extends Controller
             $rent_periodo = 'Periodo del  '.$desc1.' al '.$desc2;
 
             $rent_periodo=strtoupper($rent_periodo);
+
+            $rent_yy=$rcp['rent_yy'];
+            $rent_mm=$rcp['rent_mm'];
         }
         //Guardamos todos los datos de la NOTA, deben de venir desde la APP con algun valor
         $receipt = new Receipt();
@@ -129,8 +134,9 @@ class ReceiptController extends Controller
         $receipt->rent_id     = $rcp['rent_id'];
         $receipt->type        = $rcp['type'];
 
-        $receipt->rent_yy     = $rcp['rent_yy'];
-        $receipt->rent_mm     = $rcp['rent_mm'];
+        $receipt->rent_yy     = $rent_yy;
+        $receipt->rent_mm     = $rent_mm;
+
         $receipt->rent_periodo= $rent_periodo;
 
         $receipt->description = $rcp['description'];

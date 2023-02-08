@@ -85,7 +85,76 @@ class ReportsController extends Controller
                 'data'=>$data
         ]);
 
-    }
+    }//mensual()
+
+    public function rentasMensual(Request $request){
+        $mm   = ($request->month<10)?'0'.$request->month:$request->month;
+        $yyyy = $request->year;
+
+        $request_fecha = $yyyy.'-'.$mm.'-01';
+        $fix_date = Carbon::parse($request_fecha);
+        $start = $fix_date->copy()->startOfMonth()->format('Y-m-d');
+        $end   = $fix_date->copy()->endOfMonth()->format('Y-m-d');
+
+        $receipts = Receipt::with('partialPayments')
+                            ->whereBetween('created_at',[$start,$end])
+                            ->where('type','renta')
+                            ->where('quotation',0)
+                            ->where('status','<>','CANCELADA')
+                            ->orderBy('created_at','desc')
+                            ->get();
+
+        $count_receipst = $receipts->count();
+        $rentas=0;
+        $receipts_total=0;
+        $pagadas=0;
+        $por_cobrar=0;
+
+        $abonos=0;
+        $adeudos=0;
+
+        foreach($receipts as $venta){
+            $receipts_total+= $venta->total;
+            $rentas++;
+            if($venta->status=='PAGADA'){
+                $pagadas+=$venta->total;
+            }
+            if($venta->status=='POR COBRAR'){
+                $por_cobrar+=$venta->total;
+            }
+
+            foreach($venta->partialPayments as $pp){
+                $abonos += $pp->amount;
+            }
+        }//foreach
+
+        $adeudos= $receipts_total - $abonos;
+
+        $receipts_total = number_format($receipts_total,2);
+        $pagadas = number_format($pagadas,2);
+        $por_cobrar = number_format($por_cobrar,2);
+        $abonos = number_format($abonos,2);
+
+
+        $adeudos= number_format($adeudos,2);
+
+        $data=[
+            'receipts_num'=>$count_receipst,
+            'rentas'=>$rentas,
+            'receipts_total'=>$receipts_total,
+            'pagadas'=>$pagadas,
+            'por_cobrar'=>$por_cobrar,
+            'abonos'=>$abonos,
+            'adeudos'=>$adeudos,
+        ];
+        return response()->json([
+                'ok'=>true,
+                'start'=>$start,
+                'end' => $end,
+                'data'=>$data
+        ]);
+
+    }//rentasMensual()
 
     public function clientesAdeudos(Request $request){
 
@@ -137,5 +206,5 @@ class ReportsController extends Controller
                 'data'=>$data
         ]);
 
-    }
+    }//clientesAdeudos
 }

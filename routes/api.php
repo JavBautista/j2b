@@ -112,6 +112,8 @@ Route::post('purchase-order/partial-payment/store','App\Http\Controllers\Purchas
 Route::get('report/mes','App\Http\Controllers\ReportsController@mensual');
 Route::get('report/clientes-adeudos','App\Http\Controllers\ReportsController@clientesAdeudos');
 
+Route::get('report/rentas/mes','App\Http\Controllers\ReportsController@rentasMensual');
+
 
 /*CONSUMABLES*/
 Route::get('consumables/get-history-rent-deatil/{rent_detail_id}','App\Http\Controllers\ConsumablesController@getHistoryRendtDeatil');

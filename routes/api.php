@@ -106,6 +106,7 @@ Route::post('purchase-order/edit/update-status','App\Http\Controllers\PurchaseOr
 Route::post('purchase-order/edit/update/complete-purchase-order','App\Http\Controllers\PurchaseOrderController@updateCompletePurchaseOrder');
 
 Route::post('puchase-order/edit/cancel','App\Http\Controllers\PurchaseOrderController@cancel');
+Route::post('puchase-order/edit/porpagarpagar','App\Http\Controllers\PurchaseOrderController@updatePorpagarpagar');
 
 Route::post('purchase-order/partial-payment/store','App\Http\Controllers\PurchaseOrderPartialPaymentsController@store');
 

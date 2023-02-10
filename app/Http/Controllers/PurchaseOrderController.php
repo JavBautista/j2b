@@ -57,6 +57,7 @@ class PurchaseOrderController extends Controller
         $purchase_order->observation = $po['observation'];
         $purchase_order->payment     = $po['payment'];
         $purchase_order->total       = $po['total'];
+        $purchase_order->payable     = $po['payable'];
         $purchase_order->save();
 
         //Guardaremos el detalle de la orden
@@ -99,6 +100,7 @@ class PurchaseOrderController extends Controller
         $purchase_order->observation = $po['observation'];
         $purchase_order->payment     = $po['payment'];
         $purchase_order->total       = $po['total'];
+        $purchase_order->payable       = $po['payable'];
         $purchase_order->save();
 
         PurchaseOrderDetail::where('purchase_order_id', $purchase_order->id)->delete();
@@ -170,6 +172,16 @@ class PurchaseOrderController extends Controller
                 'purchase_order' => $purchase_order,
         ]);
     }//.cancel()
+
+    public function updatePorpagarpagar(Request $request){
+        $purchase_order = PurchaseOrder::findOrFail($request->purchase_order_id);
+        $purchase_order->payable=$request->val_porpagar;
+        $purchase_order->save();
+        return response()->json([
+                'ok'=>true,
+                'purchase_order' => $purchase_order,
+        ]);
+    }//.updatePorpagarpagar()
 
     private function removeSpecialChar($str)
     {

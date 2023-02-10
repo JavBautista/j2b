@@ -52,30 +52,35 @@ class ReceiptController extends Controller
 
     public function getAll(Request $request){
         $filtro_status = $request->status;
+        $filtro_type_receipt = $request->filtro_type_receipt;
+        $filtro_type_receipt = strtolower($filtro_type_receipt);
         $filtro_buscar = isset($request->buscar)?trim($request->buscar):'';
-        $quotation=(isset($request->type)&&$request->type=='true')?1:0;
+        $quotation     = (isset($request->type_cotizacion)&&$request->type_cotizacion=='true')?1:0;
 
-        if($filtro_status=='TODOS'){
-            $receipts = Receipt::with('partialPayments')
-                            ->with('client')
-                            ->whereHas('client', function (Builder $query) use($filtro_buscar) {
-                                $query->where('name', 'like', '%'.$filtro_buscar.'%');
-                            })
-                            ->where('quotation',$quotation)
-                            ->orderBy('id','desc')
-                            ->paginate(10);
 
-        }else{
-            $receipts = Receipt::with('partialPayments')
-                            ->with('client')
-                            ->whereHas('client', function (Builder $query) use($filtro_buscar) {
-                                $query->where('name', 'like', '%'.$filtro_buscar.'%');
-                            })
-                            ->where('quotation',$quotation)
-                            ->where('status',$filtro_status)
-                            ->orderBy('id','desc')
-                            ->paginate(10);
-        }
+        $where_type =($filtro_type_receipt=='todos')?null:$filtro_type_receipt;
+        $where_status =($filtro_status=='TODOS')?null:$filtro_status;
+
+
+
+
+        $receipts = Receipt::with('partialPayments')
+                        ->with('client')
+                        ->whereHas('client', function (Builder $query) use($filtro_buscar) {
+                            $query->where('name', 'like', '%'.$filtro_buscar.'%');
+                        })
+                        ->where('quotation',$quotation)
+
+                        ->when( $where_status, function ($query, $where_status) {
+                            return $query->where('status',$where_status);
+                        })
+                        ->when( $where_type, function ($query, $where_type) {
+                            return $query->where('type',$where_type);
+                        })
+
+                        ->orderBy('id','desc')
+                        ->paginate(10);
+
         return $receipts;
     }//getAll()
 

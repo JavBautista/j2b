@@ -10,6 +10,9 @@ class ProductController extends Controller
 
     public function index(Request $request)
     {
+        $user = $request->user();
+        $shop = $user->shop;
+
         $buscar = $request->buscar;
         $category_id = isset($request->category_id)?$request->category_id:0;
 
@@ -18,29 +21,21 @@ class ProductController extends Controller
         if ($category_id!=0) array_push($array_where,['category_id', '=', $category_id]);
 
         $products = Product::with('category')
+                    ->where('shop_id',$shop->id)
                     ->where($array_where)
                     ->orderBy('id','desc')
                     ->paginate(10);
-
-        /*if($buscar==''){
-            $products = Product::with('category')
-                    ->where('active',1)
-                    ->orderBy('id','desc')
-                    ->paginate(10);
-        }else{
-            $products = Product::with('category')
-                    ->where('active',1)
-                    ->where('name', 'like', '%'.$buscar.'%')
-                    ->orderBy('id','desc')
-                    ->paginate(10);
-        }*/
 
         return $products;
     }
 
     public function store(Request $request)
     {
+            $user = $request->user();
+            $shop = $user->shop;
+
             $product = new Product;
+            $product->shop_id=$shop->id;
             $product->active        = 1;
             $product->category_id   = $request->category_id;
             $product->key           = $request->key;

@@ -10,13 +10,18 @@ class CategoryController extends Controller
 {
     public function index(Request $request)
     {
+        $user = $request->user();
+        $shop = $user->shop;
+
         $buscar = $request->buscar;
         if($buscar==''){
             $categories = Category::where('active',1)
+                    ->where('shop_id',$shop->id)
                     ->orderBy('id','desc')
                     ->paginate(10);
         }else{
             $categories = Category::where('active',1)
+                    ->where('shop_id',$shop->id)
                     ->where('name', 'like', '%'.$buscar.'%')
                     ->orderBy('id','desc')
                     ->paginate(10);
@@ -24,9 +29,12 @@ class CategoryController extends Controller
         return $categories;
     }
 
-    public function all()
+    public function all(Request $request)
     {
-        $categories = Category::where('active',1)->get();
+        $user = $request->user();
+        $shop = $user->shop;
+
+        $categories = Category::where('active',1)->where('shop_id',$shop->id)->get();
         return response()->json([
             'ok'=>true,
             'data' => $categories,
@@ -36,7 +44,11 @@ class CategoryController extends Controller
 
     public function store(Request $request)
     {
+        $user = $request->user();
+        $shop = $user->shop;
+
         $category =new Category();
+        $category->shop_id=$shop->id;
         $category->active = 1;
         $category->name = $request->name;
         $category->description = $request->description;

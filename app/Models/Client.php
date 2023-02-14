@@ -13,4 +13,8 @@ class Client extends Model
     public function rents(){
         return $this->hasMany(Rent::class);
     }
+
+    public function shop(){
+        return $this->belongsTo(Shop::class);
+    }
 }

@@ -24,6 +24,7 @@ class ReceiptController extends Controller
     public function index(Request $request){
         $client_id = $request->client_id;
         $receipts = Receipt::with('partialPayments')
+                        ->with('shop')
                         ->with('detail')
                         ->where('client_id',$client_id)
                         ->orderBy('id','desc')
@@ -40,6 +41,7 @@ class ReceiptController extends Controller
         $id= $request->id;
         $name_file = $this->removeSpecialChar($request->name_file);
         $receipt = Receipt::with('partialPayments')
+                            ->with('shop')
                             ->with('detail')
                             ->with('client')
                             ->findOrFail($id);
@@ -51,28 +53,27 @@ class ReceiptController extends Controller
     }//printReceiptRent()
 
     public function getAll(Request $request){
-        $filtro_status = $request->status;
+        $user = $request->user();
+        $shop = $user->shop;
+
         $filtro_type_receipt = $request->filtro_type_receipt;
         $filtro_type_receipt = strtolower($filtro_type_receipt);
+
         $filtro_buscar = isset($request->buscar)?trim($request->buscar):'';
         $quotation     = (isset($request->type_cotizacion)&&$request->type_cotizacion=='true')?1:0;
 
-
         $where_type =($filtro_type_receipt=='todos')?null:$filtro_type_receipt;
-        $where_status =($filtro_status=='TODOS')?null:$filtro_status;
-
-
-
 
         $receipts = Receipt::with('partialPayments')
+                        ->with('shop')
                         ->with('client')
                         ->whereHas('client', function (Builder $query) use($filtro_buscar) {
                             $query->where('name', 'like', '%'.$filtro_buscar.'%');
                         })
+                        ->where('shop_id',$shop->id)
                         ->where('quotation',$quotation)
-
-                        ->when( $where_status, function ($query, $where_status) {
-                            return $query->where('status',$where_status);
+                        ->when( $request->status!='TODOS', function ($query, $request) {
+                            return $query->where('status',$request->status);
                         })
                         ->when( $where_type, function ($query, $where_type) {
                             return $query->where('type',$where_type);
@@ -85,6 +86,9 @@ class ReceiptController extends Controller
     }//getAll()
 
     public function store(Request $request){
+        $user = $request->user();
+        $shop = $user->shop;
+
         $rcp = $request->receipt;
         $date_today     = Carbon::now();
         //Obtenemos el valor que nos dira si es una cotizacion, si no existe ponemos en 0 el valor
@@ -135,6 +139,7 @@ class ReceiptController extends Controller
         }
         //Guardamos todos los datos de la NOTA, deben de venir desde la APP con algun valor
         $receipt = new Receipt();
+        $receipt->shop_id = $shop->id;
         $receipt->client_id   = $rcp['client_id'];
         $receipt->rent_id     = $rcp['rent_id'];
         $receipt->type        = $rcp['type'];
@@ -226,6 +231,7 @@ class ReceiptController extends Controller
 
         //Obtenemos el recibo recien guardado para obtener la relacion de de pagos parciales
         $rr = Receipt::with('partialPayments')
+                    ->with('shop')
                     ->with('client')
                     ->findOrFail($receipt->id);
 
@@ -346,6 +352,7 @@ class ReceiptController extends Controller
 
         //Obtenemos el recibo recien guardado para obtener la relacion de de pagos parciales
         $rr = Receipt::with('partialPayments')
+                    ->with('shop')
                     ->with('client')
                     ->findOrFail($receipt->id);
 

@@ -19,6 +19,9 @@ window.Vue = require('vue').default;
 // const files = require.context('./', true, /\.vue$/i)
 // files.keys().map(key => Vue.component(key.split('/').pop().split('.')[0], files(key).default))
 
+Vue.component('superadmin-plans-component', require('./components/superadmin/PlansComponent.vue').default);
+Vue.component('superadmin-shops-component', require('./components/superadmin/ShopsComponent.vue').default);
+Vue.component('superadmin-users-component', require('./components/superadmin/UsersComponent.vue').default);
 Vue.component('example-component', require('./components/ExampleComponent.vue').default);
 
 Vue.filter('toCurrency', function (value) {

@@ -16,24 +16,31 @@ class PurchaseOrderController extends Controller
 {
     public function getAll(Request $request)
     {
+        $user = $request->user();
+        $shop = $user->shop;
+
         $filtro_status = $request->status;
         $filtro_buscar = isset($request->buscar)?trim($request->buscar):'';
 
         if($filtro_status=='TODOS'){
             $purchase_orders = PurchaseOrder::with('partialPayments')
+                            ->with('shop')
                             ->with('supplier')
                             ->whereHas('supplier', function (Builder $query) use($filtro_buscar) {
                                 $query->where('name', 'like', '%'.$filtro_buscar.'%');
                             })
+                            ->where('shop_id',$shop->id)
                             ->orderBy('id','desc')
                             ->paginate(10);
 
         }else{
             $purchase_orders = PurchaseOrder::with('partialPayments')
                             ->with('supplier')
+                            ->with('shop')
                             ->whereHas('supplier', function (Builder $query) use($filtro_buscar) {
                                 $query->where('name', 'like', '%'.$filtro_buscar.'%');
                             })
+                            ->where('shop_id',$shop->id)
                             ->where('status',$filtro_status)
                             ->orderBy('id','desc')
                             ->paginate(10);
@@ -43,6 +50,9 @@ class PurchaseOrderController extends Controller
 
     public function store(Request $request)
     {
+        $user = $request->user();
+        $shop = $user->shop;
+
         date_default_timezone_set('America/Mexico_City');
         $po = $request->purchase_order;
         $date_today     = Carbon::now();
@@ -51,6 +61,7 @@ class PurchaseOrderController extends Controller
         $expiration=Carbon::createFromFormat('Y-m-d H:i:s',$fecha_exp_request)->format('Y-m-d');
         //Guardamos todos los datos de la PO, deben de venir desde la APP con algun valor
         $purchase_order = new PurchaseOrder();
+        $purchase_order->shop_id = $shop->id;
         $purchase_order->supplier_id = $po['supplier_id'];
         $purchase_order->status      = $po['status'];
         $purchase_order->expiration  = $expiration;
@@ -76,6 +87,7 @@ class PurchaseOrderController extends Controller
 
         $po = PurchaseOrder::with('partialPayments')
                     ->with('supplier')
+                    ->with('shop')
                     ->findOrFail($purchase_order->id);
 
         return response()->json([
@@ -120,6 +132,7 @@ class PurchaseOrderController extends Controller
 
         $po = PurchaseOrder::with('partialPayments')
                     ->with('supplier')
+                    ->with('shop')
                     ->findOrFail($purchase_order->id);
 
         return response()->json([
@@ -198,6 +211,7 @@ class PurchaseOrderController extends Controller
         $name_file = $this->removeSpecialChar($request->name_file);
         $purchase_order = PurchaseOrder::with('partialPayments')
                             ->with('detail')
+                            ->with('shop')
                             ->with('supplier')
                             ->findOrFail($id);
 

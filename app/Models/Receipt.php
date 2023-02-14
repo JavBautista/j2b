@@ -21,4 +21,8 @@ class Receipt extends Model
     public function client(){
         return $this->belongsTo(Client::class);
     }
+
+    public function shop(){
+        return $this->belongsTo(Shop::class);
+    }
 }

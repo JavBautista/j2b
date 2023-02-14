@@ -76,4 +76,8 @@ class User extends Authenticatable
         }
         return false;
     }
+
+    public function shop(){
+        return $this->belongsTo(Shop::class);
+    }
 }

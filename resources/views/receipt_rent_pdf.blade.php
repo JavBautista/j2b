@@ -20,23 +20,23 @@
         <table width="100%">
             <tr>
                 <td width="50%">
-                    <h1>COPIGAMA</h1>
-                    <p><strong>ING. JUAN CARLOS HERRERA</strong> <br>
-                    copigama-aca@hotmail.com <br>
-                    442 559 2717</p>
+                    <h1>  {{ strtoupper($receipt->shop->name) }}</h1>
+                    <p><strong>{{$receipt->shop->owner_name }}</strong> <br>
+                    {{ $receipt->shop->email }} <br>
+                    {{ $receipt->shop->phone }}</p>
                 </td>
                 <td width="50%" align="right">
-                    <img src="{{ asset('img/logo.jpg') }}" alt="LOGO COPIGAMA" width="70%">
+                    <img src="{{ asset('/storage/'.$receipt->shop->logo)  }}"  width="50%">
                 </td>
             </tr>
             <tr>
                 <td>
-                    <p>C. SECRETARIA DE GOBERNACIÓN 117 COL. SAN PABLO II<br>
-                    SANTIAGO DE QUERETARO, QRO<br>
-                    CP. 76125<br>
-                    BANCOMER<br>
-                    2838071535<br>
-                    4152 3134 4248 6580</P>
+                    <p>{{ $receipt->shop->address }} {{ $receipt->shop->number_out }} {{ $receipt->shop->number_int }} COL. {{ $receipt->shop->district }}<br>
+                    {{ $receipt->shop->city }}, {{ $receipt->shop->state }}<br>
+                    CP. {{ $receipt->shop->zip_code }}<br>
+                    {{ $receipt->shop->bank_name }}<br>
+                    {{ $receipt->shop->bank_number }}<br>
+                    {{ $receipt->shop->bank_number_secondary }}</P>
                 </td>
                 <td align="right">
                     <H2>CLIENTE</H2>

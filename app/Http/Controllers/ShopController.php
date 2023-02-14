@@ -8,7 +8,9 @@ use App\Models\Shop;
 class ShopController extends Controller
 {
     public function getShop(Request $request){
-       $shop= Shop::findOrFail($request->shop_id);
+       $user = $request->user();
+       $shop = $user->shop;
+       $shop= Shop::findOrFail($shop->id);
        return $shop;
     }
 

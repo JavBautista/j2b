@@ -20,23 +20,23 @@
         <table width="100%">
             <tr>
                 <td width="50%">
-                    <h1>COPIGAMA</h1>
-                    <p><strong>ING. JUAN CARLOS HERRERA</strong> <br>
-                    copigama-aca@hotmail.com <br>
-                    442 559 2717</p>
+                    <h1>  {{ strtoupper($purchase_order->shop->name) }}</h1>
+                    <p><strong>{{$purchase_order->shop->owner_name }}</strong> <br>
+                    {{ $purchase_order->shop->email }} <br>
+                    {{ $purchase_order->shop->phone }}</p>
                 </td>
                 <td width="50%" align="right">
-                    <img src="{{ asset('img/logo.jpg') }}" alt="LOGO COPIGAMA" width="70%">
+                    <img src="{{ asset('/storage/'.$purchase_order->shop->logo)  }}"  width="50%">
                 </td>
             </tr>
             <tr>
                 <td>
-                    <p>C. SECRETARIA DE GOBERNACIÓN 117 COL. SAN PABLO II<br>
-                    SANTIAGO DE QUERETARO, QRO<br>
-                    CP. 76125<br>
-                    BANCOMER<br>
-                    2838071535<br>
-                    4152 3134 4248 6580</P>
+                    <p>{{ $purchase_order->shop->address }} {{ $purchase_order->shop->number_out }} {{ $purchase_order->shop->number_int }} COL. {{ $purchase_order->shop->district }}<br>
+                    {{ $purchase_order->shop->city }}, {{ $purchase_order->shop->state }}<br>
+                    CP. {{ $purchase_order->shop->zip_code }}<br>
+                    {{ $purchase_order->shop->bank_name }}<br>
+                    {{ $purchase_order->shop->bank_number }}<br>
+                    {{ $purchase_order->shop->bank_number_secondary }}</P>
                 </td>
                 <td align="right">
                     <H2>CLIENTE</H2>

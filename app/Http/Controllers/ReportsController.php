@@ -12,6 +12,9 @@ use Illuminate\Support\Carbon;
 class ReportsController extends Controller
 {
     public function mensual(Request $request){
+        $user = $request->user();
+        $shop = $user->shop;
+
         $mm   = ($request->month<10)?'0'.$request->month:$request->month;
         $yyyy = $request->year;
 
@@ -22,6 +25,7 @@ class ReportsController extends Controller
 
         $receipts = Receipt::with('partialPayments')
                             ->whereBetween('created_at',[$start,$end])
+                            ->where('shop_id',$shop->id)
                             ->where('quotation',0)
                             ->where('status','<>','CANCELADA')
                             ->orderBy('created_at','desc')
@@ -88,6 +92,9 @@ class ReportsController extends Controller
     }//mensual()
 
     public function rentasMensual(Request $request){
+        $user = $request->user();
+        $shop = $user->shop;
+
         $mm   = ($request->month<10)?'0'.$request->month:$request->month;
         $yyyy = $request->year;
 
@@ -97,6 +104,7 @@ class ReportsController extends Controller
         $end   = $fix_date->copy()->endOfMonth()->format('Y-m-d');
 
         $receipts = Receipt::with('partialPayments')
+                            ->where('shop_id',$shop->id)
                             ->whereBetween('created_at',[$start,$end])
                             ->where('type','renta')
                             ->where('quotation',0)
@@ -157,10 +165,13 @@ class ReportsController extends Controller
     }//rentasMensual()
 
     public function clientesAdeudos(Request $request){
+        $user = $request->user();
+        $shop = $user->shop;
 
         $clientes = Client::where('active',1)->get();
 
         $receipts = Receipt::with('partialPayments')
+                            ->where('shop_id',$shop->id)
                             ->where('quotation',0)
                             ->where('status','POR COBRAR')
                             ->orderBy('created_at','desc')

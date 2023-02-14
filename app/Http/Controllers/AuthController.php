@@ -74,6 +74,15 @@ class AuthController extends Controller
             ]);
 
         $user = $request->user();
+        $shop = $user->shop;
+        // Validación adicional para verificar si el usuario está activo
+        if (!$shop->active || !$user->active ) {
+            return response()->json([
+                'ok'=>false,
+                'message' => 'Tienda o Usuario inactivo.'
+            ]);
+        }
+
         $tokenResult = $user->createToken('Personal Access Token');
 
         $token = $tokenResult->token;

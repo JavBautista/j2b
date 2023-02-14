@@ -9,6 +9,8 @@ class PurchaseOrder extends Model
 {
     use HasFactory;
 
+    protected $guarded=[];
+
     public function detail(){
         return $this->hasMany(PurchaseOrderDetail::class);
     }
@@ -19,5 +21,9 @@ class PurchaseOrder extends Model
 
     public function supplier(){
         return $this->belongsTo(Supplier::class);
+    }
+
+    public function shop(){
+        return $this->belongsTo(Shop::class);
     }
 }

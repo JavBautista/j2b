@@ -14,11 +14,12 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
+Route::get('notifications/test','App\Http\Controllers\NotificationController@test');
 
 /*RENTAS*/
 Route::get('rents/{client_id}','App\Http\Controllers\RentController@index');
 Route::get('rent/get/{id}','App\Http\Controllers\RentController@getRentByID');
-Route::get('rents/get/by-cutoff','App\Http\Controllers\RentController@getByCutoff');
+
 Route::post('rent/store','App\Http\Controllers\RentController@store');
 Route::post('rent/update','App\Http\Controllers\RentController@update');
 Route::post('rent/delete','App\Http\Controllers\RentController@destroy');
@@ -131,6 +132,8 @@ Route::group([
         Route::post('notifications/read','App\Http\Controllers\NotificationController@read');
         Route::get('notifications/get/client/{client_id}','App\Http\Controllers\NotificationController@getClientxID');
 
+        /*RENTAS*/
+        Route::get('rents/get/by-cutoff','App\Http\Controllers\RentController@getByCutoff');
     });
 });
 /*------------------------------------------------------------------

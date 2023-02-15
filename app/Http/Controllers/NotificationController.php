@@ -8,6 +8,7 @@ use App\Models\Notification;
 use App\Models\NotificationUserToday;
 use App\Models\Rent;
 use App\Models\Client;
+use App\Models\User;
 
 class NotificationController extends Controller
 {
@@ -42,12 +43,22 @@ class NotificationController extends Controller
     }//.get()
 
     public function storeNotificationsRentsByUser($user_id){
+        /*VERIFICAR SI ESTO FUNCIONA BIEN YA QUE
+        SOLO DEBE GENERAR PARA LAS RENTAS DE LOS CLIENTES DE LA TIENDAS
+        */
+        $user = User::findOrFail($user_id);
+        $shop = $user->shop;
+        $shop_id = $shop->id;
+
         $date_today     = Carbon::now();
         //$date_tomorrow  = new Carbon('tomorrow');
         $dd_today       = $date_today->day;
         //$dd_tomorrow    = $date_tomorrow->day;
 
         $rents_today    = Rent::with('client')
+                        ->whereHas('client', function($query) use ($shop_id) {
+                            $query->where('shop_id', $shop_id);
+                        })
                         ->where('active',1)
                         ->where('cutoff',$dd_today)
                         ->get();
@@ -79,11 +90,17 @@ class NotificationController extends Controller
 
     public function getClientxID(Request $request){
         $client = Client::with('rents')->findOrFail($request->client_id);
-        $client->save();
         return $client;
-        /*return response()->json([
-            'ok'=>true,
-            'client'=>$client
-        ]);*/
     }//getClientxID()
+
+    public function test(Request $request){
+
+        /*
+        VERIFICAR SI ESTO FUNCIONA BIEN YA QUE
+        SOLO DEBE GENERAR PARA LAS RENTAS DE LOS CLIENTES DE LA TIENDAS
+        */
+        $user = User::findOrFail($request->user_id);
+        $shop = $user->shop;
+        dd($shop);
+    }//test
 }

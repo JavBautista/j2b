@@ -72,7 +72,7 @@ class ReceiptController extends Controller
                         })
                         ->where('shop_id',$shop->id)
                         ->where('quotation',$quotation)
-                        ->when( $request->status!='TODOS', function ($query, $request) {
+                        ->when( $request->status!='TODOS', function ($query) use($request) {
                             return $query->where('status',$request->status);
                         })
                         ->when( $where_type, function ($query, $where_type) {

@@ -26,6 +26,9 @@ class RentController extends Controller
     }//.getRentByID
 
     public function getByCutoff(Request $request){
+        $user = $request->user();
+        $shop = $user->shop;
+        $shop_id = $shop->id;
         $date_today     = Carbon::now();
         $date_tomorrow  = new Carbon('tomorrow');
 
@@ -33,10 +36,16 @@ class RentController extends Controller
         $dd_tomorrow = $date_tomorrow->day;
 
         $rents_today    = Rent::with('client')
+                        ->whereHas('client', function($query) use ($shop_id) {
+                            $query->where('shop_id', $shop_id);
+                        })
                         ->where('active',1)
                         ->where('cutoff',$dd_today)
                         ->get();
         $rents_tomorrow = Rent::with('client')
+                        ->whereHas('client', function($query) use ($shop_id) {
+                            $query->where('shop_id', $shop_id);
+                        })
                         ->where('active',1)
                         ->where('cutoff',$dd_tomorrow)
                         ->get();

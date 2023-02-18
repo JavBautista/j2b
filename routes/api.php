@@ -134,6 +134,8 @@ Route::group([
 
         /*RENTAS*/
         Route::get('rents/get/by-cutoff','App\Http\Controllers\RentController@getByCutoff');
+        /*Usuario Reset Pass*/
+        Route::post('user/reset-password', '\App\Http\Controllers\UsuarioController@resetPassword');
     });
 });
 /*------------------------------------------------------------------

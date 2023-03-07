@@ -39,4 +39,34 @@ class PartialPaymentsController extends Controller
             'receipt' => $receipt
         ]);
     }
+
+    public function delete(Request $request)
+    {
+        $payment = PartialPayments::findOrFail($request->id);
+        $receipt_id=$payment->receipt_id;
+        $payment->delete();
+
+        //Una vez eliminado el pago, volvemos a sumar todos los pagos actuales que quedaron para actualizar el total de la nota
+        $pagos = PartialPayments::where('receipt_id',$receipt_id)->get();
+
+        $suma_pagos=0;
+        foreach ($pagos as $data) $suma_pagos+= $data['amount'];
+
+        //Obtenmos el recibo para actualizar los datos del recibo
+        $receipt = Receipt::with('partialPayments')->findOrFail($receipt_id);
+        $receipt->received = $suma_pagos;
+        if($suma_pagos >= $receipt->total){
+            $receipt->finished=1;
+            $receipt->status='PAGADA';
+        }else{
+            $receipt->finished=0;
+            $receipt->status='POR COBRAR';
+        }
+        $receipt->save();
+
+        return response()->json([
+            'ok'=>true,
+            'receipt'=>$receipt,
+        ]);
+    }
 }

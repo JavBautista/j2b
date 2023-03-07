@@ -31,13 +31,31 @@ class NotificationController extends Controller
             //Creamos las notificaciones de renta de este día
             $this->storeNotificationsRentsByUser($user_id);
         }
-        //Traemos todas la notoficaciones sin leer del usuario
-        $notifications = Notification::where('user_id',$user_id)->where('read',0)->orderBy('created_at','desc')->paginate(10);
 
-        /*return response()->json([
-            'ok'=>true,
-            'data' => $notifications,
-        ]);*/
+        //Traemos todas la notificaciones sin leer del usuario
+        $all_notifications = Notification::where('user_id',$user_id)
+                            ->where('read',0)
+                            ->get();
+
+        //Adicionalmente verificamos que las notificaciones no leidas aun sean de clientes activos
+        //Puede haber notificaciones de dias pasados, y en ese lapso haberse dado de baja algun cliente
+        foreach ($all_notifications as $ntf) {
+            if($ntf->action == 'client_id'){
+                $idcl = $ntf->data;
+                $cl = Client::find($idcl);
+                if($cl->active==0){
+                    $act_ntf = Notification::find($ntf->id);
+                    $act_ntf->read=1;
+                    $act_ntf->save();
+                }
+            }
+        }
+
+        //Traemos las notoficaciones paginada sin leer del usuario
+        $notifications = Notification::where('user_id',$user_id)
+                            ->where('read',0)
+                            ->orderBy('created_at','desc')
+                            ->paginate(10);
 
         return $notifications;
     }//.get()

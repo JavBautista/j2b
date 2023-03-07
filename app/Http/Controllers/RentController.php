@@ -171,4 +171,16 @@ class RentController extends Controller
         ]);
     }//.destroyDetail
 
+    public function updateEquipmentRentID(Request $request){
+        $equipment_id=$request->equipment_id;
+        $rent_id     =$request->rent_id;
+        $rent_detail = RentDetail::findOrFail($equipment_id);
+        $rent_detail->rent_id = $rent_id;
+        $rent_detail->save();
+        return response()->json([
+            'ok'=>true,
+            'rent_detail' => $rent_detail,
+        ]);
+    }
+
 }

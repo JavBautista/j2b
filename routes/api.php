@@ -27,6 +27,8 @@ Route::post('rent/store-detail','App\Http\Controllers\RentController@storeDetail
 Route::post('rent/update-detail','App\Http\Controllers\RentController@updateDetail');
 Route::post('rent/delete-detail','App\Http\Controllers\RentController@destroyDetail');
 
+Route::post('rent/equipment/update-rent-id','App\Http\Controllers\RentController@updateEquipmentRentID');
+
 /*PLANS*/
 Route::resource('plan','App\Http\Controllers\PlanController');
 Route::get('/plan/get/all','App\Http\Controllers\PlanController@all');
@@ -110,6 +112,7 @@ Route::group([
         Route::post('receipt/edit/update/quotation-to-sale','App\Http\Controllers\ReceiptController@updateQuotationToSale');
         /*PartialPayments*/
         Route::post('receipt/partial-payment/store','App\Http\Controllers\PartialPaymentsController@store');
+        Route::post('receipt/partial-payment/delete','App\Http\Controllers\PartialPaymentsController@delete');
 
         /* PRUCHASE ORDER*/
         Route::get('purchase-order/all','App\Http\Controllers\PurchaseOrderController@getAll');
@@ -121,6 +124,7 @@ Route::group([
         Route::post('puchase-order/edit/cancel','App\Http\Controllers\PurchaseOrderController@cancel');
         Route::post('puchase-order/edit/porpagarpagar','App\Http\Controllers\PurchaseOrderController@updatePorpagarpagar');
         Route::post('purchase-order/partial-payment/store','App\Http\Controllers\PurchaseOrderPartialPaymentsController@store');
+        Route::post('purchase-order/partial-payment/delete','App\Http\Controllers\PurchaseOrderPartialPaymentsController@delete');
 
         /*REPORTES*/
         Route::get('report/mes','App\Http\Controllers\ReportsController@mensual');
@@ -136,6 +140,14 @@ Route::group([
         Route::get('rents/get/by-cutoff','App\Http\Controllers\RentController@getByCutoff');
         /*Usuario Reset Pass*/
         Route::post('user/reset-password', '\App\Http\Controllers\UsuarioController@resetPassword');
+
+         /*EQUIPMENT*/
+         Route::get('equipment','App\Http\Controllers\EquipmentController@index');
+         Route::post('equipment/store','App\Http\Controllers\EquipmentController@store');
+         Route::post('equipment/update','App\Http\Controllers\EquipmentController@update');
+         Route::post('equipment/delete','App\Http\Controllers\EquipmentController@destroy');
+         Route::post('equipment/active','App\Http\Controllers\EquipmentController@active');
+         Route::post('equipment/inactive','App\Http\Controllers\EquipmentController@inactive');
     });
 });
 /*------------------------------------------------------------------

@@ -103,7 +103,13 @@
                     </tr>
                 </thead>
                 <tbody>
+                @php
+                    $total_payments=0;
+                @endphp
                 @foreach($purchase_order->partialPayments as $data)
+                    @php
+                        $total_payments += $data->amount;
+                    @endphp
                     <tr>
                         <td>
                             {{$data->payment_date}}
@@ -114,6 +120,19 @@
                     </tr>
                 @endforeach
                 </tbody>
+                <tfoot>
+                    <tr>
+                        <th>PAGADO</th>
+                        <th>MXN $ {{number_format($total_payments ,2)}}</th>
+                    </tr>
+                    @if($total_payments  < $purchase_order->total )
+                    <tr>
+                        <th>ADEUDO</th>
+                        <th>MXN $ {{number_format(($purchase_order->total-$total_payments ),2)}}</th>
+                    </tr>
+                    @endif
+
+                </tfoot>
             </table>
 
     </body>

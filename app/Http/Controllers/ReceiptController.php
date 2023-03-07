@@ -26,6 +26,7 @@ class ReceiptController extends Controller
         $receipts = Receipt::with('partialPayments')
                         ->with('shop')
                         ->with('detail')
+                        ->with('client')
                         ->where('client_id',$client_id)
                         ->orderBy('id','desc')
                         ->paginate(10);

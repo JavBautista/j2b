@@ -139,7 +139,12 @@ class ReceiptController extends Controller
             $rent_mm=$rcp['rent_mm'];
         }
         //Guardamos todos los datos de la NOTA, deben de venir desde la APP con algun valor
+        $ultimo_folio = Receipt::where('shop_id', $shop->id)->max('folio');
+        $nuevo_folio = $ultimo_folio + 1;
         $receipt = new Receipt();
+
+        $receipt->folio = $nuevo_folio;
+
         $receipt->shop_id = $shop->id;
         $receipt->client_id   = $rcp['client_id'];
         $receipt->rent_id     = $rcp['rent_id'];

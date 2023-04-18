@@ -138,9 +138,18 @@ class ReceiptController extends Controller
             $rent_yy=$rcp['rent_yy'];
             $rent_mm=$rcp['rent_mm'];
         }
-        //Guardamos todos los datos de la NOTA, deben de venir desde la APP con algun valor
+
+        //Este bloque es para obtener el ultimo folio de la tienda o inicializarlo en 1
         $ultimo_folio = Receipt::where('shop_id', $shop->id)->max('folio');
-        $nuevo_folio = $ultimo_folio + 1;
+        $nuevo_folio = 0;
+        if (!$ultimo_folio) {
+            // Si no hay folios para esta tienda aún, asignamos el valor 1 al nuevo folio
+            $nuevo_folio = 1;
+        } else {
+            // Si hay folios, asignamos el valor siguiente al último folio
+            $nuevo_folio = $ultimo_folio + 1;
+        }
+        //Guardamos todos los datos de la NOTA, deben de venir desde la APP con algun valor
         $receipt = new Receipt();
 
         $receipt->folio = $nuevo_folio;

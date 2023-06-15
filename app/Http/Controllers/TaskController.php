@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Task;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 
 class TaskController extends Controller
 {
@@ -34,6 +35,8 @@ class TaskController extends Controller
         $shop = $user->shop;
 
         $ff = Carbon::parse($request->expiration);
+        //$ff = $request->expiration;
+        //$date_expiration = Carbon::createFromFormat('Y-m-d\TH:i:s.uP', $ff)->format('Y-m-d');
         $date_expiration = Carbon::createFromFormat('Y-m-d H:i:s', $ff )->format('Y-m-d');
 
         $now = now();
@@ -42,12 +45,23 @@ class TaskController extends Controller
         $task->shop_id = $shop->id;
         $task->client_id = $request->client_id;
         $task->active    = 1;
+        $task->status    = 'NUEVO';
         $task->priority  = $request->priority;
         $task->title     = $request->title;
         $task->description = $request->description;
         $task->solution = $request->solution;
         $task->expiration = $date_expiration;
+
+        if ($request->hasFile('image')) {
+            $task->image = $request->file('image')->store('tasks', 'public');
+        }
+        $directory_id =  $request->directory_id;
+        //$task->image = $request->file('image')->store('tasks', 'public');
         $task->save();
+
+        $task->load('client');
+
+        //$task_new = Task::with('client')->find($task->id);
 
         return response()->json([
             'ok'=>true,

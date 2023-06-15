@@ -156,6 +156,14 @@ Route::group([
          Route::post('task/delete','App\Http\Controllers\TaskController@destroy');
          Route::post('task/active','App\Http\Controllers\TaskController@active');
          Route::post('task/inactive','App\Http\Controllers\TaskController@inactive');
+
+        /*COLLABORATORS*/
+        Route::get('collaborators','App\Http\Controllers\CollaboratorController@index');
+        Route::get('collaborator/verify-user-email','App\Http\Controllers\CollaboratorController@verifyUserEmail');
+        Route::post('collaborator/store','App\Http\Controllers\CollaboratorController@store');
+        Route::post('collaborator/update','App\Http\Controllers\CollaboratorController@update');
+        Route::post('collaborator/active','App\Http\Controllers\CollaboratorController@active');
+        Route::post('collaborator/inactive','App\Http\Controllers\CollaboratorController@inactive');
     });
 });
 /*------------------------------------------------------------------

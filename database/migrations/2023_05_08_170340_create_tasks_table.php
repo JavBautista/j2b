@@ -18,6 +18,7 @@ class CreateTasksTable extends Migration
             $table->unsignedBigInteger('shop_id');
             $table->unsignedBigInteger('client_id')->nullable()->default(0);
             $table->boolean('active')->default(1);
+            $table->string('status')->nullable();
             $table->unsignedBigInteger('priority')->default(1);
             $table->string('title')->nullable();
             $table->text('description')->nullable();

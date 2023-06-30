@@ -14,7 +14,38 @@ class TaskController extends Controller
         $shop = $user->shop;
 
         $buscar = $request->buscar;
-        if($buscar==''){
+        $ordenar = $request->filtro_ordenar;
+
+        $query = Task::with('client')->where('shop_id', $shop->id);
+
+        if ($buscar != '') {
+            $query->where(function ($q) use ($buscar) {
+                $q->where('title', 'like', '%' . $buscar . '%')
+                  ->orWhere('description', 'like', '%' . $buscar . '%');
+            });
+        }
+
+        switch ($ordenar) {
+            case 'ID_ASC':
+                $query->orderBy('id', 'asc');
+                break;
+            case 'ID_DESC':
+                $query->orderBy('id', 'desc');
+                break;
+            case 'PRD_ASC':
+                $query->orderBy('priority', 'asc');
+                break;
+            case 'PRD_DESC':
+                $query->orderBy('priority', 'desc');
+                break;
+            default:
+                // Ordenar por defecto por ID DESC si no se especifica ningún filtro
+                $query->orderBy('id', 'desc');
+        }
+
+        $tasks = $query->paginate(10);
+
+        /*if($buscar==''){
             $tasks = Task::with('client')->where('shop_id',$shop->id)
                     ->orderBy('id','desc')
                     ->paginate(10);
@@ -24,7 +55,7 @@ class TaskController extends Controller
                     ->orWhere('description', 'like', '%'.$buscar.'%')
                     ->orderBy('id','desc')
                     ->paginate(10);
-        }
+        }*/
 
         return $tasks;
     }//index()
@@ -70,15 +101,19 @@ class TaskController extends Controller
     }//.store
 
     public function update(Request $request){
+
         $task = Task::findOrFail($request->id);
         $task->priority = $request->priority;
         $task->title    = $request->title;
         $task->description = $request->description;
         $task->solution = $request->solution;
         $task->save();
+
+        $task->load('client');
+
         return response()->json([
-            'ok'=>true,
-            'task' => $task,
+            'ok' => true,
+            'task' => $task
         ]);
     }//.update
 

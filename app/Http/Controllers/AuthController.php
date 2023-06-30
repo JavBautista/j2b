@@ -115,9 +115,11 @@ class AuthController extends Controller
      */
     public function user(Request $request)
     {
+        $user = $request->user()->load('roles');
+
         return response()->json([
             'ok'=>true,
-            'usuario'=>$request->user(),
+            'usuario'=>$user,
             ]);
     }
 

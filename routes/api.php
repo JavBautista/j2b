@@ -156,6 +156,7 @@ Route::group([
          Route::post('task/delete','App\Http\Controllers\TaskController@destroy');
          Route::post('task/active','App\Http\Controllers\TaskController@active');
          Route::post('task/inactive','App\Http\Controllers\TaskController@inactive');
+         Route::post('task/update-status','App\Http\Controllers\TaskController@updateEstatus');
 
         /*COLLABORATORS*/
         Route::get('collaborators','App\Http\Controllers\CollaboratorController@index');

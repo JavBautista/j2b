@@ -108,4 +108,18 @@ class TaskController extends Controller
             'ok'=>true
         ]);
     }//.destroy
+
+    public function updateEstatus(Request $request){
+        $task = Task::findOrFail($request->input('task')['id']);
+        $new_status = $request->input('estatus');
+        $task->status = $new_status;
+        $task->save();
+
+        $task->load('client');
+
+        return response()->json([
+            'ok' => true,
+            'task' => $task
+        ]);
+    }//.updateEstatus
 }

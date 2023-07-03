@@ -138,7 +138,18 @@ class TaskController extends Controller
 
     public function destroy(Request $request){
         $task = Task::findOrFail($request->id);
+        // Verificar si la tarea tiene una imagen asociada
+        if ($task->image) {
+            // Obtener el nombre de archivo de la imagen
+            $filename = basename($task->image);
+
+            // Eliminar la imagen del almacenamiento
+            Storage::delete('public/' . $task->image);
+        }
+
+        // Eliminar la tarea
         $task->delete();
+
         return response()->json([
             'ok'=>true
         ]);

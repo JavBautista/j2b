@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Task;
+use App\Models\TaskImage;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 
@@ -16,7 +17,9 @@ class TaskController extends Controller
         $buscar = $request->buscar;
         $ordenar = $request->filtro_ordenar;
 
-        $query = Task::with('client')->where('shop_id', $shop->id);
+        $query = Task::with('client')
+                        ->with('images')
+                        ->where('shop_id', $shop->id);
 
         if ($buscar != '') {
             $query->where(function ($q) use ($buscar) {
@@ -45,20 +48,23 @@ class TaskController extends Controller
 
         $tasks = $query->paginate(10);
 
-        /*if($buscar==''){
-            $tasks = Task::with('client')->where('shop_id',$shop->id)
-                    ->orderBy('id','desc')
-                    ->paginate(10);
-        }else{
-            $tasks = Task::with('client')->where('shop_id',$shop->id)
-                    ->where('title', 'like', '%'.$buscar.'%')
-                    ->orWhere('description', 'like', '%'.$buscar.'%')
-                    ->orderBy('id','desc')
-                    ->paginate(10);
-        }*/
-
         return $tasks;
     }//index()
+
+    public function getNumPorEstatus(Request $request){
+        $user = $request->user();
+        $shop = $user->shop;
+
+        $numNuevo = Task::where('shop_id', $shop->id)->where('status', 'NUEVO')->count();
+        $numPendiente = Task::where('shop_id', $shop->id)->where('status', 'PENDIENTE')->count();
+        $numAtendido = Task::where('shop_id', $shop->id)->where('status', 'ATENDIDO')->count();
+
+        return response()->json([
+            'numNuevo' => $numNuevo,
+            'numPendiente' => $numPendiente,
+            'numAtendido' => $numAtendido
+        ]);
+    }//getNumPorEstatus()
 
     public function store(Request $request){
 
@@ -147,6 +153,15 @@ class TaskController extends Controller
             Storage::delete('public/' . $task->image);
         }
 
+        // Eliminar las imágenes asociadas al modelo TaskImage del almacenamiento
+        $taskImages = TaskImage::where('task_id', $task->id)->get();
+        foreach ($taskImages as $taskImage) {
+            Storage::delete('public/' . $taskImage->image);
+        }
+
+        // Eliminar las imágenes asociadas al modelo TaskImage de la base de datos
+        TaskImage::where('task_id', $task->id)->delete();
+
         // Eliminar la tarea
         $task->delete();
 
@@ -168,4 +183,49 @@ class TaskController extends Controller
             'task' => $task
         ]);
     }//.updateEstatus
+
+    public function updateResena(Request $request){
+        $task = Task::findOrFail($request->input('task')['id']);
+        $new_resena = $request->input('resena');
+        $task->review = $new_resena;
+        $task->save();
+
+        $task->load('client');
+
+        return response()->json([
+            'ok' => true,
+            'task' => $task
+        ]);
+    }//.updateEstatus
+
+    public function uploadImageTask(Request $request){
+        $taskId = $request->task_id;
+        $task = Task::findOrFail($taskId);
+
+        // Validar la existencia del archivo de imagen
+        if ($request->hasFile('image')) {
+            $image = $request->file('image');
+
+            // Guardar la imagen en la ubicación 'public'
+            $imagePath = $image->store('tasks', 'public');
+
+            // Si ya existe una imagen principal, guardar en la relación TaskImage
+            if ($task->image) {
+                $taskImage = new TaskImage();
+                $taskImage->task_id = $taskId;
+                $taskImage->image = $imagePath;
+                $taskImage->save();
+            } else {
+                // Si no existe una imagen principal, guardarla en el registro del task
+                $task->image = $imagePath;
+                $task->save();
+            }
+        }
+
+        $task->load('client');
+        return response()->json([
+            'ok'=>true,
+            'task' => $task,
+        ]);
+    }
 }

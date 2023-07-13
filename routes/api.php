@@ -151,12 +151,15 @@ Route::group([
 
          /*TASKS*/
          Route::get('tasks','App\Http\Controllers\TaskController@index');
+         Route::get('tasks/get-num-status','App\Http\Controllers\TaskController@getNumPorEstatus');
          Route::post('task/store','App\Http\Controllers\TaskController@store');
          Route::post('task/update','App\Http\Controllers\TaskController@update');
          Route::post('task/delete','App\Http\Controllers\TaskController@destroy');
          Route::post('task/active','App\Http\Controllers\TaskController@active');
          Route::post('task/inactive','App\Http\Controllers\TaskController@inactive');
          Route::post('task/update-status','App\Http\Controllers\TaskController@updateEstatus');
+         Route::post('task/update-resena','App\Http\Controllers\TaskController@updateResena');
+         Route::post('task/upload-image-task','App\Http\Controllers\TaskController@uploadImageTask');
 
         /*COLLABORATORS*/
         Route::get('collaborators','App\Http\Controllers\CollaboratorController@index');

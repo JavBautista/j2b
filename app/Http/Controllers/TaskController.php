@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Task;
 use App\Models\TaskImage;
+use App\Models\TaskLog;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 
@@ -19,6 +20,7 @@ class TaskController extends Controller
 
         $query = Task::with('client')
                         ->with('images')
+                        ->with('logs')
                         ->where('shop_id', $shop->id);
 
         if ($buscar != '') {
@@ -92,13 +94,16 @@ class TaskController extends Controller
         if ($request->hasFile('image')) {
             $task->image = $request->file('image')->store('tasks', 'public');
         }
-        $directory_id =  $request->directory_id;
-        //$task->image = $request->file('image')->store('tasks', 'public');
+
         $task->save();
 
-        $task->load('client');
+        //Una ves creado el task, insertamos un log-history
+        $this->storeTaskLog($task->id,$user->name,'Creación del registro.');
 
-        //$task_new = Task::with('client')->find($task->id);
+
+        $task->load('client');
+        $task->load('images');
+        $task->load('logs');
 
         return response()->json([
             'ok'=>true,
@@ -107,7 +112,7 @@ class TaskController extends Controller
     }//.store
 
     public function update(Request $request){
-
+        $user = $request->user();
         $task = Task::findOrFail($request->id);
         $task->priority = $request->priority;
         $task->title    = $request->title;
@@ -115,7 +120,12 @@ class TaskController extends Controller
         $task->solution = $request->solution;
         $task->save();
 
+        //Una ves guardado el task, insertamos un log-history
+        $this->storeTaskLog($task->id,$user->name,'Edición del registro.');
+
         $task->load('client');
+        $task->load('images');
+        $task->load('logs');
 
         return response()->json([
             'ok' => true,
@@ -124,18 +134,35 @@ class TaskController extends Controller
     }//.update
 
     public function active(Request $request){
+        $user = $request->user();
         $task = Task::findOrFail($request->id);
         $task->active = 1;
         $task->save();
+
+
+        //Una ves guardado el task, insertamos un log-history
+        $this->storeTaskLog($task->id,$user->name,'Activado.');
+
+        $task->load('client');
+        $task->load('images');
+        $task->load('logs');
+
         return response()->json([
             'ok'=>true,
             'task' => $task,
         ]);
     }//.active
     public function inactive(Request $request){
+        $user = $request->user();
         $task = Task::findOrFail($request->id);
         $task->active = 0;
         $task->save();
+        //Una ves guardado el task, insertamos un log-history
+        $this->storeTaskLog($task->id,$user->name,'Desactivado.');
+
+        $task->load('client');
+        $task->load('images');
+        $task->load('logs');
         return response()->json([
             'ok'=>true,
             'task' => $task,
@@ -162,6 +189,9 @@ class TaskController extends Controller
         // Eliminar las imágenes asociadas al modelo TaskImage de la base de datos
         TaskImage::where('task_id', $task->id)->delete();
 
+        // Eliminar el history asociadas al modelo TaskLog de la base de datos
+        TaskLog::where('task_id', $task->id)->delete();
+
         // Eliminar la tarea
         $task->delete();
 
@@ -171,13 +201,17 @@ class TaskController extends Controller
     }//.destroy
 
     public function updateEstatus(Request $request){
+        $user = $request->user();
         $task = Task::findOrFail($request->input('task')['id']);
         $new_status = $request->input('estatus');
         $task->status = $new_status;
         $task->save();
-
+        //Una ves guardado el task, insertamos un log-history
+        $log_desc = 'Actualización de estatus: '.$new_status;
+        $this->storeTaskLog($task->id,$user->name,$log_desc);
         $task->load('client');
-
+        $task->load('images');
+        $task->load('logs');
         return response()->json([
             'ok' => true,
             'task' => $task
@@ -185,12 +219,18 @@ class TaskController extends Controller
     }//.updateEstatus
 
     public function updateResena(Request $request){
+        $user = $request->user();
         $task = Task::findOrFail($request->input('task')['id']);
         $new_resena = $request->input('resena');
         $task->review = $new_resena;
         $task->save();
+        //Una ves guardado el task, insertamos un log-history
+        $log_desc = 'Actualización reseña.';
+        $this->storeTaskLog($task->id,$user->name,$log_desc);
 
         $task->load('client');
+        $task->load('images');
+        $task->load('logs');
 
         return response()->json([
             'ok' => true,
@@ -199,6 +239,8 @@ class TaskController extends Controller
     }//.updateEstatus
 
     public function uploadImageTask(Request $request){
+        $user = $request->user();
+
         $taskId = $request->task_id;
         $task = Task::findOrFail($taskId);
 
@@ -215,17 +257,34 @@ class TaskController extends Controller
                 $taskImage->task_id = $taskId;
                 $taskImage->image = $imagePath;
                 $taskImage->save();
+                //Una ves guardado el task, insertamos un log-history
+                $log_desc = 'Subida de imágen.';
+                $this->storeTaskLog($task->id,$user->name,$log_desc);
             } else {
                 // Si no existe una imagen principal, guardarla en el registro del task
                 $task->image = $imagePath;
                 $task->save();
+                //Una ves guardado el task, insertamos un log-history
+                $log_desc = 'Subida de imágen.';
+                $this->storeTaskLog($task->id,$user->name,$log_desc);
             }
         }
 
         $task->load('client');
+        $task->load('images');
+        $task->load('logs');
         return response()->json([
             'ok'=>true,
             'task' => $task,
         ]);
     }
+
+    private function storeTaskLog($task_id, $user, $description){
+        $log = new TaskLog();
+        $log->task_id    = $task_id;
+        $log->user       = $user;
+        $log->description= $description;
+        $log->save();
+    }
+
 }

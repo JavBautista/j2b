@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class Task extends Model
 {
     use HasFactory;
+    protected $guarded=[];
 
     public function client(){
         return $this->belongsTo(Client::class);
@@ -15,5 +16,9 @@ class Task extends Model
 
     public function images(){
         return $this->hasMany(TaskImage::class);
+    }
+
+    public function logs(){
+        return $this->hasMany(TaskLog::class)->orderBy('created_at', 'desc');;
     }
 }

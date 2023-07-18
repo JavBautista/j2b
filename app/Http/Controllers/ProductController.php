@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
 {
@@ -86,6 +87,7 @@ class ProductController extends Controller
         $product->url_video   = $request->url_video;
         */
         $product->save();
+        $product->load('category');
 
         return response()->json([
             'ok'=>true,
@@ -117,6 +119,47 @@ class ProductController extends Controller
         $product->save();
         return response()->json([
             'ok'=>true
+        ]);
+    }
+
+    public function uploadImageProduct(Request $request){
+        $product_id = $request->product_id;
+        $product = Product::findOrFail($product_id);
+        // Validar la existencia del archivo de imagen
+        if ($request->hasFile('image')) {
+            $image = $request->file('image');
+            // Guardar la imagen en la ubicación 'public'
+            $imagePath = $image->store('products', 'public');
+            // Si no existe una imagen principal, guardarla en el registro del product
+            $product->image = $imagePath;
+            $product->save();
+        }
+
+        $product->load('category');
+        return response()->json([
+            'ok'=>true,
+            'product' => $product,
+        ]);
+    }
+
+    public function deleteImageProduct(Request $request){
+        $product_id = $request->id;
+        $product = Product::findOrFail($product_id);
+        // Obtener la ruta de la imagen actual
+        $imagePath = $product->image;
+        // Verificar si hay una imagen almacenada y eliminarla
+        if ($imagePath) {
+            // Eliminar la imagen del almacenamiento
+            Storage::disk('public')->delete($imagePath);
+            // Limpiar el atributo de la imagen en el modelo
+            $product->image = null;
+            $product->save();
+        }
+
+        $product->load('category');
+        return response()->json([
+            'ok' => true,
+            'product' => $product,
         ]);
     }
 }

@@ -91,6 +91,9 @@ Route::group([
         Route::post('product/edit/update-stock','App\Http\Controllers\ProductController@updateStock');
         Route::post('product/delete','App\Http\Controllers\ProductController@inactive');
 
+        Route::post('product/upload-image','App\Http\Controllers\ProductController@uploadImageProduct');
+        Route::post('product/delete-image','App\Http\Controllers\ProductController@deleteImageProduct');
+
         /* SHOP */
         Route::get('/shop','App\Http\Controllers\ShopController@getShop');
         Route::post('shop/update','App\Http\Controllers\ShopController@update');

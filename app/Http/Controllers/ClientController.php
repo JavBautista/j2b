@@ -15,13 +15,17 @@ class ClientController extends Controller
 
         $buscar = $request->buscar;
         if($buscar==''){
-            $clients = Client::with('rents')
+            $clients = Client::with(['rents' => function ($query) {
+                        $query->where('active', 1);
+                    }])
                     ->where('shop_id',$shop->id)
                     ->where('active',1)
                     ->orderBy('id','desc')
                     ->paginate(10);
         }else{
-            $clients = Client::with('rents')
+            $clients = Client::with(['rents' => function ($query) {
+                        $query->where('active', 1);
+                    }])
                     ->where('shop_id',$shop->id)
                     ->where('active',1)
                     ->where('name', 'like', '%'.$buscar.'%')
@@ -48,7 +52,9 @@ class ClientController extends Controller
         $client->level=$request->level;
         $client->save();
 
-        $client_new = Client::with('rents')->findOrFail($client->id);
+        $client_new = Client::with(['rents' => function ($query) {
+                    $query->where('active', 1);
+                }])->findOrFail($client->id);
         return response()->json([
                 'ok'=>true,
                 'client' => $client_new,

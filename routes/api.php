@@ -22,6 +22,7 @@ Route::get('rent/get/{id}','App\Http\Controllers\RentController@getRentByID');
 
 Route::post('rent/store','App\Http\Controllers\RentController@store');
 Route::post('rent/update','App\Http\Controllers\RentController@update');
+Route::post('rent/inactive','App\Http\Controllers\RentController@inactive');
 Route::post('rent/delete','App\Http\Controllers\RentController@destroy');
 Route::post('rent/store-detail','App\Http\Controllers\RentController@storeDetail');
 Route::post('rent/update-detail','App\Http\Controllers\RentController@updateDetail');

@@ -14,6 +14,7 @@ class RentController extends Controller
         $client_id = $request->client_id;
         $rents = Rent::with('rentDetail')
                         ->where('client_id',$client_id)
+                        ->where('active',1)
                         ->orderBy('id','desc')
                         ->paginate(10);
         return $rents;
@@ -92,6 +93,15 @@ class RentController extends Controller
             'rent' => $rent
         ]);
     }//.update
+
+    public function inactive(Request $request){
+        $rent =Rent::find($request->id);
+        $rent->active=0;
+        $rent->save();
+        return response()->json([
+            'ok'=>true
+        ]);
+    }//.destroy
 
     public function destroy(Request $request){
 

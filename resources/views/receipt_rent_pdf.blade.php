@@ -114,10 +114,13 @@
         <div align="right">
 
             <p>Subtotal MXN $ {{ number_format($receipt->subtotal,2) }}</p>
+
             @if($receipt->discount_concept=='$')
                 <p>Descuento MXN $ {{ number_format($receipt->discount,2) }}</p>
             @else
                 <p>Descuento % {{ $receipt->discount }}</p>
+            @endif
+
             @if($receipt->iva)
                 <p>IVA 16% MXN $ {{number_format($receipt->iva,2)}}</p>
             @endif

@@ -20,9 +20,24 @@ class PurchaseOrderController extends Controller
         $shop = $user->shop;
 
         $filtro_status = $request->status;
+        $filtro_pagadas = $request->filtro_pagadas;
         $filtro_buscar = isset($request->buscar)?trim($request->buscar):'';
 
-        if($filtro_status=='TODOS'){
+        $purchase_orders = PurchaseOrder::with('partialPayments')
+                        ->with('shop')
+                        ->with('supplier')
+                        ->whereHas('supplier', function (Builder $query) use($filtro_buscar) {
+                            $query->where('name', 'like', '%'.$filtro_buscar.'%');
+                        })
+                        ->where('shop_id',$shop->id)
+                        ->where('payable',$filtro_pagadas)
+                        ->when( $request->status!='TODOS', function ($query) use($request) {
+                            return $query->where('status',$request->status);
+                        })
+                        ->orderBy('id','desc')
+                        ->paginate(10);
+
+        /*if($filtro_status=='TODOS'){
             $purchase_orders = PurchaseOrder::with('partialPayments')
                             ->with('shop')
                             ->with('supplier')
@@ -44,7 +59,7 @@ class PurchaseOrderController extends Controller
                             ->where('status',$filtro_status)
                             ->orderBy('id','desc')
                             ->paginate(10);
-        }
+        }*/
         return $purchase_orders;
     }//.index
 

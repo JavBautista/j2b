@@ -57,4 +57,27 @@ class ConsumablesController extends Controller
 
 
     }
+
+    public function delete(Request $request)
+    {
+        try {
+            //Eliminamos el consumible
+            $consumable = Consumables::findOrFail($request->consumable_id);
+            $qty        = $consumable->qty;
+            $product_id = $consumable->product_id;
+            //Regresamos el stock si es necesario
+            if($request->return_stock){
+                $product = Product::find($product_id);
+                $new_stock = $product->stock + $qty;
+                $product->stock = $new_stock;
+                $product->save();
+            }
+            $consumable->delete();
+            return response()->json([
+                'ok'=>true
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json(['error' => 'Consumible no encontrado'], 404);
+        }
+    }
 }

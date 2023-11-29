@@ -42,6 +42,8 @@ Route::get('consumables/get-history-rent-deatil/{rent_detail_id}','App\Http\Cont
 Route::post('consumables/store','App\Http\Controllers\ConsumablesController@store');
 Route::post('consumables/update-observation','App\Http\Controllers\ConsumablesController@updateObservation');
 
+Route::post('consumables/delete','App\Http\Controllers\ConsumablesController@delete');
+
 
 
 

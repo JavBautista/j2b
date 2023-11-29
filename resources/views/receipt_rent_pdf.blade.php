@@ -89,7 +89,7 @@
                 @foreach($receipt->detail as $data)
                 <tr>
 
-                    <td>{{$data->descripcion}}</td>
+                    <td style="max-width: 50%; word-wrap: break-word;">{!! nl2br(e($data->descripcion)) !!}</td>
 
                     @if($data->discount_concept=='')
                         <td>MXN $ {{ number_format($data->price,2) }}</td>

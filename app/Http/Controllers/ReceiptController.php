@@ -210,14 +210,22 @@ class ReceiptController extends Controller
         $details = json_decode($request->detail);
 
         foreach($details as $data){
-            //Solo alteraremos el Stock si el item es un producto y la nota NO es un cotizacion
+            //Si es un PRODUCTO y NO es un cotizacion: Actualizamos el Stock Inventario
             if(!$es_cotizacion && $data->type=='product'){
                 $qty=$data->qty;
                 $product = Product::find($data->id);
                 $new_stock = $product->stock - $qty;
                 $product->stock = $new_stock;
                 $product->save();
-            }//.if(stock)
+            }//.if(!$es_cotizacion && $data->type=='product')
+
+            //Si es un EQUIPO de venta y NO es un cotizacion: Actualizamos el estatus del equipo
+            if(!$es_cotizacion && $data->type=='equipment'){
+                $equipo = RentDetail::find($data->id);
+                $equipo->active = 0;
+                $equipo->save();
+            }//.if(!$es_cotizacion && $data->type=='equipment')
+
             $detail = new ReceiptDetail();
             $detail->receipt_id  = $receipt->id;
             $detail->product_id  = $data->id;
@@ -308,6 +316,8 @@ class ReceiptController extends Controller
         /*-----------------------------------------*/
         //ELIMINAR EL DETAIL Y VOLVER A GUARDAR
         //Si no es cotizacion devolveremos el stock temnporalmente el stock
+        //y en el caso de los equipos lo volvemos a activar
+        //Esto es por si los eliminan d ela nota y ya no los vuelven a meter
         if(!$es_cotizacion){
             //obtenemos el detalle actua de la BD
             $detail_bd=ReceiptDetail::where('receipt_id', $receipt->id)->get();
@@ -319,7 +329,12 @@ class ReceiptController extends Controller
                     $new_stock = $product->stock + $qty;
                     $product->stock = $new_stock;
                     $product->save();
-                }//.if(stock)
+                }//.if(product)
+                if($dt_bd->type=='equipment'){
+                    $equipo = RentDetail::find($dt_bd->product_id);
+                    $equipo->active = 1;
+                    $equipo->save();
+                }//.if(equipment)
             }
         }
         /*-----------------------------------------*/
@@ -336,7 +351,15 @@ class ReceiptController extends Controller
                 $new_stock = $product->stock - $qty;
                 $product->stock = $new_stock;
                 $product->save();
-            }//.if(stock)
+            }//.if(!$es_cotizacion && $data->type=='product')
+
+            //Si es un EQUIPO de venta y NO es un cotizacion: Actualizamos el estatus del equipo
+            if(!$es_cotizacion && $data->type=='equipment'){
+                $equipo = RentDetail::find($data->id);
+                $equipo->active = 0;
+                $equipo->save();
+            }//.if(!$es_cotizacion && $data->type=='equipment')
+
             $detail = new ReceiptDetail();
             $detail->receipt_id  = $receipt->id;
             $detail->product_id  = $data->id;

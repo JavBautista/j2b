@@ -120,16 +120,23 @@ class ReceiptController extends Controller
             $fecha_corte_ini = Carbon::createFromFormat('Y-m-d', $f_ini);
             $fecha_corte_fin = Carbon::createFromFormat('Y-m-d', $f_fin);
 
-            $fecha_corte_ini = $fecha_corte_ini->subMonth()->addDay();
+
+            $fecha_corte_fin = $fecha_corte_fin->addMonth()->subDay();
+
+
+            /*$fecha_corte_ini = $fecha_corte_ini->subMonth()->addDay();
             $fecha_corte_ini = $fecha_corte_ini->format('Y-m-d');
             $fecha_corte_ini = Carbon::createFromFormat('Y-m-d', $fecha_corte_ini);
+            */
 
             setlocale(LC_TIME, 'es_ES.UTF-8');
             Carbon::setLocale('es');
             $fecha_corte_ini->locale('es');
             $fecha_corte_fin->locale('es');
             $desc1 = $fecha_corte_ini->formatLocalized('%d de %B del %Y');
+            //$desc2 = $fecha_corte_fin->formatLocalized('%d de %B del %Y');
             $desc2 = $fecha_corte_fin->formatLocalized('%d de %B del %Y');
+
 
             $rent_periodo = 'Periodo del  '.$desc1.' al '.$desc2;
 

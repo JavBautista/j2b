@@ -64,6 +64,8 @@ Route::group([
         Route::get('user', '\App\Http\Controllers\AuthController@user');
         Route::post('user', '\App\Http\Controllers\AuthController@update');
 
+        Route::post('user/update-terminos', '\App\Http\Controllers\AuthController@updateTerminos');
+
         /*CLIENTES*/
         Route::resource('client','App\Http\Controllers\ClientController');
         Route::post('client/edit/update','App\Http\Controllers\ClientController@update');

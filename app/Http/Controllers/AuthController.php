@@ -85,13 +85,19 @@ class AuthController extends Controller
 
         $tokenResult = $user->createToken('Personal Access Token');
 
+
+
         $token = $tokenResult->token;
         if ($request->remember_me)
             $token->expires_at = Carbon::now()->addWeeks(1);
         $token->save();
 
+        // Verificar si el usuario ha aceptado los términos
+        $accepted_terms = $user->accepted_terms;
+
         return response()->json([
             'ok'=>true,
+            'accepted_terms'=>$accepted_terms,
             'access_token' => $tokenResult->accessToken,
             'token_type' => 'Bearer',
             'expires_at' => Carbon::parse($token->expires_at)->toDateTimeString()
@@ -136,5 +142,15 @@ class AuthController extends Controller
             'usuario'=>$request->user(),
             ]);
             */
+    }
+
+    public function updateTerminos(Request $request)
+    {
+        $user = Auth::user();
+        if ($user) {
+            $user->update(['accepted_terms' => true]);
+            return response()->json(['ok' => true, 'term'=>'si', 'user'=>$user]); // Puedes enviar un nuevo token si es necesario.
+        }
+        return response()->json(['ok' => false, 'term'=>'no', 'user'=>$user]);
     }
 }

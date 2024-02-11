@@ -27,4 +27,4 @@ mix.js('resources/js/app.js', 'public/js')
     .vue()
     .sourceMaps();
 
- mix.browserSync('http://copigama-app.local/');
+ mix.browserSync('http://j2b.local/');

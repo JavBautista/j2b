@@ -51,7 +51,7 @@
         <table width="100%">
             <tr>
                 <td width="20%">
-                    <img src="{{asset('img/copigama_qr.png')}}" alt="QR" width="50%">
+                    <img src="{{asset('img/j2b_qr.png')}}" alt="QR" width="50%">
                 </td>
                 <td width="30%">
                     <h2>Orden de compra #{{$purchase_order->id}}</h2>

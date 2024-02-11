@@ -7,7 +7,7 @@
     <!-- CSRF Token -->
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ config('app.name', 'COPIGAMA') }}</title>
+    <title>{{ config('app.name', 'J2Biznes') }}</title>
 
     <!-- Scripts -->
     <script src="{{ asset('js/app.js') }}" defer></script>
@@ -30,7 +30,7 @@
             <button class="navbar-toggler mobile-sidebar-toggler d-lg-none mr-auto" type="button">
               <span class="navbar-toggler-icon"></span>
             </button>
-                <a class="" href="/home">COPIGAMA</a>
+                <a class="" href="/home">J2Biznes</a>
             <button class="navbar-toggler sidebar-toggler d-md-down-none" type="button">
               <span class="navbar-toggler-icon"></span>
             </button>

@@ -1,5 +1,9 @@
 @extends('auth.contenido')
 
+@section('estilos')
+
+@endsection
+
 @section('login')
 <div class="row justify-content-center">
   <div class="col-md-8">
@@ -54,9 +58,10 @@
           </form>
         </div>
 
-        <div class="card text-white bg-primary py-5 d-md-down-none" style="width:44%">
+        <div class="card text-white bg-dark py-5 d-md-down-none" style="width:44%">
             <div class="card-body text-center">
               <div>
+                <img src="{{ asset('img/j2b_1200px.png') }}" width="25%" alt="Logo de J2Biznes">
                 <h2>J2Biznes</h2>
               </div>
             </div>

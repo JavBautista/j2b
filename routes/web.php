@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -16,6 +18,15 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', [App\Http\Controllers\HomeController::class, 'index']);
 Route::get('/home', [App\Http\Controllers\HomeController::class, 'index']);
 
+Route::get('/pre-registro', [App\Http\Controllers\RequestsJ2bController::class, 'j2bSolicitar'])->name('solicitud');
+Route::post('/pre-registro/create', [App\Http\Controllers\RequestsJ2bController::class, 'store'])->name('solicitud.store');
+Route::get('/pre-registro/confirm/{xtoken}', [App\Http\Controllers\RequestsJ2bController::class, 'confirm'])->name('solicitud.confirm');
+
+Route::get('/pre-registro/completar', [App\Http\Controllers\RequestsJ2bController::class, 'completar'])->name('solicitud.completar')->middleware('check.token');
+
+Route::get('/pre-registro/error', [App\Http\Controllers\RequestsJ2bController::class, 'error'])->name('solicitud.error');
+
+Route::post('/registro/create', [App\Http\Controllers\RequestsJ2bController::class, 'store'])->name('solicitud.store');
 
 
 
@@ -25,8 +36,17 @@ Route::get('/print-receipt-rent', 'App\Http\Controllers\ReceiptController@printR
 
 Route::get('/print-purchase-order', 'App\Http\Controllers\PurchaseOrderController@printPurchaseOrder');
 
+Route::get('/print-purchase-order', 'App\Http\Controllers\PurchaseOrderController@printPurchaseOrder');
 
-Auth::routes();
+
+Auth::routes([
+    'login'    => true,
+    'logout'   => true,
+    'register' => true,
+    'reset'    => false,
+    'confirm'  => false,
+    'verify'   => false,
+]);
 
 Route::group(['middleware' => 'auth'], function () {
     Route::get('/user/passwords/reset', [App\Http\Controllers\HomeController::class,'passwordReset'])->name('password.reset');
@@ -61,6 +81,9 @@ Route::group(['middleware' => 'auth'], function () {
         Route::put('/superadmin/users/active', [App\Http\Controllers\Superadmin\UsersController::class,'updateToActive']);
         Route::put('/superadmin/users/inactive', [App\Http\Controllers\Superadmin\UsersController::class,'updateToInactive']);
 
+        //UPLOAD APK
+        Route::get('/superadmin/upload', [App\Http\Controllers\SuperadminPagesController::class,'uploadApk'])->name('superadmin.upload_apk');
+        Route::post('/superadmin/upload-apk/store', [App\Http\Controllers\Superadmin\UsersController::class,'storeApk'])->name('superadmin.store.apk');
     });//./Routes Middleware superadmin
 
     Route::group(['middleware' => 'admin'], function () {
@@ -71,9 +94,26 @@ Route::group(['middleware' => 'auth'], function () {
 
 
     Route::group(['middleware' => 'client'], function () {
-        Route::get('/client', function(){
-            return view('client.index');
-        });
+        //Index
+        Route::get('/client', [App\Http\Controllers\ClientPagesController::class,'index'])->name('client.index');
+        //Shops
+        Route::get('/client/shop', [App\Http\Controllers\ClientPagesController::class,'shop'])->name('client.shop');
+        Route::get('/client/shop/edit', [App\Http\Controllers\ClientPagesController::class,'shopEdit'])->name('client.shop.edit');
+        Route::put('/client/shop/update', [App\Http\Controllers\ShopController::class,'updateWeb'])->name('client.shop.update');
+
+        Route::get('/client/download', [App\Http\Controllers\ClientPagesController::class,'download'])->name('client.download');
+
+        Route::get('/client/download-apk/{filename}', function ($filename) {
+            // Verifica si el archivo existe en la carpeta de almacenamiento público
+            if (Storage::disk('public')->exists('apk/' . $filename)) {
+                // Si el archivo existe, devuelve una respuesta de descarga
+                return Storage::disk('public')->download('apk/' . $filename);
+            } else {
+                // Si el archivo no existe, devuelve una respuesta 404
+                abort(404);
+            }
+        })->name('download.apk');
+
     });//./Routes Middleware client
 
 });#./Middlware AUTH

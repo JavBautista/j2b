@@ -2,19 +2,13 @@
     <nav class="sidebar-nav">
         <ul class="nav">
             <li class="nav-item">
-                <a class="nav-link" href="{{ route('superadmin.index') }}"><i class="icon-home"></i> Home</a>
+                <a class="nav-link" href="{{ route('client.index') }}"><i class="icon-home"></i> Home</a>
             </li>
             <li class="nav-item">
-                <a href=" {{ route('superadmin.shops') }} " class="nav-link"> Tiendas </a>
+                <a href=" {{ route('client.shop') }} " class="nav-link"> <i class="icon-shop"></i> Mi Tienda </a>
             </li>
             <li class="nav-item">
-                <a href=" {{ route('superadmin.users') }} " class="nav-link"> Usuario </a>
-            </li>
-            <li class="nav-item">
-                <a href=" {{ route('superadmin.plans') }} " class="nav-link"> Planes </a>
-            </li>
-            <li class="nav-item">
-                <a href=" {{ route('superadmin.upload_apk') }} " class="nav-link"> Upload APK </a>
+                <a href=" {{ route('client.download') }} " class="nav-link"><i class="icon-download"></i> Descarga </a>
             </li>
 
             <!--<li class="nav-item nav-dropdown">

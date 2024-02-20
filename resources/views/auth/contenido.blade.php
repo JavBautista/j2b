@@ -13,7 +13,7 @@
 
   <link href="{{ asset('css/app.css') }}" rel="stylesheet">
   <link href="{{ asset('css/dashboard.css') }}" rel="stylesheet">
-
+   @yield('estilos')
 </head>
 
 <body class="app flex-row align-items-center">

@@ -9,12 +9,12 @@
 
                 <div class="card-body">
                     @if(session('success'))
-                        <div class="alert alert-success">
+                        <div class="alert alert-success text-center">
                             {{ session('success') }}
                         </div>
                     @endif
                     @if ($errors->any())
-                        <div class="alert alert-danger">
+                        <div class="alert alert-danger text-center">
                             <ul>
                                 @foreach ($errors->all() as $error)
                                     <li>{{ $error }}</li>
@@ -22,8 +22,8 @@
                             </ul>
                         </div>
                     @endif
-                    <div class="alert alert-info">
-                        <p>Para descargar J2Biznes por favor </p>
+                    <div class="alert alert-info text-center">
+                        <p>Registrarse para descargar J2Biznes</p>
                     </div>
                     <form action="{{ route('solicitud.store') }}" method="POST" >
                         @csrf
@@ -75,6 +75,10 @@
                             </div>
                         </div>
                     </form>
+                    <p class="float-right">
+
+                    <a href="{{ route('login') }}">o Iniciar sesión</a>
+                    </p>
                 </div>
             </div>
         </div>

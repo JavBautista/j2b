@@ -54,8 +54,14 @@
                         </div>
                     </div>
 
+
             </div>
           </form>
+          <hr>
+          <p class="text-muted small" >*No tiene una cuenta</p>
+          <p class="float-right">
+            <a href="{{ route('solicitud') }}">Registrarse</a>
+          </p>
         </div>
 
         <div class="card text-white bg-dark py-5 d-md-down-none" style="width:44%">

@@ -287,4 +287,75 @@ class TaskController extends Controller
         $log->save();
     }
 
+    public function deleteMainImage(Request $request){
+        $user = $request->user();
+        $task_id = $request->id;
+        $task = Task::findOrFail($task_id);
+        // Obtener la ruta de la imagen actual
+        $imagePath = $task->image;
+        // Verificar si hay una imagen almacenada y eliminarla
+        if ($imagePath) {
+            // Eliminar la imagen del almacenamiento
+            Storage::disk('public')->delete($imagePath);
+            // Limpiar el atributo de la imagen en el modelo
+            $task->image = null;
+            $task->save();
+
+            $log_desc = 'Eliminación de imágen principal.';
+            $this->storeTaskLog($task->id,$user->name,$log_desc);
+        }
+
+        $task->load('client');
+        $task->load('images');
+        $task->load('logs');
+        return response()->json([
+            'ok' => true,
+            'task' => $task,
+        ]);
+    }//.deleteMainImage()
+
+    public function deleteAltImage(Request $request){
+        $user = $request->user();
+        $taskId = $request->input('task.id'); // Obtener el 'id' del task del request
+        $imgAltId = $request->input('img_alt_id'); // Obtener el 'img_alt_id' del request
+
+
+        try {
+            // Buscar la imagen alternativa por su ID
+            $taskImage = TaskImage::findOrFail($imgAltId);
+
+            // Verificar si la imagen alternativa pertenece al task indicado
+            if ($taskImage->task_id != $taskId) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'La imagen alternativa no pertenece al task indicado.',
+                ], 400);
+            }
+
+            // Eliminar la imagen alternativa del almacenamiento
+            Storage::disk('public')->delete($taskImage->image);
+
+            // Eliminar el registro de la imagen alternativa de la base de datos
+            $taskImage->delete();
+
+            // Registrar la acción en el log del task
+            $logDesc = 'Eliminación de imagen secundaria.';
+            $this->storeTaskLog($taskId, $user->name, $logDesc);
+
+            // Cargar el task con las relaciones actualizadas
+            $task = Task::with('client', 'images', 'logs')->findOrFail($taskId);
+
+            return response()->json([
+                'ok' => true,
+                'task' => $task,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Error al eliminar la imagen alternativa.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }//.deleteAltImage()
+
 }

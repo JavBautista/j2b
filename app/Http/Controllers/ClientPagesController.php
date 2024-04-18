@@ -48,4 +48,8 @@ class ClientPagesController extends Controller
     public function download(){
         return view('client.download');
     }
+
+    public function configurations(){
+        return view('client.configurations.index');
+    }
 }

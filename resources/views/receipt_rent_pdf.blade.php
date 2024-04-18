@@ -26,7 +26,11 @@
                     {{ $receipt->shop->phone }}</p>
                 </td>
                 <td width="50%" align="right">
-                    <img src="{{ asset('/storage/'.$receipt->shop->logo)  }}"  width="50%">
+                    @if (Storage::exists($receipt->shop->logo))
+                        <img src="{{ asset('/storage/'.$receipt->shop->logo) }}" width="50%">
+                    @else
+                        <p style="font-weight: bold;">Logo</p>
+                    @endif
                 </td>
             </tr>
             <tr>
@@ -74,6 +78,30 @@
                 </tr>
             @endif
         </table>
+
+        <!--NUEVOS CAMPOS EXTRA-->
+        @if ($receipt->infoExtra->isNotEmpty())
+            <hr>
+            <table width="100%">
+                <tbody>
+                    @php $extras = $receipt->infoExtra->chunk(2); @endphp
+                    @foreach ($extras as $pair)
+                        <tr>
+                            @foreach ($pair as $extra)
+                                <td style="width: 30%; padding-right: 10px;"> <strong> {{ $extra->field_name }} </strong></td>
+                                <td style="width: 70%;">{{ $extra->value }}</td>
+                            @endforeach
+                            @if ($loop->count < 2) {{-- Agregar una celda vacía si solo hay un campo en la última fila --}}
+                                <td></td>
+                                <td></td>
+                            @endif
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        @endif
+
+        <!--./NUEVOS CAMPOS EXTRA-->
         <hr>
         <table width="100%">
             <thead>

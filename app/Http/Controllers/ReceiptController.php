@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Receipt;
 use Illuminate\Http\Request;
 use App\Models\ReceiptDetail;
+use App\Models\ReceiptInfoExtra;
 use App\Models\RentDetail;
 use App\Models\PartialPayments;
 use App\Models\Shop;
@@ -66,6 +67,7 @@ class ReceiptController extends Controller
         $where_type =($filtro_type_receipt=='todos')?null:$filtro_type_receipt;
 
         $receipts = Receipt::with('partialPayments')
+                        ->with('infoExtra')
                         ->with('shop')
                         ->with('client')
                         ->whereHas('client', function (Builder $query) use($filtro_buscar) {
@@ -213,6 +215,21 @@ class ReceiptController extends Controller
             }
         }//.ifs(Pagos Parciales)
 
+        /************************************************
+        *NUEVO BLOQUE PARA GUARDAR LA INFO EXTRA DEL RECEIPT
+        */
+        $info_extra = json_decode($request->info_extra, true);
+        if (!empty($info_extra)) {
+            foreach ($info_extra as $field_name => $value) {
+                $receiptInfoExtra = new ReceiptInfoExtra();
+                $receiptInfoExtra->receipt_id = $receipt->id; // Asignar el ID del recibo
+                $receiptInfoExtra->field_name = $field_name; // Asignar el nombre del campo
+                $receiptInfoExtra->value = $value; // Asignar el valor del campo
+                $receiptInfoExtra->save(); // Guardar el modelo en la base de datos
+            }
+        }
+        /************************************************/
+
         //Guardaremos el detalle de la nota
         $details = json_decode($request->detail);
 
@@ -261,6 +278,7 @@ class ReceiptController extends Controller
 
         //Obtenemos el recibo recien guardado para obtener la relacion de de pagos parciales
         $rr = Receipt::with('partialPayments')
+                    ->with('infoExtra')
                     ->with('shop')
                     ->with('client')
                     ->findOrFail($receipt->id);
@@ -346,6 +364,24 @@ class ReceiptController extends Controller
         }
         /*-----------------------------------------*/
 
+        /************************************************
+        *NUEVO BLOQUE PARA ACTUALIZAR LA INFO EXTRA DEL RECEIPT
+        */
+        //Eliminamos la info extra actual para luego agregar la nueva
+        ReceiptInfoExtra::where('receipt_id', $receipt->id)->delete();
+        $info_extra = json_decode($request->info_extra, true);
+        if (!empty($info_extra)) {
+            foreach ($info_extra as $extra) {
+                $receiptInfoExtra = new ReceiptInfoExtra();
+                $receiptInfoExtra->receipt_id = $receipt->id; // Asignar el ID del recibo
+                $receiptInfoExtra->field_name = $extra['field_name'];
+                $receiptInfoExtra->value = $extra['value'];
+                $receiptInfoExtra->save(); // Guardar el modelo en la base de datos
+            }
+        }
+        /************************************************/
+
+
         //Eliminamos el detail actual para luego agregar el nuevo
         ReceiptDetail::where('receipt_id', $receipt->id)->delete();
         //Guardaremos el detalle de la nota
@@ -397,6 +433,7 @@ class ReceiptController extends Controller
 
         //Obtenemos el recibo recien guardado para obtener la relacion de de pagos parciales
         $rr = Receipt::with('partialPayments')
+                    ->with('infoExtra')
                     ->with('shop')
                     ->with('client')
                     ->findOrFail($receipt->id);

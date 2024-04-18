@@ -25,4 +25,9 @@ class Receipt extends Model
     public function shop(){
         return $this->belongsTo(Shop::class);
     }
+
+    public function infoExtra()
+    {
+        return $this->hasMany(ReceiptInfoExtra::class, 'receipt_id');
+    }
 }

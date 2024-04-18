@@ -86,14 +86,16 @@ Route::group(['middleware' => 'auth'], function () {
         Route::post('/superadmin/upload-apk/store', [App\Http\Controllers\Superadmin\UsersController::class,'storeApk'])->name('superadmin.store.apk');
     });//./Routes Middleware superadmin
 
-    Route::group(['middleware' => 'admin'], function () {
+    /*Route::group(['middleware' => 'admin'], function () {
         Route::get('/admin', function(){
             return view('admin.index');
         });
     });//./Routes Middleware admin
+    */
 
 
-    Route::group(['middleware' => 'client'], function () {
+    //Route::group(['middleware' => 'client'], function () {
+    Route::group(['middleware' => 'admin'], function () {
         //Index
         Route::get('/client', [App\Http\Controllers\ClientPagesController::class,'index'])->name('client.index');
         //Shops
@@ -113,6 +115,28 @@ Route::group(['middleware' => 'auth'], function () {
                 abort(404);
             }
         })->name('download.apk');
+
+
+        Route::get('/client/configurations', [App\Http\Controllers\ClientPagesController::class,'configurations'])->name('client.configurations');
+
+        Route::get('/client/configurations/extra-fields-shop', [App\Http\Controllers\ExtraFieldsShopController::class,'index'])->name('client.configurations.extra_fields');
+
+        Route::get('/client/configurations/extra-fields-shop/create', [App\Http\Controllers\ExtraFieldsShopController::class,'create'])->name('client.configurations.extra_fields.create');
+
+        Route::get('/client/configurations/extra-fields-shop/edit/{id}', [App\Http\Controllers\ExtraFieldsShopController::class,'edit'])->name('client.configurations.extra_fields.edit');
+
+        Route::post('/client/configurations/extra-fields/store', [App\Http\Controllers\ExtraFieldsShopController::class,'store'])->name('client.configurations.extra-fields.store');
+
+        Route::put('/client/configurations/extra-fields-shop/{id}/toggle', [App\Http\Controllers\ExtraFieldsShopController::class,'toggleShow'])->name('client.configurations.extra_fields.toggle');
+
+        Route::delete('/client/configurations/extra-fields/{id}', [App\Http\Controllers\ExtraFieldsShopController::class, 'destroy'])->name('client.configurations.extra_fields.destroy');
+
+        Route::put('/client/configurations/extra-fields-shop/update/{id}', [App\Http\Controllers\ExtraFieldsShopController::class,'update'])->name('client.configurations.extra-fields.update');
+
+
+
+
+
 
     });//./Routes Middleware client
 

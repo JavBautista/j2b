@@ -29,10 +29,10 @@ class HomeController extends Controller
             return redirect('/superadmin');
 
         if($request->user()->hasRole('admin'))
-            return redirect('/admin');
-
-        if($request->user()->hasRole('client'))
             return redirect('/client');
+
+        //if($request->user()->hasRole('client'))
+          //  return redirect('/client');
 
         return redirect('/');
     }

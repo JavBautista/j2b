@@ -27,6 +27,7 @@ Route::post('rent/delete','App\Http\Controllers\RentController@destroy');
 Route::post('rent/store-detail','App\Http\Controllers\RentController@storeDetail');
 Route::post('rent/update-detail','App\Http\Controllers\RentController@updateDetail');
 Route::post('rent/delete-detail','App\Http\Controllers\RentController@destroyDetail');
+Route::post('rent/liberar-detail','App\Http\Controllers\RentController@liberarDetail');
 
 Route::post('rent/equipment/update-rent-id','App\Http\Controllers\RentController@updateEquipmentRentID');
 
@@ -43,6 +44,7 @@ Route::post('consumables/store','App\Http\Controllers\ConsumablesController@stor
 Route::post('consumables/update-observation','App\Http\Controllers\ConsumablesController@updateObservation');
 
 Route::post('consumables/delete','App\Http\Controllers\ConsumablesController@delete');
+
 
 
 
@@ -122,6 +124,14 @@ Route::group([
         Route::post('receipt/partial-payment/store','App\Http\Controllers\PartialPaymentsController@store');
         Route::post('receipt/partial-payment/delete','App\Http\Controllers\PartialPaymentsController@delete');
 
+        /**EXTRA FIELDS*/
+
+        Route::get('extra-fields/get','App\Http\Controllers\ExtraFieldsShopController@getApiExtraFieldsShop');
+        Route::post('extra-fields/store','App\Http\Controllers\ExtraFieldsShopController@storeApiExtraFieldsShop');
+        Route::post('extra-fields/update','App\Http\Controllers\ExtraFieldsShopController@updateApiExtraFieldsShop');
+        Route::post('extra-fields/delete','App\Http\Controllers\ExtraFieldsShopController@destroyApiExtraFieldsShop');
+
+
         /* PRUCHASE ORDER*/
         Route::get('purchase-order/all','App\Http\Controllers\PurchaseOrderController@getAll');
         Route::post('purchase-order/store','App\Http\Controllers\PurchaseOrderController@store');
@@ -168,6 +178,8 @@ Route::group([
          Route::post('task/update-status','App\Http\Controllers\TaskController@updateEstatus');
          Route::post('task/update-resena','App\Http\Controllers\TaskController@updateResena');
          Route::post('task/upload-image-task','App\Http\Controllers\TaskController@uploadImageTask');
+         Route::post('task/delete-main-image','App\Http\Controllers\TaskController@deleteMainImage');
+         Route::post('task/delete-alt-image','App\Http\Controllers\TaskController@deleteAltImage');
 
         /*COLLABORATORS*/
         Route::get('collaborators','App\Http\Controllers\CollaboratorController@index');

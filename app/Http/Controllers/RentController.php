@@ -173,6 +173,16 @@ class RentController extends Controller
         ]);
     }//.updateDetail
 
+    public function liberarDetail(Request $request){
+        $rent_detail = RentDetail::findOrFail($request->id);
+        $rent_detail->rent_id=0;
+        $rent_detail->save();
+        return response()->json([
+            'ok'=>true,
+            'rent_detail' => $rent_detail,
+        ]);
+    }//.liberarDetail
+
     public function destroyDetail(Request $request){
         $rent_detail = RentDetail::findOrFail($request->id);
         $rent_detail->delete();

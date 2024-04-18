@@ -26,7 +26,7 @@
                     {{ $receipt->shop->phone }}</p>
                 </td>
                 <td width="50%" align="right">
-                    @if (Storage::exists($receipt->shop->logo))
+                    @if (trim($receipt->shop->logo)!=null)
                         <img src="{{ asset('/storage/'.$receipt->shop->logo) }}" width="50%">
                     @else
                         <p style="font-weight: bold;">Logo</p>

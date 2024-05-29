@@ -19,7 +19,9 @@ Route::get('/', [App\Http\Controllers\HomeController::class, 'index']);
 Route::get('/home', [App\Http\Controllers\HomeController::class, 'index']);
 
 Route::get('/pre-registro', [App\Http\Controllers\RequestsJ2bController::class, 'j2bSolicitar'])->name('solicitud');
+
 Route::post('/pre-registro/create', [App\Http\Controllers\RequestsJ2bController::class, 'store'])->name('solicitud.store');
+
 Route::get('/pre-registro/confirm/{xtoken}', [App\Http\Controllers\RequestsJ2bController::class, 'confirm'])->name('solicitud.confirm');
 
 Route::get('/pre-registro/completar', [App\Http\Controllers\RequestsJ2bController::class, 'completar'])->name('solicitud.completar')->middleware('check.token');

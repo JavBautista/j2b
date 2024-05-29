@@ -110,6 +110,8 @@ class EquipmentController extends Controller
 
     public function destroy(Request $request){
         $equipment = RentDetail::findOrFail($request->id);
+        // Eliminar los registros relacionados en 'consumables'
+        $equipment->consumables()->delete();
         $equipment->delete();
         return response()->json([
             'ok'=>true

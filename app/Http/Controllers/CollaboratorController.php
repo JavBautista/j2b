@@ -109,6 +109,11 @@ class CollaboratorController extends Controller
     {
         $collaborator = Collaborator::findOrFail($request->id);
         $collaborator->active = 1;
+        // esactivar el usuario asociado
+        if ($collaborator->user) {
+            $collaborator->user->active = 1;
+            $collaborator->user->save();
+        }
         $collaborator->save();
         return response()->json([
             'ok'=>true,
@@ -119,6 +124,12 @@ class CollaboratorController extends Controller
     {
         $collaborator = Collaborator::findOrFail($request->id);
         $collaborator->active = 0;
+        // esactivar el usuario asociado
+        if ($collaborator->user) {
+            $collaborator->user->active = 0;
+            $collaborator->user->save();
+        }
+
         $collaborator->save();
         return response()->json([
             'ok'=>true,

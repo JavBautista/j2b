@@ -49,24 +49,39 @@ class RequestsJ2bController extends Controller
 
     }
 
-    public function confirm(Request $request){
+    /*public function confirm(Request $request){
         $xtoken= $request->xtoken;
         try {
             // Buscar el registro con el token proporcionado y que no esté confirmado
             $requestJ2b = RequestsJ2b::where('token', $xtoken)
                                     ->where('confirmed', 0)
                                     ->firstOrFail();
-
             // Marcar el registro como confirmado
             $requestJ2b->confirmed = 1;
             $requestJ2b->save();
-
             // Redirigir a la vista para completar el registro con los datos
             return view('register_completar',['data'=>$requestJ2b])->with('success', 'Exito, su información ha sido validada.');
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             // Si no se encuentra el registro o ya está confirmado, redirigir con un mensaje de error
             return view('pre_register_error')->with('error', 'El token proporcionado es inválido.');
+        }
+    }*/
+
+    public function confirm(Request $request){
+        $xtoken = $request->xtoken;
+        try {
+            // Buscar el registro con el token proporcionado
+            $requestJ2b = RequestsJ2b::where('token', $xtoken)->firstOrFail();
+            if ($requestJ2b->confirmed == 1) {
+                return redirect()->route('pre_register_error')->with('error', 'El token ya está confirmado.');
+            }
+            // Redirigir a la vista para completar el registro con los datos
+            return view('register_completar',['data'=>$requestJ2b])->with('success', 'Por favor complete el formulario.');
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return view('pre_register_error')->with('error', 'El token proporcionado es inválido.');
+        } catch (\Exception $e) {
+            return view('pre_register_error')->with('error', $e->getMessage());
         }
     }
 }

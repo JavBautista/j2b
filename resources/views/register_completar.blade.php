@@ -26,6 +26,12 @@
                                 <label for="email" class="col-md-4 col-form-label text-md-end">Email</label>
                                 <div class="col-md-6">
                                     <input id="email" type="email" class="form-control" name="email" value="{{ $data->email }}" readonly>
+
+                                    @error('email')
+                                        <span class="invalid-feedback" role="alert">
+                                            <strong>{{ $message }}</strong>
+                                        </span>
+                                    @enderror
                                 </div>
                             </div>
 
@@ -64,7 +70,8 @@
                                 <input id="password-confirm" type="password" class="form-control" name="password_confirmation" required autocomplete="new-password">
                             </div>
                         </div>
-
+                        <!-- Incluir el token en el formulario -->
+                        <input type="hidden" name="token" value="{{ $data->token }}">
                         <div class="row mb-0">
                             <div class="col-md-6 offset-md-4">
                                 <button type="submit" class="btn btn-primary">Registrar</button>

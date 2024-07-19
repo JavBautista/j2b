@@ -7,10 +7,12 @@ use App\Providers\RouteServiceProvider;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\Shop;
+use App\Models\RequestsJ2b;
 use Illuminate\Foundation\Auth\RegistersUsers;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB; // Agregar esta línea
+
 
 
 class RegisterController extends Controller
@@ -54,10 +56,14 @@ class RegisterController extends Controller
     protected function validator(array $data)
     {
         return Validator::make($data, [
-            'shop_name' => ['required', 'string', 'max:255','unique:shops,name'],
+            'shop_name' => ['required', 'string', 'max:255', 'unique:shops,name'],
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'token' => ['required', 'string'],
+        ], [
+            'shop_name.unique' => 'El nombre de la tienda ya está en uso. Por favor, elige otro nombre.',
+            'email.unique' => 'El correo electrónico ya está registrado. Por favor, usa otro correo.',
         ]);
     }
 
@@ -77,16 +83,19 @@ class RegisterController extends Controller
                     'name' => $data['shop_name']
                 ]);
 
-                $shop_id=$shop->id;
-
                 $user = User::create([
-                    'shop_id' => $shop_id,
+                    'shop_id' => $shop->id,
                     'name' => $data['name'],
                     'email' => $data['email'],
                     'password' => Hash::make($data['password']),
                 ]);
 
                 $user->roles()->attach(Role::where('name', 'admin')->first());
+
+                // Confirmar el token solo después de crear la tienda y el usuario
+                $requestJ2b = RequestsJ2b::where('token', $data['token'])->firstOrFail();
+                $requestJ2b->confirmed = 1;
+                $requestJ2b->save();
 
                 return $user;
             });

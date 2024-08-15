@@ -153,6 +153,7 @@ Route::group([
         Route::get('notifications/get','App\Http\Controllers\NotificationController@get');
         Route::post('notifications/read','App\Http\Controllers\NotificationController@read');
         Route::get('notifications/get/client/{client_id}','App\Http\Controllers\NotificationController@getClientxID');
+        Route::get('notifications/get/task/{task_id}','App\Http\Controllers\NotificationController@getTaskxID');
 
         /*RENTAS*/
         Route::get('rents/get/by-cutoff','App\Http\Controllers\RentController@getByCutoff');
@@ -188,6 +189,15 @@ Route::group([
         Route::post('collaborator/update','App\Http\Controllers\CollaboratorController@update');
         Route::post('collaborator/active','App\Http\Controllers\CollaboratorController@active');
         Route::post('collaborator/inactive','App\Http\Controllers\CollaboratorController@inactive');
+
+        /*ADMINISTRATORS*/
+        Route::get('administrators','App\Http\Controllers\AdministratorController@index');
+        Route::get('administrator/verify-user-email','App\Http\Controllers\AdministratorController@verifyUserEmail');
+        Route::post('administrator/store','App\Http\Controllers\AdministratorController@store');
+        Route::post('administrator/update','App\Http\Controllers\AdministratorController@update');
+        Route::post('administrator/active','App\Http\Controllers\AdministratorController@active');
+        Route::post('administrator/inactive','App\Http\Controllers\AdministratorController@inactive');
+        Route::post('administrator/update-lmited','App\Http\Controllers\AdministratorController@updateLimited');
     });
 });
 /*------------------------------------------------------------------

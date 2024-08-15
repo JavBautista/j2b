@@ -8,6 +8,7 @@ use App\Models\Notification;
 use App\Models\NotificationUserToday;
 use App\Models\Rent;
 use App\Models\Client;
+use App\Models\Task;
 use App\Models\User;
 
 class NotificationController extends Controller
@@ -110,6 +111,14 @@ class NotificationController extends Controller
         $client = Client::with('rents')->findOrFail($request->client_id);
         return $client;
     }//getClientxID()
+
+    public function getTaskxID(Request $request){
+        $task = Task::with('client')
+                        ->with('images')
+                        ->with('logs')
+                        ->findOrFail($request->task_id);
+        return $task;
+    }//getTaskxID()
 
     public function test(Request $request){
 

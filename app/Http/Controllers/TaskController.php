@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\TaskUpdated;
 use Illuminate\Http\Request;
 use App\Models\Task;
 use App\Models\TaskImage;
 use App\Models\TaskLog;
+use App\Models\Notification;
+use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 
@@ -200,8 +203,35 @@ class TaskController extends Controller
         ]);
     }//.destroy
 
+    public function storeNotificationsTaskForShop(Task $task){
+        //crearemos notificaiones para los distintos admins de la tienda
+        $shop_id = $task->shop_id;
+        $task_id = $task->id;
+
+        //Obtenemos los usuarios tipo admin o superadmin dela tienda
+        $shop_users_admin = User::where('shop_id', $shop_id)
+                                ->whereHas('roles', function($query) {
+                                    $query->whereIn('role_user.role_id', [1, 2]);
+                                })
+                                ->where('active', 1)
+                                ->where('limited', 0)
+                                ->get();
+
+        foreach($shop_users_admin as $user){
+            $new_ntf = new Notification();
+            $new_ntf->user_id     = $user->id;
+            $new_ntf->description = 'F# '.$task->id.' '.$task->title;
+            $new_ntf->type        = 'task';
+            $new_ntf->action      = 'task_id';
+            $new_ntf->data        = $task_id;
+            $new_ntf->read        = 0;
+            $new_ntf->save();
+        }
+    }//storeNotificationsTaskForShop()
+
     public function updateEstatus(Request $request){
         $user = $request->user();
+
         $task = Task::findOrFail($request->input('task')['id']);
         $new_status = $request->input('estatus');
         $task->status = $new_status;
@@ -209,6 +239,13 @@ class TaskController extends Controller
         //Una ves guardado el task, insertamos un log-history
         $log_desc = 'Actualización de estatus: '.$new_status;
         $this->storeTaskLog($task->id,$user->name,$log_desc);
+
+        // Disparar el evento
+         //event(new TaskUpdated($task, $user));
+        if($new_status == 'ATENDIDO'){ $this->storeNotificationsTaskForShop($task); }
+
+
+
         $task->load('client');
         $task->load('images');
         $task->load('logs');

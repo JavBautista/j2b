@@ -41,6 +41,8 @@ class CollaboratorController extends Controller
         //creamos el usaurio
         $role_collaborator= Role::where('name', 'collaborator')->first();
         $new_user = new User();
+        $new_user->active = 1;
+        $new_user->shop_id = $shop->id;
         $new_user->name = $request->name;
         $new_user->email = $request->email;
         $new_user->password = Hash::make($request->password);

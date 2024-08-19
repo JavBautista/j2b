@@ -214,7 +214,6 @@ class TaskController extends Controller
                                     $query->whereIn('role_user.role_id', [1, 2]);
                                 })
                                 ->where('active', 1)
-                                ->where('limited', 0)
                                 ->get();
 
         foreach($shop_users_admin as $user){

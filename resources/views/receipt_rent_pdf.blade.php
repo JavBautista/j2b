@@ -103,7 +103,7 @@
 
         <!--./NUEVOS CAMPOS EXTRA-->
         <hr>
-        <table width="100%">
+        <table style="border-collapse: collapse; width: 100%;" width="100%">
             <thead>
                 <tr>
                     <th>Descripción</th>
@@ -115,7 +115,7 @@
             </thead>
             <tbody>
                 @foreach($receipt->detail as $data)
-                <tr>
+                <tr style="border-top: 1px solid #ccc !important;">
 
                     <td style="max-width: 50%; word-wrap: break-word;">{!! nl2br(e($data->descripcion)) !!}</td>
 

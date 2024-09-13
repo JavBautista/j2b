@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\uploadLocationImageClient;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -72,6 +73,8 @@ Route::group([
         Route::resource('client','App\Http\Controllers\ClientController');
         Route::post('client/edit/update','App\Http\Controllers\ClientController@update');
         Route::post('client/delete','App\Http\Controllers\ClientController@inactive');
+        Route::post('client/upload-location-image','App\Http\Controllers\ClientController@uploadLocationImageClient');
+        Route::post('client/delete-location-image','App\Http\Controllers\ClientController@deleteLocationImage');
 
         /*PROVEEDORES*/
         Route::get('supplier','App\Http\Controllers\SupplierController@index');
@@ -167,6 +170,9 @@ Route::group([
          Route::post('equipment/delete','App\Http\Controllers\EquipmentController@destroy');
          Route::post('equipment/active','App\Http\Controllers\EquipmentController@active');
          Route::post('equipment/inactive','App\Http\Controllers\EquipmentController@inactive');
+         //nuevas para imagenes
+         Route::post('equipment/upload-image','App\Http\Controllers\EquipmentController@uploadImage');
+         Route::post('equipment/delete-image','App\Http\Controllers\EquipmentController@deleteImage');
 
          /*TASKS*/
          Route::get('tasks','App\Http\Controllers\TaskController@index');

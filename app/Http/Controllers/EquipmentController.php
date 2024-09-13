@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\RentDetail;
+use App\Models\RentDetailImage;
+use Illuminate\Support\Facades\Storage;
 
 class EquipmentController extends Controller
 {
@@ -13,13 +15,13 @@ class EquipmentController extends Controller
 
         $buscar = $request->buscar;
         if($buscar==''){
-            $equipments = RentDetail::where('active',1)
+            $equipments = RentDetail::with('images')->where('active',1)
                     ->where('rent_id',0)
                     ->where('shop_id',$shop->id)
                     ->orderBy('id','desc')
                     ->paginate(10);
         }else{
-            $equipments = RentDetail::where('active',1)
+            $equipments = RentDetail::with('images')->where('active',1)
                     ->where('rent_id',0)
                     ->where('shop_id',$shop->id)
                     ->where('trademark', 'like', '%'.$buscar.'%')
@@ -57,6 +59,13 @@ class EquipmentController extends Controller
         $equipment->extra_page_cost_color = $request->extra_page_cost_color;
         $equipment->counter_color = $request->counter_color;
         $equipment->update_counter_color = $now;
+
+        $equipment->description = $request->description;
+        $equipment->cost = $request->cost;
+        $equipment->retail = $request->retail;
+        $equipment->wholesale = $request->wholesale;
+        $equipment->type_sale = $request->type_sale;
+
         $equipment->save();
 
         return response()->json([
@@ -82,6 +91,13 @@ class EquipmentController extends Controller
         $equipment->extra_page_cost_color = $request->extra_page_cost_color;
         $equipment->counter_color = $request->counter_color;
         $equipment->update_counter_color = $now;
+
+        $equipment->description = $request->description;
+        $equipment->cost = $request->cost;
+        $equipment->retail = $request->retail;
+        $equipment->wholesale = $request->wholesale;
+        $equipment->type_sale = $request->type_sale;
+
         $equipment->save();
         return response()->json([
             'ok'=>true,
@@ -117,4 +133,71 @@ class EquipmentController extends Controller
             'ok'=>true
         ]);
     }//.destroy
+
+
+    /*NUEVOS METODOS PARA SUBIR IMAGENES AL RENT DETAIL (EQUIPOS)*/
+    public function uploadImage(Request $request){
+
+        $rent_detail_id = $request->equipment_id;
+        // Validar la existencia del archivo de imagen
+        if ($request->hasFile('image')) {
+            $image = $request->file('image');
+
+            $imagePath = $image->store('equipments', 'public');
+            $rent_detail_image = new RentDetailImage();
+            $rent_detail_image->rent_detail_id = $rent_detail_id;
+            $rent_detail_image->image = $imagePath;
+            $rent_detail_image->save();
+
+            $rent_detail = RentDetail::findOrFail($rent_detail_id);
+            $rent_detail->load('images');
+            return response()->json([
+                'ok'=>true,
+                'equipment' => $rent_detail,
+            ]);
+        }
+
+        return response()->json([
+            'ok'=>false
+        ]);
+
+    }//uploadImage()
+
+    public function deleteImage(Request $request){
+        $rent_detail_id = $request->input('equipment.id');// Obtener el 'id' del rent_detail del request
+        $img_id         = $request->input('img_id');// Obtener el 'img_alt_id' del request
+
+        try {
+            // Buscar la imagen por su ID
+            $rent_detail_image = RentDetailImage::findOrFail($img_id);
+
+            // Verificar si la imagen pertenece al rent_detail indicado
+            if ($rent_detail_image->rent_detail_id != $rent_detail_id) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'La imagen no pertenece al equipo indicado.',
+                ], 400);
+            }
+
+            // Eliminar la imagen del almacenamiento
+            Storage::disk('public')->delete($rent_detail_image->image);
+
+            // Eliminar el registro de la imagen de la base de datos
+            $rent_detail_image->delete();
+
+            // Cargar el rent_detail con las relaciones actualizadas
+            $rent_detail = RentDetail::with('images')->findOrFail($rent_detail_id);
+
+            return response()->json([
+                'ok' => true,
+                'equipment' => $rent_detail,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Error al eliminar la imagen.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }//.deleteImage()
 }

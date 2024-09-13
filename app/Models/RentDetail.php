@@ -16,4 +16,8 @@ class RentDetail extends Model
         return $this->hasMany(Consumables::class);
     }
 
+    public function images(){
+        return $this->hasMany(RentDetailImage::class);
+    }
+
 }

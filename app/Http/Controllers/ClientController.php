@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Client;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class ClientController extends Controller
 {
@@ -86,4 +87,52 @@ class ClientController extends Controller
             'ok'=>true
         ]);
     }
+
+    public function uploadLocationImageClient(Request $request){
+        //return 'OK';
+        $user = $request->user();
+
+        $clientId = $request->client_id;
+        $client = Client::findOrFail($clientId);
+
+        // Validar la existencia del archivo de imagen
+        if ($request->hasFile('image')) {
+            $image = $request->file('image');
+
+            // Guardar la imagen en la ubicación 'public'
+            $imagePath = $image->store('clients_locations', 'public');
+            // guadamos  el registro del client
+            $client->location_image = $imagePath;
+            $client->save();
+
+        }
+
+        //$client->load('...');
+        return response()->json([
+            'ok'=>true,
+            'client' => $client
+        ]);
+    }//.uploadLocationImageClient()
+
+    public function deleteLocationImage(Request $request){
+        $user = $request->user();
+        $client_id = $request->id;
+        $client = Client::findOrFail($client_id);
+        // Obtener la ruta de la imagen actual
+        $imagePath = $client->location_image;
+        // Verificar si hay una imagen almacenada y eliminarla
+        if ($imagePath) {
+            // Eliminar la imagen del almacenamiento
+            Storage::disk('public')->delete($imagePath);
+            // Limpiar el atributo de la imagen en el modelo
+            $client->location_image = null;
+            $client->save();
+        }
+
+        //$client->load('...');
+        return response()->json([
+            'ok' => true,
+            'client' => $client
+        ]);
+    }//.deleteLocationImage()
 }

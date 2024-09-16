@@ -21,13 +21,15 @@ class EquipmentController extends Controller
                     ->orderBy('id','desc')
                     ->paginate(10);
         }else{
-            $equipments = RentDetail::with('images')->where('active',1)
-                    ->where('rent_id',0)
-                    ->where('shop_id',$shop->id)
-                    ->where('trademark', 'like', '%'.$buscar.'%')
-                    ->orWhere('model', 'like', '%'.$buscar.'%')
-                    ->orWhere('serial_number', 'like', '%'.$buscar.'%')
-                    ->orderBy('id','desc')
+            $equipments = RentDetail::with('images')->where('active', 1)
+                    ->where('rent_id', 0)
+                    ->where('shop_id', $shop->id)
+                    ->where(function($query) use ($buscar) {
+                        $query->where('trademark', 'like', '%'.$buscar.'%')
+                              ->orWhere('model', 'like', '%'.$buscar.'%')
+                              ->orWhere('serial_number', 'like', '%'.$buscar.'%');
+                    })
+                    ->orderBy('id', 'desc')
                     ->paginate(10);
         }
 

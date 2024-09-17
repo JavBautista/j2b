@@ -107,11 +107,24 @@ Route::group(['middleware' => 'auth'], function () {
 
         Route::get('/client/download', [App\Http\Controllers\ClientPagesController::class,'download'])->name('client.download');
 
-        Route::get('/client/download-apk/{filename}', function ($filename) {
+        /*Route::get('/client/download-apk/{filename}', function ($filename) {
             // Verifica si el archivo existe en la carpeta de almacenamiento público
             if (Storage::disk('public')->exists('apk/' . $filename)) {
                 // Si el archivo existe, devuelve una respuesta de descarga
                 return Storage::disk('public')->download('apk/' . $filename);
+            } else {
+                // Si el archivo no existe, devuelve una respuesta 404
+                abort(404);
+            }
+        })->name('download.apk');*/
+        Route::get('/client/download-apk/{filename}', function ($filename) {
+            // Verifica si el archivo existe en la carpeta de almacenamiento público
+            if (Storage::disk('public')->exists('apk/' . $filename)) {
+                // Si el archivo existe, devuelve una respuesta de descarga con los encabezados correctos
+                return response()->download(storage_path('app/public/apk/' . $filename), $filename, [
+                    'Content-Type' => 'application/vnd.android.package-archive',
+                    'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+                ]);
             } else {
                 // Si el archivo no existe, devuelve una respuesta 404
                 abort(404);

@@ -62,9 +62,30 @@ class RegisterController extends Controller
             'password' => ['required', 'string', 'min:8', 'confirmed'],
             'token' => ['required', 'string'],
         ], [
+            'shop_name.required' => 'El nombre de la tienda es obligatorio.',
+            'shop_name.string' => 'El nombre de la tienda debe ser una cadena de texto.',
+            'shop_name.max' => 'El nombre de la tienda no puede tener más de 255 caracteres.',
             'shop_name.unique' => 'El nombre de la tienda ya está en uso. Por favor, elige otro nombre.',
+
+            'name.required' => 'El nombre es obligatorio.',
+            'name.string' => 'El nombre debe ser una cadena de texto.',
+            'name.max' => 'El nombre no puede tener más de 255 caracteres.',
+
+            'email.required' => 'El correo electrónico es obligatorio.',
+            'email.string' => 'El correo electrónico debe ser una cadena de texto.',
+            'email.email' => 'El correo electrónico debe ser una dirección de correo válida.',
+            'email.max' => 'El correo electrónico no puede tener más de 255 caracteres.',
             'email.unique' => 'El correo electrónico ya está registrado. Por favor, usa otro correo.',
+
+            'password.required' => 'La contraseña es obligatoria.',
+            'password.string' => 'La contraseña debe ser una cadena de texto.',
+            'password.min' => 'La contraseña debe tener al menos 8 caracteres.',
+            'password.confirmed' => 'Las contraseñas no coinciden.',
+
+            'token.required' => 'El token es obligatorio.',
+            'token.string' => 'El token debe ser una cadena de texto.',
         ]);
+
     }
 
     /**

@@ -17,7 +17,7 @@ class RequestsJ2bController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
+        /*$request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:requests_j2bs,email',
             'phone' => 'required|string|max:15',
@@ -28,7 +28,28 @@ class RequestsJ2bController extends Controller
             'email.email' => 'El correo electrónico debe ser una dirección de correo válida.',
             'email.unique' => 'Este correo electrónico ya ha sido registrado anteriormente, si requiere una nueva solicitud por favor contactenos directamente en contacto@levcore.app',
             'phone.required' => 'El teléfono es obligatorio.',
+        ]);*/
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => [
+                'required',
+                'string',
+                'email',
+                'max:255',
+                Rule::unique('requests_j2bs', 'email'), // Validar en la tabla RequestsJ2b
+                Rule::unique('users', 'email'),        // Validar en la tabla Users
+            ],
+            'phone' => 'required|string|max:15',
+        ], [
+            // Mensajes de error personalizados
+            'name.required' => 'El nombre es obligatorio.',
+            'email.required' => 'El correo electrónico es obligatorio.',
+            'email.email' => 'El correo electrónico debe ser una dirección de correo válida.',
+            'email.unique' => 'Este correo electrónico ya ha sido registrado anteriormente, si requiere una nueva solicitud por favor contáctenos directamente en contacto@levcore.app',
+            'phone.required' => 'El teléfono es obligatorio.',
         ]);
+
 
         $token = Str::random(60);
 

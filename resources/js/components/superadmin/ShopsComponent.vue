@@ -29,12 +29,12 @@
                 <table class="table table-bordered table-striped table-sm">
                     <thead>
                         <tr>
-                            <th>No</th>
-                            <th>Nombre</th>
-                            <th>Descripcion</th>
-                            <th>Logo</th>
-                            <th>Status</th>
-                            <th>Opciones</th>
+                            <th width="5%">No</th>
+                            <th width="25%">Nombre</th>
+                            <th width="30%">Descripcion</th>
+                            <th width="20%">Logo</th>
+                            <th width="5%">Status</th>
+                            <th width="5%">Opciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -45,7 +45,7 @@
                               <td class="text-muted small">
                                 <span v-if="shop.logo">
 
-                                  <img :src="'/storage/'+shop.logo" :alt="shop.name" class="card-img" >
+                                  <img :src="'/storage/'+shop.logo" :alt="shop.name" class="card-img" width="50%" >
                                 </span>
                                 <span v-else>
                                   Sin Imagen

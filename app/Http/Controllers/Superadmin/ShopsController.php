@@ -108,6 +108,15 @@ class ShopsController extends Controller
         $shop->save();
     }//update()
 
+    public function updateCutoff(Request $request)
+    {
+        if(!$request->ajax()) return redirect('/');
+        $shop= Shop::findOrFail($request->id);
+        $shop->cutoff = $request->cutoff;
+
+        $shop->save();
+    }//updateCutoff()
+
     public function active(Request $request)
     {
         if(!$request->ajax()) return redirect('/');

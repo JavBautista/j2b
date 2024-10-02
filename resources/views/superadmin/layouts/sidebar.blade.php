@@ -17,6 +17,10 @@
                 <a href=" {{ route('superadmin.upload_apk') }} " class="nav-link"> Upload APK </a>
             </li>
 
+            <li class="nav-item">
+                <a href=" {{ route('superadmin.pre-registers') }} " class="nav-link"> Pre Registros </a>
+            </li>
+
             <!--<li class="nav-item nav-dropdown">
                 <a class="nav-link nav-dropdown-toggle" href="#"><i class="icon-bag"></i> Tiendas</a>
                 <ul class="nav-dropdown-items">

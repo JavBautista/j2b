@@ -44,4 +44,8 @@ class SuperadminPagesController extends Controller
 
         return redirect()->back()->with('success', 'Archivo APK subido exitosamente.');
     }
+
+    public function preRegisters(){
+        return view('superadmin.pre_registers');
+    }
 }

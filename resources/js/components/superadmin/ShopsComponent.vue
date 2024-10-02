@@ -30,10 +30,12 @@
                     <thead>
                         <tr>
                             <th width="5%">No</th>
-                            <th width="25%">Nombre</th>
-                            <th width="30%">Descripcion</th>
+                            <th width="20%">Nombre</th>
+                            <th width="25%">Descripcion</th>
                             <th width="20%">Logo</th>
                             <th width="5%">Status</th>
+                            <th width="5%">Corte</th>
+                            <th width="5%">Creación</th>
                             <th width="5%">Opciones</th>
                         </tr>
                     </thead>
@@ -56,29 +58,38 @@
                                   <span v-else class="badge badge-danger">Baja</span>
                               </td>
                               <td>
-                                    <div class="dropdown">
-                                      <a class="btn btn-secondary dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                        ...
-                                      </a>
+                                {{ shop.cutoff }}
+                              </td>
+                              <td>
+                                {{ shop.created_at | formatDate }}
+                              </td>
+                              <td>
+                                <div class="dropdown">
+                                  <a class="btn btn-secondary dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    ...
+                                  </a>
 
-                                      <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item" href="#" @click="abrirModal('shop','ver_datos', shop)">  <i class="fa fa-eye"></i>Ver</a></li>
-                                        <li>
-                                        <li>
-                                          <a class="dropdown-item" href="#" @click="abrirModal('shop','actualizar_datos', shop)"><i class="fa fa-edit"></i>Editar</a>
-                                        </li>
-                                        <li>
-                                            <a v-if="shop.active" class="dropdown-item" href="#" @click="actualizarAInactivo(shop.id)"><i class="fa fa fa-toggle-on"></i>Deshabilitar</a>
-                                            <a v-else class="dropdown-item" href="#" @click="actualizarAActivo(shop.id)"><i class="fa fa fa-toggle-off"></i>Activar</a>
-                                        </li>
-                                        <li>
-                                          <a class="dropdown-item" href="#" @click="abrirModal('shop','actualizar_logo', shop)"><i class="fa fa-image"></i>Act. Logo</a>
-                                        </li>
+                                  <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="#" @click="abrirModal('shop','ver_datos', shop)">  <i class="fa fa-eye"></i>Ver</a></li>
+                                    <li>
+                                    <li>
+                                      <a class="dropdown-item" href="#" @click="abrirModal('shop','actualizar_datos', shop)"><i class="fa fa-edit"></i>Editar</a>
+                                    </li>
+                                    <li>
+                                        <a v-if="shop.active" class="dropdown-item" href="#" @click="actualizarAInactivo(shop.id)"><i class="fa fa fa-toggle-on"></i>Deshabilitar</a>
+                                        <a v-else class="dropdown-item" href="#" @click="actualizarAActivo(shop.id)"><i class="fa fa fa-toggle-off"></i>Activar</a>
+                                    </li>
+                                    <li>
+                                      <a class="dropdown-item" href="#" @click="abrirModal('shop','actualizar_logo', shop)"><i class="fa fa-image"></i>Act. Logo</a>
+                                    </li>
+                                    <li>
+                                      <a class="dropdown-item" href="#" @click="abrirModal('shop','actualizar_cutoff', shop)"><i class="fa fa-calendar"></i>Act. Corte</a>
+                                    </li>
 
-                                      </ul>
-                                    </div>
+                                  </ul>
+                                </div>
 
-                            </td>
+                              </td>
 
                           </tr>
 
@@ -285,6 +296,18 @@
                           </div>
                         </div>
 
+                        <!--tipoAccion==5 Cutoff-->
+                        <div v-if="tipoAccion==5">
+                          <div class="form-group">
+                            <label for="cutoff">Día de Corte</label>
+                            <select class="form-select" v-model="cutoff">
+                              <option v-for="day in 31" :key="day" :value="day">
+                                {{ day }}
+                              </option>
+                            </select>
+                          </div>
+                        </div>
+
                     </form>
                 </div>
                 <div class="modal-footer">
@@ -292,6 +315,7 @@
                     <button type="button" v-if="tipoAccion==1" class="btn btn-primary" @click="registrarShop()">Guardar</button>
                     <button type="button" v-if="tipoAccion==2" class="btn btn-primary" @click="actualizarDatosShop()">Actualizar</button>
                     <button type="button" v-if="tipoAccion==4" class="btn btn-primary" @click="actualizarLogoShop()">Actualizar Logo</button>
+                    <button type="button" v-if="tipoAccion==5" class="btn btn-primary" @click="actualizarCutoff()">Actualizar</button>
                 </div>
             </div>
             <!-- /.modal-content -->
@@ -349,6 +373,7 @@
               bank_number_secondary:'',
               owner_name:'',
               logo:null,
+              cutoff:0,
 
 
               errors:[],
@@ -643,6 +668,29 @@
                       });
                 });
             },
+            actualizarCutoff(){
+                let me=this;
+                axios.put('/superadmin/shops/update-cutoff',{
+                    'id':me.shop_id,
+                    'cutoff':me.cutoff,
+                }).then(function (response){
+                  console.log(response)
+                  me.cerrarModal();
+                  me.loadShops(me.pagination.current_page,me.buscar,me.criterio)
+                  Swal.fire(
+                    'Exito!',
+                    'La tienda fue actualizada correctamente.',
+                    'success'
+                  );
+                }).catch(function (error){
+                    console.log(error);
+                    Swal.fire(
+                        'Error!',
+                        'Ocurrio un error al guardar, consulte al amdinistrador del sistema.',
+                        'error'
+                    );
+                });
+            },
             validarDatosShop(action){
                 this.errorShop=0;
                 this.errorMostrarMsjShop=[];
@@ -775,6 +823,14 @@
                                 this.shop_id= data['id'];
                                 this.name=data['name'];
                                 this.logo=null;
+                                break;
+                            }
+                          case 'actualizar_cutoff':{
+                                this.modal=1;
+                                this.tipoAccion =5;
+                                this.tituloModal='Act. Día de corte';
+                                this.shop_id= data['id'];
+                                this.cutoff=data['cutoff'];
                                 break;
                             }
                         }

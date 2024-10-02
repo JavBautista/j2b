@@ -11,7 +11,7 @@ use App\Mail\SolicitudRecibida;
 
 class RequestsJ2bController extends Controller
 {
-     public function j2bSolicitar(){
+    public function j2bSolicitar(){
         return view('pre_register');
     }
 

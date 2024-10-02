@@ -66,6 +66,7 @@ Route::group(['middleware' => 'auth'], function () {
         Route::put('/superadmin/shops/active', [App\Http\Controllers\Superadmin\ShopsController::class,'active']);
         Route::put('/superadmin/shops/deactive', [App\Http\Controllers\Superadmin\ShopsController::class,'deactive']);
         Route::post('/superadmin/shops/upload-logo', [App\Http\Controllers\Superadmin\ShopsController::class,'uploadLogo']);
+        Route::put('/superadmin/shops/update-cutoff', [App\Http\Controllers\Superadmin\ShopsController::class,'updateCutoff']);
 
         //Plans
         Route::get('/superadmin/plans', [App\Http\Controllers\SuperadminPagesController::class,'plans'])->name('superadmin.plans');
@@ -86,6 +87,14 @@ Route::group(['middleware' => 'auth'], function () {
         //UPLOAD APK
         Route::get('/superadmin/upload', [App\Http\Controllers\SuperadminPagesController::class,'uploadApk'])->name('superadmin.upload_apk');
         Route::post('/superadmin/upload-apk/store', [App\Http\Controllers\Superadmin\UsersController::class,'storeApk'])->name('superadmin.store.apk');
+
+
+        //Users
+        Route::get('/superadmin/pre-registers', [App\Http\Controllers\SuperadminPagesController::class,'preRegisters'])->name('superadmin.pre-registers');
+        Route::get('/superadmin/pre-registers/get', [App\Http\Controllers\Superadmin\RequestsJ2bController::class,'getRegisters']);
+        Route::put('/superadmin/pre-registers/delete', [App\Http\Controllers\Superadmin\RequestsJ2bController::class,'destroy']);
+
+
     });//./Routes Middleware superadmin
 
     /*Route::group(['middleware' => 'admin'], function () {

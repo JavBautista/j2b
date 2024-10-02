@@ -21,8 +21,14 @@
                               <option value="name">Nombre</option>
                               <option value="description">Descripción</option>
                             </select>
-                            <input type="text" v-model="buscar" class="form-control" placeholder="Texto a buscar" @keyup.enter="loadShops(1,buscar,criterio)">
-                            <button type="submit" @click="loadShops(1,buscar,criterio)" class="btn btn-primary"><i class="fa fa-search"></i> Buscar</button>
+                            <input type="text" v-model="buscar" class="form-control" placeholder="Texto a buscar" @keyup.enter="loadShops(1,buscar,criterio,estatus)">
+
+                            <select class="form-control col-md-3" v-model="estatus">
+                                <option value="">TODOS</option>
+                                <option value="active">ACTIVOS</option>
+                                <option value="inactive">BAJAS</option>
+                            </select>
+                            <button type="submit" @click="loadShops(1,buscar,criterio,estatus)" class="btn btn-primary"><i class="fa fa-search"></i> Buscar</button>
                         </div>
                     </div>
                 </div>
@@ -343,6 +349,7 @@
               offset:3,
               criterio:'name',
               buscar:'',
+              estatus:'active',
 
               shop_id:0,
               name:'',
@@ -418,14 +425,14 @@
                 this.logo = event.target.files[0];
                 console.log(this.logo)
             },
-            cambiarPagina(page,buscar,criterio){
+            cambiarPagina(page,buscar,criterio,estatus){
                 let me = this;
                 me.pagination.current_page = page;
-                me.loadShops(page,buscar,criterio);
+                me.loadShops(page,buscar,criterio,estatus);
             },
-            loadShops(page,buscar,criterio){
+            loadShops(page,buscar,criterio,estatus){
                 let me=this;
-                var url = '/superadmin/shops/get?page='+page+'&buscar='+buscar+'&criterio='+criterio;
+                var url = '/superadmin/shops/get?page='+page+'&buscar='+buscar+'&criterio='+criterio+'&estatus='+estatus;
                 axios.get(url).then(function (response){
                     var respuesta  = response.data;
                     me.arrayShops = respuesta.shops.data;
@@ -462,7 +469,7 @@
                     axios.put('/superadmin/shops/active',{
                         'id': id
                     }).then(function (response){
-                        me.loadShops(me.pagination.current_page,me.buscar,me.criterio);
+                        me.loadShops(me.pagination.current_page,me.buscar,me.criterio, me.estatus);
                         swalWithBootstrapButtons.fire(
                           '¡Activo!',
                           'Actualizacion exitosa.',
@@ -498,7 +505,7 @@
                     axios.put('/superadmin/shops/deactive',{
                         'id': id
                     }).then(function (response){
-                        me.loadShops(me.pagination.current_page,me.buscar,me.criterio);
+                        me.loadShops(me.pagination.current_page,me.buscar,me.criterio,me.estatus);
                         swalWithBootstrapButtons.fire(
                           '¡Inactivo!',
                           'Actualizacion exitosa.',
@@ -547,7 +554,7 @@
                 }).then(function (response){
                   console.log(response)
                   me.cerrarModal();
-                  me.loadShops(me.pagination.current_page,me.buscar,me.criterio)
+                  me.loadShops(me.pagination.current_page,me.buscar,me.criterio,me.estatus)
                   Swal.fire(
                     'Exito!',
                     'La tienda fue agregada correctamente.',
@@ -598,7 +605,7 @@
                 }).then(function (response){
                   console.log(response)
                   me.cerrarModal();
-                  me.loadShops(me.pagination.current_page,me.buscar,me.criterio)
+                  me.loadShops(me.pagination.current_page,me.buscar,me.criterio,me.estatus)
                   Swal.fire(
                     'Exito!',
                     'La tienda fue actualizada correctamente.',
@@ -652,7 +659,7 @@
                     console.log(response);
                     Swal.close();
                     me.cerrarModal();
-                    me.loadShops(me.pagination.current_page,me.buscar,me.criterio)
+                    me.loadShops(me.pagination.current_page,me.buscar,me.criterio,me.estatus)
                     Swal.fire({
                         title: 'Exitoso',
                         text: 'El video ha sido guardado exitosamente',
@@ -676,7 +683,7 @@
                 }).then(function (response){
                   console.log(response)
                   me.cerrarModal();
-                  me.loadShops(me.pagination.current_page,me.buscar,me.criterio)
+                  me.loadShops(me.pagination.current_page,me.buscar,me.criterio,me.estatus)
                   Swal.fire(
                     'Exito!',
                     'La tienda fue actualizada correctamente.',
@@ -843,7 +850,7 @@
             },
         },
         mounted() {
-            this.loadShops(1,'','nombre');
+            this.loadShops(1,'','nombre','active');
         }
     }
 </script>

@@ -22,6 +22,14 @@ class UsersController extends Controller
                 ->when($request->buscar!='',function ($query) use ($request){
                     return $query->where($request->criterio,'like','%'.$request->buscar.'%');
                 })
+                ->when($request->estatus != '', function ($query) use ($request) {
+                        // Filtrar por estatus
+                        if ($request->estatus === 'active') {
+                            return $query->where('active', 1);
+                        } elseif ($request->estatus === 'inactive') {
+                            return $query->where('active', 0);
+                        }
+                    })
                 ->orderBy('id','desc')
                 ->paginate(20);
 

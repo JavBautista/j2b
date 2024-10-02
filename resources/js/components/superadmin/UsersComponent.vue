@@ -21,8 +21,13 @@
                               <option value="name">Nombre</option>
                               <option value="email">Email</option>
                             </select>
-                            <input type="text" v-model="buscar" class="form-control" placeholder="Texto a buscar" @keyup.enter="loadUsers(1,buscar,criterio)">
-                            <button type="submit" @click="loadUsers(1,buscar,criterio)" class="btn btn-primary"><i class="fa fa-search"></i> Buscar</button>
+                            <input type="text" v-model="buscar" class="form-control" placeholder="Texto a buscar" @keyup.enter="loadUsers(1,buscar,criterio,estatus)">
+                            <select class="form-control col-md-3" v-model="estatus">
+                                <option value="">TODOS</option>
+                                <option value="active">ACTIVOS</option>
+                                <option value="inactive">BAJAS</option>
+                            </select>
+                            <button type="submit" @click="loadUsers(1,buscar,criterio,estatus)" class="btn btn-primary"><i class="fa fa-search"></i> Buscar</button>
                         </div>
                     </div>
                 </div>
@@ -186,6 +191,7 @@
               offset:3,
               criterio:'name',
               buscar:'',
+              estatus:'active',
 
               shop_id:null,
               user_id:0,
@@ -232,9 +238,9 @@
            }
         },
         methods : {
-            loadUsers(page,buscar,criterio){
+            loadUsers(page,buscar,criterio,estatus){
                 let me=this;
-                var url = '/superadmin/users/get?page='+page+'&buscar='+buscar+'&criterio='+criterio;
+                var url = '/superadmin/users/get?page='+page+'&buscar='+buscar+'&criterio='+criterio+'&estatus='+estatus;
                 axios.get(url).then(function (response){
                     var respuesta  = response.data;
                     me.arrayUsers = respuesta.users.data;
@@ -250,10 +256,10 @@
                     // always executed
                   });
             },
-            cambiarPagina(page,buscar,criterio){
+            cambiarPagina(page,buscar,criterio,estatus){
                 let me = this;
                 me.pagination.current_page = page;
-                me.loadUsers(page,buscar,criterio);
+                me.loadUsers(page,buscar,criterio,estatus);
             },
             actualizarAActivo(id){
                 const swalWithBootstrapButtons = Swal.mixin({
@@ -278,7 +284,7 @@
                     axios.put('/superadmin/users/active',{
                         'id': id
                     }).then(function (response){
-                        me.loadUsers(me.pagination.current_page,me.buscar,me.criterio);
+                        me.loadUsers(me.pagination.current_page,me.buscar,me.criterio,me.estatus);
                         swalWithBootstrapButtons.fire(
                           '¡Activo!',
                           'Actualizacion exitosa.',
@@ -314,7 +320,7 @@
                     axios.put('/superadmin/users/inactive',{
                         'id': id
                     }).then(function (response){
-                        me.loadUsers(me.pagination.current_page,me.buscar,me.criterio);
+                        me.loadUsers(me.pagination.current_page,me.buscar,me.criterio,me.estatus);
                         swalWithBootstrapButtons.fire(
                           '¡Inactivo!',
                           'Actualizacion exitosa.',
@@ -340,7 +346,7 @@
                 }).then(function (response){
                   console.log(response)
                   me.cerrarModal();
-                  me.loadUsers(me.pagination.current_page,me.buscar,me.criterio)
+                  me.loadUsers(me.pagination.current_page,me.buscar,me.criterio,me.estatus)
                   Swal.fire(
                     'Exito!',
                     'Agregado correctamente.',
@@ -369,7 +375,7 @@
                 }).then(function (response){
                   console.log(response)
                   me.cerrarModal();
-                  me.loadUsers(me.pagination.current_page,me.buscar,me.criterio)
+                  me.loadUsers(me.pagination.current_page,me.buscar,me.criterio,me.estatus)
                   Swal.fire(
                     'Exito!',
                     'Actualización correcta.',
@@ -448,7 +454,7 @@
             },
         },
         mounted() {
-            this.loadUsers(1,'','name');
+            this.loadUsers(1,'','name','active');
         }
     }
 </script>

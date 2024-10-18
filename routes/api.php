@@ -70,11 +70,14 @@ Route::group([
         Route::post('user/update-terminos', '\App\Http\Controllers\AuthController@updateTerminos');
 
         /*CLIENTES*/
-        Route::resource('client','App\Http\Controllers\ClientController');
+        Route::resource('client','App\Http\Controllers\ClientController')->except(['show']);
         Route::post('client/edit/update','App\Http\Controllers\ClientController@update');
         Route::post('client/delete','App\Http\Controllers\ClientController@inactive');
         Route::post('client/upload-location-image','App\Http\Controllers\ClientController@uploadLocationImageClient');
         Route::post('client/delete-location-image','App\Http\Controllers\ClientController@deleteLocationImage');
+
+        Route::get('client/verify-user-email','App\Http\Controllers\ClientController@verifyUserEmail');
+        Route::post('client/store-user-app','App\Http\Controllers\ClientController@storeUserApp');
 
         /*PROVEEDORES*/
         Route::get('supplier','App\Http\Controllers\SupplierController@index');

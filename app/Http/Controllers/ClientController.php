@@ -3,8 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Client;
+use App\Models\User;
+use App\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Session;
 
 class ClientController extends Controller
 {
@@ -34,6 +38,41 @@ class ClientController extends Controller
                     ->paginate(10);
         }
         return $clients;
+
+    }
+
+    public function verifyUserEmail(Request $request)
+    {
+        $email = $request->email;
+        $existeUsuario = User::where('email', $email)->exists();
+        return response()->json(['existeUsuario' => $existeUsuario]);
+
+    }
+
+    public function storeUserApp(Request $request)
+    {
+        $user = $request->user();
+        $shop = $user->shop;
+
+        $client = Client::findOrFail($request->client_id);
+        $name=$client->name;
+        $role_collaborator= Role::where('name', 'client')->first();
+        $new_user = new User();
+        $new_user->active   = 1;
+        $new_user->shop_id  = $shop->id;
+        $new_user->name     = $name;
+        $new_user->email    = $request->email;
+        $new_user->password = Hash::make($request->password);
+        $new_user->save();
+        $new_user->roles()->attach($role_collaborator);
+
+        $client->user_id=$new_user->id;
+        $client->save();
+
+        return response()->json([
+                'ok'=>true,
+                'user' => $new_user,
+        ]);
 
     }
 

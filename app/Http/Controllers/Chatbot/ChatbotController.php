@@ -11,7 +11,7 @@ class ChatbotController extends Controller
 {
     public function getProducts(Request $request){
 
-        $products = Product::select('id', 'retail', 'wholesale', 'wholesale_premium', 'stock', 'reserve', 'description', 'image')
+        $products = Product::select('id', 'name','retail', 'wholesale', 'wholesale_premium', 'stock', 'reserve', 'description', 'image')
                     ->with('category')
                     ->where('shop_id',1)
                     ->where('active',1)

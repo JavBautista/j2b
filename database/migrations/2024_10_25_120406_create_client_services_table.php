@@ -15,8 +15,8 @@ class CreateClientServicesTable extends Migration
     {
         Schema::create('client_services', function (Blueprint $table) {
             $table->id();
-            /*$table->unsignedBigInteger('shop_id');
-            $table->unsignedBigInteger('client_id')->nullable()->default(0);
+            $table->unsignedBigInteger('shop_id');
+            $table->unsignedBigInteger('client_id');
             $table->boolean('active')->default(1);
             $table->string('status')->nullable();
             $table->unsignedBigInteger('priority')->default(1);
@@ -24,10 +24,11 @@ class CreateClientServicesTable extends Migration
             $table->text('description')->nullable();
             $table->text('solution')->nullable();
             $table->string('image')->nullable();
-            $table->date('expiration')->nullable();
+            $table->date('date_completed')->nullable();
             $table->timestamps();
 
-            $table->foreign('shop_id')->references('id')->on('shops');*/
+            $table->foreign('shop_id')->references('id')->on('shops');
+            $table->foreign('client_id')->references('id')->on('clients');
         });
     }
 

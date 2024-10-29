@@ -15,6 +15,17 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
+
+/*
+*-------------------------------------------------------------------
+*ROUTES OPEN FOR API IA
+*---------------------------------------------------------------------
+*/
+
+Route::get('chatbot/291118/get-products','App\Http\Controllers\Chatbot\ChatbotController@getProducts');
+Route::get('chatbot/291118/get-clients','App\Http\Controllers\Chatbot\ChatbotController@getClients');
+/*----------------------------------------------------------------------*/
+
 Route::get('notifications/test','App\Http\Controllers\NotificationController@test');
 
 /*RENTAS*/
@@ -160,6 +171,7 @@ Route::group([
         Route::post('notifications/read','App\Http\Controllers\NotificationController@read');
         Route::get('notifications/get/client/{client_id}','App\Http\Controllers\NotificationController@getClientxID');
         Route::get('notifications/get/task/{task_id}','App\Http\Controllers\NotificationController@getTaskxID');
+        Route::get('notifications/get/receipt/{receipt_id}','App\Http\Controllers\NotificationController@getReceiptxID');
 
         /*RENTAS*/
         Route::get('rents/get/by-cutoff','App\Http\Controllers\RentController@getByCutoff');

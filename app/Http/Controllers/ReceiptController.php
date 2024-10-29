@@ -96,6 +96,10 @@ class ReceiptController extends Controller
         $date_today     = Carbon::now();
         //Obtenemos el valor que nos dira si es una cotizacion, si no existe ponemos en 0 el valor
         $es_cotizacion  = isset($rcp['quotation'])?$rcp['quotation']:0;
+
+        //Obtenemos el valor que nos dira si es CRedito, si no existe ponemos en 0 el valor
+        $es_credito  = isset($rcp['credit'])?$rcp['credit']:0;
+
         //La nota no sera finalizada por default (en caso que sea cotizacion se quedara como 0)
         $finished=0;
         //Solo si no es cotizacion avaluaremos si estara finalizada o no
@@ -187,13 +191,25 @@ class ReceiptController extends Controller
         $receipt->status      = $rcp['status'];
         $receipt->payment     = $rcp['payment'];
         $receipt->received    = $rcp['received'];
+
         //Campos para cotizaciones
-        $receipt->quotation   = $es_cotizacion;
         //Solo si es una cotizacion guardemos la fecha, si no se guarda por default NULL en el insert BD
+        $receipt->quotation   = $es_cotizacion;
         if($es_cotizacion){
-            $ff = Carbon::parse($rcp['quotation_expiration']);
-            $exp = Carbon::createFromFormat('Y-m-d H:i:s', $ff )->format('Y-m-d');
+            $ff = Carbon::parse($rcp['quotation_expiration'], 'America/Mexico_City');
+            $exp = $ff->format('Y-m-d');
             $receipt->quotation_expiration = $exp;
+        }
+
+        //Solo si es una credito guardemos la fecha, si no se guarda por default NULL en el insert BD
+        $receipt->credit = $es_credito;
+        if($es_credito){
+            // Asegúrate de que la fecha enviada esté en la zona horaria correcta
+            $c_ff = Carbon::parse($rcp['credit_date_notification'], 'America/Mexico_City');
+            $c_exp = $c_ff->format('Y-m-d');
+
+            $receipt->credit_date_notification = $c_exp;
+            $receipt->credit_type = $rcp['credit_type'];
         }
 
 
@@ -294,6 +310,10 @@ class ReceiptController extends Controller
         $date_today     = Carbon::now();
         //Obtenemos el valor que nos dira si es una cotizacion, si no existe ponemos en 0 el valor
         $es_cotizacion  = isset($rcp['quotation'])?$rcp['quotation']:0;
+
+        //Obtenemos el valor que nos dira si es una credito, si no existe ponemos en 0 el valor
+        $es_credito  = isset($rcp['credit'])?$rcp['credit']:0;
+
         //La nota no sera finalizada por default (en caso que sea cotizacion se quedara como 0)
         $finished=0;
         //Solo si no es cotizacion avaluaremos si estara finalizada o no
@@ -327,11 +347,26 @@ class ReceiptController extends Controller
         $receipt->quotation   = $es_cotizacion;
         //Si es una cotizacion guardemos la fecha, si no debe ser NULL
         if($es_cotizacion){
-            $ff = Carbon::parse($rcp['quotation_expiration']);
-            $exp = Carbon::createFromFormat('Y-m-d H:i:s', $ff )->format('Y-m-d');
+            $ff = Carbon::parse($rcp['quotation_expiration'], 'America/Mexico_City');
+            $exp = $ff->format('Y-m-d');
             $receipt->quotation_expiration = $exp;
         }else{
             $receipt->quotation_expiration = null;
+        }
+
+        //Solo si es una credito guardemos la fecha, si no se guarda por default NULL en el insert BD
+        $receipt->credit = $es_credito;
+        if($es_credito){
+            // Asegúrate de que la fecha enviada esté en la zona horaria correcta
+            $c_ff = Carbon::parse($rcp['credit_date_notification'], 'America/Mexico_City');
+            $c_exp = $c_ff->format('Y-m-d');
+
+            $receipt->credit_date_notification = $c_exp;
+            $receipt->credit_type = $rcp['credit_type'];
+        }else{
+            $receipt->credit_date_notification = null;
+            $receipt->credit_type = null;
+            $receipt->credit_completed = 0;
         }
 
 

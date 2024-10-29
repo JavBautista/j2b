@@ -10,6 +10,7 @@ use App\Models\Rent;
 use App\Models\Client;
 use App\Models\Task;
 use App\Models\User;
+use App\Models\Receipt;
 
 class NotificationController extends Controller
 {
@@ -31,6 +32,7 @@ class NotificationController extends Controller
             $new_ntf_usr_today->save();
             //Creamos las notificaciones de renta de este día
             $this->storeNotificationsRentsByUser($user_id);
+            //$this->storeNotificationsCredits($user_id);
         }
 
         //Traemos todas la notificaciones sin leer del usuario
@@ -60,6 +62,11 @@ class NotificationController extends Controller
 
         return $notifications;
     }//.get()
+
+    public function storeNotificationsCredits($user_id){
+
+
+    }//storeNotificationsCredits()
 
     public function storeNotificationsRentsByUser($user_id){
         /*VERIFICAR SI ESTO FUNCIONA BIEN YA QUE
@@ -119,6 +126,15 @@ class NotificationController extends Controller
                         ->findOrFail($request->task_id);
         return $task;
     }//getTaskxID()
+
+    public function getReceiptxID(Request $request){
+        $receipt = Receipt::with('partialPayments')
+                        ->with('shop')
+                        ->with('detail')
+                        ->with('client')
+                        ->findOrFail($request->receipt_id);
+        return $receipt;
+    }//getReceiptxID()
 
     public function test(Request $request){
 

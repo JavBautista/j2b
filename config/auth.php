@@ -44,6 +44,10 @@ return [
             'driver' => 'passport',
             'provider' => 'users',
         ],
+        'chatbot' => [
+            'driver' => 'passport', // O el driver que estés usando
+            'provider' => 'users', // Este será el nuevo provider para el chatbot
+        ],
     ],
 
     /*
@@ -68,7 +72,10 @@ return [
             'driver' => 'eloquent',
             'model' => App\Models\User::class,
         ],
-
+        'chatbot_users' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\User::class, // Este modelo será exclusivo para el chatbot
+        ],
         // 'users' => [
         //     'driver' => 'database',
         //     'table' => 'users',

@@ -16,16 +16,6 @@ use Illuminate\Support\Facades\Route;
 */
 
 
-/*
-*-------------------------------------------------------------------
-*ROUTES OPEN FOR API IA
-*---------------------------------------------------------------------
-*/
-
-Route::get('chatbot/291118/get-products','App\Http\Controllers\Chatbot\ChatbotController@getProducts');
-Route::get('chatbot/291118/get-clients','App\Http\Controllers\Chatbot\ChatbotController@getClients');
-/*----------------------------------------------------------------------*/
-
 Route::get('notifications/test','App\Http\Controllers\NotificationController@test');
 
 /*RENTAS*/
@@ -58,8 +48,23 @@ Route::post('consumables/update-observation','App\Http\Controllers\ConsumablesCo
 Route::post('consumables/delete','App\Http\Controllers\ConsumablesController@delete');
 
 
+/*
+*-------------------------------------------------------------------
+*ROUTES FOR CHATBOX
+*---------------------------------------------------------------------
+*/
 
+/*----------------------------------------------------------------------*/
 
+Route::post('chatbot/login', '\App\Http\Controllers\Chatbot\ChatbotAuthController@login');
+
+Route::group([
+    'prefix' => 'chatbot',
+    'middleware' => ['auth:chatbot'] // Protege estas rutas con el guard chatbot
+], function () {
+    Route::get('get-products','App\Http\Controllers\Chatbot\ChatbotController@getProducts');
+    Route::get('get-clients','App\Http\Controllers\Chatbot\ChatbotController@getClients');
+});
 
 /*------------------------------------------------------------------
 /* BEGIN RUTAS PROTEGIDAS
@@ -219,6 +224,11 @@ Route::group([
         Route::post('administrator/active','App\Http\Controllers\AdministratorController@active');
         Route::post('administrator/inactive','App\Http\Controllers\AdministratorController@inactive');
         Route::post('administrator/update-lmited','App\Http\Controllers\AdministratorController@updateLimited');
+
+        /*CLIENT SEVICES*/
+         /*TASKS*/
+         Route::get('client-services','App\Http\Controllers\ClientServiceController@index');
+         Route::post('client-services/store','App\Http\Controllers\ClientServiceController@store');
     });
 });
 /*------------------------------------------------------------------

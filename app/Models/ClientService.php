@@ -16,6 +16,6 @@ class ClientService extends Model
 
 
     public function logs(){
-        return $this->hasMany(TaskLog::class)->orderBy('created_at', 'desc');;
+        return $this->hasMany(ClientServiceLog::class)->orderBy('created_at', 'desc');;
     }
 }

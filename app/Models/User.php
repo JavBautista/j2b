@@ -82,4 +82,8 @@ class User extends Authenticatable
     public function shop(){
         return $this->belongsTo(Shop::class);
     }
+
+    public function client(){
+        return $this->hasOne(Client::class);
+    }
 }

@@ -95,12 +95,15 @@ class AuthController extends Controller
         // Verificar si el usuario ha aceptado los términos
         $accepted_terms = $user->accepted_terms;
 
+        $user = $request->user()->load('roles')->load('client');
+
         return response()->json([
             'ok'=>true,
             'accepted_terms'=>$accepted_terms,
             'access_token' => $tokenResult->accessToken,
             'token_type' => 'Bearer',
-            'expires_at' => Carbon::parse($token->expires_at)->toDateTimeString()
+            'expires_at' => Carbon::parse($token->expires_at)->toDateTimeString(),
+            'user'=> $user,
         ]);
     }
 
@@ -121,7 +124,7 @@ class AuthController extends Controller
      */
     public function user(Request $request)
     {
-        $user = $request->user()->load('roles');
+        $user = $request->user()->load('roles')->load('client');
 
         return response()->json([
             'ok'=>true,

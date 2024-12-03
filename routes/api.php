@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Route;
 */
 
 
+
 Route::get('notifications/test','App\Http\Controllers\NotificationController@test');
 
 /*RENTAS*/
@@ -48,6 +49,7 @@ Route::post('consumables/update-observation','App\Http\Controllers\ConsumablesCo
 Route::post('consumables/delete','App\Http\Controllers\ConsumablesController@delete');
 
 
+
 /*
 *-------------------------------------------------------------------
 *ROUTES FOR CHATBOX
@@ -64,7 +66,10 @@ Route::group([
 ], function () {
     Route::get('get-products','App\Http\Controllers\Chatbot\ChatbotController@getProducts');
     Route::get('get-clients','App\Http\Controllers\Chatbot\ChatbotController@getClients');
+    Route::post('clients-create','App\Http\Controllers\Chatbot\ChatbotController@clientStore');
 });
+
+
 
 /*------------------------------------------------------------------
 /* BEGIN RUTAS PROTEGIDAS
@@ -79,6 +84,9 @@ Route::group([
       'middleware' => 'auth:api'
     ], function() {
         /*USER*/
+
+
+
         Route::get('logout', '\App\Http\Controllers\AuthController@logout');
         Route::get('user', '\App\Http\Controllers\AuthController@user');
         Route::post('user', '\App\Http\Controllers\AuthController@update');
@@ -225,10 +233,14 @@ Route::group([
         Route::post('administrator/inactive','App\Http\Controllers\AdministratorController@inactive');
         Route::post('administrator/update-lmited','App\Http\Controllers\AdministratorController@updateLimited');
 
-        /*CLIENT SEVICES*/
-         /*TASKS*/
-         Route::get('client-services','App\Http\Controllers\ClientServiceController@index');
-         Route::post('client-services/store','App\Http\Controllers\ClientServiceController@store');
+        /*ROUTES APP-CLIENTS*/
+        Route::get('client-services','App\Http\Controllers\ClientServiceController@index');
+        Route::post('client-services/store','App\Http\Controllers\ClientServiceController@store');
+
+        Route::get('app-client/catalogo/categories','App\Http\Controllers\CatalogoController@categories');
+        Route::get('app-client/catalogo/products','App\Http\Controllers\CatalogoController@products');
+
+
     });
 });
 /*------------------------------------------------------------------

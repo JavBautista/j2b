@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Storage;
 
 class TaskController extends Controller
 {
-     public function index(Request $request){
+    public function index(Request $request){
         $user = $request->user();
         $shop = $user->shop;
 

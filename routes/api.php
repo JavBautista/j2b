@@ -184,6 +184,9 @@ Route::group([
         Route::post('notifications/read','App\Http\Controllers\NotificationController@read');
         Route::get('notifications/get/client/{client_id}','App\Http\Controllers\NotificationController@getClientxID');
         Route::get('notifications/get/task/{task_id}','App\Http\Controllers\NotificationController@getTaskxID');
+
+        Route::get('notifications/get/client-service/{client_service_id}','App\Http\Controllers\NotificationController@getClientServicexID');
+
         Route::get('notifications/get/receipt/{receipt_id}','App\Http\Controllers\NotificationController@getReceiptxID');
 
         /*RENTAS*/
@@ -201,6 +204,11 @@ Route::group([
          //nuevas para imagenes
          Route::post('equipment/upload-image','App\Http\Controllers\EquipmentController@uploadImage');
          Route::post('equipment/delete-image','App\Http\Controllers\EquipmentController@deleteImage');
+
+         /*SERVICES CLIENTS*/
+         Route::get('services-clients','App\Http\Controllers\ServicesClientController@index');
+         Route::get('services-clients/get-num-status','App\Http\Controllers\ServicesClientController@getNumPorEstatus');
+         Route::post('services-clients/update-status','App\Http\Controllers\ServicesClientController@updateEstatus');
 
          /*TASKS*/
          Route::get('tasks','App\Http\Controllers\TaskController@index');
@@ -236,9 +244,16 @@ Route::group([
         /*ROUTES APP-CLIENTS*/
         Route::get('client-services','App\Http\Controllers\ClientServiceController@index');
         Route::post('client-services/store','App\Http\Controllers\ClientServiceController@store');
+        Route::post('client-services/update','App\Http\Controllers\ClientServiceController@update');
+        Route::post('client-services/delete-main-image','App\Http\Controllers\ClientServiceController@deleteMainImage');
+        Route::post('client-services/upload-image','App\Http\Controllers\ClientServiceController@uploadImage');
 
         Route::get('app-client/catalogo/categories','App\Http\Controllers\CatalogoController@categories');
         Route::get('app-client/catalogo/products','App\Http\Controllers\CatalogoController@products');
+
+        Route::get('app-client/pruchases/get','App\Http\Controllers\Clients\PurchaseController@getPurchasesClient');
+        Route::post('app-client/pruchase/store','App\Http\Controllers\Clients\PurchaseController@store');
+        Route::post('app-client/pruchase/update','App\Http\Controllers\Clients\PurchaseController@update');
 
 
     });

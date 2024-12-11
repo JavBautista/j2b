@@ -5,11 +5,39 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\ClientService;
 use App\Models\ClientServiceLog;
+use App\Models\Notification;
 use App\Models\User;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Database\Eloquent\Builder;
 
 class ClientServiceController extends Controller
 {
+    public function storeNotificationsForShop(ClientService $client_service){
+        //crearemos notificaiones para los distintos admins de la tienda
+        $shop_id = $client_service->shop_id;
+        $client_service_id = $client_service->id;
+        $client_name = $client_service->client->name;
+        //Obtenemos los usuarios tipo admin o superadmin dela tienda
+        $shop_users_admin = User::where('shop_id', $shop_id)
+                                ->whereHas('roles', function($query) {
+                                    $query->whereIn('role_user.role_id', [1, 2]);
+                                })
+                                ->where('active', 1)
+                                ->get();
+
+        foreach($shop_users_admin as $user){
+            $new_ntf = new Notification();
+            $new_ntf->user_id     = $user->id;
+            $new_ntf->description = 'Solicitud de Servicio: '.$client_name;
+            $new_ntf->type        = 'client_service';
+            $new_ntf->action      = 'client_service_id';
+            $new_ntf->data        = $client_service_id;
+            $new_ntf->read        = 0;
+            $new_ntf->save();
+        }
+    }//storeNotificationsForShop()
+
     private function storeLog($client_service_id, $user, $description){
         $log = new ClientServiceLog();
         $log->client_service_id    = $client_service_id;
@@ -29,7 +57,8 @@ class ClientServiceController extends Controller
         $query = ClientService::with('client')
                         ->with('logs')
                         ->where('shop_id', $shop->id)
-                        ->where('client_id', $client->id);
+                        ->where('client_id', $client->id)
+                        ->orderBy('id', 'desc');
 
        /* if ($buscar != '') {
             $query->where(function ($q) use ($buscar) {
@@ -75,6 +104,11 @@ class ClientServiceController extends Controller
         $client_service->priority  = 0;
         $client_service->title     = $request->title;
         $client_service->description = $request->description;
+
+        if ($request->hasFile('image')) {
+            $client_service->image = $request->file('image')->store('clients_services', 'public');
+        }
+
         $client_service->save();
 
         //Una ves creado el client_service, insertamos un log-history
@@ -82,6 +116,9 @@ class ClientServiceController extends Controller
 
 
         $client_service->load('logs');
+        $client_service->load('client');
+
+        $this->storeNotificationsForShop($client_service);
 
         return response()->json([
             'ok'=>true,
@@ -89,18 +126,93 @@ class ClientServiceController extends Controller
         ]);
     }//.store
 
+    public function deleteMainImage(Request $request){
+        $user = $request->user();
+        $client_service_id = $request->id;
+        $client_service = ClientService::findOrFail($client_service_id);
+        // Obtener la ruta de la imagen actual
+        $imagePath = $client_service->image;
+        // Verificar si hay una imagen almacenada y eliminarla
+        if ($imagePath) {
+            // Eliminar la imagen del almacenamiento
+            Storage::disk('public')->delete($imagePath);
+            // Limpiar el atributo de la imagen en el modelo
+            $client_service->image = null;
+            $client_service->save();
+
+            $log_desc = 'Eliminación de imágen principal.';
+            $this->storeLog($client_service->id,$user->name,$log_desc);
+        }
+
+        $client_service->load('client');
+        $client_service->load('logs');
+        return response()->json([
+            'ok' => true,
+            'client_service' => $client_service,
+        ]);
+    }//.deleteMainImage()
+
+    public function uploadImage(Request $request){
+        $user = $request->user();
+
+        $client_service_id = $request->client_service_id;
+        $client_service = ClientService::findOrFail($client_service_id);
+
+        // Validar la existencia del archivo de imagen
+        if ($request->hasFile('image')) {
+            $image = $request->file('image');
+
+            // Guardar la imagen en la ubicación 'public'
+            $imagePath = $image->store('clients_services', 'public');
+
+            // Si ya existe una imagen principal, guardar en la relación TaskImage
+            /*if ($client_service->image) {
+                $taskImage = new TaskImage();
+                $taskImage->task_id = $client_service_id;
+                $taskImage->image = $imagePath;
+                $taskImage->save();
+                //Una ves guardado el client_service, insertamos un log-history
+                $log_desc = 'Subida de imágen.';
+                $this->storeTask($client_service->id,$user->name,$log_desc);
+            } else {
+                // Si no existe una imagen principal, guardarla en el registro del client_service
+                $client_service->image = $imagePath;
+                $client_service->save();
+                //Una ves guardado el client_service, insertamos un log-history
+                $log_desc = 'Subida de imágen.';
+                $this->storeTask($client_service->id,$user->name,$log_desc);
+            }*/
+
+            // Si no existe una imagen principal, guardarla en el registro del client_service
+            if (!$client_service->image){
+                $client_service->image = $imagePath;
+                $client_service->save();
+                //Una ves guardado el client_service, insertamos un log-history
+                $log_desc = 'Subida de imágen.';
+                $this->storeLog($client_service->id,$user->name,$log_desc);
+            }
+        }
+
+        $client_service->load('client');
+        $client_service->load('logs');
+        return response()->json([
+            'ok'=>true,
+            'client_service' => $client_service,
+        ]);
+    }//uploadImage()
+
+
     public function update(Request $request){
         $user = $request->user();
         $client_service = ClientService::findOrFail($request->id);
-        $client_service->priority = $request->priority;
         $client_service->title    = $request->title;
         $client_service->description = $request->description;
-        $client_service->solution = $request->solution;
         $client_service->save();
 
-        //Una ves guardado el client_service, insertamos un log-history
+        //Una ves guardado, insertamos un log-history
         $this->storeLog($client_service->id,$user->name,'Edición del registro.');
 
+        $client_service->load('client');
         $client_service->load('logs');
 
         return response()->json([
@@ -109,115 +221,6 @@ class ClientServiceController extends Controller
         ]);
     }//.update
 
-    public function active(Request $request){
-        $user = $request->user();
-        $client_service = ClientService::findOrFail($request->id);
-        $client_service->active = 1;
-        $client_service->save();
 
-
-        //Una ves guardado el client_service, insertamos un log-history
-        $this->storeLog($client_service->id,$user->name,'Activado.');
-
-        $client_service->load('logs');
-
-        return response()->json([
-            'ok'=>true,
-            'client_service' => $client_service,
-        ]);
-    }//.active
-    public function inactive(Request $request){
-        $user = $request->user();
-        $client_service = ClientService::findOrFail($request->id);
-        $client_service->active = 0;
-        $client_service->save();
-        //Una ves guardado el client_service, insertamos un log-history
-        $this->storeLog($client_service->id,$user->name,'Desactivado.');
-
-        $client_service->load('logs');
-        return response()->json([
-            'ok'=>true,
-            'client_service' => $client_service,
-        ]);
-    }//.inactive
-
-    public function destroy(Request $request){
-        /*$client_service = ClientService::findOrFail($request->id);
-        // Verificar si la tarea tiene una imagen asociada
-        if ($client_service->image) {
-            // Obtener el nombre de archivo de la imagen
-            $filename = basename($client_service->image);
-
-            // Eliminar la imagen del almacenamiento
-            Storage::delete('public/' . $client_service->image);
-        }
-
-        // Eliminar las imágenes asociadas al modelo TaskImage del almacenamiento
-        $taskImages = TaskImage::where('task_id', $client_service->id)->get();
-        foreach ($taskImages as $taskImage) {
-            Storage::delete('public/' . $taskImage->image);
-        }
-
-        // Eliminar las imágenes asociadas al modelo TaskImage de la base de datos
-        TaskImage::where('task_id', $client_service->id)->delete();
-
-        // Eliminar el history asociadas al modelo TaskLog de la base de datos
-        TaskLog::where('task_id', $client_service->id)->delete();
-
-        // Eliminar la tarea
-        $client_service->delete();
-        */
-        return response()->json([
-            'ok'=>true
-        ]);
-    }//.destroy
-
-
-
-    public function updateEstatus(Request $request){
-        $user = $request->user();
-
-        $client_service = ClientService::findOrFail($request->input('client_service')['id']);
-        $new_status = $request->input('estatus');
-        $client_service->status = $new_status;
-        $client_service->save();
-        //Una ves guardado el client_service, insertamos un log-history
-        $log_desc = 'Actualización de estatus: '.$new_status;
-        $this->storeLog($client_service->id,$user->name,$log_desc);
-
-        // Disparar el evento
-         //event(new TaskUpdated($client_service, $user));
-        if($new_status == 'ATENDIDO'){ $this->storeNotificationsTaskForShop($client_service); }
-
-
-
-        $client_service->load('client');
-        $client_service->load('images');
-        $client_service->load('logs');
-        return response()->json([
-            'ok' => true,
-            'client_service' => $client_service
-        ]);
-    }//.updateEstatus
-
-    public function updateResena(Request $request){
-        $user = $request->user();
-        $client_service = ClientService::findOrFail($request->input('client_service')['id']);
-        $new_resena = $request->input('resena');
-        $client_service->review = $new_resena;
-        $client_service->save();
-        //Una ves guardado el client_service, insertamos un log-history
-        $log_desc = 'Actualización reseña.';
-        $this->storeLog($client_service->id,$user->name,$log_desc);
-
-        $client_service->load('client');
-        $client_service->load('images');
-        $client_service->load('logs');
-
-        return response()->json([
-            'ok' => true,
-            'client_service' => $client_service
-        ]);
-    }//.updateEstatus
 
 }

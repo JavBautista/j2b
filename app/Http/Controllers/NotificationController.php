@@ -11,6 +11,7 @@ use App\Models\Client;
 use App\Models\Task;
 use App\Models\User;
 use App\Models\Receipt;
+use App\Models\ClientService;
 
 class NotificationController extends Controller
 {
@@ -126,6 +127,13 @@ class NotificationController extends Controller
                         ->findOrFail($request->task_id);
         return $task;
     }//getTaskxID()
+
+    public function getClientServicexID(Request $request){
+        $client_service = ClientService::with('client')
+                        ->with('logs')
+                        ->findOrFail($request->client_service_id);
+        return $client_service;
+    }//getClientServicexID()
 
     public function getReceiptxID(Request $request){
         $receipt = Receipt::with('partialPayments')

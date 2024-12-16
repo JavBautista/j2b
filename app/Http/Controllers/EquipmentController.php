@@ -14,24 +14,29 @@ class EquipmentController extends Controller
         $shop = $user->shop;
 
         $buscar = $request->buscar;
-        if($buscar==''){
-            $equipments = RentDetail::with('images')->where('active',1)
-                    ->where('rent_id',0)
-                    ->where('shop_id',$shop->id)
-                    ->orderBy('id','desc')
-                    ->paginate(10);
-        }else{
-            $equipments = RentDetail::with('images')->where('active', 1)
-                    ->where('rent_id', 0)
-                    ->where('shop_id', $shop->id)
-                    ->where(function($query) use ($buscar) {
-                        $query->where('trademark', 'like', '%'.$buscar.'%')
-                              ->orWhere('model', 'like', '%'.$buscar.'%')
-                              ->orWhere('serial_number', 'like', '%'.$buscar.'%');
-                    })
-                    ->orderBy('id', 'desc')
-                    ->paginate(10);
+
+        // Inicializamos la consulta base
+        $query = RentDetail::with('images')
+            ->where('active', 1)
+            ->where('rent_id', 0)
+            ->where('shop_id', $shop->id);
+
+        // Aplicar búsqueda si existe
+        if (!empty($buscar)) {
+            $terms = explode(' ', $buscar); // Dividir la búsqueda en palabras
+            $query->where(function ($q) use ($terms) {
+                foreach ($terms as $term) {
+                    $q->where(function ($subQuery) use ($term) {
+                        $subQuery->where('trademark', 'like', "%$term%")
+                                 ->orWhere('model', 'like', "%$term%")
+                                 ->orWhere('serial_number', 'like', "%$term%");
+                    });
+                }
+            });
         }
+
+        // Obtener los resultados paginados
+        $equipments = $query->orderBy('id', 'desc')->paginate(10);
 
         return $equipments;
     }//index()

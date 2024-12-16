@@ -17,7 +17,7 @@ class ProductController extends Controller
         $buscar = $request->buscar;
         $category_id = isset($request->category_id)?$request->category_id:0;
 
-        $array_where =[ ['active','=','1'] ];
+        /*$array_where =[ ['active','=','1'] ];
         if ($buscar!='')     array_push($array_where,['name', 'like', '%'.$buscar.'%']);
         if ($category_id!=0) array_push($array_where,['category_id', '=', $category_id]);
 
@@ -25,7 +25,31 @@ class ProductController extends Controller
                     ->where('shop_id',$shop->id)
                     ->where($array_where)
                     ->orderBy('id','desc')
-                    ->paginate(10);
+                    ->paginate(10);*/
+
+        // Inicializamos la consulta base
+        $query = Product::with('category')
+            ->where('shop_id', $shop->id)
+            ->where('active', '1');
+
+        // Búsqueda por palabras separadas en el campo 'name'
+        if (!empty($buscar)) {
+            $terms = explode(' ', $buscar); // Dividir la búsqueda en palabras
+            $query->where(function ($q) use ($terms) {
+                foreach ($terms as $term) {
+                    $q->where('name', 'like', "%$term%");
+                }
+            });
+        }
+
+        // Filtrar por categoría si se selecciona una
+        if ($category_id != 0) {
+            $query->where('category_id', $category_id);
+        }
+
+        // Ordenar y paginar resultados
+        $products = $query->orderBy('id', 'desc')->paginate(10);
+
 
         return $products;
     }

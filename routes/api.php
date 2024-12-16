@@ -208,7 +208,16 @@ Route::group([
          /*SERVICES CLIENTS*/
          Route::get('services-clients','App\Http\Controllers\ServicesClientController@index');
          Route::get('services-clients/get-num-status','App\Http\Controllers\ServicesClientController@getNumPorEstatus');
+         Route::post('services-clients/store','App\Http\Controllers\ServicesClientController@store');
+         Route::post('services-clients/update','App\Http\Controllers\ServicesClientController@update');
+         Route::post('services-clients/delete','App\Http\Controllers\ServicesClientController@destroy');
+         Route::post('services-clients/active','App\Http\Controllers\ServicesClientController@active');
+         Route::post('services-clients/inactive','App\Http\Controllers\ServicesClientController@inactive');
          Route::post('services-clients/update-status','App\Http\Controllers\ServicesClientController@updateEstatus');
+         Route::post('services-clients/update-resena','App\Http\Controllers\ServicesClientController@updateResena');
+         Route::post('services-clients/upload-image-client-service','App\Http\Controllers\ServicesClientController@uploadImageClientService');
+         Route::post('services-clients/delete-main-image','App\Http\Controllers\ServicesClientController@deleteMainImage');
+         Route::post('services-clients/delete-alt-image','App\Http\Controllers\ServicesClientController@deleteAltImage');
 
          /*TASKS*/
          Route::get('tasks','App\Http\Controllers\TaskController@index');

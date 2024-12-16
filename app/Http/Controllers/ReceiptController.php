@@ -88,6 +88,30 @@ class ReceiptController extends Controller
         return $receipts;
     }//getAll()
 
+    public function descontarInventario(Receipt $receipt){
+        $details = $receipt->detail;
+
+        foreach ($details as $data) {
+            // Si es un PRODUCTO y NO es cotización: Actualizamos el Stock Inventario
+            if ($data->type == 'product') {
+                $product = Product::find($data->product_id);
+                if ($product) { // Verificar si el producto existe
+                    $product->stock -= $data->qty;
+                    $product->save();
+                }
+            }
+
+            // Si es un EQUIPO y NO es cotización: Actualizamos el estatus del equipo
+            if ($data->type == 'equipment') {
+                $equipo = RentDetail::find($data->product_id);
+                if ($equipo) { // Verificar si el equipo existe
+                    $equipo->active = 0;
+                    $equipo->save();
+                }
+            }
+        }//.foreach
+    }
+
     public function store(Request $request){
         $user = $request->user();
         $shop = $user->shop;
@@ -480,9 +504,14 @@ class ReceiptController extends Controller
     }//updateReceiptVentas()
 
     public function updateStatus(Request $request){
-        $receipt = Receipt::findOrFail($request->receipt_id);
+        $receipt = Receipt::with('detail')->findOrFail($request->receipt_id);
+        $status_actual = $receipt->status;
+
+        if($status_actual=='NUEVA COMPRA'){ $this->descontarInventario($receipt); }
+
         $receipt->status=$request->new_status;
         $receipt->save();
+
         return response()->json([
                 'ok'=>true,
                 'receipt' => $receipt,

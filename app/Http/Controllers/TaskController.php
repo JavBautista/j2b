@@ -20,6 +20,7 @@ class TaskController extends Controller
 
         $buscar = $request->buscar;
         $ordenar = $request->filtro_ordenar;
+        $status = $request->filtro_status;
 
         $query = Task::with('client')
                         ->with('images')
@@ -32,6 +33,11 @@ class TaskController extends Controller
                   ->orWhere('description', 'like', '%' . $buscar . '%');
             });
         }
+
+        if (!empty($status) && $status !== 'TODOS') {
+            $query->where('status', $status);
+        }
+
 
         switch ($ordenar) {
             case 'ID_ASC':

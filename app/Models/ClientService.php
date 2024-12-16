@@ -16,6 +16,10 @@ class ClientService extends Model
 
 
     public function logs(){
-        return $this->hasMany(ClientServiceLog::class)->orderBy('created_at', 'desc');;
+        return $this->hasMany(ClientServiceLog::class)->orderBy('created_at', 'desc');
+    }
+
+    public function images(){
+        return $this->hasMany(ClientServiceImage::class)->orderBy('created_at', 'desc');
     }
 }

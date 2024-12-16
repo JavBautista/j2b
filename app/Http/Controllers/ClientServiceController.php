@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\ClientService;
 use App\Models\ClientServiceLog;
+use App\Models\ClientServiceImage;
 use App\Models\Notification;
 use App\Models\User;
 use Illuminate\Support\Carbon;
@@ -56,16 +57,18 @@ class ClientServiceController extends Controller
 
         $query = ClientService::with('client')
                         ->with('logs')
+                        ->with('images')
                         ->where('shop_id', $shop->id)
-                        ->where('client_id', $client->id)
-                        ->orderBy('id', 'desc');
+                        ->where('client_id', $client->id);
 
-       /* if ($buscar != '') {
+        if ($buscar != '') {
             $query->where(function ($q) use ($buscar) {
                 $q->where('title', 'like', '%' . $buscar . '%')
                   ->orWhere('description', 'like', '%' . $buscar . '%');
             });
-        }*/
+        }
+
+        $query->orderBy('id', 'desc');
 
         /*switch ($ordenar) {
             case 'ID_ASC':
@@ -85,8 +88,7 @@ class ClientServiceController extends Controller
                 $query->orderBy('id', 'desc');
         }*/
 
-        $client_services = $query->paginate(10);
-
+        $client_services = $query->paginate(15);
         return $client_services;
     }//index()
 
@@ -116,6 +118,7 @@ class ClientServiceController extends Controller
 
 
         $client_service->load('logs');
+        $client_service->load('images');
         $client_service->load('client');
 
         $this->storeNotificationsForShop($client_service);
@@ -145,6 +148,7 @@ class ClientServiceController extends Controller
         }
 
         $client_service->load('client');
+        $client_service->load('images');
         $client_service->load('logs');
         return response()->json([
             'ok' => true,
@@ -165,26 +169,17 @@ class ClientServiceController extends Controller
             // Guardar la imagen en la ubicación 'public'
             $imagePath = $image->store('clients_services', 'public');
 
-            // Si ya existe una imagen principal, guardar en la relación TaskImage
-            /*if ($client_service->image) {
-                $taskImage = new TaskImage();
-                $taskImage->task_id = $client_service_id;
-                $taskImage->image = $imagePath;
-                $taskImage->save();
+            // Si ya existe una imagen principal, guardar en la relación ClientServiceImage
+            if ($client_service->image) {
+                $client_serviceImage = new ClientServiceImage();
+                $client_serviceImage->client_service_id = $client_service_id;
+                $client_serviceImage->image = $imagePath;
+                $client_serviceImage->save();
                 //Una ves guardado el client_service, insertamos un log-history
                 $log_desc = 'Subida de imágen.';
-                $this->storeTask($client_service->id,$user->name,$log_desc);
+                $this->storeLog($client_service->id,$user->name,$log_desc);
             } else {
                 // Si no existe una imagen principal, guardarla en el registro del client_service
-                $client_service->image = $imagePath;
-                $client_service->save();
-                //Una ves guardado el client_service, insertamos un log-history
-                $log_desc = 'Subida de imágen.';
-                $this->storeTask($client_service->id,$user->name,$log_desc);
-            }*/
-
-            // Si no existe una imagen principal, guardarla en el registro del client_service
-            if (!$client_service->image){
                 $client_service->image = $imagePath;
                 $client_service->save();
                 //Una ves guardado el client_service, insertamos un log-history
@@ -194,6 +189,7 @@ class ClientServiceController extends Controller
         }
 
         $client_service->load('client');
+        $client_service->load('images');
         $client_service->load('logs');
         return response()->json([
             'ok'=>true,
@@ -213,6 +209,7 @@ class ClientServiceController extends Controller
         $this->storeLog($client_service->id,$user->name,'Edición del registro.');
 
         $client_service->load('client');
+        $client_service->load('images');
         $client_service->load('logs');
 
         return response()->json([

@@ -9,7 +9,9 @@ use App\Models\Product;
 class CatalogoController extends Controller
 {
     public function categories(Request $request){
-        $categories = Category::where('active',1)->orderBy('name')->limit(8)->inRandomOrder()->get();
+        $user = $request->user();
+        $shop = $user->shop;
+        $categories = Category::where('active',1)->where('shop_id',$shop->id)->orderBy('name')->limit(10)->inRandomOrder()->get();
         return response()->json([
             'ok'=>true,
             'data' => $categories,
@@ -17,7 +19,10 @@ class CatalogoController extends Controller
     }
 
     public function products(Request $request){
-        $products = Product::where('active', 1)
+        $user = $request->user();
+        $shop = $user->shop;
+
+        $products = Product::where('active', 1)->where('shop_id',$shop->id)
             ->inRandomOrder() // Orden aleatorio
             ->limit(10)
             ->get();

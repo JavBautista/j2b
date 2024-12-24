@@ -215,6 +215,7 @@ class ReceiptController extends Controller
         $receipt->status      = $rcp['status'];
         $receipt->payment     = $rcp['payment'];
         $receipt->received    = $rcp['received'];
+        $receipt->origin      = 'ADMIN';
 
         //Campos para cotizaciones
         //Solo si es una cotizacion guardemos la fecha, si no se guarda por default NULL en el insert BD

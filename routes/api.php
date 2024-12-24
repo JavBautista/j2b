@@ -130,7 +130,8 @@ Route::group([
         Route::post('product/delete','App\Http\Controllers\ProductController@inactive');
 
         Route::post('product/upload-image','App\Http\Controllers\ProductController@uploadImageProduct');
-        Route::post('product/delete-image','App\Http\Controllers\ProductController@deleteImageProduct');
+        Route::post('product/delete-main-image','App\Http\Controllers\ProductController@deleteMainImage');
+        Route::post('product/delete-alt-image','App\Http\Controllers\ProductController@deleteAltImage');
 
         /* SHOP */
         Route::get('/shop','App\Http\Controllers\ShopController@getShop');

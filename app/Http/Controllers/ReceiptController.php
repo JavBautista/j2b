@@ -61,10 +61,14 @@ class ReceiptController extends Controller
         $filtro_type_receipt = $request->filtro_type_receipt;
         $filtro_type_receipt = strtolower($filtro_type_receipt);
 
+        $filtro_origin_receipt = $request->filtro_origin_receipt;
+
+
         $filtro_buscar = isset($request->buscar)?trim($request->buscar):'';
         $quotation     = (isset($request->type_cotizacion)&&$request->type_cotizacion=='true')?1:0;
 
         $where_type =($filtro_type_receipt=='todos')?null:$filtro_type_receipt;
+        $where_origin =($filtro_origin_receipt=='TODOS')?null:$filtro_origin_receipt;
 
         $receipts = Receipt::with('partialPayments')
                         ->with('infoExtra')
@@ -80,6 +84,9 @@ class ReceiptController extends Controller
                         })
                         ->when( $where_type, function ($query, $where_type) {
                             return $query->where('type',$where_type);
+                        })
+                        ->when( $where_origin, function ($query, $where_origin) {
+                            return $query->where('origin',$where_origin);
                         })
 
                         ->orderBy('id','desc')

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Models\ProductImage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -28,7 +29,7 @@ class ProductController extends Controller
                     ->paginate(10);*/
 
         // Inicializamos la consulta base
-        $query = Product::with('category')
+        $query = Product::with('category', 'images')
             ->where('shop_id', $shop->id)
             ->where('active', '1');
 
@@ -81,11 +82,12 @@ class ProductController extends Controller
             */
             $product->save();
 
-            $product_insert = Product::with('category')->findOrFail($product->id);
+            $product->load('category');
+            $product->load('images');
 
             return response()->json([
                 'ok'=>true,
-                'product' => $product_insert,
+                'product' => $product,
             ]);
     }
 
@@ -112,6 +114,7 @@ class ProductController extends Controller
         */
         $product->save();
         $product->load('category');
+        $product->load('images');
 
         return response()->json([
             'ok'=>true,
@@ -126,6 +129,9 @@ class ProductController extends Controller
         $product->stock   = $request->stock;
         $product->reserve = $request->reserve;
         $product->save();
+
+        $product->load('category');
+        $product->load('images');
 
         return response()->json([
             'ok'=>true,
@@ -154,19 +160,32 @@ class ProductController extends Controller
             $image = $request->file('image');
             // Guardar la imagen en la ubicación 'public'
             $imagePath = $image->store('products', 'public');
-            // Si no existe una imagen principal, guardarla en el registro del product
-            $product->image = $imagePath;
-            $product->save();
+
+            // Si ya existe una imagen principal, guardar en la relación ProductImage
+            if ($product->image) {
+                $productImage = new ProductImage();
+                $productImage->product_id = $product_id;
+                $productImage->image = $imagePath;
+                $productImage->save();
+            } else {
+                // Si no existe una imagen principal, guardarla en el registro del product
+                $product->image = $imagePath;
+                $product->save();
+
+            }
         }
 
+
         $product->load('category');
+        $product->load('images');
         return response()->json([
             'ok'=>true,
             'product' => $product,
         ]);
     }
 
-    public function deleteImageProduct(Request $request){
+    public function deleteMainImage(Request $request){
+        $user = $request->user();
         $product_id = $request->id;
         $product = Product::findOrFail($product_id);
         // Obtener la ruta de la imagen actual
@@ -178,12 +197,55 @@ class ProductController extends Controller
             // Limpiar el atributo de la imagen en el modelo
             $product->image = null;
             $product->save();
+
+            $log_desc = 'Eliminación de imágen principal.';
         }
 
         $product->load('category');
+        $product->load('images');
         return response()->json([
             'ok' => true,
             'product' => $product,
         ]);
-    }
+    }//.deleteMainImage()
+
+    public function deleteAltImage(Request $request){
+        $user = $request->user();
+        $product_id = $request->input('product.id'); // Obtener el 'id' del product del request
+        $imgAltId = $request->input('img_alt_id'); // Obtener el 'img_alt_id' del request
+
+        try {
+            // Buscar la imagen alternativa por su ID
+            $productImage = ProductImage::findOrFail($imgAltId);
+
+            // Verificar si la imagen alternativa pertenece al product indicado
+            if ($productImage->product_id != $product_id) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'La imagen alternativa no pertenece al product indicado.',
+                ], 400);
+            }
+
+            // Eliminar la imagen alternativa del almacenamiento
+            Storage::disk('public')->delete($productImage->image);
+
+            // Eliminar el registro de la imagen alternativa de la base de datos
+            $productImage->delete();
+
+
+            // Cargar el product con las relaciones actualizadas
+            $product = Product::with('category', 'images')->findOrFail($product_id);
+
+            return response()->json([
+                'ok' => true,
+                'product' => $product,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Error al eliminar la imagen alternativa.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }//.deleteAltImage()
 }

@@ -67,6 +67,7 @@ Route::group([
     Route::get('get-products','App\Http\Controllers\Chatbot\ChatbotController@getProducts');
     Route::get('get-clients','App\Http\Controllers\Chatbot\ChatbotController@getClients');
     Route::post('clients-create','App\Http\Controllers\Chatbot\ChatbotController@clientStore');
+    Route::post('receipt-create','App\Http\Controllers\Chatbot\ChatbotController@receiptStore');
 });
 
 

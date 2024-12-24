@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Validator;
 
 class AuthController extends Controller
 {
-     public function signUp(Request $request)
+    public function signUp(Request $request)
     {
         $validator = Validator::make($request->all(),[
             'name' => 'required|string',

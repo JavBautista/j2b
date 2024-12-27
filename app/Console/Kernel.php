@@ -24,10 +24,11 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule)
     {
         // $schedule->command('inspire')->hourly();
-        $schedule->command('test:task')->everyMinute();
+        //$schedule->command('test:task')->everyMinute();
+
         //everyTwoMinutes()
-        //$schedule->command('payment_reminders:generate')->daily();
-        $schedule->command('payment_reminders:generate')->everyTwoMinutes();
+        //$schedule->command('payment_reminders:generate')->everyTwoMinutes();
+        $schedule->command('payment_reminders:generate')->daily();
     }
 
     /**

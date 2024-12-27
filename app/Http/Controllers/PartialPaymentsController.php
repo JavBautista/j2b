@@ -31,6 +31,10 @@ class PartialPaymentsController extends Controller
         if($suma_pagos >= $receipt->total){
             $receipt->finished=1;
             $receipt->status='PAGADA';
+            if($receipt->credit){
+                $receipt->credit=0;
+                $receipt->credit_completed=1;
+            }
         }
         $receipt->save();
 

@@ -62,7 +62,7 @@ class PaymentsReminders extends Command
         Storage::append("log_payment_reminders.txt", $log_text);
 
         // Obtener los créditos activos
-        $receipts = Receipt::where('credit', 1)
+        $receipts = Receipt::with('client')->where('credit', 1)
             ->where('credit_completed', 0)
             ->get();
         // Fecha actual
@@ -89,7 +89,7 @@ class PaymentsReminders extends Command
                 foreach($shop_users_admin as $user){
                     $new_ntf = new Notification();
                     $new_ntf->user_id = $user->id;
-                    $new_ntf->description = 'Recordatorio de Pago';
+                    $new_ntf->description = 'Recordatorio de Pago: '.$client_name;
                     $new_ntf->type = 'payment_reminders';
                     $new_ntf->action = 'receipt_id';
                     $new_ntf->data = $receipt->id;

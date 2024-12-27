@@ -27,7 +27,7 @@ class Kernel extends ConsoleKernel
         //$schedule->command('test:task')->everyMinute();
 
         //everyTwoMinutes()
-        //$schedule->command('payment_reminders:generate')->everyTwoMinutes();
+        //$schedule->command('payment_reminders:generate')->everyMinute();
         $schedule->command('payment_reminders:generate')->daily();
     }
 

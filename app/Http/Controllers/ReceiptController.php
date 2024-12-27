@@ -241,6 +241,7 @@ class ReceiptController extends Controller
             $c_exp = $c_ff->format('Y-m-d');
 
             $receipt->credit_date_notification = $c_exp;
+            //El tipo de credito puede ser: 'semanal', 'quincenal', 'mensual'
             $receipt->credit_type = $rcp['credit_type'];
         }
 

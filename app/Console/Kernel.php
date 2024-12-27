@@ -13,9 +13,21 @@ class Kernel extends ConsoleKernel
      * @param  \Illuminate\Console\Scheduling\Schedule  $schedule
      * @return void
      */
+    /*protected $commands=[
+        Commands\TestTask::class
+    ];*/
+
+    protected function scheduleTimezone(){
+        return 'America/Mexico_City';
+    }
+
     protected function schedule(Schedule $schedule)
     {
         // $schedule->command('inspire')->hourly();
+        $schedule->command('test:task')->everyMinute();
+        //everyTwoMinutes()
+        //$schedule->command('payment_reminders:generate')->daily();
+        $schedule->command('payment_reminders:generate')->everyTwoMinutes();
     }
 
     /**

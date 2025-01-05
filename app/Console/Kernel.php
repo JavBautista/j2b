@@ -29,6 +29,7 @@ class Kernel extends ConsoleKernel
         //$schedule->command('payment_reminders:generate')->everyMinute();
         $schedule->command('payment_reminders:generate')->daily();
         $schedule->command('create:rents_notifications')->daily();
+        $schedule->command('create:shop_cutoff_notifications')->daily();
     }
 
     /**

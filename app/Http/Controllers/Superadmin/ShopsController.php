@@ -80,6 +80,7 @@ class ShopsController extends Controller
         $shop->values = $request->values;
         $shop->bank_number_secondary = $request->bank_number_secondary;
         $shop->owner_name = $request->owner_name;
+        $shop->cutoff = 1;
         $shop->save();
     }//store()
 

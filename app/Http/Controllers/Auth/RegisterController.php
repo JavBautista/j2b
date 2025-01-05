@@ -101,7 +101,8 @@ class RegisterController extends Controller
                 $shop = Shop::create([
                     'plan_id' => 1,
                     'active' => 1,
-                    'name' => $data['shop_name']
+                    'name' => $data['shop_name'],
+                    'cutoff'=>1
                 ]);
 
                 $user = User::create([

@@ -25,10 +25,10 @@ class Kernel extends ConsoleKernel
     {
         // $schedule->command('inspire')->hourly();
         //$schedule->command('test:task')->everyMinute();
-
         //everyTwoMinutes()
         //$schedule->command('payment_reminders:generate')->everyMinute();
         $schedule->command('payment_reminders:generate')->daily();
+        $schedule->command('create:rents_notifications')->daily();
     }
 
     /**

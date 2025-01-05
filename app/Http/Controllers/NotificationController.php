@@ -15,6 +15,7 @@ use App\Models\ClientService;
 
 class NotificationController extends Controller
 {
+    /*//Metodo get Original v1: Este generaba las notificaciones al abrir la app
     public function get(Request $request){
 
         $user_id=$request->user_id;
@@ -63,13 +64,44 @@ class NotificationController extends Controller
 
         return $notifications;
     }//.get()
+    */
+
+    //Nuevo metodo get, solo obtenemos las notificaciones  ya que ya las genero el cron tab
+    public function get(Request $request){
+
+        $user_id=$request->user_id;
+
+        //Traemos todas la notificaciones sin leer del usuario
+        $all_notifications = Notification::where('user_id',$user_id)->where('read',0)->get();
+
+        //Adicionalmente verificamos que las notificaciones no leidas aun sean de clientes activos
+        //Puede haber notificaciones de dias pasados, y en ese lapso haberse dado de baja algun cliente
+        foreach ($all_notifications as $ntf) {
+            if($ntf->action == 'client_id'){
+                $idcl = $ntf->data;
+                $cl = Client::find($idcl);
+                if($cl->active==0){
+                    $act_ntf = Notification::find($ntf->id);
+                    $act_ntf->read=1;
+                    $act_ntf->save();
+                }
+            }
+        }
+
+        //Traemos las notificaciones paginadas sin leer del usuario
+        $notifications = Notification::where('user_id',$user_id)
+                            ->where('read',0)
+                            ->orderBy('created_at','desc')
+                            ->paginate(10);
+
+        return $notifications;
+    }//.get()
 
     public function storeNotificationsCredits($user_id){
-
-
     }//storeNotificationsCredits()
 
     public function storeNotificationsRentsByUser($user_id){
+        /* ENERO 2025: Este metodo ya no deberia usarse, lo dejaremos hasta confirmar que funciona bien el nuevo cron que las gnerar ahora*/
         /*VERIFICAR SI ESTO FUNCIONA BIEN YA QUE
         SOLO DEBE GENERAR PARA LAS RENTAS DE LOS CLIENTES DE LA TIENDAS
         */

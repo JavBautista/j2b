@@ -17,6 +17,6 @@
 
     <p>Saludos.</p>
     <p>J2Biznes powered by Levcore.app</p>
-    <p>2024</p>
+    <p>{{ date('Y') }}</p>
 </body>
 </html>

@@ -117,7 +117,9 @@ class ChatbotController extends Controller
         $receipt->save();
 
         //Guardaremos el detalle de la nota
-        $details = json_decode($request->detail);
+        //$details = json_decode($request->detail);
+        $details = is_string($request->detail) ? json_decode($request->detail) : $request->detail;
+
 
         foreach($details as $data){
 

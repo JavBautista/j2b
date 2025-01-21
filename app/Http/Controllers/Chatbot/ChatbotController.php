@@ -122,6 +122,12 @@ class ChatbotController extends Controller
 
 
         foreach($details as $data){
+            if (!is_object($data) || !isset($data->id)) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'Cada detalle debe ser un objeto con las propiedades necesarias.',
+                ], 400);
+            }
 
             $detail = new ReceiptDetail();
             $detail->receipt_id  = $receipt->id;

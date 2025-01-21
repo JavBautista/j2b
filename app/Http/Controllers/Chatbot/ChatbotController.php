@@ -118,7 +118,37 @@ class ChatbotController extends Controller
 
         //Guardaremos el detalle de la nota
         //$details = json_decode($request->detail);
-        $details = is_string($request->detail) ? json_decode($request->detail) : $request->detail;
+
+        $details = $request->detail;
+
+        if (!is_array($details)) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'El campo "detail" debe ser un array válido.',
+            ], 400);
+        }
+
+        foreach ($details as $data) {
+            if (!is_object((object)$data) || !isset($data['id'])) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'Cada detalle debe ser un objeto con las propiedades necesarias.',
+                ], 400);
+            }
+
+            $detail = new ReceiptDetail();
+            $detail->receipt_id  = $receipt->id;
+            $detail->product_id  = $data['id'];
+            $detail->type        = $data['type'] ?? 'desconocido';
+            $detail->descripcion = $data['name'] ?? '';
+            $detail->qty         = $data['qty'] ?? 0;
+            $detail->price       = $data['cost'] ?? 0;
+            $detail->subtotal    = $data['subtotal'] ?? 0;
+            $detail->image       = $data['image'] ?? null;
+            $detail->save();
+        }
+
+        /*$details = is_string($request->detail) ? json_decode($request->detail) : $request->detail;
 
         return response()->json([
                 'object'=>$request->detail
@@ -143,7 +173,7 @@ class ChatbotController extends Controller
             $detail->image       = $data->image;
             $detail->save();
         }//.foreach
-
+        */
 
         //Obtenemos el recibo recien guardado para obtener la relacion de de pagos parciales
         $receipt->load('detail');

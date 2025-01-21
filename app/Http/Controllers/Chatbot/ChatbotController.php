@@ -120,6 +120,9 @@ class ChatbotController extends Controller
         //$details = json_decode($request->detail);
         $details = is_string($request->detail) ? json_decode($request->detail) : $request->detail;
 
+        return response()->json([
+                'object'=>$request->detail
+            ],400);
 
         foreach($details as $data){
             if (!is_object($data) || !isset($data->id)) {

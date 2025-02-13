@@ -18,7 +18,7 @@ class UsersController extends Controller
 
         $shops = Shop::where('active',1)->get();
 
-        $users = User::with('shop')
+        $users = User::with('shop')->with('roles')
                 ->when($request->buscar!='',function ($query) use ($request){
                     return $query->where($request->criterio,'like','%'.$request->buscar.'%');
                 })

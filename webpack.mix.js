@@ -1,4 +1,5 @@
 const mix = require('laravel-mix');
+const webpack = require('webpack'); // Agregar esta línea
 
 /*
  |--------------------------------------------------------------------------
@@ -27,4 +28,14 @@ mix.js('resources/js/app.js', 'public/js')
     .vue()
     .sourceMaps();
 
- mix.browserSync('http://j2b.local/');
+mix.webpackConfig({
+        plugins: [
+            new webpack.DefinePlugin({
+                __VUE_OPTIONS_API__: true,
+                __VUE_PROD_DEVTOOLS__: false
+            })
+        ]
+    });
+
+
+ mix.browserSync('http://j2b.test/');

@@ -77,7 +77,7 @@
 
                                   <ul class="dropdown-menu">
                                     <li><a class="dropdown-item" href="#" @click="abrirModal('shop','ver_datos', shop)">  <i class="fa fa-eye"></i>Ver</a></li>
-                                    <li>
+                                  
                                     <li>
                                       <a class="dropdown-item" href="#" @click="abrirModal('shop','actualizar_datos', shop)"><i class="fa fa-edit"></i>Editar</a>
                                     </li>

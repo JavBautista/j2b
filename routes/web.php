@@ -28,7 +28,7 @@ Route::get('/pre-registro/completar', [App\Http\Controllers\RequestsJ2bControlle
 
 Route::get('/pre-registro/error', [App\Http\Controllers\RequestsJ2bController::class, 'error'])->name('solicitud.error');
 
-Route::post('/registro/create', [App\Http\Controllers\RequestsJ2bController::class, 'store'])->name('solicitud.store');
+Route::post('/registro/create', [App\Http\Controllers\RequestsJ2bController::class, 'store'])->name('X.solicitud.store');
 
 
 

@@ -4,51 +4,39 @@
  * building robust, powerful web applications using Vue and Laravel.
  */
 
-// Import Day.js
+import { createApp } from 'vue';
 import dayjs from 'dayjs';
-
 require('./bootstrap');
 
-window.Vue = require('vue').default;
+// Importar los componentes manualmente
+import PlansComponent from './components/superadmin/PlansComponent.vue'
+import PreRegisterComponent from './components/superadmin/PreRegisterComponent.vue'
+import ShopsComponent from './components/superadmin/ShopsComponent.vue'
+import UsersComponent from './components/superadmin/UsersComponent.vue'
+import ExampleComponent from './components/ExampleComponent.vue';
 
-/**
- * The following block of code may be used to automatically register your
- * Vue components. It will recursively scan this directory for the Vue
- * components and automatically register them with their "basename".
- *
- * Eg. ./components/ExampleComponent.vue -> <example-component></example-component>
- */
+const app = createApp({});
 
-// const files = require.context('./', true, /\.vue$/i)
-// files.keys().map(key => Vue.component(key.split('/').pop().split('.')[0], files(key).default))
+// Registrar los componentes globalmente
+app.component('superadmin-plans-component', PlansComponent);
+app.component('superadmin-pre-register-component', PreRegisterComponent);
+app.component('superadmin-shops-component', ShopsComponent);
+app.component('superadmin-users-component', UsersComponent);
+app.component('example-component', ExampleComponent);
 
-Vue.component('superadmin-plans-component', require('./components/superadmin/PlansComponent.vue').default);
-Vue.component('superadmin-pre-register-component', require('./components/superadmin/PreRegisterComponent.vue').default);
-Vue.component('superadmin-shops-component', require('./components/superadmin/ShopsComponent.vue').default);
-Vue.component('superadmin-users-component', require('./components/superadmin/UsersComponent.vue').default);
-Vue.component('example-component', require('./components/ExampleComponent.vue').default);
-
-// Example of a Vue filter using Day.js (optional)
-Vue.filter('formatDate', function(value, format = 'DD/MM/YYYY') {
-    return dayjs(value).format(format); // This will format the date using Day.js
-});
-
-Vue.filter('toCurrency', function (value) {
-    if (typeof value !== "number") {
-        return value;
+// Filtros ya no existen en Vue 3, pero puedes usar propiedades globales
+app.config.globalProperties.$filters = {
+    formatDate(value, format = 'DD/MM/YYYY') {
+        return dayjs(value).format(format);
+    },
+    toCurrency(value) {
+        if (typeof value !== "number") return value;
+        return new Intl.NumberFormat('es-MX', {
+            style: 'currency',
+            currency: 'MXN'
+        }).format(value);
     }
-    var formatter = new Intl.NumberFormat('es-MX', {
-        style: 'currency',
-        currency: 'MXN'
-    });
-    return formatter.format(value);
-});
-/**
- * Next, we will create a fresh Vue application instance and attach it to
- * the page. Then, you may begin adding components to this application
- * or customize the JavaScript scaffolding to fit your unique needs.
- */
+};
 
-const app = new Vue({
-    el: '#app',
-});
+// Montar la aplicación en el `#app`
+app.mount('#app');

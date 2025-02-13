@@ -39,6 +39,7 @@
                             <th>Email</th>
                             <th>Tienda</th>
                             <th>Status</th>
+                            <th>Rol</th>
                             <th>Opciones</th>
                         </tr>
                     </thead>
@@ -48,7 +49,7 @@
                               <td v-text="user.name"></td>
                               <td v-text="user.email"></td>
                               <td v-text="user.shop.name"></td>
-
+                              <td>{{ user.roles && user.roles.length ? user.roles[0].name : 'Sin rol' }}</td>
 
                               <td>
                                   <span v-if="user.active" class="badge badge-success">Activo</span>

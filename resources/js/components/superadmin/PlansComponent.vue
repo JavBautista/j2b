@@ -55,7 +55,7 @@
 
                                       <ul class="dropdown-menu">
                                         <li><a class="dropdown-item" href="#" @click="abrirModal('plan','ver_datos', plan)"><i class="fa fa-eye"></i>Ver</a></li>
-                                        <li>
+                                      
                                         <li><a class="dropdown-item" href="#" @click="abrirModal('plan','actualizar_datos', plan)"><i class="fa fa-edit"></i>Editar</a></li>
                                         <li>
                                             <a v-if="plan.active" class="dropdown-item" href="#" @click="actualizarAInactivo(plan.id)"><i class="fa fa fa-toggle-on"></i>Deshabilitar</a>

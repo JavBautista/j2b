@@ -164,9 +164,12 @@ class ReceiptController extends Controller
             Carbon::setLocale('es');
             $fecha_corte_ini->locale('es');
             $fecha_corte_fin->locale('es');
-            $desc1 = $fecha_corte_ini->formatLocalized('%d de %B del %Y');
+
+            //$desc1 = $fecha_corte_ini->formatLocalized('%d de %B del %Y');
             //$desc2 = $fecha_corte_fin->formatLocalized('%d de %B del %Y');
-            $desc2 = $fecha_corte_fin->formatLocalized('%d de %B del %Y');
+
+            $desc1 = $fecha_corte_ini->isoFormat('DD [de] MMMM [del] YYYY');
+            $desc2 = $fecha_corte_fin->isoFormat('DD [de] MMMM [del] YYYY');
 
 
             $rent_periodo = 'Periodo del  '.$desc1.' al '.$desc2;

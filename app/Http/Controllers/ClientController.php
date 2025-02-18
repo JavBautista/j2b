@@ -37,7 +37,14 @@ class ClientController extends Controller
                     ->orderBy('id','desc')
                     ->paginate(10);
         }
-        return $clients;
+        
+        //return $clients;
+
+        $response = $clients->toArray();
+        
+        $response['total_bd']  = Client::where('shop_id',$shop->id)->where('active',1)->count();
+
+        return response()->json($response);
 
     }
 

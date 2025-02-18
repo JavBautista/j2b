@@ -88,11 +88,11 @@ class ReceiptController extends Controller
                         ->when( $where_origin, function ($query, $where_origin) {
                             return $query->where('origin',$where_origin);
                         })
-
-                        ->orderBy('id','desc')
+                        ->orderBy('id', 'desc')
                         ->paginate(10);
 
         return $receipts;
+
     }//getAll()
 
     public function descontarInventario(Receipt $receipt){
@@ -160,12 +160,6 @@ class ReceiptController extends Controller
 
             $fecha_corte_fin = $fecha_corte_fin->addMonth()->subDay();
 
-
-            /*$fecha_corte_ini = $fecha_corte_ini->subMonth()->addDay();
-            $fecha_corte_ini = $fecha_corte_ini->format('Y-m-d');
-            $fecha_corte_ini = Carbon::createFromFormat('Y-m-d', $fecha_corte_ini);
-            */
-
             setlocale(LC_TIME, 'es_ES.UTF-8');
             Carbon::setLocale('es');
             $fecha_corte_ini->locale('es');
@@ -198,7 +192,7 @@ class ReceiptController extends Controller
 
         $receipt->folio = $nuevo_folio;
 
-        $receipt->shop_id = $shop->id;
+        $receipt->shop_id     = $shop->id;
         $receipt->client_id   = $rcp['client_id'];
         $receipt->rent_id     = $rcp['rent_id'];
         $receipt->type        = $rcp['type'];
@@ -312,7 +306,7 @@ class ReceiptController extends Controller
             $detail->save();
         }//.foreach
 
-        //Actualizamos ocntadores solo si es una renta y por si las moscas que no sea una cotizacion
+        //Actualizamos ocontadores solo si es una renta y por si las moscas que no sea una cotizacion
         if(!$es_cotizacion && $rcp['type']=='renta'){
             $eq_new_counts = json_decode($request->eq_new_counts);
             foreach($eq_new_counts as $enc){
@@ -594,8 +588,40 @@ class ReceiptController extends Controller
     }//test()
 
     public function delete(Request $request){
+        //ANTES DE ELIMNAR DE LA BD HAY QUE CORROBORAR QUE NO QUEDE STOCK EN EL LIMBO
+        $receipt = Receipt::findOrFail($request->id);
+
+        //SOLO HAREMOS EL AJUSTE DE STOCK SI SE ELIMINA UNA NOTA QUE NO ESTE CANCELADA O EN DEVOLUCION
+        //SE SUPONE QUE SI YA ESTA CANCELADA O DEVUELTA YA HIZO EL EBIDO AJUSTE EN EL STOCK
+        if($receipt->status!='CANCELADA' && $receipt->status!='DEVOLUCION'){
+
+            $es_cotizacion=$receipt->quotation;
+            $detail = ReceiptDetail::where('receipt_id',$receipt->id)->get();
+            foreach($detail as $data){
+                if(!$es_cotizacion){                
+                    //solo con los items que sean productos
+                    if($data->type=='product'){
+                        $qty = $data->qty;
+                        $product   = Product::find($data->product_id);
+                        $new_stock = $product->stock + $qty;
+                        $product->stock = $new_stock;
+                        $product->save();
+                    }
+                    //solo con los items que sean Equipos se activara 
+                    //de nuevo es el quivalente a regresarlo al inventario
+                    if($data->type=='equipment'){
+                        $equipo = RentDetail::find($data->product_id);
+                        $equipo->active = 1;
+                        $equipo->save();
+                    }
+                }//si no es cotizacion
+            }
+        }//.if($receipt->status!='CANCELADA' || $receipt->status!='DEVOLUCION') 
+
+        //Eliminamos los datos relacionados 
         ReceiptDetail::where('receipt_id', $request->id)->delete();
         PartialPayments::where('receipt_id', $request->id)->delete();
+        ReceiptInfoExtra::where('receipt_id', $request->id)->delete();
 
         $receipt=Receipt::destroy($request->id);
         return response()->json([
@@ -607,9 +633,33 @@ class ReceiptController extends Controller
         $receipt = Receipt::findOrFail($request->receipt_id);
         $receipt->status='CANCELADA';
         $receipt->save();
+        
+        //Solo Si es nota de VENTA y ademas que no sea una COTIZACIÓN debemos ver si hay ajuste de stock
+        if($receipt->type == 'VENTA' && !$receipt->quotation){
+            $detail = ReceiptDetail::where('receipt_id',$receipt->id)->get();
+            foreach($detail as $data){
+                //solo con los items que sean productos
+                if($data->type=='product'){
+                    $qty = $data->qty;
+                    $product   = Product::find($data->product_id);
+                    $new_stock = $product->stock + $qty;
+                    $product->stock = $new_stock;
+                    $product->save();
+                }
+                //solo con los items que sean Equipos se activara 
+                //de nuevo es el quivalente a regresarlo al inventario
+                if($data->type=='equipment'){
+                    $equipo = RentDetail::find($data->product_id);
+                    $equipo->active = 1;
+                    $equipo->save();
+                }
+            }//foreach
+        }//.if($receipt->type == 'VENTA' && !$receipt->quotation)
+
         return response()->json([
                 'ok'=>true,
                 'receipt' => $receipt,
+                'alt'=>' funcion cancel'
         ]);
     }//cancel()
 
@@ -618,17 +668,28 @@ class ReceiptController extends Controller
         $receipt->status='DEVOLUCION';
         $receipt->save();
 
-        $detail = ReceiptDetail::where('receipt_id',$receipt->id)->get();
-        foreach($detail as $data){
-            //solo con los items que sean productos
-            if($data->type=='product'){
-                $qty = $data->qty;
-                $product   = Product::find($data->product_id);
-                $new_stock = $product->stock + $qty;
-                $product->stock = $new_stock;
-                $product->save();
+        //Solo Si es nota de VENTA y ademas que no sea una COTIZACIÓN debemos ver si hay ajuste de stock
+        if($receipt->type == 'VENTA' && !$receipt->quotation){
+
+            $detail = ReceiptDetail::where('receipt_id',$receipt->id)->get();
+            foreach($detail as $data){
+                //solo con los items que sean productos
+                if($data->type=='product'){
+                    $qty = $data->qty;
+                    $product   = Product::find($data->product_id);
+                    $new_stock = $product->stock + $qty;
+                    $product->stock = $new_stock;
+                    $product->save();
+                }
+                //solo con los items que sean Equipos se activara 
+                //de nuevo es el quivalente a regresarlo al inventario
+                if($data->type=='equipment'){
+                    $equipo = RentDetail::find($data->product_id);
+                    $equipo->active = 1;
+                    $equipo->save();
+                }
             }
-        }
+        }//.if($receipt->type == 'VENTA' && !$receipt->quotation)
 
         return response()->json([
                 'ok'=>true,

@@ -211,10 +211,12 @@ class ReportsController extends Controller
 
         }//foreach1
 
+        $total_data = count($data);
 
         return response()->json([
                 'ok'=>true,
-                'data'=>$data
+                'data'=>$data,
+                'total_data' => $total_data,
         ]);
 
     }//clientesAdeudos

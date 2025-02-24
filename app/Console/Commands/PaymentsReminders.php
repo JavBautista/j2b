@@ -70,14 +70,14 @@ class PaymentsReminders extends Command
         foreach ($receipts as $receipt) {
             $log_text = "[" . now() . "] Se encuentra receipt ID: ".$receipt->id;
             Storage::append("log_payment_reminders.txt", $log_text);
-
-
             // Comprobar si la fecha actual coincide con la fecha de notificación
             if (Carbon::parse($receipt->credit_date_notification)->startOfDay()->eq($date_today)) {
                 //Obtenemos los datos del Receipt
                 $shop_id     = $receipt->shop_id;
                 $receipt_id  = $receipt->id;
                 $client_name = $receipt->client->name;
+                
+
                 //Obtenemos los usuarios tipo admin o superadmin dela tienda
                 $shop_users_admin = User::where('shop_id', $shop_id)
                                         ->whereHas('roles', function($query) {
@@ -99,7 +99,7 @@ class PaymentsReminders extends Command
 
                 // Calcular la siguiente fecha de notificación
                 $next_date = $this->calculateNextNotificationDate($receipt->credit_date_notification, $receipt->credit_type);
-
+                
                 // Actualizar la fecha de notificación en el registro del recibo
                 $receipt->credit_date_notification = $next_date;
                 $receipt->save();

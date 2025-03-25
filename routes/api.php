@@ -4,6 +4,11 @@ use App\Http\Controllers\uploadLocationImageClient;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
+use App\Http\Controllers\ReportsController;
+use App\Http\Controllers\PurchaseOrderController;
+use App\Http\Controllers\PurchaseOrderDetailController;
+use App\Http\Controllers\PurchaseOrderPartialPaymentsController;
+
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -165,21 +170,31 @@ Route::group([
 
 
         /* PRUCHASE ORDER*/
-        Route::get('purchase-order/all','App\Http\Controllers\PurchaseOrderController@getAll');
-        Route::post('purchase-order/store','App\Http\Controllers\PurchaseOrderController@store');
-        Route::post('purchase-order/update','App\Http\Controllers\PurchaseOrderController@update');
-        Route::get('purchase-order/detail/{purchase_order_id}','App\Http\Controllers\PurchaseOrderDetailController@getDetail');
-        Route::post('purchase-order/edit/update-status','App\Http\Controllers\PurchaseOrderController@updateStatus');
-        Route::post('purchase-order/edit/update/complete-purchase-order','App\Http\Controllers\PurchaseOrderController@updateCompletePurchaseOrder');
-        Route::post('puchase-order/edit/cancel','App\Http\Controllers\PurchaseOrderController@cancel');
-        Route::post('puchase-order/edit/porpagarpagar','App\Http\Controllers\PurchaseOrderController@updatePorpagarpagar');
-        Route::post('purchase-order/partial-payment/store','App\Http\Controllers\PurchaseOrderPartialPaymentsController@store');
-        Route::post('purchase-order/partial-payment/delete','App\Http\Controllers\PurchaseOrderPartialPaymentsController@delete');
+        Route::get('purchase-order/all',[PurchaseOrderController::class,'getAll']);
+        Route::post('purchase-order/store',[PurchaseOrderController::class,'store']);
+        Route::post('purchase-order/update',[PurchaseOrderController::class,'update']);
+        Route::get('purchase-order/detail/{purchase_order_id}',[PurchaseOrderDetailController::class,'getDetail']);
+        Route::post('purchase-order/edit/update-status',[PurchaseOrderController::class,'updateStatus']);
+        Route::post('purchase-order/edit/update/complete-purchase-order',[PurchaseOrderController::class,'updateCompletePurchaseOrder']);
+        Route::post('puchase-order/edit/cancel',[PurchaseOrderController::class,'cancel']);
+        Route::post('puchase-order/edit/porpagarpagar',[PurchaseOrderController::class,'updatePorpagarpagar']);
+        Route::post('purchase-order/partial-payment/store',[PurchaseOrderPartialPaymentsController::class,'store']);
+        Route::post('purchase-order/partial-payment/delete',[PurchaseOrderPartialPaymentsController::class,'delete']);
 
         /*REPORTES*/
-        Route::get('report/mes','App\Http\Controllers\ReportsController@mensual');
-        Route::get('report/clientes-adeudos','App\Http\Controllers\ReportsController@clientesAdeudos');
-        Route::get('report/rentas/mes','App\Http\Controllers\ReportsController@rentasMensual');
+        Route::get('report/mes', [ReportsController::class, 'mensual']);
+        Route::get('report/clientes-adeudos', [ReportsController::class, 'clientesAdeudos']);
+        Route::get('report/rentas/mes', [ReportsController::class, 'rentasMensual']);
+        //REPORTES / ingresos
+        Route::get('report/ingresos-xfechas', [ReportsController::class, 'ingresosxFechas']);
+        Route::get('report/ingresos-xfechas/excel', [ReportsController::class, 'descargarIngresosExcel']);
+        //REPORTES / egresos
+        Route::get('report/egresos-xfechas', [ReportsController::class, 'egresosxFechas']);
+        Route::get('report/egresos-xfechas/excel', [ReportsController::class, 'descargarEgresosExcel']);
+
+
+
+        
 
         /*NOTIFICATIONS*/
         Route::get('notifications/get','App\Http\Controllers\NotificationController@get');

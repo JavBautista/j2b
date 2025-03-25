@@ -3,10 +3,17 @@
 namespace App\Http\Controllers;
 
 use App\Models\Receipt;
+use App\Models\PurchaseOrder;
 use App\Models\Client;
+use App\Models\Supplier;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+
+use App\Exports\IngresosExport;
+use App\Exports\EgresosExport;
+use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Facades\Response;
 
 
 class ReportsController extends Controller
@@ -220,4 +227,197 @@ class ReportsController extends Controller
         ]);
 
     }//clientesAdeudos
-}
+
+    public function ingresosxFechas(Request $request){
+        // Obtener usuario autenticado y su tienda
+        $user = $request->user();
+        $shop = $user->shop;
+
+        // Validar que las fechas sean correctas
+        $request->validate([
+            'fechaInicio' => 'required|date',
+            'fechaFin' => 'required|date|after_or_equal:fechaInicio',
+        ]);
+
+        // Convertir fechas a formato Carbon para asegurar el formato correcto
+        $fechaInicio = Carbon::parse($request->fechaInicio)->startOfDay();
+        $fechaFin    = Carbon::parse($request->fechaFin)->endOfDay();
+
+        // Obtener los recibos en el rango de fechas seleccionado
+        $receipts = Receipt::with(['partialPayments', 'shop', 'detail', 'client'])
+            ->where('shop_id', $shop->id)
+            ->where('quotation', 0)
+            ->whereNotIn('status', ['CANCELADA', 'DEVOLUCION'])
+            ->where(function ($query) use ($fechaInicio, $fechaFin) {
+                $query->where(function ($q) use ($fechaInicio, $fechaFin) {
+                    // Recibos con pagos parciales en el rango
+                    $q->whereHas('partialPayments', function ($subquery) use ($fechaInicio, $fechaFin) {
+                        $subquery->whereBetween('created_at', [$fechaInicio, $fechaFin]);
+                    });
+                })->orWhere(function ($q) use ($fechaInicio, $fechaFin) {
+                    // Recibos finalizados con fecha de creación en el rango
+                    $q->where('finished', 1)
+                      ->whereBetween('created_at', [$fechaInicio, $fechaFin]);
+                });
+            })
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Inicializar variables
+        $totalIngresos = 0;
+        $ingresos = [];
+
+        foreach ($receipts as $receipt) {
+            $ingresoNota = 0; // Variable para acumular ingresos de cada nota
+
+            $pagosFiltrados = collect(); 
+            
+            if ($receipt->finished && $receipt->created_at->between($fechaInicio, $fechaFin))  {
+                // Si la nota está finalizada, el ingreso es el monto recibido al momento de la creación
+                $ingresoNota = $receipt->received;
+            } else {
+                // Filtrar los pagos parciales que estén dentro del rango de fechas
+                $pagosFiltrados = $receipt->partialPayments->filter(function ($pp) use ($fechaInicio, $fechaFin) {
+                    return Carbon::parse($pp->created_at)->between($fechaInicio, $fechaFin);
+                });
+
+                // Sumar solo los pagos parciales dentro del rango de fechas
+                $ingresoNota = $pagosFiltrados->sum('amount');
+            }
+
+            // Acumular ingresos totales
+            $totalIngresos += $ingresoNota;
+
+            // Agregar la entrada al reporte
+            $ingresos[] = [
+                'id' => $receipt->id, // ID de la nota
+                'nombre' => $receipt->client->name,
+                'folio' => $receipt->folio,
+                'fecha' => $receipt->created_at->format('Y-m-d'),
+                'descripcion' => $receipt->type,
+                'monto' => (float) $ingresoNota,
+                'detalle' => $pagosFiltrados->map(function ($pp) {
+                    return [
+                        'fecha' => $pp->created_at->format('Y-m-d'),
+                        'monto' => (float) $pp->amount
+                    ];
+                }),
+                'receipt' => $receipt
+            ];
+        }
+
+        // Devolver la respuesta en formato JSON
+        return response()->json([
+            'ok' => true,
+            'fechaInicio' => $fechaInicio->format('Y-m-d'),
+            'fechaFin' => $fechaFin->format('Y-m-d'),
+            'totalIngresos' => number_format($totalIngresos, 2, '.', ''),
+            'ingresos' => $ingresos
+        ]);
+    }//.ingresosxFechas()
+
+    public function descargarIngresosExcel(Request $request){
+        // Obtener usuario autenticado y su tienda
+        $user = $request->user();
+        $shop = $user->shop;
+
+        // Validar que las fechas sean correctas
+        $request->validate([
+            'fechaInicio' => 'required|date',
+            'fechaFin' => 'required|date|after_or_equal:fechaInicio',
+        ]);
+
+        // Generar archivo Excel
+        $fileName = 'ingresos_' . now()->format('Ymd_His') . '.xlsx';
+        return Excel::download(new IngresosExport($request->fechaInicio, $request->fechaFin, $shop), $fileName);
+    }//.descargarIngresosExcel
+
+    public function egresosxFechas(Request $request){
+        // Obtener usuario autenticado y su tienda
+        $user = $request->user();
+        $shop = $user->shop;
+
+        // Validar que las fechas sean correctas
+        $request->validate([
+            'fechaInicio' => 'required|date',
+            'fechaFin' => 'required|date|after_or_equal:fechaInicio',
+        ]);
+
+        // Convertir fechas a formato Carbon para asegurar el formato correcto
+        $fechaInicio = Carbon::parse($request->fechaInicio)->startOfDay();
+        $fechaFin    = Carbon::parse($request->fechaFin)->endOfDay();
+
+        // Obtener los recibos en el rango de fechas seleccionado
+        // !Hey que ver si hay que filtrar por estatus o pagadas
+        $purchases = PurchaseOrder::with(['partialPayments', 'shop', 'detail', 'supplier'])
+            ->where('shop_id', $shop->id)
+            ->whereHas('partialPayments', function ($query) use ($fechaInicio, $fechaFin) {
+                $query->whereBetween('created_at', [$fechaInicio, $fechaFin]);
+            })
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Inicializar variables
+        $totalEgresos = 0;
+        $egresos = [];
+
+        foreach ($purchases as $purchase) {
+            $egresoNota = 0; // Variable para acumular egresos de cada nota
+            
+            //Filtrar los pagos parciales que estén dentro del rango de fechas
+            $pagosFiltrados = $purchase->partialPayments->filter(function ($pp) use ($fechaInicio, $fechaFin) {
+                return Carbon::parse($pp->created_at)->between($fechaInicio, $fechaFin);
+            });
+
+            // Sumar solo los pagos parciales dentro del rango de fechas
+            $egresoNota = $pagosFiltrados->sum('amount');
+            
+            // Acumular egresos totales
+            $totalEgresos += $egresoNota;
+
+            // Agregar la entrada al reporte
+            $egresos[] = [
+                'id' => $purchase->id, // ID de la nota
+                'nombre' => $purchase->supplier->name,
+                'folio' => $purchase->folio,
+                'fecha' => $purchase->created_at->format('Y-m-d'),
+                'descripcion' => $purchase->type,
+                'monto' => (float) $egresoNota,
+                'detalle' => $pagosFiltrados->map(function ($pp) {
+                    return [
+                        'fecha' => $pp->created_at->format('Y-m-d'),
+                        'monto' => (float) $pp->amount
+                    ];
+                }),
+                'purchase' => $purchase
+            ];
+        }
+
+        // Devolver la respuesta en formato JSON
+        return response()->json([
+            'ok' => true,
+            'fechaInicio' => $fechaInicio->format('Y-m-d'),
+            'fechaFin' => $fechaFin->format('Y-m-d'),
+            'totalEgresos' => number_format($totalEgresos, 2, '.', ''),
+            'egresos' => $egresos
+        ]);
+    }//.egresosxFechas()
+
+    public function descargarEgresosExcel(Request $request){
+        // Obtener usuario autenticado y su tienda
+        $user = $request->user();
+        $shop = $user->shop;
+
+        // Validar que las fechas sean correctas
+        $request->validate([
+            'fechaInicio' => 'required|date',
+            'fechaFin' => 'required|date|after_or_equal:fechaInicio',
+        ]);
+
+        // Generar archivo Excel
+        $fileName = 'ingresos_' . now()->format('Ymd_His') . '.xlsx';
+        return Excel::download(new EgresosExport($request->fechaInicio, $request->fechaFin, $shop), $fileName);
+    }//.descargarEgresosExcel()
+
+
+}//.class ReportsController

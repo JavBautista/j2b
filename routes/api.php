@@ -8,6 +8,8 @@ use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\PurchaseOrderDetailController;
 use App\Http\Controllers\PurchaseOrderPartialPaymentsController;
+use App\Http\Controllers\ExpenseController;
+use App\Http\Controllers\ReceiptController;
 
 /*
 |--------------------------------------------------------------------------
@@ -153,6 +155,9 @@ Route::group([
         Route::post('receipt/edit/devolucion','App\Http\Controllers\ReceiptController@devolucion');
         Route::post('receipt/edit/update-info','App\Http\Controllers\ReceiptController@updateInfo');
         Route::post('receipt/edit/update-venta/','App\Http\Controllers\ReceiptController@updateReceiptVentas');
+        
+        Route::patch('receipt/{id}/update-invoiced/',[ReceiptController::class,'updateInvoiced']);
+        
         Route::post('receipt/delete','App\Http\Controllers\ReceiptController@delete');
             /*PRINT PDF*/
             Route::get('receipt/pdf/print-receipt-rent', 'App\Http\Controllers\ReceiptController@printReceiptRent');
@@ -181,6 +186,8 @@ Route::group([
         Route::post('purchase-order/partial-payment/store',[PurchaseOrderPartialPaymentsController::class,'store']);
         Route::post('purchase-order/partial-payment/delete',[PurchaseOrderPartialPaymentsController::class,'delete']);
 
+        Route::patch('purchase-order/{id}/update-invoiced/',[PurchaseOrderController::class,'updateInvoiced']);
+
         /*REPORTES*/
         Route::get('report/mes', [ReportsController::class, 'mensual']);
         Route::get('report/clientes-adeudos', [ReportsController::class, 'clientesAdeudos']);
@@ -191,6 +198,9 @@ Route::group([
         //REPORTES / egresos
         Route::get('report/egresos-xfechas', [ReportsController::class, 'egresosxFechas']);
         Route::get('report/egresos-xfechas/excel', [ReportsController::class, 'descargarEgresosExcel']);
+
+        Route::post('reports/diferencias-mensual', [ReportsController::class, 'diferenciasMensual']);
+
 
 
 
@@ -280,6 +290,29 @@ Route::group([
         Route::get('app-client/pruchases/get','App\Http\Controllers\Clients\PurchaseController@getPurchasesClient');
         Route::post('app-client/pruchase/store','App\Http\Controllers\Clients\PurchaseController@store');
         Route::post('app-client/pruchase/update','App\Http\Controllers\Clients\PurchaseController@update');
+
+
+
+        Route::get('expenses', [ExpenseController::class, 'index']);
+        Route::post('expenses', [ExpenseController::class, 'store']);
+        Route::match(['put', 'patch'], 'expenses/{id}', [ExpenseController::class, 'update']);
+
+        Route::patch('expenses/{id}/activate', [ExpenseController::class, 'active']);
+        Route::patch('expenses/{id}/deactivate', [ExpenseController::class, 'inactive']);
+        Route::patch('expenses/{id}/facturado', [ExpenseController::class, 'facturado']);
+        Route::patch('expenses/{id}/no-facturado', [ExpenseController::class, 'noFacturado']);
+        Route::patch('expenses/{id}/status', [ExpenseController::class, 'updateStatus']);
+        Route::patch('expenses/{id}/fecha', [ExpenseController::class, 'updateFecha']);
+        Route::patch('expenses/{id}/total', [ExpenseController::class, 'updateTotal']);
+        Route::get('expenses/{id}/logs', [ExpenseController::class, 'logs']);
+
+        Route::get('expenses/{id}/attachments', [ExpenseController::class, 'getAttachments']);
+        Route::post('expenses/{id}/attachments', [ExpenseController::class, 'uploadAttachment']);
+        Route::delete('attachments/{id}', [ExpenseController::class, 'deleteAttachment']);
+
+        Route::post('expenses/{id}/attachments-image', [ExpenseController::class, 'uploadImageExpense']);
+        Route::delete('attachments-image/{id}', [ExpenseController::class, 'deleteImageExpense']);
+
 
 
     });

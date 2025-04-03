@@ -235,4 +235,16 @@ class PurchaseOrderController extends Controller
         $pdf = PDF::loadView('purchase_order_pdf',['purchase_order'=>$purchase_order]);
         return $pdf->stream($name_file.'.pdf',array("Attachment" => false));
     }
+
+
+    public function updateInvoiced(Request $request, $id){
+        $purchase_order = PurchaseOrder::findOrFail($id);
+        $purchase_order->is_tax_invoiced = $request->is_facturado;
+        $purchase_order->save();
+
+        return response()->json([
+                'ok'=>true,
+                'purchase_order' => $purchase_order,
+        ]);
+    }//updateInvoiced()
 }

@@ -699,4 +699,18 @@ class ReceiptController extends Controller
                 'receipt' => $receipt,
         ]);
     }//devolucion()
+
+
+    public function updateInvoiced(Request $request, $id){
+        $receipt = Receipt::with('detail')->findOrFail($id);
+        $receipt->is_tax_invoiced = $request->is_facturado;
+        $receipt->save();
+
+        return response()->json([
+                'ok'=>true,
+                'receipt' => $receipt,
+        ]);
+    }//updateInvoiced()
+
+
 }

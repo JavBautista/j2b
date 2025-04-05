@@ -25,7 +25,7 @@ class EgresosExport implements FromCollection, WithHeadings, WithMapping
         $this->egresos = collect(); 
     }
 
-    public function collection()
+    /*public function collection()
     {
         // 1. Purchase Orders
         $purchases = PurchaseOrder::with(['partialPayments', 'supplier'])
@@ -65,6 +65,47 @@ class EgresosExport implements FromCollection, WithHeadings, WithMapping
                 'folio' => null,
                 'fecha' => Carbon::parse($expense->date)->format('Y-m-d'),
                 'monto' => $expense->total,
+                'cantidad_pagos' => 1
+            ]);
+        }
+
+        return $this->egresos->sortByDesc('fecha')->values();
+    }*/
+
+    public function collection()
+    {
+        // 1. Purchase Orders (se toma el total directamente)
+        $purchases = PurchaseOrder::with(['supplier'])
+            ->where('shop_id', $this->shop->id)
+            ->whereBetween('created_at', [$this->fechaInicio, $this->fechaFin])
+            ->get();
+
+        foreach ($purchases as $purchase) {
+            $this->egresos->push((object)[
+                'tipo' => 'Compra',
+                'id' => $purchase->id,
+                'nombre' => $purchase->supplier->name ?? 'Sin Proveedor',
+                'folio' => $purchase->folio,
+                'fecha' => $purchase->created_at->format('Y-m-d'),
+                'monto' => (float) $purchase->total,
+                'cantidad_pagos' => 1
+            ]);
+        }
+
+        // 2. Expenses
+        $expenses = Expense::where('shop_id', $this->shop->id)
+            ->where('status', 'PAGADO')
+            ->whereBetween('date', [$this->fechaInicio, $this->fechaFin])
+            ->get();
+
+        foreach ($expenses as $expense) {
+            $this->egresos->push((object)[
+                'tipo' => 'Gasto',
+                'id' => $expense->id,
+                'nombre' => $expense->name,
+                'folio' => null,
+                'fecha' => Carbon::parse($expense->date)->format('Y-m-d'),
+                'monto' => (float) $expense->total,
                 'cantidad_pagos' => 1
             ]);
         }

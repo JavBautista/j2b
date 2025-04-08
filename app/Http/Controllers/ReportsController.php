@@ -544,7 +544,7 @@ class ReportsController extends Controller
         return Excel::download(new EgresosExport($request->fechaInicio, $request->fechaFin, $shop), $fileName);
     }//.descargarEgresosExcel()
 */
-    
+
     public function diferenciasMensual(Request $request)
     {
         $user = $request->user();
@@ -614,8 +614,9 @@ class ReportsController extends Controller
             $totalIngresos += $ingresoNota;
         }
 
+        //-------------------------------------------------------------------------------------------
         // EGRESOS: PurchaseOrders
-        /*$purchaseOrders = PurchaseOrder::with('partialPayments')
+        $purchaseOrders = PurchaseOrder::with('partialPayments')
             ->where('shop_id', $shop->id)
             ->whereHas('partialPayments', function ($query) use ($fechaInicio, $fechaFin) {
                 $query->whereBetween('created_at', [$fechaInicio, $fechaFin]);
@@ -631,8 +632,9 @@ class ReportsController extends Controller
             });
 
             $totalEgresos += $pagosFiltrados->sum('amount');
-        }*/
+        }
 
+        /*
         $purchaseOrders = PurchaseOrder::where('shop_id', $shop->id)
             ->whereBetween('created_at', [$fechaInicio, $fechaFin]);
 
@@ -655,8 +657,9 @@ class ReportsController extends Controller
         
         foreach ($expenses->get() as $expense) {
             $totalEgresos += $expense->total;
-        }
+        } */
 
+        //-------------------------------------------------------------------------------------------
 
         // Calcular diferencia
         $diferencia = $totalIngresos - $totalEgresos;

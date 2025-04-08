@@ -333,7 +333,7 @@ class ReportsController extends Controller
         return Excel::download(new IngresosExport($request->fechaInicio, $request->fechaFin, $shop), $fileName);
     }//.descargarIngresosExcel
 
-    /* //METODO ANTERIOR DODNDE SE TOMABAN LOS PAGOS PARCIALES DEL PURCHASE COMO EGRESSOS
+     //METODO ANTERIOR DODNDE SE TOMABAN LOS PAGOS PARCIALES DEL PURCHASE COMO EGRESSOS
     //PERO COMO POR CUESTIONES DE TIEMPOS DE ENTREGA SE DEBEN TOMAR LOS TOTALES DEL PURCHASE COMO COMPRA
     public function egresosxFechas(Request $request){
         // Obtener usuario autenticado y su tienda
@@ -440,8 +440,8 @@ class ReportsController extends Controller
             'egresos' => $egresos
         ]);
     }//.egresosxFechas()
-    */
-
+    
+/*
     public function egresosxFechas(Request $request){
         // Obtener usuario autenticado y su tienda
         $user = $request->user();
@@ -543,7 +543,8 @@ class ReportsController extends Controller
         $fileName = 'ingresos_' . now()->format('Ymd_His') . '.xlsx';
         return Excel::download(new EgresosExport($request->fechaInicio, $request->fechaFin, $shop), $fileName);
     }//.descargarEgresosExcel()
-
+*/
+    
     public function diferenciasMensual(Request $request)
     {
         $user = $request->user();

@@ -333,8 +333,7 @@ class ReportsController extends Controller
         return Excel::download(new IngresosExport($request->fechaInicio, $request->fechaFin, $shop), $fileName);
     }//.descargarIngresosExcel
 
-     //METODO ANTERIOR DODNDE SE TOMABAN LOS PAGOS PARCIALES DEL PURCHASE COMO EGRESSOS
-    //PERO COMO POR CUESTIONES DE TIEMPOS DE ENTREGA SE DEBEN TOMAR LOS TOTALES DEL PURCHASE COMO COMPRA
+     //METODO CORRECTO DODNDE SE TOMABAN LOS PAGOS PARCIALES DEL PURCHASE COMO EGRESSOS
     public function egresosxFechas(Request $request){
         // Obtener usuario autenticado y su tienda
         $user = $request->user();
@@ -441,109 +440,7 @@ class ReportsController extends Controller
         ]);
     }//.egresosxFechas()
     
-/*
-    public function egresosxFechas(Request $request){
-        // Obtener usuario autenticado y su tienda
-        $user = $request->user();
-        $shop = $user->shop;
 
-        // Validar que las fechas sean correctas
-        $request->validate([
-            'fechaInicio' => 'required|date',
-            'fechaFin' => 'required|date|after_or_equal:fechaInicio',
-        ]);
-
-        // Convertir fechas a formato Carbon para asegurar el formato correcto
-        $fechaInicio = Carbon::parse($request->fechaInicio)->startOfDay();
-        $fechaFin    = Carbon::parse($request->fechaFin)->endOfDay();
-
-        // Inicializar variables
-        $totalEgresos = 0;
-        $egresos = [];
-
-        // 1. Egresos por PurchaseOrder (ahora se toma el total de la compra, no pagos parciales)
-        $purchases = PurchaseOrder::with(['shop', 'detail', 'supplier'])
-            ->where('shop_id', $shop->id)
-            ->whereBetween('created_at', [$fechaInicio, $fechaFin])
-            ->orderBy('created_at', 'desc')
-            ->get();
-
-        foreach ($purchases as $purchase) {
-            $egresoNota = (float) $purchase->total;
-            $totalEgresos += $egresoNota;
-
-            $egresos[] = [
-                'id' => $purchase->id,
-                'tipo' => 'purchase',
-                'nombre' => $purchase->supplier->name,
-                'folio' => $purchase->folio,
-                'fecha' => $purchase->created_at->format('Y-m-d'),
-                'descripcion' => $purchase->type,
-                'monto' => $egresoNota,
-                'detalle' => collect([[
-                    'fecha' => $purchase->created_at->format('Y-m-d'),
-                    'monto' => $egresoNota
-                ]]),
-                'purchase' => $purchase->toArray(),
-                'expense' => null
-            ];
-        }
-
-        // 2. Egresos por Expenses
-        $expenses = Expense::where('shop_id', $shop->id)
-            ->where('status', 'PAGADO')
-            ->whereBetween('date', [$fechaInicio, $fechaFin])
-            ->orderBy('date', 'desc')
-            ->get();
-
-        foreach ($expenses as $expense) {
-            $totalEgresos += $expense->total;
-
-            $egresos[] = [
-                'id' => $expense->id,
-                'tipo' => 'expense',
-                'nombre' => $expense->name,
-                'folio' => null,
-                'fecha' => Carbon::parse($expense->date)->format('Y-m-d'),
-                'descripcion' => $expense->description ?? 'Gasto',
-                'monto' => (float) $expense->total,
-                'detalle' => collect([[
-                    'fecha' => Carbon::parse($expense->date)->format('Y-m-d'),
-                    'monto' => (float) $expense->total
-                ]]),
-                'expense' => $expense->toArray(),
-                'purchase' => null,
-            ];
-        }
-
-        $egresos = collect($egresos)->sortByDesc('fecha')->values()->all();
-
-        return response()->json([
-            'ok' => true,
-            'fechaInicio' => $fechaInicio->format('Y-m-d'),
-            'fechaFin' => $fechaFin->format('Y-m-d'),
-            'totalEgresos' => number_format($totalEgresos, 2, '.', ''),
-            'egresos' => $egresos
-        ]);
-    }
-
-
-    public function descargarEgresosExcel(Request $request){
-        // Obtener usuario autenticado y su tienda
-        $user = $request->user();
-        $shop = $user->shop;
-
-        // Validar que las fechas sean correctas
-        $request->validate([
-            'fechaInicio' => 'required|date',
-            'fechaFin' => 'required|date|after_or_equal:fechaInicio',
-        ]);
-
-        // Generar archivo Excel
-        $fileName = 'ingresos_' . now()->format('Ymd_His') . '.xlsx';
-        return Excel::download(new EgresosExport($request->fechaInicio, $request->fechaFin, $shop), $fileName);
-    }//.descargarEgresosExcel()
-*/
 
     public function diferenciasMensual(Request $request)
     {
@@ -634,18 +531,6 @@ class ReportsController extends Controller
             $totalEgresos += $pagosFiltrados->sum('amount');
         }
 
-        /*
-        $purchaseOrders = PurchaseOrder::where('shop_id', $shop->id)
-            ->whereBetween('created_at', [$fechaInicio, $fechaFin]);
-
-        if (!is_null($soloFacturado)) {
-            $purchaseOrders->where('is_tax_invoiced', $soloFacturado);
-        }
-
-        foreach ($purchaseOrders->get() as $purchase) {
-            $totalEgresos += $purchase->total;
-        }
-
         // EGRESOS: Expenses
         $expenses = Expense::where('shop_id', $shop->id)
             ->where('status', 'PAGADO')
@@ -657,7 +542,7 @@ class ReportsController extends Controller
         
         foreach ($expenses->get() as $expense) {
             $totalEgresos += $expense->total;
-        } */
+        } 
 
         //-------------------------------------------------------------------------------------------
 

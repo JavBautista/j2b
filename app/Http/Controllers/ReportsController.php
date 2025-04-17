@@ -333,7 +333,9 @@ class ReportsController extends Controller
         return Excel::download(new IngresosExport($request->fechaInicio, $request->fechaFin, $shop), $fileName);
     }//.descargarIngresosExcel
 
-     //METODO CORRECTO DODNDE SE TOMABAN LOS PAGOS PARCIALES DEL PURCHASE COMO EGRESSOS
+    
+
+    //METODO CORRECTO DODNDE SE TOMABAN LOS PAGOS PARCIALES DEL PURCHASE COMO EGRESSOS
     public function egresosxFechas(Request $request){
         // Obtener usuario autenticado y su tienda
         $user = $request->user();
@@ -404,6 +406,7 @@ class ReportsController extends Controller
         // 2. Egresos por Expenses
         $expenses = Expense::where('shop_id', $shop->id)
             ->where('status', 'PAGADO')
+            ->where('active', 1)
             ->whereBetween('date', [$fechaInicio, $fechaFin])
             ->orderBy('date', 'desc')
             ->get();
@@ -534,6 +537,7 @@ class ReportsController extends Controller
         // EGRESOS: Expenses
         $expenses = Expense::where('shop_id', $shop->id)
             ->where('status', 'PAGADO')
+            ->where('active', 1)
             ->whereBetween('date', [$fechaInicio, $fechaFin]);
 
         if (!is_null($soloFacturado)) {

@@ -713,4 +713,19 @@ class ReceiptController extends Controller
     }//updateInvoiced()
 
 
+    public function createPDFReceiptRent(Request $request, $id){
+       
+        $name_file = $this->removeSpecialChar($request->name_file);
+        $receipt = Receipt::with('partialPayments')
+                            ->with('shop')
+                            ->with('detail')
+                            ->with('client')
+                            ->findOrFail($id);
+       
+        $pdf = PDF::loadView('receipt_rent_pdf',['receipt'=>$receipt]);
+        return $pdf->stream($name_file.'.pdf',array("Attachment" => false));
+    }//printReceiptRent()
+
+
+
 }

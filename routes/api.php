@@ -161,6 +161,9 @@ Route::group([
         Route::post('receipt/delete','App\Http\Controllers\ReceiptController@delete');
             /*PRINT PDF*/
             Route::get('receipt/pdf/print-receipt-rent', 'App\Http\Controllers\ReceiptController@printReceiptRent');
+            /*NUEVO PDF PARA COMPARTIR DESDE APP CON AUTENTICACIÓN*/
+            Route::get('receipt/{id}/pdf', [ReceiptController::class, 'createPDFReceiptRent']);
+
         Route::post('receipt/edit/update/quotation-to-sale','App\Http\Controllers\ReceiptController@updateQuotationToSale');
         /*PartialPayments*/
         Route::post('receipt/partial-payment/store','App\Http\Controllers\PartialPaymentsController@store');
@@ -312,6 +315,8 @@ Route::group([
 
         Route::post('expenses/{id}/attachments-image', [ExpenseController::class, 'uploadImageExpense']);
         Route::delete('attachments-image/{id}', [ExpenseController::class, 'deleteImageExpense']);
+
+
 
 
 

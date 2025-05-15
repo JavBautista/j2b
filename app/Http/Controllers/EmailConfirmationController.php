@@ -104,7 +104,7 @@ class EmailConfirmationController extends Controller
                     'plan_id' => 1, // Plan básico por defecto
                     'active' => 1, // Activada por defecto
                     'name' => $registro->shop,
-                    'cutoff' => 1 // Corte diario por defecto
+                    'cutoff' => now()->day // Corte diario por defecto
                 ]);
 
                 // 3. Crear usuario asociado a la tienda

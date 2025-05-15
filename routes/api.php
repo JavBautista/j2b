@@ -10,6 +10,7 @@ use App\Http\Controllers\PurchaseOrderDetailController;
 use App\Http\Controllers\PurchaseOrderPartialPaymentsController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\ReceiptController;
+use App\Http\Controllers\EmailConfirmationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -22,6 +23,7 @@ use App\Http\Controllers\ReceiptController;
 |
 */
 
+Route::post('/api-pre-registro', [EmailConfirmationController::class, 'store']);
 
 
 Route::get('notifications/test','App\Http\Controllers\NotificationController@test');

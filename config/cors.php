@@ -19,7 +19,13 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['*'],
+    //'allowed_origins' => ['*'],
+    'allowed_origins' => [
+        'capacitor://localhost',
+        'http://localhost',
+        'http://localhost:8100',
+        'https://j2b.levcore.app',
+    ],
 
     'allowed_origins_patterns' => [],
 

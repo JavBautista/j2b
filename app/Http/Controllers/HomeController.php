@@ -3,6 +3,10 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\User;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
 
 class HomeController extends Controller
 {
@@ -13,7 +17,7 @@ class HomeController extends Controller
      */
     public function __construct()
     {
-        $this->middleware('auth');
+        //$this->middleware('auth');
     }
 
     /**
@@ -23,7 +27,9 @@ class HomeController extends Controller
      */
     public function index(Request $request)
     {
-        $request->user()->authorizeRoles(['superadmin', 'admin', 'client']);
+        return view('web.index');
+        
+        /*$request->user()->authorizeRoles(['superadmin', 'admin', 'client']);
 
         if($request->user()->hasRole('superadmin'))
             return redirect('/superadmin');
@@ -34,7 +40,7 @@ class HomeController extends Controller
         //if($request->user()->hasRole('client'))
           //  return redirect('/client');
 
-        return redirect('/');
+        return redirect('/');*/
     }
 
     public function passwordReset(Request $request){
@@ -49,7 +55,7 @@ class HomeController extends Controller
         $user->setRememberToken(Str::random(60));
         $user->save();
 
-        $this->guard()->login($user);
+        Auth::login($user);
 
         /*
             $request->user()->authorizeRoles(['seller', 'admin', 'buyer']);

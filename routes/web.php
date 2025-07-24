@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Auth;
 
 use App\Http\Controllers\EmailConfirmationController;
 
@@ -19,7 +20,8 @@ use App\Http\Controllers\EmailConfirmationController;
 Route::get('confirmar-email/{token}', [EmailConfirmationController::class, 'confirmar'])->name('email.confirmar');
 
 Route::get('/', [App\Http\Controllers\HomeController::class, 'index']);
-Route::get('/home', [App\Http\Controllers\HomeController::class, 'index']);
+
+//Route::get('/home', [App\Http\Controllers\HomeController::class, 'index']);
 
 Route::get('/pre-registro', [App\Http\Controllers\RequestsJ2bController::class, 'j2bSolicitar'])->name('solicitud');
 

@@ -56,34 +56,6 @@ class EmailConfirmationController extends Controller
         ]);
     }//.store()
 
-    /*public function confirmar($token)
-    {
-        $registro = EmailConfirmation::where('token', $token)->first();
-
-        if (!$registro) {
-            return view('emails.error_token'); // Vista para token inválido
-        }
-
-        if ($registro->expires_at && Carbon::now()->greaterThan($registro->expires_at)) {
-            return view('emails.error_expirado'); // Vista para expirado
-        }
-
-        // Crear usuario real
-        $user = User::create([
-            'name' => $registro->name,
-            'email' => $registro->email,
-            'password' => $registro->password,
-            'avatar' => $registro->avatar,
-        ]);
-
-        $user->roles()->attach(Role::where('name', 'client')->first());
-
-        $registro->delete();
-
-        return view('emails.confirmado'); // Vista de éxito
-
-    }//.confirmar()
-    */
     public function confirmar($token)
     {
         return DB::transaction(function () use ($token) {

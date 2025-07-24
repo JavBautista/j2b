@@ -7,7 +7,10 @@
         "watch-poll": "mix watch -- --watch-options-poll=1000",
         "hot": "mix watch --hot",
         "prod": "npm run production",
-        "production": "mix --production"
+        "production": "mix --production",
+        "build": "npm run production && php artisan mix:check",
+        "clean": "rm -rf public/css/* public/js/* public/mix-manifest.json",
+        "fresh": "npm run clean && npm run production"
     },
     "devDependencies": {
         "@popperjs/core": "^2.11.8",

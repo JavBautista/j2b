@@ -14,6 +14,8 @@ const webpack = require('webpack'); // Agregar esta línea
 
 mix.js('resources/js/app.js', 'public/js')
     .sass('resources/sass/app.scss', 'public/css')
+    
+    // Dashboard Assets (Admin/Client/Superadmin)
     .styles([
             'resources/templates/coreui/css/font-awesome.min.css',
             'resources/templates/coreui/css/simple-line-icons.min.css',
@@ -25,8 +27,36 @@ mix.js('resources/js/app.js', 'public/js')
             'resources/templates/coreui/js/template.js',
             'resources/templates/coreui/js/sweetalert2.all.min.js'
             ],'public/js/dashboard.js')
+    
+    // Web Assets (Public Landing Pages)
+    .styles([
+            'resources/css/web/landing.css'
+            ], 'public/css/web.css')
+    .scripts([
+            'resources/js/web/landing.js'
+            ], 'public/js/web.js')
+    
+    // Development test script (only in development)
+    .when(!mix.inProduction(), () => {
+        mix.scripts([
+            'resources/js/web/test-lazy-loading.js'
+        ], 'public/js/web-test.js');
+    })
+    
     .vue()
-    .sourceMaps();
+    .sourceMaps()
+    
+    // Enable versioning for cache busting in production
+    .version()
+    
+    // Configure options for better cache busting
+    .options({
+        processCssUrls: false, // Disable processing of CSS urls for faster builds
+        hmrOptions: {
+            host: 'localhost',
+            port: 8080
+        }
+    });
 
 mix.webpackConfig({
         plugins: [

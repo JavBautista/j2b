@@ -27,7 +27,7 @@
                 </td>
                 <td width="50%" align="right">
                     @if (trim($receipt->shop->logo)!=null)
-                        <img src="{{ asset('/storage/'.$receipt->shop->logo) }}" width="50%">
+                        <img src="{{ public_path('storage/'.$receipt->shop->logo) }}" width="50%">
                     @else
                         <p style="font-weight: bold;">Logo</p>
                     @endif
@@ -55,7 +55,7 @@
         <table width="100%">
             <tr>
                 <td width="20%">
-                    <img src="{{asset('img/j2b_qr.png')}}" alt="QR" width="50%">
+                    <img src="{{ public_path('img/j2b_qr.png') }}" alt="QR" width="50%">
                 </td>
                 <td width="40%">
                     <h2>{{$receipt->quotation?'COTIZACIÓN':'FOLIO'}} #{{$receipt->folio}}</h2>

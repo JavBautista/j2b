@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
 
 use App\Http\Controllers\EmailConfirmationController;
+use App\Http\Controllers\ReceiptController;
 
 /*
 |--------------------------------------------------------------------------
@@ -39,7 +40,7 @@ Route::post('/registro/create', [App\Http\Controllers\RequestsJ2bController::cla
 
 //Route::get('/test','App\Http\Controllers\ReceiptController@test');
 
-Route::get('/print-receipt-rent', 'App\Http\Controllers\ReceiptController@printReceiptRent');
+Route::get('/print-receipt-rent', [ReceiptController::class, 'printReceiptRent']);
 
 Route::get('/print-purchase-order', 'App\Http\Controllers\PurchaseOrderController@printPurchaseOrder');
 

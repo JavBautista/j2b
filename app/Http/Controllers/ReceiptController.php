@@ -12,7 +12,7 @@ use App\Models\Shop;
 use App\Models\Rent;
 use App\Models\Product;
 use Illuminate\Support\Carbon;
-use PDF;
+use Barryvdh\DomPDF\Facade\Pdf as PDF;
 use Illuminate\Database\Eloquent\Builder;
 
 class ReceiptController extends Controller

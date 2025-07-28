@@ -44,6 +44,10 @@ return [
             'timeout' => null,
             'auth_mode' => null,
         ],
+        'mailersend' => [
+            'transport' => 'mailersend',
+            'api_key' => env('MAILERSEND_API_KEY'),
+        ],
 
         'ses' => [
             'transport' => 'ses',

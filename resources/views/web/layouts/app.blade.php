@@ -26,9 +26,7 @@
     
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
-    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('images/web/apple-touch-icon.png') }}">
-    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/web/favicon-32x32.png') }}">
-    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('images/web/favicon-16x16.png') }}">
+    <link rel="shortcut icon" href="{{ asset('favicon.ico') }}" type="image/x-icon">
     
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -57,20 +55,24 @@
     <header class="header">
         <nav class="nav">
             <div class="logo">
-                <a href="{{ url('/') }}">j2biznes</a>
+                <a href="{{ url('/') }}" class="logo-link">
+                    <img src="{{ asset('img/j2b_60px.png') }}" alt="J2Biznes Logo" class="logo-image">
+                    <span class="logo-text">J2Biznes</span>
+                </a>
             </div>
             
             <ul class="nav-links">
                 <li><a href="#inicio" class="nav-link">Inicio</a></li>
                 <li><a href="#caracteristicas" class="nav-link">Características</a></li>
+                <li><a href="#precios" class="nav-link">Precios</a></li>
                 <li><a href="#testimonios" class="nav-link">Testimonios</a></li>
-                <li><a href="#contacto" class="nav-link">Contacto</a></li>
+                <li><a href="#faq" class="nav-link">FAQ</a></li>
             </ul>
             
             <div class="header-actions">
                 @guest
                     <a href="{{ route('login') }}" class="login-btn">Iniciar Sesión</a>
-                    <a href="#descarga" class="cta-button">Descargar App</a>
+                    <a href="#descarga" class="cta-button">Prueba Gratis</a>
                 @else
                     @if(auth()->user()->hasRole('superadmin'))
                         <a href="{{ url('/superadmin') }}" class="dashboard-btn">Dashboard</a>
@@ -112,14 +114,23 @@
     <!-- Footer -->
     <footer id="contacto" class="footer">
         <div class="footer-content">
-            <div class="footer-section">
-                <h3>j2biznes</h3>
-                <p>La solución integral para gestionar tu negocio desde cualquier lugar. Simple, potente y diseñada para emprendedores como tú.</p>
+            <div class="footer-section footer-brand">
+                <div class="footer-logo">
+                    <img src="{{ asset('img/j2b_60px.png') }}" alt="J2Biznes Logo" class="footer-logo-image">
+                    <div class="footer-logo-content">
+                        <h3>J2Biznes</h3>
+                        <div class="footer-badge">
+                            <span>Hecho con ❤️ en México</span>
+                        </div>
+                    </div>
+                </div>
+                <p>La solución integral para gestionar tu negocio desde cualquier lugar. Simple, potente y diseñada para emprendedores mexicanos.</p>
                 <div class="social-links">
                     <a href="#" aria-label="Facebook"><i class="fab fa-facebook"></i></a>
                     <a href="#" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
                     <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
                     <a href="#" aria-label="LinkedIn"><i class="fab fa-linkedin"></i></a>
+                    <a href="#" aria-label="YouTube"><i class="fab fa-youtube"></i></a>
                 </div>
             </div>
             
@@ -128,8 +139,10 @@
                 <ul>
                     <li><a href="#caracteristicas">Características</a></li>
                     <li><a href="#precios">Precios</a></li>
-                    <li><a href="#actualizaciones">Actualizaciones</a></li>
+                    <li><a href="#faq">Preguntas Frecuentes</a></li>
+                    <li><a href="#actualizaciones">Novedades</a></li>
                     <li><a href="#seguridad">Seguridad</a></li>
+                    <li><a href="#integraciones">Integraciones</a></li>
                 </ul>
             </div>
             
@@ -139,7 +152,9 @@
                     <li><a href="#ayuda">Centro de Ayuda</a></li>
                     <li><a href="#contacto">Contacto</a></li>
                     <li><a href="#tutoriales">Tutoriales</a></li>
-                    <li><a href="#api">API</a></li>
+                    <li><a href="#documentacion">Documentación</a></li>
+                    <li><a href="#api">API para Desarrolladores</a></li>
+                    <li><a href="#estado">Estado del Servicio</a></li>
                 </ul>
             </div>
             
@@ -148,17 +163,47 @@
                 <ul>
                     <li><a href="#nosotros">Sobre Nosotros</a></li>
                     <li><a href="#blog">Blog</a></li>
-                    <li><a href="#carrera">Carrera</a></li>
+                    <li><a href="#carrera">Trabaja con Nosotros</a></li>
                     <li><a href="#prensa">Prensa</a></li>
+                    <li><a href="#partners">Partners</a></li>
+                    <li><a href="#afiliados">Programa de Afiliados</a></li>
                 </ul>
+            </div>
+            
+            <div class="footer-section">
+                <h3>Contacto</h3>
+                <div class="contact-info">
+                    <div class="contact-item">
+                        <i class="fas fa-envelope"></i>
+                        <a href="mailto:contcato@j2biznes.com">contcato@j2biznes.com</a>
+                    </div>
+                    <div class="contact-item">
+                        <i class="fas fa-phone"></i>
+                        <a href="tel:+525646281026">+52 56 4628 1026</a>
+                    </div>
+                    <div class="contact-item">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <span>México</span>
+                    </div>
+                    <div class="contact-item">
+                        <i class="fas fa-clock"></i>
+                        <span>Lun - Vie: 9:00 - 18:00 CST</span>
+                    </div>
+                </div>
             </div>
         </div>
         
         <div class="footer-bottom">
-            <p>&copy; {{ date('Y') }} j2biznes. Todos los derechos reservados. | 
-               <a href="#privacidad">Política de Privacidad</a> | 
-               <a href="#terminos">Términos de Servicio</a>
-            </p>
+            <div class="footer-bottom-content">
+                <div class="footer-copyright">
+                    <p>&copy; {{ date('Y') }} J2Biznes. Todos los derechos reservados.</p>
+                </div>
+                <div class="footer-links">
+                    <a href="#privacidad">Política de Privacidad</a>
+                    <a href="#terminos">Términos de Servicio</a>
+                    <a href="#cookies">Cookies</a>
+                </div>
+            </div>
         </div>
     </footer>
 

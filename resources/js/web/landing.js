@@ -3,8 +3,7 @@
  * Separated from index.blade.php for better organization
  */
 
-// Import lazy loading functionality
-import './lazy-loading.js';
+// Note: Lazy loading functionality should be loaded separately or included directly
 
 class LandingPage {
     constructor() {
@@ -104,6 +103,9 @@ class LandingPage {
 
         // Enhanced hover effects
         this.setupHoverEffects();
+        
+        // FAQ functionality
+        this.setupFAQ();
     }
 
     handleSmoothScroll(e) {
@@ -125,11 +127,9 @@ class LandingPage {
         
         // Header background effect
         if (scrollTop > 100) {
-            header.style.background = 'rgba(255, 255, 255, 0.98)';
-            header.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.1)';
+            header.classList.add('scrolled');
         } else {
-            header.style.background = 'rgba(255, 255, 255, 0.95)';
-            header.style.boxShadow = 'none';
+            header.classList.remove('scrolled');
         }
         
         // Navigation highlighting
@@ -267,6 +267,44 @@ class LandingPage {
                 this.style.transform = 'translateY(0)';
                 this.style.borderLeftWidth = '4px';
             });
+        });
+    }
+
+    setupFAQ() {
+        // FAQ accordion functionality
+        const faqItems = document.querySelectorAll('.faq-item');
+        
+        faqItems.forEach(item => {
+            const question = item.querySelector('.faq-question');
+            
+            if (question) {
+                question.addEventListener('click', () => {
+                    const isActive = item.classList.contains('active');
+                    
+                    // Close all other FAQ items
+                    faqItems.forEach(otherItem => {
+                        if (otherItem !== item) {
+                            otherItem.classList.remove('active');
+                        }
+                    });
+                    
+                    // Toggle current item
+                    if (isActive) {
+                        item.classList.remove('active');
+                    } else {
+                        item.classList.add('active');
+                    }
+                });
+            }
+        });
+        
+        // Close FAQ on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                faqItems.forEach(item => {
+                    item.classList.remove('active');
+                });
+            }
         });
     }
 

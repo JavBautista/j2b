@@ -1,32 +1,128 @@
 @extends('web.layouts.app')
 
-@section('title', 'j2biznes - Control Total de tu Negocio desde tu Móvil')
-@section('description', 'j2biznes es la aplicación todo-en-uno que necesitas para manejar inventarios, clientes, ventas y más. Simplifica tu gestión empresarial con la herramienta que cabe en tu bolsillo.')
+@section('title', 'J2Biznes - Control Total de tu Negocio desde tu Móvil')
+@section('description', 'J2Biznes es la aplicación todo-en-uno que necesitas para manejar inventarios, clientes, ventas y más. Simplifica tu gestión empresarial con la herramienta que cabe en tu bolsillo.')
 
 @section('content')
     <!-- Hero Section -->
     <section id="inicio" class="hero">
         <div class="hero-content fade-in-up">
-            <h1>Control Total de tu Negocio desde tu Móvil</h1>
-            <p>j2biznes es la aplicación todo-en-uno que necesitas para manejar inventarios, clientes, ventas y más. Simplifica tu gestión empresarial con la herramienta que cabe en tu bolsillo.</p>
+            <div class="hero-badges">
+                <span class="hero-badge"><i class="fas fa-shield-alt"></i> Sin costos ocultos</span>
+                <span class="hero-badge"><i class="fas fa-wifi"></i> Funciona offline</span>
+                <span class="hero-badge"><i class="fas fa-heart"></i> Hecho en México</span>
+            </div>
+            
+            <h1>El punto de venta móvil que hace crecer tu negocio</h1>
+            <p>Más de 3 años ayudando a pequeños y medianos negocios en México. Genera notas de venta, controla inventarios y gestiona clientes desde cualquier lugar, incluso sin internet.</p>
+            
             <div class="hero-buttons">
-                <a href="#descarga" class="btn-primary">
-                    <i class="fas fa-download"></i> Descargar Gratis
+                <a href="#descarga" class="btn-primary btn-large">
+                    <i class="fas fa-rocket"></i> Prueba Gratis 30 días
                 </a>
                 <a href="#demo" class="btn-secondary">
                     <i class="fas fa-play"></i> Ver Demo
                 </a>
             </div>
 
-            <!-- Hero Screenshot with Lazy Loading -->
-            <div class="hero-screenshot" style="margin-top: 3rem;">
-                <img 
-                    data-src="https://via.placeholder.com/600x400/667eea/ffffff?text=j2biznes+App+Screenshot" 
-                    data-critical="true"
-                    alt="Captura de pantalla de j2biznes App" 
-                    class="lazy-placeholder"
-                    style="border-radius: 12px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); max-width: 100%; height: auto;"
-                >
+            <!-- App Mockup -->
+            <div class="hero-mockup">
+                <div class="phone-mockup">
+                    <div class="phone-frame">
+                        <div class="phone-screen">
+                            <img 
+                                src="{{ asset('img/web/j2b_screenshot.jpg') }}" 
+                                alt="Captura de pantalla de J2Biznes App" 
+                                class="app-screenshot"
+                            >
+                        </div>
+                        <div class="phone-button"></div>
+                    </div>
+                    <div class="phone-shadow"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Problem/Solution Section -->
+    <section class="problem-solution">
+        <div class="container">
+            <div class="section-header scroll-reveal">
+                <h2>¿Cansado de perder ventas por no tener un sistema confiable?</h2>
+                <p>J2Biznes resuelve los principales problemas que enfrentan los negocios mexicanos</p>
+            </div>
+            
+            <div class="solution-grid">
+                <div class="solution-card scroll-reveal">
+                    <div class="solution-icon">
+                        <i class="fas fa-wifi-slash"></i>
+                    </div>
+                    <h3>Sin Internet</h3>
+                    <p>Funciona completamente offline. Vende, consulta inventarios y gestiona clientes sin conexión a internet.</p>
+                </div>
+                
+                <div class="solution-card scroll-reveal">
+                    <div class="solution-icon">
+                        <i class="fas fa-layer-group"></i>
+                    </div>
+                    <h3>Todo en Uno</h3>
+                    <p>Punto de venta, inventarios, clientes, proveedores, reportes y más. Una sola app para todo tu negocio.</p>
+                </div>
+                
+                <div class="solution-card scroll-reveal">
+                    <div class="solution-icon">
+                        <i class="fas fa-mobile-alt"></i>
+                    </div>
+                    <h3>Desde Cualquier Lugar</h3>
+                    <p>Administra tu negocio desde tu teléfono. Atiende clientes en ferias, domicilio o donde sea necesario.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section class="how-it-works">
+        <div class="container">
+            <div class="section-header scroll-reveal">
+                <h2>Cómo funciona J2Biznes</h2>
+                <p>En solo 3 pasos puedes tener tu negocio funcionando con J2Biznes</p>
+            </div>
+            
+            <div class="steps-grid">
+                <div class="step-card scroll-reveal">
+                    <div class="step-number">1</div>
+                    <div class="step-icon">
+                        <i class="fas fa-download"></i>
+                    </div>
+                    <h3>Descarga</h3>
+                    <p>Instala J2Biznes desde Google Play o App Store. Es gratis y no requiere registro inicial.</p>
+                </div>
+                
+                <div class="step-arrow scroll-reveal">
+                    <i class="fas fa-arrow-right"></i>
+                </div>
+                
+                <div class="step-card scroll-reveal">
+                    <div class="step-number">2</div>
+                    <div class="step-icon">
+                        <i class="fas fa-cog"></i>
+                    </div>
+                    <h3>Configura</h3>
+                    <p>Agrega tus productos, clientes y configura tu negocio en menos de 15 minutos.</p>
+                </div>
+                
+                <div class="step-arrow scroll-reveal">
+                    <i class="fas fa-arrow-right"></i>
+                </div>
+                
+                <div class="step-card scroll-reveal">
+                    <div class="step-number">3</div>
+                    <div class="step-icon">
+                        <i class="fas fa-rocket"></i>
+                    </div>
+                    <h3>Vende</h3>
+                    <p>Comienza a generar ventas, controlar inventarios y hacer crecer tu negocio desde el primer día.</p>
+                </div>
             </div>
         </div>
     </section>
@@ -36,93 +132,153 @@
         <div class="container">
             <div class="section-header scroll-reveal">
                 <h2>Todo lo que necesitas en una sola app</h2>
-                <p>Desde inventarios hasta ventas, j2biznes integra todas las herramientas esenciales para que puedas enfocarte en hacer crecer tu negocio.</p>
+                <p>Desde inventarios hasta ventas, J2Biznes integra todas las herramientas esenciales para que puedas enfocarte en hacer crecer tu negocio.</p>
             </div>
 
             <div class="features-grid">
-                <div class="feature-card scroll-reveal">
+                <div class="feature-card scroll-reveal" data-feature="inventory">
                     <div class="feature-icon">
                         <i class="fas fa-boxes"></i>
                     </div>
                     <h3>Gestión de Inventarios</h3>
-                    <p>Controla tu stock en tiempo real, recibe alertas de productos agotados y gestiona múltiples almacenes desde cualquier lugar.</p>
-                    <img 
-                        data-src="https://via.placeholder.com/300x200/10b981/ffffff?text=Inventarios" 
-                        alt="Gestión de Inventarios"
-                        class="lazy-placeholder feature-image"
-                        style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; margin-top: 1rem;"
-                    >
+                    <p>Controla tu stock en tiempo real, recibe alertas de productos agotados y gestiona múltiples almacenes.</p>
+                    <div class="feature-benefits">
+                        <span class="benefit-tag">Control en tiempo real</span>
+                        <span class="benefit-tag">Alertas automáticas</span>
+                    </div>
                 </div>
 
-                <div class="feature-card scroll-reveal">
+                <div class="feature-card scroll-reveal" data-feature="customers">
                     <div class="feature-icon">
                         <i class="fas fa-users"></i>
                     </div>
                     <h3>Control de Clientes</h3>
-                    <p>Mantén una base de datos completa de tus clientes, historial de compras y preferencias para brindar un servicio personalizado.</p>
-                    <img 
-                        data-src="https://via.placeholder.com/300x200/6366f1/ffffff?text=Clientes" 
-                        alt="Control de Clientes"
-                        class="lazy-placeholder feature-image"
-                        style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; margin-top: 1rem;"
-                    >
+                    <p>Base de datos completa de clientes, historial de compras y preferencias para un servicio personalizado.</p>
+                    <div class="feature-benefits">
+                        <span class="benefit-tag">Historial completo</span>
+                        <span class="benefit-tag">Servicio personalizado</span>
+                    </div>
                 </div>
 
-                <div class="feature-card scroll-reveal">
+                <div class="feature-card scroll-reveal" data-feature="suppliers">
                     <div class="feature-icon">
                         <i class="fas fa-truck"></i>
                     </div>
                     <h3>Gestión de Proveedores</h3>
-                    <p>Administra tus proveedores, órdenes de compra y mantén un control detallado de tus costos y tiempos de entrega.</p>
-                    <img 
-                        data-src="https://via.placeholder.com/300x200/f59e0b/ffffff?text=Proveedores" 
-                        alt="Gestión de Proveedores"
-                        class="lazy-placeholder feature-image"
-                        style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; margin-top: 1rem;"
-                    >
+                    <p>Administra proveedores, órdenes de compra y mantén control detallado de costos y tiempos de entrega.</p>
+                    <div class="feature-benefits">
+                        <span class="benefit-tag">Órdenes automáticas</span>
+                        <span class="benefit-tag">Control de costos</span>
+                    </div>
                 </div>
 
-                <div class="feature-card scroll-reveal">
+                <div class="feature-card scroll-reveal" data-feature="pos">
                     <div class="feature-icon">
                         <i class="fas fa-receipt"></i>
                     </div>
                     <h3>Punto de Venta Móvil</h3>
-                    <p>Genera facturas, notas de venta y cotizaciones al instante. Acepta diferentes métodos de pago y envía comprobantes por email.</p>
-                    <img 
-                        data-src="https://via.placeholder.com/300x200/ef4444/ffffff?text=POS+M%C3%B3vil" 
-                        alt="Punto de Venta Móvil"
-                        class="lazy-placeholder feature-image"
-                        style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; margin-top: 1rem;"
-                    >
+                    <p>Genera facturas, notas de venta y cotizaciones al instante. Acepta múltiples métodos de pago.</p>
+                    <div class="feature-benefits">
+                        <span class="benefit-tag">Facturación instantánea</span>
+                        <span class="benefit-tag">Múltiples pagos</span>
+                    </div>
                 </div>
 
-                <div class="feature-card scroll-reveal">
+                <div class="feature-card scroll-reveal" data-feature="staff">
                     <div class="feature-icon">
                         <i class="fas fa-user-tie"></i>
                     </div>
                     <h3>Control de Personal</h3>
-                    <p>Administra tu equipo, asigna roles y permisos, y mantén un registro de actividades para optimizar la productividad.</p>
-                    <img 
-                        data-src="https://via.placeholder.com/300x200/8b5cf6/ffffff?text=Personal" 
-                        alt="Control de Personal"
-                        class="lazy-placeholder feature-image"
-                        style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; margin-top: 1rem;"
-                    >
+                    <p>Administra tu equipo, asigna roles y permisos, y mantén registro de actividades para optimizar productividad.</p>
+                    <div class="feature-benefits">
+                        <span class="benefit-tag">Roles personalizados</span>
+                        <span class="benefit-tag">Seguimiento de actividad</span>
+                    </div>
                 </div>
 
-                <div class="feature-card scroll-reveal">
+                <div class="feature-card scroll-reveal" data-feature="support">
                     <div class="feature-icon">
                         <i class="fas fa-headset"></i>
                     </div>
-                    <h3>Soporte al Cliente</h3>
-                    <p>Ofrece atención personalizada a tus clientes, gestiona tickets de soporte y mantén la satisfacción al máximo nivel.</p>
-                    <img 
-                        data-src="https://via.placeholder.com/300x200/06b6d4/ffffff?text=Soporte" 
-                        alt="Soporte al Cliente"
-                        class="lazy-placeholder feature-image"
-                        style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; margin-top: 1rem;"
-                    >
+                    <h3>Soporte 24/7</h3>
+                    <p>Atención personalizada para tus clientes, gestión de tickets y soporte técnico cuando lo necesites.</p>
+                    <div class="feature-benefits">
+                        <span class="benefit-tag">Soporte en español</span>
+                        <span class="benefit-tag">Respuesta rápida</span>
+                    </div>
                 </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section id="precios" class="pricing">
+        <div class="container">
+            <div class="section-header scroll-reveal">
+                <h2>Planes diseñados para cada tipo de negocio</h2>
+                <p>Comienza gratis y crece con nosotros. Sin compromisos, cancela cuando quieras.</p>
+            </div>
+            
+            <div class="pricing-grid">
+                <div class="pricing-card scroll-reveal">
+                    <div class="pricing-header">
+                        <h3>Prueba Gratuita</h3>
+                        <div class="price">
+                            <span class="currency">MX$</span>
+                            <span class="amount">0</span>
+                            <span class="period">/30 días</span>
+                        </div>
+                    </div>
+                    <ul class="pricing-features">
+                        <li><i class="fas fa-check"></i> Hasta 100 productos</li>
+                        <li><i class="fas fa-check"></i> 50 clientes</li>
+                        <li><i class="fas fa-check"></i> 1 usuario</li>
+                        <li><i class="fas fa-check"></i> Soporte por email</li>
+                        <li><i class="fas fa-check"></i> Funciona offline</li>
+                    </ul>
+                    <a href="#descarga" class="pricing-btn btn-outline">Comenzar Gratis</a>
+                </div>
+                
+                <div class="pricing-card scroll-reveal">
+                    <div class="pricing-header">
+                        <h3>Básico</h3>
+                        <div class="price">
+                            <span class="currency">MX$</span>
+                            <span class="amount">299</span>
+                            <span class="period">/mes</span>
+                        </div>
+                    </div>
+                    <ul class="pricing-features">
+                        <li><i class="fas fa-check"></i> Productos ilimitados</li>
+                        <li><i class="fas fa-check"></i> 500 clientes</li>
+                        <li><i class="fas fa-check"></i> 2 usuarios</li>
+                        <li><i class="fas fa-check"></i> Reportes básicos</li>
+                        <li><i class="fas fa-check"></i> Soporte prioritario</li>
+                    </ul>
+                    <a href="#descarga" class="pricing-btn btn-outline">Elegir Plan</a>
+                </div>
+                
+                <div class="pricing-card pricing-card-featured scroll-reveal">
+                    <div class="pricing-badge">Más Popular</div>
+                    <div class="pricing-header">
+                        <h3>Profesional</h3>
+                        <div class="price">
+                            <span class="currency">MX$</span>
+                            <span class="amount">599</span>
+                            <span class="period">/mes</span>
+                        </div>
+                    </div>
+                    <ul class="pricing-features">
+                        <li><i class="fas fa-check"></i> Todo lo del plan Básico</li>
+                        <li><i class="fas fa-check"></i> Clientes ilimitados</li>
+                        <li><i class="fas fa-check"></i> 5 usuarios</li>
+                        <li><i class="fas fa-check"></i> Reportes avanzados</li>
+                        <li><i class="fas fa-check"></i> Múltiples sucursales</li>
+                        <li><i class="fas fa-check"></i> Integración con contabilidad</li>
+                    </ul>
+                    <a href="#descarga" class="pricing-btn btn-primary">Elegir Plan</a>
+                </div>
+                
             </div>
         </div>
     </section>
@@ -132,8 +288,8 @@
         <div class="container">
             <div class="stats-grid">
                 <div class="stat-item scroll-reveal">
-                    <h3 data-target="10000" data-format="thousands" data-duration="2000">0</h3>
-                    <p>Negocios confían en nosotros</p>
+                    <h3 data-target="3" data-format="years" data-duration="2000">0</h3>
+                    <p>Años en el mercado</p>
                 </div>
                 <div class="stat-item scroll-reveal">
                     <h3 data-target="99" data-format="percentage" data-duration="1800">0</h3>
@@ -144,8 +300,8 @@
                     <p>Horas de soporte técnico</p>
                 </div>
                 <div class="stat-item scroll-reveal">
-                    <h3 data-target="50" data-format="countries" data-duration="1200">0</h3>
-                    <p>Países utilizando j2biznes</p>
+                    <h3 data-target="10" data-format="countries" data-duration="1200">0</h3>
+                    <p>Países utilizando J2Biznes</p>
                 </div>
             </div>
         </div>
@@ -156,12 +312,12 @@
         <div class="container">
             <div class="section-header scroll-reveal">
                 <h2>Lo que dicen nuestros clientes</h2>
-                <p>Miles de emprendedores y empresarios ya transformaron su forma de trabajar con j2biznes.</p>
+                <p>Miles de emprendedores y empresarios ya transformaron su forma de trabajar con J2Biznes.</p>
             </div>
 
             <div class="testimonial-grid">
                 <div class="testimonial-card scroll-reveal">
-                    <p class="testimonial-text">"j2biznes revolucionó mi negocio. Ahora puedo manejar todo desde mi teléfono y mis ventas aumentaron 40% en los primeros 3 meses."</p>
+                    <p class="testimonial-text">"J2Biznes revolucionó mi negocio. Ahora puedo manejar todo desde mi teléfono y mis ventas aumentaron 40% en los primeros 3 meses."</p>
                     <div class="testimonial-author">
                         <div class="author-avatar">MC</div>
                         <div class="author-info">
@@ -196,20 +352,83 @@
         </div>
     </section>
 
+    <!-- FAQ Section -->
+    <section id="faq" class="faq">
+        <div class="container">
+            <div class="section-header scroll-reveal">
+                <h2>Preguntas Frecuentes</h2>
+                <p>Resolvemos las dudas más comunes sobre J2Biznes</p>
+            </div>
+            
+            <div class="faq-list">
+                <div class="faq-item scroll-reveal">
+                    <div class="faq-question">
+                        <h3>J2Biznes funciona sin conexión a internet?</h3>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Sí, J2Biznes está diseñado para funcionar completamente offline. Puedes generar notas de venta, consultar inventarios, y gestionar clientes sin necesidad de internet. La información se sincroniza automáticamente cuando recuperas la conexión.</p>
+                    </div>
+                </div>
+                
+                <div class="faq-item scroll-reveal">
+                    <div class="faq-question">
+                        <h3>¿En qué dispositivos puedo usar J2Biznes?</h3>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p>J2Biznes está disponible para Android (versión 5.0 o superior) e iOS (versión 10.0 o superior). También funciona en tablets y próximamente estará disponible para computadoras de escritorio.</p>
+                    </div>
+                </div>
+                
+                <div class="faq-item scroll-reveal">
+                    <div class="faq-question">
+                        <h3>¿Qué tipo de soporte ofrecen?</h3>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Ofrecemos soporte en español por email, chat en vivo, y videollamadas. Los planes Profesional y Empresarial incluyen soporte prioritario con tiempos de respuesta garantizados. También tenemos tutoriales en video y documentación completa.</p>
+                    </div>
+                </div>
+                
+                <div class="faq-item scroll-reveal">
+                    <div class="faq-question">
+                        <h3>¿Puedo migrar mis datos de otro sistema?</h3>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Sí, ofrecemos migración gratuita de datos desde Excel, otros sistemas POS, y bases de datos. Nuestro equipo te ayuda con el proceso para que no pierdas información y puedas comenzar a usar J2Biznes inmediatamente.</p>
+                    </div>
+                </div>
+                
+                <div class="faq-item scroll-reveal">
+                    <div class="faq-question">
+                        <h3>¿Qué tan segura es mi información?</h3>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Tu información está protegida con encriptación de grado bancario, respaldos automáticos diarios, y servidores seguros en México. Cumplimos con las regulaciones de privacidad mexicanas y nunca compartimos tu información con terceros.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- CTA Section -->
     <section id="descarga" class="cta-section">
         <div class="container">
             <div class="cta-content scroll-reveal">
                 <h2>¿Listo para transformar tu negocio?</h2>
-                <p>Únete a miles de emprendedores que ya están creciendo con j2biznes. Descarga la app y comienza tu prueba gratuita hoy mismo.</p>
+                <p>Únete a cientos de emprendedores que ya están creciendo con J2Biznes. Descarga la app y comienza tu prueba gratuita hoy mismo.</p>
                 <div class="hero-buttons">
-                    <a href="#" class="btn-primary">
-                        <i class="fab fa-apple"></i> App Store
+                    <a href="#" class="btn-primary btn-large">
+                        <i class="fab fa-apple"></i> Descargar para iOS
                     </a>
-                    <a href="#" class="btn-primary">
-                        <i class="fab fa-google-play"></i> Google Play
+                    <a href="#" class="btn-primary btn-large">
+                        <i class="fab fa-google-play"></i> Descargar para Android
                     </a>
                 </div>
+                <p class="cta-note">💡 <strong>Prueba gratuita por 30 días</strong> - No se requiere tarjeta de crédito</p>
             </div>
         </div>
     </section>

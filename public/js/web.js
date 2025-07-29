@@ -1,4 +1,444 @@
 /**
+ * Stats Counter Component
+ * Lazy-loaded component for animated counters
+ */
+
+class StatsCounter {
+    constructor(element) {
+        this.element = element;
+        this.counters = element.querySelectorAll('[data-target]');
+        this.animated = false;
+        
+        this.init();
+    }
+
+    init() {
+        // Only animate once when the component becomes visible
+        if (!this.animated) {
+            this.animateCounters();
+            this.animated = true;
+        }
+    }
+
+    animateCounters() {
+        this.counters.forEach(counter => {
+            const target = parseInt(counter.getAttribute('data-target'));
+            const duration = parseInt(counter.getAttribute('data-duration')) || 2000;
+            const formatter = counter.getAttribute('data-format') || 'number';
+            
+            this.animateCounter(counter, target, duration, formatter);
+        });
+    }
+
+    animateCounter(counter, target, duration, formatter) {
+        let current = 0;
+        const increment = target / (duration / 16); // 60 FPS
+        const startTime = performance.now();
+
+        const animate = (currentTime) => {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            // Use easing function for smooth animation
+            const easedProgress = this.easeOutCubic(progress);
+            current = target * easedProgress;
+
+            // Format and display the number
+            counter.textContent = this.formatNumber(Math.floor(current), formatter, target);
+
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                // Ensure final value is exact
+                counter.textContent = this.formatNumber(target, formatter, target);
+            }
+        };
+
+        requestAnimationFrame(animate);
+    }
+
+    formatNumber(value, formatter, target) {
+        switch (formatter) {
+            case 'thousands':
+                if (target >= 10000) {
+                    return Math.floor(value / 1000) + 'K+';
+                }
+                return value.toLocaleString() + '+';
+            
+            case 'percentage':
+                return value + '%';
+            
+            case 'time':
+                return value + '/7';
+            
+            case 'countries':
+                return value + '+';
+            
+            case 'country':
+                return value;
+            
+            default:
+                return value.toLocaleString();
+        }
+    }
+
+    easeOutCubic(t) {
+        return 1 - Math.pow(1 - t, 3);
+    }
+}
+
+// Make StatsCounter available globally for concatenated builds
+window.StatsCounter = StatsCounter;
+/**
+ * Lazy Loading System for j2biznes Landing Page
+ * Optimized for performance and SEO
+ */
+
+class LazyLoader {
+    constructor() {
+        this.imageObserver = null;
+        this.componentObserver = null;
+        this.loadedImages = new Set();
+        this.loadedComponents = new Set();
+        
+        this.init();
+    }
+
+    init() {
+        // Check if Intersection Observer is supported
+        if ('IntersectionObserver' in window) {
+            this.setupImageLazyLoading();
+            this.setupComponentLazyLoading();
+            this.setupResourceHints();
+        } else {
+            // Fallback for older browsers
+            this.loadAllImagesImmediately();
+        }
+
+        // Preload critical resources
+        this.preloadCriticalResources();
+    }
+
+    /**
+     * Setup lazy loading for images
+     */
+    setupImageLazyLoading() {
+        const imageOptions = {
+            root: null,
+            rootMargin: '50px 0px', // Start loading 50px before entering viewport
+            threshold: 0.1
+        };
+
+        this.imageObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    this.loadImage(entry.target);
+                    this.imageObserver.unobserve(entry.target);
+                }
+            });
+        }, imageOptions);
+
+        // Observe all lazy images
+        const lazyImages = document.querySelectorAll('img[data-src], picture[data-src]');
+        lazyImages.forEach(img => {
+            this.imageObserver.observe(img);
+        });
+    }
+
+    /**
+     * Load individual image
+     */
+    loadImage(imageElement) {
+        const src = imageElement.dataset.src;
+        const srcset = imageElement.dataset.srcset;
+        
+        if (!src && !srcset) return;
+
+        // Add loading class
+        imageElement.classList.add('lazy-loading');
+
+        // Create new image to preload
+        const img = new Image();
+        
+        img.onload = () => {
+            // Update the actual image
+            if (srcset) {
+                imageElement.srcset = srcset;
+            }
+            if (src) {
+                imageElement.src = src;
+            }
+
+            // Add loaded class and remove loading class
+            imageElement.classList.remove('lazy-loading', 'lazy-placeholder');
+            imageElement.classList.add('lazy-loaded');
+            
+            // Track loaded image
+            this.loadedImages.add(imageElement);
+
+            // Dispatch custom event
+            imageElement.dispatchEvent(new CustomEvent('lazyloaded', { 
+                detail: { src, srcset } 
+            }));
+        };
+
+        img.onerror = () => {
+            imageElement.classList.remove('lazy-loading');
+            imageElement.classList.add('lazy-error');
+            console.warn('Failed to load lazy image:', src);
+        };
+
+        // Start loading
+        if (srcset) img.srcset = srcset;
+        if (src) img.src = src;
+    }
+
+    /**
+     * Setup lazy loading for heavy components
+     */
+    setupComponentLazyLoading() {
+        const componentOptions = {
+            root: null,
+            rootMargin: '100px 0px', // Load components 100px before viewport
+            threshold: 0.1
+        };
+
+        this.componentObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    this.loadComponent(entry.target);
+                    this.componentObserver.unobserve(entry.target);
+                }
+            });
+        }, componentOptions);
+
+        // Observe lazy components
+        const lazyComponents = document.querySelectorAll('[data-lazy-component]');
+        lazyComponents.forEach(component => {
+            this.componentObserver.observe(component);
+        });
+    }
+
+    /**
+     * Load heavy components
+     */
+    loadComponent(element) {
+        const componentType = element.dataset.lazyComponent;
+        
+        element.classList.add('lazy-loading');
+
+        switch (componentType) {
+            case 'stats-counter':
+                this.loadStatsCounter(element);
+                break;
+            case 'testimonials':
+                this.loadTestimonials(element);
+                break;
+            case 'contact-form':
+                this.loadContactForm(element);
+                break;
+            case 'video-player':
+                this.loadVideoPlayer(element);
+                break;
+            default:
+                console.warn('Unknown lazy component type:', componentType);
+        }
+    }
+
+    /**
+     * Load stats counter component
+     */
+    loadStatsCounter(element) {
+        try {
+            // Use globally available StatsCounter class
+            if (window.StatsCounter) {
+                new window.StatsCounter(element);
+                element.classList.remove('lazy-loading');
+                element.classList.add('lazy-loaded');
+                this.loadedComponents.add(element);
+            } else {
+                console.error('StatsCounter class not available');
+                element.classList.add('lazy-error');
+            }
+        } catch (error) {
+            console.error('Failed to load stats counter:', error);
+            element.classList.add('lazy-error');
+        }
+    }
+
+    /**
+     * Load testimonials component
+     */
+    loadTestimonials(element) {
+        // Simulate loading testimonials data
+        setTimeout(() => {
+            element.classList.remove('lazy-loading');
+            element.classList.add('lazy-loaded');
+            this.loadedComponents.add(element);
+        }, 100);
+    }
+
+    /**
+     * Load contact form component
+     */
+    loadContactForm(element) {
+        // Load form validation and submission logic
+        import('./components/contact-form.js')
+            .then(module => {
+                const ContactForm = module.default;
+                new ContactForm(element);
+                element.classList.remove('lazy-loading');
+                element.classList.add('lazy-loaded');
+                this.loadedComponents.add(element);
+            })
+            .catch(error => {
+                console.error('Failed to load contact form:', error);
+                element.classList.add('lazy-error');
+            });
+    }
+
+    /**
+     * Load video player component
+     */
+    loadVideoPlayer(element) {
+        const videoSrc = element.dataset.videoSrc;
+        const posterSrc = element.dataset.posterSrc;
+
+        const video = document.createElement('video');
+        video.src = videoSrc;
+        video.poster = posterSrc;
+        video.controls = true;
+        video.preload = 'metadata';
+        
+        element.appendChild(video);
+        element.classList.remove('lazy-loading');
+        element.classList.add('lazy-loaded');
+        this.loadedComponents.add(element);
+    }
+
+    /**
+     * Setup resource hints for better performance
+     */
+    setupResourceHints() {
+        // DNS prefetch for external resources
+        const dnsPrefetchDomains = [
+            '//fonts.googleapis.com',
+            '//fonts.gstatic.com',
+            '//cdnjs.cloudflare.com'
+        ];
+
+        dnsPrefetchDomains.forEach(domain => {
+            if (!document.querySelector(`link[href="${domain}"]`)) {
+                const link = document.createElement('link');
+                link.rel = 'dns-prefetch';
+                link.href = domain;
+                document.head.appendChild(link);
+            }
+        });
+    }
+
+    /**
+     * Preload critical resources
+     */
+    preloadCriticalResources() {
+        // Preload critical images that should load immediately
+        const criticalImages = document.querySelectorAll('img[data-critical]');
+        criticalImages.forEach(img => {
+            this.loadImage(img);
+        });
+
+        // Preload next section's images when user scrolls
+        let scrollTimeout;
+        window.addEventListener('scroll', () => {
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+                this.preloadNextSectionImages();
+            }, 150);
+        }, { passive: true });
+    }
+
+    /**
+     * Preload images in the next section
+     */
+    preloadNextSectionImages() {
+        const scrollPosition = window.pageYOffset;
+        const windowHeight = window.innerHeight;
+        const nextSectionPosition = scrollPosition + windowHeight * 1.5;
+
+        const allImages = document.querySelectorAll('img[data-src]');
+        allImages.forEach(img => {
+            const imgPosition = img.offsetTop;
+            if (imgPosition <= nextSectionPosition && !this.loadedImages.has(img)) {
+                this.loadImage(img);
+            }
+        });
+    }
+
+    /**
+     * Fallback for browsers without Intersection Observer
+     */
+    loadAllImagesImmediately() {
+        const lazyImages = document.querySelectorAll('img[data-src]');
+        lazyImages.forEach(img => this.loadImage(img));
+
+        const lazyComponents = document.querySelectorAll('[data-lazy-component]');
+        lazyComponents.forEach(component => this.loadComponent(component));
+    }
+
+    /**
+     * Get loading statistics
+     */
+    getStats() {
+        return {
+            imagesLoaded: this.loadedImages.size,
+            componentsLoaded: this.loadedComponents.size,
+            totalImages: document.querySelectorAll('img[data-src]').length,
+            totalComponents: document.querySelectorAll('[data-lazy-component]').length
+        };
+    }
+
+    /**
+     * Force load all remaining lazy content
+     */
+    loadAll() {
+        const remainingImages = document.querySelectorAll('img[data-src]:not(.lazy-loaded)');
+        remainingImages.forEach(img => {
+            this.imageObserver?.unobserve(img);
+            this.loadImage(img);
+        });
+
+        const remainingComponents = document.querySelectorAll('[data-lazy-component]:not(.lazy-loaded)');
+        remainingComponents.forEach(component => {
+            this.componentObserver?.unobserve(component);
+            this.loadComponent(component);
+        });
+    }
+
+    /**
+     * Cleanup observers
+     */
+    destroy() {
+        if (this.imageObserver) {
+            this.imageObserver.disconnect();
+        }
+        if (this.componentObserver) {
+            this.componentObserver.disconnect();
+        }
+    }
+}
+
+// Auto-initialize when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        window.lazyLoader = new LazyLoader();
+    });
+} else {
+    window.lazyLoader = new LazyLoader();
+}
+
+// Make LazyLoader available globally for concatenated builds
+window.LazyLoader = LazyLoader;
+/**
  * j2biznes Landing Page JavaScript
  * Separated from index.blade.php for better organization
  */

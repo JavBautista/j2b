@@ -9,12 +9,12 @@
         <div class="hero-content fade-in-up">
             <div class="hero-badges">
                 <span class="hero-badge"><i class="fas fa-shield-alt"></i> Sin costos ocultos</span>
-                <span class="hero-badge"><i class="fas fa-wifi"></i> Funciona offline</span>
+                <span class="hero-badge"><i class="fas fa-sync"></i> Sincronización automática</span>
                 <span class="hero-badge"><i class="fas fa-heart"></i> Hecho en México</span>
             </div>
             
             <h1>El punto de venta móvil que hace crecer tu negocio</h1>
-            <p>Más de 3 años ayudando a pequeños y medianos negocios en México. Genera notas de venta, controla inventarios y gestiona clientes desde cualquier lugar, incluso sin internet.</p>
+            <p>1 año ayudando a pequeños y medianos negocios en México. Genera notas de venta, controla inventarios y gestiona clientes desde cualquier lugar con sincronización automática.</p>
             
             <div class="hero-buttons">
                 <a href="#descarga" class="btn-primary btn-large">
@@ -55,10 +55,10 @@
             <div class="solution-grid">
                 <div class="solution-card scroll-reveal">
                     <div class="solution-icon">
-                        <i class="fas fa-wifi-slash"></i>
+                        <i class="fas fa-sync"></i>
                     </div>
-                    <h3>Sin Internet</h3>
-                    <p>Funciona completamente offline. Vende, consulta inventarios y gestiona clientes sin conexión a internet.</p>
+                    <h3>Siempre Conectado</h3>
+                    <p>Mantén tu información sincronizada en tiempo real. Accede a tus datos desde cualquier dispositivo con conexión segura.</p>
                 </div>
                 
                 <div class="solution-card scroll-reveal">
@@ -200,10 +200,10 @@
                     <div class="feature-icon">
                         <i class="fas fa-headset"></i>
                     </div>
-                    <h3>Soporte 24/7</h3>
-                    <p>Atención personalizada para tus clientes, gestión de tickets y soporte técnico cuando lo necesites.</p>
+                    <h3>Soporte en Español</h3>
+                    <p>Atención personalizada en horario laboral mexicano, gestión de tickets y soporte técnico especializado.</p>
                     <div class="feature-benefits">
-                        <span class="benefit-tag">Soporte en español</span>
+                        <span class="benefit-tag">Horario México</span>
                         <span class="benefit-tag">Respuesta rápida</span>
                     </div>
                 </div>
@@ -216,7 +216,7 @@
         <div class="container">
             <div class="section-header scroll-reveal">
                 <h2>Planes diseñados para cada tipo de negocio</h2>
-                <p>Comienza gratis y crece con nosotros. Sin compromisos, cancela cuando quieras.</p>
+                <p>Comienza con nuestra prueba gratuita y crece con nosotros. Sin compromisos, cancela cuando quieras.</p>
             </div>
             
             <div class="pricing-grid">
@@ -233,8 +233,8 @@
                         <li><i class="fas fa-check"></i> Hasta 100 productos</li>
                         <li><i class="fas fa-check"></i> 50 clientes</li>
                         <li><i class="fas fa-check"></i> 1 usuario</li>
-                        <li><i class="fas fa-check"></i> Soporte por email</li>
-                        <li><i class="fas fa-check"></i> Funciona offline</li>
+                        <li><i class="fas fa-check"></i> Soporte en español</li>
+                        <li><i class="fas fa-check"></i> Sincronización automática</li>
                     </ul>
                     <a href="#descarga" class="pricing-btn btn-outline">Comenzar Gratis</a>
                 </div>
@@ -288,8 +288,8 @@
         <div class="container">
             <div class="stats-grid">
                 <div class="stat-item scroll-reveal">
-                    <h3 data-target="3" data-format="years" data-duration="2000">0</h3>
-                    <p>Años en el mercado</p>
+                    <h3 data-target="1" data-format="years" data-duration="2000">0</h3>
+                    <p>Año en el mercado</p>
                 </div>
                 <div class="stat-item scroll-reveal">
                     <h3 data-target="99" data-format="percentage" data-duration="1800">0</h3>
@@ -300,8 +300,8 @@
                     <p>Horas de soporte técnico</p>
                 </div>
                 <div class="stat-item scroll-reveal">
-                    <h3 data-target="10" data-format="countries" data-duration="1200">0</h3>
-                    <p>Países utilizando J2Biznes</p>
+                    <h3 data-target="1" data-format="country" data-duration="1200">0</h3>
+                    <p>País utilizando J2Biznes</p>
                 </div>
             </div>
         </div>
@@ -312,12 +312,12 @@
         <div class="container">
             <div class="section-header scroll-reveal">
                 <h2>Lo que dicen nuestros clientes</h2>
-                <p>Miles de emprendedores y empresarios ya transformaron su forma de trabajar con J2Biznes.</p>
+                <p>Emprendedores y empresarios mexicanos ya están mejorando su forma de trabajar con J2Biznes.</p>
             </div>
 
             <div class="testimonial-grid">
                 <div class="testimonial-card scroll-reveal">
-                    <p class="testimonial-text">"J2Biznes revolucionó mi negocio. Ahora puedo manejar todo desde mi teléfono y mis ventas aumentaron 40% en los primeros 3 meses."</p>
+                    <p class="testimonial-text">"J2Biznes simplificó mi negocio. Ahora puedo manejar todo desde mi teléfono y mis procesos son más eficientes."</p>
                     <div class="testimonial-author">
                         <div class="author-avatar">MC</div>
                         <div class="author-info">
@@ -363,11 +363,11 @@
             <div class="faq-list">
                 <div class="faq-item scroll-reveal">
                     <div class="faq-question">
-                        <h3>J2Biznes funciona sin conexión a internet?</h3>
+                        <h3>¿J2Biznes requiere conexión a internet?</h3>
                         <i class="fas fa-chevron-down"></i>
                     </div>
                     <div class="faq-answer">
-                        <p>Sí, J2Biznes está diseñado para funcionar completamente offline. Puedes generar notas de venta, consultar inventarios, y gestionar clientes sin necesidad de internet. La información se sincroniza automáticamente cuando recuperas la conexión.</p>
+                        <p>Sí, J2Biznes requiere conexión a internet para funcionar correctamente. Esto nos permite mantener tu información sincronizada en tiempo real entre todos tus dispositivos y garantizar la seguridad de tus datos.</p>
                     </div>
                 </div>
                 
@@ -387,7 +387,7 @@
                         <i class="fas fa-chevron-down"></i>
                     </div>
                     <div class="faq-answer">
-                        <p>Ofrecemos soporte en español por email, chat en vivo, y videollamadas. Los planes Profesional y Empresarial incluyen soporte prioritario con tiempos de respuesta garantizados. También tenemos tutoriales en video y documentación completa.</p>
+                        <p>Ofrecemos soporte en español por email y chat. El plan Profesional incluye soporte prioritario con tiempos de respuesta más rápidos. También tenemos tutoriales en video y documentación completa.</p>
                     </div>
                 </div>
                 
@@ -407,7 +407,7 @@
                         <i class="fas fa-chevron-down"></i>
                     </div>
                     <div class="faq-answer">
-                        <p>Tu información está protegida con encriptación de grado bancario, respaldos automáticos diarios, y servidores seguros en México. Cumplimos con las regulaciones de privacidad mexicanas y nunca compartimos tu información con terceros.</p>
+                        <p>Tu información está protegida con encriptación SSL, respaldos automáticos regulares, y medidas de seguridad estrictas. Cumplimos con las regulaciones de privacidad mexicanas y nunca compartimos tu información con terceros.</p>
                     </div>
                 </div>
             </div>
@@ -419,7 +419,7 @@
         <div class="container">
             <div class="cta-content scroll-reveal">
                 <h2>¿Listo para transformar tu negocio?</h2>
-                <p>Únete a cientos de emprendedores que ya están creciendo con J2Biznes. Descarga la app y comienza tu prueba gratuita hoy mismo.</p>
+                <p>Únete a los emprendedores mexicanos que ya están optimizando sus negocios con J2Biznes. Descarga la app y comienza tu prueba gratuita hoy mismo.</p>
                 <div class="hero-buttons">
                     <a href="#" class="btn-primary btn-large">
                         <i class="fab fa-apple"></i> Descargar para iOS

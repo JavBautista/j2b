@@ -157,15 +157,18 @@ class LazyLoader {
     /**
      * Load stats counter component
      */
-    async loadStatsCounter(element) {
+    loadStatsCounter(element) {
         try {
-            // Import counter animation dynamically
-            const module = await import('./components/stats-counter.js');
-            const StatsCounter = module.default;
-            new StatsCounter(element);
-            element.classList.remove('lazy-loading');
-            element.classList.add('lazy-loaded');
-            this.loadedComponents.add(element);
+            // Use globally available StatsCounter class
+            if (window.StatsCounter) {
+                new window.StatsCounter(element);
+                element.classList.remove('lazy-loading');
+                element.classList.add('lazy-loaded');
+                this.loadedComponents.add(element);
+            } else {
+                console.error('StatsCounter class not available');
+                element.classList.add('lazy-error');
+            }
         } catch (error) {
             console.error('Failed to load stats counter:', error);
             element.classList.add('lazy-error');
@@ -342,4 +345,5 @@ if (document.readyState === 'loading') {
     window.lazyLoader = new LazyLoader();
 }
 
-export default LazyLoader;
+// Make LazyLoader available globally for concatenated builds
+window.LazyLoader = LazyLoader;

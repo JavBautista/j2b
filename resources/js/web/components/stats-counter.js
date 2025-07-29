@@ -74,6 +74,9 @@ class StatsCounter {
             case 'countries':
                 return value + '+';
             
+            case 'country':
+                return value;
+            
             default:
                 return value.toLocaleString();
         }
@@ -84,4 +87,5 @@ class StatsCounter {
     }
 }
 
-export default StatsCounter;
+// Make StatsCounter available globally for concatenated builds
+window.StatsCounter = StatsCounter;

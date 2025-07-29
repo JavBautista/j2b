@@ -33,6 +33,8 @@ mix.js('resources/js/app.js', 'public/js')
             'resources/css/web/landing.css'
             ], 'public/css/web.css')
     .scripts([
+            'resources/js/web/components/stats-counter.js',
+            'resources/js/web/lazy-loading.js',
             'resources/js/web/landing.js'
             ], 'public/js/web.js')
     

@@ -28,7 +28,7 @@ class AdminMiddleware
         // Opción 2
         return redirect(‘home’);
         */
-        if( auth()->check() && auth()->user()->authorizeRoles(['admin']) )
+        if( auth()->check() && auth()->user()->hasRole('admin') )
             return $next($request);
         return redirect('/');
     }

@@ -8,10 +8,11 @@
                 <a href=" {{ route('client.shop') }} " class="nav-link"> <i class="icon-shop"></i> Mi Tienda </a>
             </li>
             <li class="nav-item">
-                <a href=" {{ route('client.configurations') }} " class="nav-link"> <i class="icon-engine"></i> Configuraciones </a>
-            </li>
-            <li class="nav-item">
                 <a href=" {{ route('client.download') }} " class="nav-link"><i class="icon-download"></i> Descarga </a>
+            </li>
+            
+            <li class="nav-item">
+                <a href=" {{ route('client.contracts') }} " class="nav-link"><i class="icon-documetn"></i> Contratos </a>
             </li>
 
             <!--<li class="nav-item nav-dropdown">

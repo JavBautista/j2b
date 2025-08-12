@@ -329,6 +329,64 @@ class TaskController extends Controller
         $log->save();
     }
 
+    private function processBase64ToImage($base64Data, $taskId){
+        try {
+            // Remover el prefijo data:image/...;base64, si existe
+            if (preg_match('/^data:image\/(\w+);base64,/', $base64Data, $matches)) {
+                $imageType = $matches[1]; // png, jpeg, etc.
+                $base64Data = substr($base64Data, strpos($base64Data, ',') + 1);
+            } else {
+                $imageType = 'png'; // Tipo por defecto
+            }
+
+            // Validar que sea PNG o JPEG
+            if (!in_array(strtolower($imageType), ['png', 'jpeg', 'jpg'])) {
+                throw new \Exception('Formato de imagen no válido. Solo se permiten PNG y JPEG.');
+            }
+
+            // Decodificar base64
+            $imageData = base64_decode($base64Data);
+            if ($imageData === false) {
+                throw new \Exception('Error al decodificar la imagen base64.');
+            }
+
+            // Generar nombre único para el archivo
+            $timestamp = now()->format('YmdHis');
+            $filename = "task_{$taskId}_{$timestamp}.png";
+            $relativePath = "signatures/{$filename}";
+
+            // Crear directorio si no existe
+            $fullPath = storage_path('app/public/signatures');
+            if (!file_exists($fullPath)) {
+                mkdir($fullPath, 0755, true);
+            }
+
+            // Guardar el archivo
+            $fullFilePath = "{$fullPath}/{$filename}";
+            if (file_put_contents($fullFilePath, $imageData) === false) {
+                throw new \Exception('Error al guardar el archivo de imagen.');
+            }
+
+            return $relativePath;
+
+        } catch (\Exception $e) {
+            throw new \Exception("Error procesando la imagen: " . $e->getMessage());
+        }
+    }
+
+    private function deleteSignatureFile($signaturePath){
+        if ($signaturePath && Storage::disk('public')->exists($signaturePath)) {
+            Storage::disk('public')->delete($signaturePath);
+        }
+    }
+
+    private function getSignaturePublicUrl($signaturePath){
+        if ($signaturePath) {
+            return asset('storage/' . $signaturePath);
+        }
+        return null;
+    }
+
     public function deleteMainImage(Request $request){
         $user = $request->user();
         $task_id = $request->id;
@@ -399,5 +457,132 @@ class TaskController extends Controller
             ], 500);
         }
     }//.deleteAltImage()
+
+    public function saveSignature(Request $request){
+        $user = $request->user();
+        
+        try {
+            $task = Task::findOrFail($request->task_id);
+            $signature_base64 = $request->signature;
+            
+            if (!$signature_base64) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'La firma es requerida.',
+                ], 400);
+            }
+            
+            // Procesar base64 y guardar como archivo
+            $signaturePath = $this->processBase64ToImage($signature_base64, $task->id);
+            
+            // Guardar la ruta en la base de datos
+            $task->signature_path = $signaturePath;
+            $task->save();
+            
+            $log_desc = 'Firma guardada.';
+            $this->storeTaskLog($task->id, $user->name, $log_desc);
+            
+            $task->load('client');
+            $task->load('images');
+            $task->load('logs');
+            
+            return response()->json([
+                'ok' => true,
+                'task' => $task,
+                'signature_url' => $this->getSignaturePublicUrl($signaturePath),
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Error al guardar la firma.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }//.saveSignature()
+
+    public function updateSignature(Request $request){
+        $user = $request->user();
+        
+        try {
+            $task = Task::findOrFail($request->task_id);
+            $signature_base64 = $request->signature;
+            
+            if (!$signature_base64) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'La firma es requerida.',
+                ], 400);
+            }
+            
+            // Eliminar la firma anterior si existe
+            if ($task->signature_path) {
+                $this->deleteSignatureFile($task->signature_path);
+            }
+            
+            // Procesar la nueva firma y guardar como archivo
+            $signaturePath = $this->processBase64ToImage($signature_base64, $task->id);
+            
+            // Actualizar la ruta en la base de datos
+            $task->signature_path = $signaturePath;
+            $task->save();
+            
+            $log_desc = 'Firma actualizada.';
+            $this->storeTaskLog($task->id, $user->name, $log_desc);
+            
+            $task->load('client');
+            $task->load('images');
+            $task->load('logs');
+            
+            return response()->json([
+                'ok' => true,
+                'task' => $task,
+                'signature_url' => $this->getSignaturePublicUrl($signaturePath),
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Error al actualizar la firma.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }//.updateSignature()
+
+    public function deleteSignature(Request $request){
+        $user = $request->user();
+        
+        try {
+            $task = Task::findOrFail($request->task_id);
+            
+            // Eliminar el archivo físico si existe
+            if ($task->signature_path) {
+                $this->deleteSignatureFile($task->signature_path);
+            }
+            
+            // Limpiar el campo en la base de datos
+            $task->signature_path = null;
+            $task->save();
+            
+            $log_desc = 'Firma eliminada.';
+            $this->storeTaskLog($task->id, $user->name, $log_desc);
+            
+            $task->load('client');
+            $task->load('images');
+            $task->load('logs');
+            
+            return response()->json([
+                'ok' => true,
+                'task' => $task,
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Error al eliminar la firma.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }//.deleteSignature()
 
 }

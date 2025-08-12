@@ -28,7 +28,7 @@ class SuperadminMiddleware
         // Opción 2
         return redirect(‘home’);
         */
-        if( auth()->check() && auth()->user()->authorizeRoles(['superadmin']) )
+        if( auth()->check() && auth()->user()->hasAnyRole(['superadmin']) )
             return $next($request);
         return redirect('/');
     }

@@ -13,10 +13,11 @@
 
   <link href="{{ asset('css/app.css') }}" rel="stylesheet">
   <link href="{{ asset('css/dashboard.css') }}" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
    @yield('estilos')
 </head>
 
-<body class="app flex-row align-items-center">
+<body>
   <div class="container">
     @yield('login')
   </div>

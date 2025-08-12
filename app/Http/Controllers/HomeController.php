@@ -17,7 +17,8 @@ class HomeController extends Controller
      */
     public function __construct()
     {
-        //$this->middleware('auth');
+        // No aplicar middleware aquí porque HomeController maneja tanto 
+        // usuarios autenticados como no autenticados
     }
 
     /**
@@ -27,24 +28,35 @@ class HomeController extends Controller
      */
     public function index(Request $request)
     {
-        return view('web.index');
+        // Si el usuario no está autenticado, mostrar landing público
+        if (!auth()->check()) {
+            return view('web.index');
+        }
         
-        /*$request->user()->authorizeRoles(['superadmin', 'admin', 'client']);
+        // Redirecciones por rol para usuarios autenticados
+        $request->user()->authorizeRoles(['superadmin', 'admin', 'client']);
 
         if($request->user()->hasRole('superadmin'))
             return redirect('/superadmin');
 
         if($request->user()->hasRole('admin'))
-            return redirect('/client');
+            return redirect('/admin');
 
-        //if($request->user()->hasRole('client'))
-          //  return redirect('/client');
-
-        return redirect('/');*/
+        // Para roles no autorizados (client, collaborator, etc.) 
+        // los enviamos a /unauthorized donde se cerrará su sesión
+        return redirect('/unauthorized');
     }
 
     public function passwordReset(Request $request){
-        return view('user.reset_password');
+        $user = auth()->user();
+        
+        if($user->hasRole('superadmin')) {
+            return view('superadmin.reset_password');
+        } elseif($user->hasRole('admin')) {
+            return view('admin.reset_password');  
+        } else {
+            return view('user.reset_password');
+        }
     }
 
     public function updatePassword(Request $request){

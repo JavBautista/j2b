@@ -11,19 +11,19 @@ class ExtraFieldsShopController extends Controller
         $user = auth()->user();
         if ($user->shop) {
             $extra_fields = $user->shop->extraFields;
-            return view('client.configurations.extra_fields_shop.index', ['extra_fields' => $extra_fields]);
+            return view('admin.configurations.extra_fields_shop.index', ['extra_fields' => $extra_fields]);
         } else {
             return redirect()->route('no_shop_assigned');
         }
     }
 
     public function create(){
-        return view('client.configurations.extra_fields_shop.create');
+        return view('admin.configurations.extra_fields_shop.create');
     }
 
     public function edit($id){
         $extraField = ExtraFieldShop::findOrFail($id);
-        return view('client.configurations.extra_fields_shop.edit',['extraField'=>$extraField]);
+        return view('admin.configurations.extra_fields_shop.edit',['extraField'=>$extraField]);
     }
 
     public function store(Request $request)
@@ -43,9 +43,9 @@ class ExtraFieldsShopController extends Controller
             $extraField->active = $request->has('active'); // Asignar true si el checkbox está marcado
             $extraField->save();
             // Redireccionar con un mensaje de éxito
-            return redirect()->route('client.configurations.extra_fields')->with('success', '¡Campo extra creado exitosamente!');
+            return redirect()->route('admin.configurations.extra_fields')->with('success', '¡Campo extra creado exitosamente!');
         }
-        return redirect()->route('client.configurations.extra_fields')->with('error', '¡No se pudo crear el campo!');
+        return redirect()->route('admin.configurations.extra_fields')->with('error', '¡No se pudo crear el campo!');
 
     }
 
@@ -58,7 +58,7 @@ class ExtraFieldsShopController extends Controller
         $extraField->save();
 
         // Redireccionar con un mensaje de éxito
-        return redirect()->route('client.configurations.extra_fields')->with('success', '¡Estado del campo extra modificado exitosamente!');
+        return redirect()->route('admin.configurations.extra_fields')->with('success', '¡Estado del campo extra modificado exitosamente!');
     }
 
     public function destroy($id){
@@ -69,7 +69,7 @@ class ExtraFieldsShopController extends Controller
         $extraField->delete();
 
         // Redireccionar con un mensaje de éxito
-        return redirect()->route('client.configurations.extra_fields')->with('success', '¡Campo extra eliminado exitosamente!');
+        return redirect()->route('admin.configurations.extra_fields')->with('success', '¡Campo extra eliminado exitosamente!');
     }
 
     public function update(Request $request, $id){
@@ -86,7 +86,7 @@ class ExtraFieldsShopController extends Controller
         $extraField->save();
 
         // Redireccionar con un mensaje de éxito
-        return redirect()->route('client.configurations.extra_fields')->with('success', '¡Campo extra actualizado exitosamente!');
+        return redirect()->route('admin.configurations.extra_fields')->with('success', '¡Campo extra actualizado exitosamente!');
     }
 
     public function getApiExtraFieldsShop(Request $request){

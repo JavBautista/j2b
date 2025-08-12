@@ -3,9 +3,23 @@
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
-
 use App\Http\Controllers\EmailConfirmationController;
 use App\Http\Controllers\ReceiptController;
+use App\Http\Controllers\AdminPagesController;
+use App\Http\Controllers\Auth\UnauthorizedController;
+use App\Http\Controllers\RequestsJ2bController;
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\PurchaseOrderController;
+use App\Http\Controllers\ShopController;
+use App\Http\Controllers\ExtraFieldsShopController;
+use App\Http\Controllers\ContractController;
+use App\Http\Controllers\ContractTemplateController;
+use App\Http\Controllers\SuperadminPagesController;
+use App\Http\Controllers\Superadmin\ShopsController; 
+use  App\Http\Controllers\Superadmin\PlansController;
+use App\Http\Controllers\Superadmin\UsersController;
+use App\Http\Controllers\Admin\ClientsController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -19,32 +33,16 @@ use App\Http\Controllers\ReceiptController;
 */
 
 Route::get('confirmar-email/{token}', [EmailConfirmationController::class, 'confirmar'])->name('email.confirmar');
-
-Route::get('/', [App\Http\Controllers\HomeController::class, 'index']);
-
-//Route::get('/home', [App\Http\Controllers\HomeController::class, 'index']);
-
-Route::get('/pre-registro', [App\Http\Controllers\RequestsJ2bController::class, 'j2bSolicitar'])->name('solicitud');
-
-Route::post('/pre-registro/create', [App\Http\Controllers\RequestsJ2bController::class, 'store'])->name('solicitud.store');
-
-Route::get('/pre-registro/confirm/{xtoken}', [App\Http\Controllers\RequestsJ2bController::class, 'confirm'])->name('solicitud.confirm');
-
-Route::get('/pre-registro/completar', [App\Http\Controllers\RequestsJ2bController::class, 'completar'])->name('solicitud.completar')->middleware('check.token');
-
-Route::get('/pre-registro/error', [App\Http\Controllers\RequestsJ2bController::class, 'error'])->name('solicitud.error');
-
-Route::post('/registro/create', [App\Http\Controllers\RequestsJ2bController::class, 'store'])->name('X.solicitud.store');
-
-
-
-//Route::get('/test','App\Http\Controllers\ReceiptController@test');
-
+Route::get('/', [HomeController::class, 'index']);
+Route::get('/pre-registro', [RequestsJ2bController::class, 'j2bSolicitar'])->name('solicitud');
+Route::post('/pre-registro/create', [RequestsJ2bController::class, 'store'])->name('solicitud.store');
+Route::get('/pre-registro/confirm/{xtoken}', [RequestsJ2bController::class, 'confirm'])->name('solicitud.confirm');
+Route::get('/pre-registro/completar', [RequestsJ2bController::class, 'completar'])->name('solicitud.completar')->middleware('check.token');
+Route::get('/pre-registro/error', [RequestsJ2bController::class, 'error'])->name('solicitud.error');
+Route::post('/registro/create', [RequestsJ2bController::class, 'store'])->name('X.solicitud.store');
 Route::get('/print-receipt-rent', [ReceiptController::class, 'printReceiptRent']);
-
-Route::get('/print-purchase-order', 'App\Http\Controllers\PurchaseOrderController@printPurchaseOrder');
-
-Route::get('/print-purchase-order', 'App\Http\Controllers\PurchaseOrderController@printPurchaseOrder');
+Route::get('/print-purchase-order', [PurchaseOrderController::class,'printPurchaseOrder']);
+Route::get('/print-purchase-order', [PurchaseOrderController::class,'printPurchaseOrder']);
 
 
 Auth::routes([
@@ -56,83 +54,70 @@ Auth::routes([
     'verify'   => false,
 ]);
 
-Route::group(['middleware' => 'auth'], function () {
-    Route::get('/user/passwords/reset', [App\Http\Controllers\HomeController::class,'passwordReset'])->name('password.reset');
-    Route::post('/user/passwords/update', [App\Http\Controllers\HomeController::class,'updatePassword'])->name('password.update');
+// Ruta para acceso no autorizado
+Route::get('/unauthorized', [UnauthorizedController::class, 'index'])->name('unauthorized');
+Route::post('/unauthorized/logout', [UnauthorizedController::class, 'logout'])->name('unauthorized.logout');
 
+Route::group(['middleware' => ['auth', 'web.access']], function () {
+    Route::get('/user/passwords/reset', [HomeController::class,'passwordReset'])->name('password.reset');
+    Route::post('/user/passwords/update', [HomeController::class,'updatePassword'])->name('password.update');
+
+    //====================RUTAS AUTH/SUPER ADMIN DE TODO====================
     Route::group(['middleware' => 'superadmin'], function () {
         //Index
-        Route::get('/superadmin', [App\Http\Controllers\SuperadminPagesController::class,'index'])->name('superadmin.index');
+        Route::get('/superadmin', [SuperadminPagesController::class,'index'])->name('superadmin.index');
         //Shops
-        Route::get('/superadmin/shops', [App\Http\Controllers\SuperadminPagesController::class,'shops'])->name('superadmin.shops');
+        Route::get('/superadmin/shops', [SuperadminPagesController::class,'shops'])->name('superadmin.shops');
 
-        Route::get('/superadmin/shops/get', [App\Http\Controllers\Superadmin\ShopsController::class,'get']);
-        Route::post('/superadmin/shops/store', [App\Http\Controllers\Superadmin\ShopsController::class,'store']);
-        Route::put('/superadmin/shops/update', [App\Http\Controllers\Superadmin\ShopsController::class,'update']);
-        Route::put('/superadmin/shops/active', [App\Http\Controllers\Superadmin\ShopsController::class,'active']);
-        Route::put('/superadmin/shops/deactive', [App\Http\Controllers\Superadmin\ShopsController::class,'deactive']);
-        Route::post('/superadmin/shops/upload-logo', [App\Http\Controllers\Superadmin\ShopsController::class,'uploadLogo']);
-        Route::put('/superadmin/shops/update-cutoff', [App\Http\Controllers\Superadmin\ShopsController::class,'updateCutoff']);
+        Route::get('/superadmin/shops/get', [ShopsController::class,'get']);
+        Route::post('/superadmin/shops/store', [ShopsController::class,'store']);
+        Route::put('/superadmin/shops/update', [ShopsController::class,'update']);
+        Route::put('/superadmin/shops/active', [ShopsController::class,'active']);
+        Route::put('/superadmin/shops/deactive', [ShopsController::class,'deactive']);
+        Route::post('/superadmin/shops/upload-logo', [ShopsController::class,'uploadLogo']);
+        Route::put('/superadmin/shops/update-cutoff', [ShopsController::class,'updateCutoff']);
 
         //Plans
-        Route::get('/superadmin/plans', [App\Http\Controllers\SuperadminPagesController::class,'plans'])->name('superadmin.plans');
-        Route::get('/superadmin/plans/get', [App\Http\Controllers\Superadmin\PlansController::class,'get']);
-        Route::post('/superadmin/plans/store', [App\Http\Controllers\Superadmin\PlansController::class,'store']);
-        Route::put('/superadmin/plans/update', [App\Http\Controllers\Superadmin\PlansController::class,'update']);
-        Route::put('/superadmin/plans/active', [App\Http\Controllers\Superadmin\PlansController::class,'active']);
-        Route::put('/superadmin/plans/deactive', [App\Http\Controllers\Superadmin\PlansController::class,'deactive']);
+        Route::get('/superadmin/plans', [SuperadminPagesController::class,'plans'])->name('superadmin.plans');
+        Route::get('/superadmin/plans/get', [PlansController::class,'get']);
+        Route::post('/superadmin/plans/store', [PlansController::class,'store']);
+        Route::put('/superadmin/plans/update', [PlansController::class,'update']);
+        Route::put('/superadmin/plans/active', [PlansController::class,'active']);
+        Route::put('/superadmin/plans/deactive', [PlansController::class,'deactive']);
 
         //Users
-        Route::get('/superadmin/users', [App\Http\Controllers\SuperadminPagesController::class,'users'])->name('superadmin.users');
-        Route::get('/superadmin/users/get', [App\Http\Controllers\Superadmin\UsersController::class,'get']);
-        Route::post('/superadmin/users/store', [App\Http\Controllers\Superadmin\UsersController::class,'store']);
-        Route::put('/superadmin/users/update', [App\Http\Controllers\Superadmin\UsersController::class,'updateInfo']);
-        Route::put('/superadmin/users/active', [App\Http\Controllers\Superadmin\UsersController::class,'updateToActive']);
-        Route::put('/superadmin/users/inactive', [App\Http\Controllers\Superadmin\UsersController::class,'updateToInactive']);
+        Route::get('/superadmin/users', [SuperadminPagesController::class,'users'])->name('superadmin.users');
+        Route::get('/superadmin/users/get', [UsersController::class,'get']);
+        Route::post('/superadmin/users/store', [UsersController::class,'store']);
+        Route::put('/superadmin/users/update', [UsersController::class,'updateInfo']);
+        Route::put('/superadmin/users/active', [UsersController::class,'updateToActive']);
+        Route::put('/superadmin/users/inactive', [UsersController::class,'updateToInactive']);
 
         //UPLOAD APK
-        Route::get('/superadmin/upload', [App\Http\Controllers\SuperadminPagesController::class,'uploadApk'])->name('superadmin.upload_apk');
-        Route::post('/superadmin/upload-apk/store', [App\Http\Controllers\Superadmin\UsersController::class,'storeApk'])->name('superadmin.store.apk');
+        Route::get('/superadmin/upload', [SuperadminPagesController::class,'uploadApk'])->name('superadmin.upload_apk');
+        Route::post('/superadmin/upload-apk/store', [UsersController::class,'storeApk'])->name('superadmin.store.apk');
 
 
         //Users
-        Route::get('/superadmin/pre-registers', [App\Http\Controllers\SuperadminPagesController::class,'preRegisters'])->name('superadmin.pre-registers');
+        Route::get('/superadmin/pre-registers', [SuperadminPagesController::class,'preRegisters'])->name('superadmin.pre-registers');
         Route::get('/superadmin/pre-registers/get', [App\Http\Controllers\Superadmin\RequestsJ2bController::class,'getRegisters']);
         Route::put('/superadmin/pre-registers/delete', [App\Http\Controllers\Superadmin\RequestsJ2bController::class,'destroy']);
 
 
     });//./Routes Middleware superadmin
 
-    /*Route::group(['middleware' => 'admin'], function () {
-        Route::get('/admin', function(){
-            return view('admin.index');
-        });
-    });//./Routes Middleware admin
-    */
-
-
-    //Route::group(['middleware' => 'client'], function () {
-    Route::group(['middleware' => 'admin'], function () {
+    //====================RUTAS AUTH/ADMIN DE TIENDAS====================
+    Route::group(['middleware' => ['admin', 'web.access']], function () {
         //Index
-        Route::get('/client', [App\Http\Controllers\ClientPagesController::class,'index'])->name('client.index');
+        Route::get('/admin', [AdminPagesController::class,'index'])->name('admin.index');
         //Shops
-        Route::get('/client/shop', [App\Http\Controllers\ClientPagesController::class,'shop'])->name('client.shop');
-        Route::get('/client/shop/edit', [App\Http\Controllers\ClientPagesController::class,'shopEdit'])->name('client.shop.edit');
-        Route::put('/client/shop/update', [App\Http\Controllers\ShopController::class,'updateWeb'])->name('client.shop.update');
+        Route::get('/admin/shop', [AdminPagesController::class,'shop'])->name('admin.shop');
+        Route::get('/admin/shop/edit', [AdminPagesController::class,'shopEdit'])->name('admin.shop.edit');
+        Route::put('/admin/shop/update', [ShopController::class,'updateWeb'])->name('admin.shop.update');
 
-        Route::get('/client/download', [App\Http\Controllers\ClientPagesController::class,'download'])->name('client.download');
-
-        /*Route::get('/client/download-apk/{filename}', function ($filename) {
-            // Verifica si el archivo existe en la carpeta de almacenamiento público
-            if (Storage::disk('public')->exists('apk/' . $filename)) {
-                // Si el archivo existe, devuelve una respuesta de descarga
-                return Storage::disk('public')->download('apk/' . $filename);
-            } else {
-                // Si el archivo no existe, devuelve una respuesta 404
-                abort(404);
-            }
-        })->name('download.apk');*/
-        Route::get('/client/download-apk/{filename}', function ($filename) {
+        Route::get('/admin/download', [AdminPagesController::class,'download'])->name('admin.download');
+       
+        Route::get('/admin/download-apk/{filename}', function ($filename) {
             // Verifica si el archivo existe en la carpeta de almacenamiento público
             if (Storage::disk('public')->exists('apk/' . $filename)) {
                 // Si el archivo existe, devuelve una respuesta de descarga con los encabezados correctos
@@ -147,27 +132,59 @@ Route::group(['middleware' => 'auth'], function () {
         })->name('download.apk');
 
 
-        Route::get('/client/configurations', [App\Http\Controllers\ClientPagesController::class,'configurations'])->name('client.configurations');
+        Route::get('/admin/configurations', [AdminPagesController::class,'configurations'])->name('admin.configurations');
 
-        Route::get('/client/configurations/extra-fields-shop', [App\Http\Controllers\ExtraFieldsShopController::class,'index'])->name('client.configurations.extra_fields');
+        Route::get('/admin/configurations/extra-fields-shop', [ExtraFieldsShopController::class,'index'])->name('admin.configurations.extra_fields');
 
-        Route::get('/client/configurations/extra-fields-shop/create', [App\Http\Controllers\ExtraFieldsShopController::class,'create'])->name('client.configurations.extra_fields.create');
+        Route::get('/admin/configurations/extra-fields-shop/create', [ExtraFieldsShopController::class,'create'])->name('admin.configurations.extra_fields.create');
 
-        Route::get('/client/configurations/extra-fields-shop/edit/{id}', [App\Http\Controllers\ExtraFieldsShopController::class,'edit'])->name('client.configurations.extra_fields.edit');
+        Route::get('/admin/configurations/extra-fields-shop/edit/{id}', [ExtraFieldsShopController::class,'edit'])->name('admin.configurations.extra_fields.edit');
 
-        Route::post('/client/configurations/extra-fields/store', [App\Http\Controllers\ExtraFieldsShopController::class,'store'])->name('client.configurations.extra-fields.store');
+        Route::post('/admin/configurations/extra-fields/store', [ExtraFieldsShopController::class,'store'])->name('admin.configurations.extra-fields.store');
 
-        Route::put('/client/configurations/extra-fields-shop/{id}/toggle', [App\Http\Controllers\ExtraFieldsShopController::class,'toggleShow'])->name('client.configurations.extra_fields.toggle');
+        Route::put('/admin/configurations/extra-fields-shop/{id}/toggle', [ExtraFieldsShopController::class,'toggleShow'])->name('admin.configurations.extra_fields.toggle');
 
-        Route::delete('/client/configurations/extra-fields/{id}', [App\Http\Controllers\ExtraFieldsShopController::class, 'destroy'])->name('client.configurations.extra_fields.destroy');
+        Route::delete('/admin/configurations/extra-fields/{id}', [ExtraFieldsShopController::class, 'destroy'])->name('admin.configurations.extra_fields.destroy');
 
-        Route::put('/client/configurations/extra-fields-shop/update/{id}', [App\Http\Controllers\ExtraFieldsShopController::class,'update'])->name('client.configurations.extra-fields.update');
+        Route::put('/admin/configurations/extra-fields-shop/update/{id}', [ExtraFieldsShopController::class,'update'])->name('admin.configurations.extra-fields.update');
+
+        Route::get('/admin/contracts', [AdminPagesController::class,'contracts'])->name('admin.contracts');
+        
+        // Rutas para plantillas de contratos
+        Route::resource('contract-templates', ContractTemplateController::class);
+        
+        // Rutas para contratos
+        Route::resource('contracts', ContractController::class);
+        Route::get('contracts/{contract}/generate-pdf', [ContractController::class, 'generatePdf'])->name('contracts.generate-pdf');
+        
+        // Rutas para firmas de contratos
+        Route::post('contracts/save-signature', [ContractController::class, 'saveSignature'])->name('contracts.save-signature');
+        Route::post('contracts/update-signature', [ContractController::class, 'updateSignature'])->name('contracts.update-signature');
+        Route::post('contracts/delete-signature', [ContractController::class, 'deleteSignature'])->name('contracts.delete-signature');
+
+
+        Route::get('/admin/clients', [AdminPagesController::class,'clients'])->name('admin.clients');
+        
+        // Rutas AJAX para CRUD de clientes (admin web - separadas de Ionic)
+        Route::get('/admin/clients/get', [ClientsController::class,'index'])->name('admin.clients.get');
+        Route::post('/admin/clients/store', [ClientsController::class,'store'])->name('admin.clients.store');
+        Route::put('/admin/clients/update', [ClientsController::class,'update'])->name('admin.clients.update');
+        Route::put('/admin/clients/inactive', [ClientsController::class,'inactive'])->name('admin.clients.inactive');
+        Route::put('/admin/clients/active', [ClientsController::class,'active'])->name('admin.clients.active');
+        
+        // Rutas para contratos desde clientes
+        Route::get('/admin/clients/{client}/assign-contract', [ClientsController::class,'assignContractPage'])->name('admin.clients.assign-contract');
+        Route::post('/admin/clients/{client}/create-contract', [ClientsController::class,'createContract'])->name('admin.clients.create-contract');
+        Route::post('/admin/clients/{client}/contract-preview', [ClientsController::class,'getContractPreview'])->name('admin.clients.contract-preview');
+        Route::get('/admin/clients/{client}/contracts', [ClientsController::class,'clientContracts'])->name('admin.clients.contracts');
+        Route::get('/admin/contracts/{contract}/view', [ClientsController::class,'viewContract'])->name('admin.contracts.view');
+        Route::delete('/admin/contracts/{contract}', [ClientsController::class,'deleteContract'])->name('admin.contracts.delete');
 
 
 
 
 
 
-    });//./Routes Middleware client
+    });//./Routes Middleware admin
 
 });#./Middlware AUTH

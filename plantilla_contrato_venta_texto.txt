@@ -1,0 +1,66 @@
+CONTRATO DE VENTA
+
+Contrato de venta a financiamiento que celebran por una parte {{vendedor_nombre}}, quien en lo sucesivo se denominará "LA VENDEDORA" por su propio derecho y por otra parte {{cliente_empresa}} representada por {{cliente_nombre}}, a quien en lo sucesivo se le denominará "EL COMPRADOR" al tenor de las siguientes:
+
+DECLARACIONES
+
+Declara la vendedora que:
+I.- Hace entrega del equipo de copiado: {{producto_descripcion}}
+II.- Que el bien mueble anteriormente descrito se entrega en perfecto estado de uso y funcionando.
+
+Declara EL COMPRADOR que:
+III.- Ser una persona física, mayor de edad, en pleno uso de su capacidad legal.
+IV.- Es su deseo adquirir en compra a crédito el equipo descrito en la declaración número I del presente contrato.
+Que cuenta con los suficientes ingresos económicos para cubrir el pago total del equipo que pretende comprar, así como los gastos que se generen por la utilización del mismo.
+Declaran las partes que están de acuerdo en celebrar el presente contrato al tenor de las siguientes:
+
+CLAUSULAS
+
+PRIMERA.- La vendedora da en venta a el comprador quien recibe en tal calidad el equipo: {{producto_estado}} {{producto_modelo}} Y NUMERO DE SERIE {{producto_serie}} TOMANDO COMO CONTADOR INICIAL COLOR {{contador_inicial_color}}, INICIAL NEGRO {{contador_inicial_negro}}
+
+SEGUNDA. El comprador pagará a la vendedora un total de {{monto_total}} ({{monto_letra}}), a más tardar el día {{dia_pago}}. Si por cualquier causa el comprador no realiza el pago el día {{dia_pago}} tendrá obligación de pagar a La vendedora el {{interes_moratorio}}% sobre el total a pagar por cada mes que incurra en incumplimiento.
+
+TERCERA.- En caso de que el comprador haya cubierto el importe de abono con cheque y éste sea devuelto, La vendedora tendrá derecho a cobrar el 20% sobre documentos devueltos, en los términos del artículo 193 de la Ley General de Títulos y Operaciones de Crédito, más el pago de interés previsto en la cláusula segunda del presente contrato por falta de pago oportuno.
+
+CUARTA.- La garantía del equipo en venta será de {{garantia_copias}} ({{garantia_copias_letra}}) copias/impresiones tamaño carta en consumibles y/o {{garantia_meses}} meses lo que ocurra primero, tomando como contador inicial total el descrito en la cláusula de {{garantia_meses}} meses en fallas mecánicas a partir de la fecha de entrega del equipo en el domicilio del comprador descrito en el presente contrato siempre y cuando las fallas mecánicas y/o de consumibles no sean presentadas por negligencia tanto del comprador como de las personas que se les haya permitido su uso por parte del comprador.
+
+El pago del equipo se realizará mediante efectivo, deposito y/o transferencia bancaria a la cuenta de la vendedora número {{cuenta_bancaria}} y/o clabe interbancaria {{clabe_interbancaria}} a cargo de Banco {{banco_nombre}}, sirviendo como comprobante del pago del abono la ficha de depósito expedida por el Banco, la constancia de transferencia y/o el recibo emitido por la vendedora.
+
+QUINTA. La vendedora entrega el día {{fecha_entrega}} a el comprador el equipo descrito en la cláusula primera en el domicilio del comprador ubicado en {{cliente_direccion}}, en perfecto estado de uso, funcionando y sin ninguna falla o desperfecto.
+
+SEXTA.- Está estrictamente prohibido al comprador modificar, variar, adicionar, reparar el bien adquirido, y en general a realizar cualquier acto que cambie en todo o en parte la estética del mismo, por lo cual no podrá hacer ninguna modificación sino existe el consentimiento expreso y por escrito de la vendedora, esto para fines de cumplimiento con la garantía descrita en la cláusula cuarta por parte de la vendedora.
+
+SEPTIMA.- El comprador está obligado a poner en conocimiento de la vendedora a la brevedad posible la necesidad de mantenimiento y/o reparación, hecho que deberá realizarse por escrito, para el cumplimiento de la garantía descrita en la cláusula cuarta por parte de la vendedora.
+
+OCTAVA.- Serán causas de rescisión de la garantía entre otras:
+• La falta de pago total del equipo.
+• La alteración y/o modificación del equipo
+• La sustracción del equipo fuera del lugar donde se instaló
+• Que terceros realicen mantenimiento al equipo
+• La muerte del comprador
+• La pérdida, menoscabo, gravamen o limitación que le acontezca del bien descrito en el capítulo de declaraciones del presente contrato propiedad del comprador y/o fiador solidario y cualquier otro incumplimiento derivado del este instrumento.
+
+NOVENA.- Para todos los efectos legales de este contrato, las partes manifiestan tener su domicilio en:
+La vendedora.- {{vendedor_direccion}}
+El comprador.- {{cliente_direccion}}
+Obligándose las partes a informar por escrito con anticipación cualquier cambio de domicilio, y en caso de no hacerlo les surtirá efecto la comunicación que se les haga en los domicilios señalados, así como también las notificaciones de carácter judicial, emplazamientos, citaciones, requerimientos.
+
+DECIMA.- El presente contrato consta de 3 hojas por una sola de sus caras se extiende por triplicado, quedando un ejemplar en poder de la vendedora para los efectos legales procedentes.
+
+DÉCIMA PRIMERA.- Para todo lo relativo a la interpretación y cumplimiento de las obligaciones que se deriven del presente contrato, las partes contratantes, se someten expresamente a las leyes y Tribunales de {{ciudad_contrato}}, {{estado_contrato}}, renunciando a cualquier fuero que por razón de su domicilio les pudiere corresponder presente o futuro.
+
+Los contratantes declaran estar debidamente enterados de todas y cada una de las cláusulas contenidas en el presente contrato, y manifiestan tener pleno conocimiento del contenido de los artículos que se mencionan, en donde han emitido libremente su voluntad, firmando de conformidad al calce y al margen para constancia, a los {{fecha_contrato}}, en {{ciudad_contrato}}, {{estado_contrato}}.
+
+
+LA VENDEDORA
+
+_________________________________
+{{vendedor_nombre}}
+NOMBRE Y FIRMA
+
+
+EL COMPRADOR
+
+_________________________________
+{{cliente_nombre}}
+NOMBRE Y FIRMA

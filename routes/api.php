@@ -264,6 +264,9 @@ Route::group([
          Route::post('task/upload-image-task','App\Http\Controllers\TaskController@uploadImageTask');
          Route::post('task/delete-main-image','App\Http\Controllers\TaskController@deleteMainImage');
          Route::post('task/delete-alt-image','App\Http\Controllers\TaskController@deleteAltImage');
+         Route::post('task/save-signature','App\Http\Controllers\TaskController@saveSignature');
+         Route::post('task/update-signature','App\Http\Controllers\TaskController@updateSignature');
+         Route::post('task/delete-signature','App\Http\Controllers\TaskController@deleteSignature');
 
         /*COLLABORATORS*/
         Route::get('collaborators','App\Http\Controllers\CollaboratorController@index');
@@ -317,6 +320,26 @@ Route::group([
 
         Route::post('expenses/{id}/attachments-image', [ExpenseController::class, 'uploadImageExpense']);
         Route::delete('attachments-image/{id}', [ExpenseController::class, 'deleteImageExpense']);
+
+        /*------------------------------------------------------------------
+        /* CONTRACTS MODULE - Sistema de Contratos
+        /* Flujo: Admin crea plantillas -> Asigna a clientes -> Cliente firma
+        /*------------------------------------------------------------------*/
+        
+        /* ADMIN FUNCTIONS - Para administradores en la APP */
+        Route::get('contract-templates', 'App\Http\Controllers\ContractTemplateController@apiIndex');           // Ver plantillas de su tienda
+        Route::post('contracts/assign', 'App\Http\Controllers\ContractController@assignToClient');             // Asignar plantilla a cliente específico
+        Route::get('contracts/admin', 'App\Http\Controllers\ContractController@adminIndex');                   // Ver todos los contratos de su tienda
+        Route::get('contracts/{id}/status', 'App\Http\Controllers\ContractController@getStatus');              // Ver estado del contrato (firmado/pendiente)
+        
+        /* CLIENT FUNCTIONS - Para clientes en la APP */  
+        Route::get('client/{client_id}/contracts', 'App\Http\Controllers\ContractController@getClientContracts');    // Ver contratos del cliente
+        Route::get('contracts/{contract}/view', 'App\Http\Controllers\ContractController@viewContract');     // Ver contenido de contrato específico
+        Route::post('contracts/{contract}/sign', 'App\Http\Controllers\ContractController@saveSignature');   // Firmar contrato digitalmente
+        
+        /* SHARED FUNCTIONS - Para ambos roles */
+        Route::get('contracts/{contract}/pdf', 'App\Http\Controllers\ContractController@generatePdf');       // Descargar PDF del contrato
+        Route::get('contracts/{contract}/preview', 'App\Http\Controllers\ContractController@show');          // Preview del contrato con datos
 
 
 

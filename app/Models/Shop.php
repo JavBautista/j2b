@@ -14,4 +14,14 @@ class Shop extends Model
     {
         return $this->hasMany(ExtraFieldShop::class);
     }
+
+    public function contractTemplates()
+    {
+        return $this->hasMany(ContractTemplate::class);
+    }
+
+    public function clients()
+    {
+        return $this->hasMany(Client::class);
+    }
 }

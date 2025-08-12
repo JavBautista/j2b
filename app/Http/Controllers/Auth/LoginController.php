@@ -29,6 +29,28 @@ class LoginController extends Controller
     protected $redirectTo = RouteServiceProvider::HOME;
 
     /**
+     * Get the post-login redirect path based on user role.
+     *
+     * @return string
+     */
+    public function redirectTo()
+    {
+        $user = auth()->user();
+        
+        if ($user && $user->hasRole('superadmin')) {
+            return '/superadmin';
+        }
+        
+        if ($user && $user->hasRole('admin')) {
+            return '/admin';
+        }
+        
+        // Para roles no autorizados en el frontend web (client, collaborator, chatbot, etc.)
+        // los enviamos a la página de no autorizado donde se cerrará su sesión
+        return '/unauthorized';
+    }
+
+    /**
      * Create a new controller instance.
      *
      * @return void

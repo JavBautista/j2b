@@ -181,4 +181,74 @@ class ClientController extends Controller
             'client' => $client
         ]);
     }//.deleteLocationImage()
+
+    // MÉTODOS PARA GEOLOCALIZACIÓN GPS
+
+    public function updateLocation(Request $request)
+    {
+        try {
+            $user = $request->user();
+            $shop = $user->shop;
+            
+            $request->validate([
+                'client_id' => 'required|integer|exists:clients,id',
+                'location_latitude' => 'required|string',
+                'location_longitude' => 'required|string'
+            ]);
+
+            $client = Client::where('id', $request->client_id)
+                           ->where('shop_id', $shop->id)
+                           ->firstOrFail();
+
+            $client->location_latitude = $request->location_latitude;
+            $client->location_longitude = $request->location_longitude;
+            $client->save();
+
+            return response()->json([
+                'ok' => true,
+                'message' => 'Ubicación actualizada correctamente',
+                'client' => $client
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Error al actualizar ubicación',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    } // updateLocation()
+
+    public function removeLocation(Request $request)
+    {
+        try {
+            $user = $request->user();
+            $shop = $user->shop;
+            
+            $request->validate([
+                'client_id' => 'required|integer|exists:clients,id'
+            ]);
+
+            $client = Client::where('id', $request->client_id)
+                           ->where('shop_id', $shop->id)
+                           ->firstOrFail();
+
+            $client->location_latitude = null;
+            $client->location_longitude = null;
+            $client->save();
+
+            return response()->json([
+                'ok' => true,
+                'message' => 'Ubicación eliminada correctamente',
+                'client' => $client
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Error al eliminar ubicación',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    } // removeLocation()
 }

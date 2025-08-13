@@ -150,11 +150,11 @@ class ServicesClientController extends Controller
             Storage::delete('public/' . $client_serviceImage->image);
         }
 
-        // Eliminar las imágenes asociadas al modelo client_serviceImage de la base de datos
-        client_serviceImage::where('client_service_id', $client_service->id)->delete();
+        // Eliminar las imágenes asociadas al modelo ClientServiceImage de la base de datos
+        ClientServiceImage::where('client_service_id', $client_service->id)->delete();
 
-        // Eliminar el history asociadas al modelo client_serviceLog de la base de datos
-        client_serviceLog::where('client_service_id', $client_service->id)->delete();
+        // Eliminar el history asociadas al modelo ClientServiceLog de la base de datos
+        ClientServiceLog::where('client_service_id', $client_service->id)->delete();
 
         // Eliminar la servicio
         $client_service->delete();
@@ -327,4 +327,135 @@ class ServicesClientController extends Controller
             ], 500);
         }
     }//.deleteAltImage()
+
+    /**
+     * Firmar un servicio de cliente con firma digital
+     */
+    public function signService(Request $request){
+        try {
+            $user = $request->user();
+            $client_service = ClientService::findOrFail($request->client_service_id);
+            
+            // Validar que el servicio pertenece a la misma tienda del usuario
+            if($client_service->shop_id != $user->shop->id){
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'No tiene permisos para firmar este servicio.'
+                ], 403);
+            }
+
+            // Validar que se envió la firma
+            if(empty($request->signature)){
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'La firma es requerida.'
+                ], 400);
+            }
+
+            // Decodificar la imagen base64
+            $imageData = $request->signature;
+            $imageData = str_replace('data:image/png;base64,', '', $imageData);
+            $imageData = str_replace(' ', '+', $imageData);
+            $imageData = base64_decode($imageData);
+
+            if ($imageData === false) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'Error al decodificar la imagen base64.'
+                ], 400);
+            }
+
+            // Generar nombre único para la imagen
+            $timestamp = now()->format('YmdHis');
+            $imageName = 'service_signature_' . $client_service->id . '_' . $timestamp . '.png';
+            $imagePath = 'signatures/' . $imageName;
+
+            // Crear directorio si no existe
+            $fullPath = storage_path('app/public/signatures');
+            if (!file_exists($fullPath)) {
+                mkdir($fullPath, 0755, true);
+            }
+
+            // Guardar la imagen en storage/app/public
+            $fullFilePath = "{$fullPath}/{$imageName}";
+            if (file_put_contents($fullFilePath, $imageData) === false) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'Error al guardar el archivo de imagen.'
+                ], 500);
+            }
+
+            // Actualizar el servicio con la ruta de la firma
+            $client_service->signature_path = $imagePath;
+            $client_service->save();
+
+            // Crear log de la acción
+            $log = new ClientServiceLog();
+            $log->client_service_id = $client_service->id;
+            $log->user = $user->name;
+            $log->description = 'Servicio firmado digitalmente por ' . $user->name;
+            $log->save();
+
+            return response()->json([
+                'ok' => true,
+                'message' => 'Servicio firmado exitosamente.',
+                'client_service' => $client_service->load(['client', 'logs', 'images']),
+                'signature_url' => asset('storage/' . $imagePath)
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Error al firmar el servicio.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }//signService()
+
+    /**
+     * Eliminar la firma digital de un servicio
+     */
+    public function deleteSignature(Request $request){
+        try {
+            $user = $request->user();
+            $client_service = ClientService::findOrFail($request->client_service_id);
+            
+            // Validar que el servicio pertenece a la misma tienda del usuario
+            if($client_service->shop_id != $user->shop->id){
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'No tiene permisos para modificar este servicio.'
+                ], 403);
+            }
+
+            // Eliminar archivo de firma si existe
+            if($client_service->signature_path && Storage::disk('public')->exists($client_service->signature_path)){
+                Storage::disk('public')->delete($client_service->signature_path);
+            }
+
+            // Limpiar el campo signature_path
+            $client_service->signature_path = null;
+            $client_service->save();
+
+            // Crear log de la acción
+            $log = new ClientServiceLog();
+            $log->client_service_id = $client_service->id;
+            $log->user = $user->name;
+            $log->description = 'Firma digital eliminada por ' . $user->name;
+            $log->save();
+
+            return response()->json([
+                'ok' => true,
+                'message' => 'Firma eliminada exitosamente.',
+                'client_service' => $client_service->load(['client', 'logs', 'images'])
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Error al eliminar la firma.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }//deleteSignature()
 }

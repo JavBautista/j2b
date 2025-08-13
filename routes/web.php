@@ -42,7 +42,7 @@ Route::get('/pre-registro/error', [RequestsJ2bController::class, 'error'])->name
 Route::post('/registro/create', [RequestsJ2bController::class, 'store'])->name('X.solicitud.store');
 Route::get('/print-receipt-rent', [ReceiptController::class, 'printReceiptRent']);
 Route::get('/print-purchase-order', [PurchaseOrderController::class,'printPurchaseOrder']);
-Route::get('/print-purchase-order', [PurchaseOrderController::class,'printPurchaseOrder']);
+Route::get('/print-contract', [ContractController::class, 'printContract']);
 
 
 Auth::routes([

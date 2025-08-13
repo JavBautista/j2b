@@ -8,12 +8,13 @@ use App\Models\Contract;
 use App\Models\ContractTemplate;
 use App\Models\Client;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Auth;
 
 class ContractController extends Controller
 {
     public function index()
     {
-        $user = auth()->user();
+        $user = Auth::user();
         $shop = $user->shop;
         
         $contracts = Contract::whereHas('client', function($query) use ($shop) {
@@ -28,7 +29,7 @@ class ContractController extends Controller
 
     public function create()
     {
-        $user = auth()->user();
+        $user = Auth::user();
         $shop = $user->shop;
         
         $templates = ContractTemplate::where('shop_id', $shop->id)
@@ -50,7 +51,7 @@ class ContractController extends Controller
             'contract_data' => 'required|array'
         ]);
 
-        $user = auth()->user();
+        $user = Auth::user();
         $shop = $user->shop;
         
         // Verificar que el cliente pertenece a la tienda
@@ -156,6 +157,45 @@ class ContractController extends Controller
     }
 
     // API METHODS FOR MOBILE APP
+    
+    // Método específico para clientes autenticados - Ver MIS contratos
+    public function getMyContracts(Request $request)
+    {
+        try {
+            $user = $request->user();
+            
+            // Verificar que el usuario tenga un cliente asociado
+            if (!$user->client) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'Usuario no tiene cliente asociado'
+                ], 400);
+            }
+            
+            $clientId = $user->client->id;
+            
+            // Obtener contratos del cliente autenticado
+            $contracts = Contract::where('client_id', $clientId)
+                               ->with(['template'])
+                               ->orderBy('created_at', 'desc')
+                               ->get();
+            
+            return response()->json([
+                'ok' => true,
+                'contracts' => $contracts,
+                'total' => $contracts->count(),
+                'client' => $user->client
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Error al obtener mis contratos',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function getClientContracts(Request $request, $client_id)
     {
         try {
@@ -396,5 +436,114 @@ class ContractController extends Controller
             return asset('storage/' . $signaturePath);
         }
         return null;
+    }
+
+    // Método público para imprimir contratos (sin autenticación - para móviles)
+    public function printContract(Request $request)
+    {
+        if (!isset($request->id)) return null;
+        
+        $id = $request->id;
+        $name_file = $this->removeSpecialChar($request->name_file ?? 'contrato_' . $id);
+        
+        $contract = Contract::with(['client', 'template'])
+                           ->findOrFail($id);
+                           
+        if (!$contract->template) {
+            abort(404, 'Template no encontrado');
+        }
+        
+        $client = $contract->client;
+        $template = $contract->template;
+        
+        // Preparar datos para mostrar (igual que en el método show)
+        $contractData = array_merge([
+            'cliente_nombre' => $client->name,
+            'cliente_email' => $client->email,
+            'cliente_telefono' => $client->phone,
+            'cliente_direccion' => $client->address,
+            'fecha_contrato' => $contract->created_at->format('d/m/Y'),
+        ], $contract->contract_data ?? []);
+
+        // Generar HTML final
+        $finalHtml = $template->replaceVariables($contractData);
+        
+        // Crear PDF con CSS integrado y estilos adicionales para firma
+        $additionalStyles = '
+            <style>
+                .signature-section {
+                    margin-top: 40px;
+                    page-break-inside: avoid;
+                }
+                .signature-container {
+                    text-align: center;
+                    margin: 20px 0;
+                }
+                .signature-title {
+                    color: #333;
+                    margin-bottom: 15px;
+                    font-size: 16px;
+                    font-weight: bold;
+                }
+                .signature-frame {
+                    border: 2px solid #007bff;
+                    padding: 15px;
+                    margin: 10px auto;
+                    width: fit-content;
+                    border-radius: 8px;
+                    background-color: #f8f9fa;
+                }
+                .signature-image {
+                    max-width: 350px;
+                    height: auto;
+                    max-height: 150px;
+                }
+                .signature-info {
+                    margin-top: 10px;
+                    color: #666;
+                    font-size: 12px;
+                    line-height: 1.4;
+                }
+                .signature-separator {
+                    margin: 20px 0;
+                    border: none;
+                    height: 1px;
+                    background-color: #ddd;
+                }
+            </style>
+        ';
+        $htmlWithStyles = $additionalStyles . '<style>' . $template->css_styles . '</style>' . $finalHtml;
+        
+        // Agregar firma si existe (usando public_path para PDFs)
+        if ($contract->signature_path) {
+            $signaturePublicPath = public_path('storage/' . $contract->signature_path);
+            $signatureHtml = '
+                <div class="signature-section">
+                    <hr class="signature-separator">
+                    <div class="signature-container">
+                        <h3 class="signature-title">Firma Digital del Cliente</h3>
+                        <div class="signature-frame">
+                            <img src="' . $signaturePublicPath . '" class="signature-image" alt="Firma Digital">
+                        </div>
+                        <div class="signature-info">
+                            <strong>Firmado digitalmente el ' . $contract->updated_at->format('d/m/Y \a \l\a\s H:i') . '</strong><br>
+                            <em>Este documento tiene validez legal con la firma digital del cliente</em><br>
+                            <small>Contrato ID: ' . $contract->id . ' | Cliente: ' . $client->name . '</small>
+                        </div>
+                    </div>
+                </div>';
+            $htmlWithStyles .= $signatureHtml;
+        }
+        
+        $pdf = Pdf::loadHTML($htmlWithStyles);
+        
+        return $pdf->stream($name_file . '.pdf', array("Attachment" => false));
+    }
+
+    // Método auxiliar para limpiar caracteres especiales (como en ReceiptController)
+    private function removeSpecialChar($str)
+    {
+        $res = preg_replace('/[@\.\;\" "]+/', '_', $str);
+        return $res;
     }
 }

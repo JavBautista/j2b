@@ -109,6 +109,8 @@ Route::group([
         Route::post('client/delete','App\Http\Controllers\ClientController@inactive');
         Route::post('client/upload-location-image','App\Http\Controllers\ClientController@uploadLocationImageClient');
         Route::post('client/delete-location-image','App\Http\Controllers\ClientController@deleteLocationImage');
+        Route::post('client/update-location','App\Http\Controllers\ClientController@updateLocation');
+        Route::post('client/remove-location','App\Http\Controllers\ClientController@removeLocation');
 
         Route::get('client/verify-user-email','App\Http\Controllers\ClientController@verifyUserEmail');
         Route::post('client/store-user-app','App\Http\Controllers\ClientController@storeUserApp');
@@ -250,6 +252,8 @@ Route::group([
          Route::post('services-clients/upload-image-client-service','App\Http\Controllers\ServicesClientController@uploadImageClientService');
          Route::post('services-clients/delete-main-image','App\Http\Controllers\ServicesClientController@deleteMainImage');
          Route::post('services-clients/delete-alt-image','App\Http\Controllers\ServicesClientController@deleteAltImage');
+         Route::post('services-clients/sign','App\Http\Controllers\ServicesClientController@signService');
+         Route::post('services-clients/delete-signature','App\Http\Controllers\ServicesClientController@deleteSignature');
 
          /*TASKS*/
          Route::get('tasks','App\Http\Controllers\TaskController@index');
@@ -299,6 +303,11 @@ Route::group([
         Route::post('app-client/pruchase/store','App\Http\Controllers\Clients\PurchaseController@store');
         Route::post('app-client/pruchase/update','App\Http\Controllers\Clients\PurchaseController@update');
 
+        // RUTAS PARA UBICACIÓN DEL CLIENTE AUTENTICADO (my-location)
+        Route::get('app-client/location/my', 'App\Http\Controllers\Clients\LocationController@getMyLocation');
+        Route::post('app-client/location/save', 'App\Http\Controllers\Clients\LocationController@saveMyLocation');
+        Route::get('app-client/location/can-save', 'App\Http\Controllers\Clients\LocationController@canSaveLocation');
+
 
 
         Route::get('expenses', [ExpenseController::class, 'index']);
@@ -333,9 +342,11 @@ Route::group([
         Route::get('contracts/{id}/status', 'App\Http\Controllers\ContractController@getStatus');              // Ver estado del contrato (firmado/pendiente)
         
         /* CLIENT FUNCTIONS - Para clientes en la APP */  
+        Route::get('contracts/my', 'App\Http\Controllers\ContractController@getMyContracts');                 // Ver mis contratos (cliente autenticado)
         Route::get('client/{client_id}/contracts', 'App\Http\Controllers\ContractController@getClientContracts');    // Ver contratos del cliente
         Route::get('contracts/{contract}/view', 'App\Http\Controllers\ContractController@viewContract');     // Ver contenido de contrato específico
         Route::post('contracts/{contract}/sign', 'App\Http\Controllers\ContractController@saveSignature');   // Firmar contrato digitalmente
+        Route::post('contracts/delete-signature', 'App\Http\Controllers\ContractController@deleteSignature'); // Eliminar firma de contrato
         
         /* SHARED FUNCTIONS - Para ambos roles */
         Route::get('contracts/{contract}/pdf', 'App\Http\Controllers\ContractController@generatePdf');       // Descargar PDF del contrato

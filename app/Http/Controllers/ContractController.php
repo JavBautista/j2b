@@ -82,17 +82,22 @@ class ContractController extends Controller
         $client = $contract->client;
         $template = $contract->template;
         
-        // Preparar datos para mostrar
-        $contractData = array_merge([
-            'cliente_nombre' => $client->name,
-            'cliente_email' => $client->email,
-            'cliente_telefono' => $client->phone,
-            'cliente_direccion' => $client->address,
-            'fecha_contrato' => $contract->created_at->format('d/m/Y'),
-        ], $contract->contract_data);
+        // Verificar si existe contenido personalizado del editor Quill
+        if (!empty($contract->contract_content)) {
+            // Usar contenido personalizado creado con el editor Quill
+            $finalHtml = $contract->contract_content;
+        } else {
+            // Fallback: usar plantilla original con variables reemplazadas
+            $contractData = array_merge([
+                'cliente_nombre' => $client->name,
+                'cliente_email' => $client->email,
+                'cliente_telefono' => $client->phone,
+                'cliente_direccion' => $client->address,
+                'fecha_contrato' => $contract->created_at->format('d/m/Y'),
+            ], $contract->contract_data);
 
-        // Generar HTML final para vista previa
-        $finalHtml = $template->replaceVariables($contractData);
+            $finalHtml = $template->replaceVariables($contractData);
+        }
         
         return view('admin.contracts.contracts-show', [
             'contract' => $contract,
@@ -107,17 +112,22 @@ class ContractController extends Controller
         $client = $contract->client;
         $template = $contract->template;
         
-        // Preparar datos para reemplazar variables
-        $contractData = array_merge([
-            'cliente_nombre' => $client->name,
-            'cliente_email' => $client->email,
-            'cliente_telefono' => $client->phone,
-            'cliente_direccion' => $client->address,
-            'fecha_contrato' => $contract->created_at->format('d/m/Y'),
-        ], $contract->contract_data);
+        // Verificar si existe contenido personalizado del editor Quill
+        if (!empty($contract->contract_content)) {
+            // Usar contenido personalizado creado con el editor Quill
+            $finalHtml = $contract->contract_content;
+        } else {
+            // Fallback: usar plantilla original con variables reemplazadas
+            $contractData = array_merge([
+                'cliente_nombre' => $client->name,
+                'cliente_email' => $client->email,
+                'cliente_telefono' => $client->phone,
+                'cliente_direccion' => $client->address,
+                'fecha_contrato' => $contract->created_at->format('d/m/Y'),
+            ], $contract->contract_data);
 
-        // Generar HTML final
-        $finalHtml = $template->replaceVariables($contractData);
+            $finalHtml = $template->replaceVariables($contractData);
+        }
         
         // Crear PDF con CSS integrado
         $htmlWithStyles = '<style>' . $template->css_styles . '</style>' . $finalHtml;

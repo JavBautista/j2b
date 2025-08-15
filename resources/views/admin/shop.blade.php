@@ -213,6 +213,31 @@
             </div>
         </div>
 
+        <!-- Firma del Representante Legal -->
+        @if($shop->legal_representative_signature_path)
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-danger text-white">
+                    <h6 class="mb-0"><i class="fas fa-signature me-2"></i>Firma del Representante Legal</h6>
+                </div>
+                <div class="card-body text-center">
+                    <div class="signature-display">
+                        <div class="signature-frame border rounded p-3 bg-light mb-3">
+                            <img src="{{ $shop->legal_representative_signature_url }}" 
+                                 alt="Firma del representante legal" 
+                                 class="img-fluid"
+                                 style="max-height: 120px;">
+                        </div>
+                        <small class="text-muted">
+                            <i class="fas fa-check-circle text-success me-1"></i>
+                            Firma cargada y disponible para contratos
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @endif
+
         <!-- Información Bancaria -->
         @if($shop->bank_number || $shop->bank_name)
         <div class="col-12 mb-4">

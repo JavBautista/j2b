@@ -114,6 +114,8 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::get('/admin/shop', [AdminPagesController::class,'shop'])->name('admin.shop');
         Route::get('/admin/shop/edit', [AdminPagesController::class,'shopEdit'])->name('admin.shop.edit');
         Route::put('/admin/shop/update', [ShopController::class,'updateWeb'])->name('admin.shop.update');
+        Route::put('/admin/shop/{shop}/update-signature', [ShopController::class,'updateSignature'])->name('admin.shop.update-signature');
+        Route::delete('/admin/shop/{shop}/delete-signature', [ShopController::class,'deleteSignature'])->name('admin.shop.delete-signature');
 
         Route::get('/admin/download', [AdminPagesController::class,'download'])->name('admin.download');
        
@@ -177,6 +179,8 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::post('/admin/clients/{client}/create-contract', [ClientsController::class,'createContract'])->name('admin.clients.create-contract');
         Route::post('/admin/clients/{client}/contract-preview', [ClientsController::class,'getContractPreview'])->name('admin.clients.contract-preview');
         Route::get('/admin/clients/{client}/contracts', [ClientsController::class,'clientContracts'])->name('admin.clients.contracts');
+        Route::get('/admin/clients/{client}/contracts/{contract}/edit', [ClientsController::class,'editContract'])->name('admin.clients.edit-contract');
+        Route::put('/admin/clients/{client}/contracts/{contract}', [ClientsController::class,'updateContract'])->name('admin.clients.update-contract');
         Route::get('/admin/contracts/{contract}/view', [ClientsController::class,'viewContract'])->name('admin.contracts.view');
         Route::delete('/admin/contracts/{contract}', [ClientsController::class,'deleteContract'])->name('admin.contracts.delete');
 

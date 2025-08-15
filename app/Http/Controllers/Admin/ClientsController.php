@@ -191,7 +191,9 @@ class ClientsController extends Controller
     {
         $request->validate([
             'contract_template_id' => 'required|exists:contract_templates,id',
-            'contract_content' => 'required|string'
+            'contract_content' => 'required|string',
+            'start_date' => 'required|date',
+            'expiration_date' => 'required|date|after:start_date'
         ]);
 
         $user = Auth::user();
@@ -213,11 +215,73 @@ class ClientsController extends Controller
             'contract_template_id' => $template->id,
             'contract_data' => [], // Array vacío para cumplir con la BD
             'contract_content' => $request->contract_content, // HTML personalizado del editor
+            'start_date' => $request->start_date,
+            'expiration_date' => $request->expiration_date,
             'status' => 'draft'
         ]);
 
         return redirect()->route('admin.clients')
                         ->with('success', 'Contrato personalizado creado exitosamente para ' . $client->name);
+    }
+
+    public function editContract(Client $client, Contract $contract)
+    {
+        $user = Auth::user();
+        $shop = $user->shop;
+
+        // Verificar que el cliente pertenece a la tienda
+        if ($client->shop_id !== $shop->id) {
+            abort(404);
+        }
+
+        // Verificar que el contrato pertenece al cliente
+        if ($contract->client_id !== $client->id) {
+            abort(404);
+        }
+
+        $templates = ContractTemplate::where('shop_id', $shop->id)
+                                   ->where('is_active', true)
+                                   ->orderBy('name')
+                                   ->get();
+
+        return view('admin.clients.edit-contract', [
+            'client' => $client,
+            'contract' => $contract,
+            'templates' => $templates
+        ]);
+    }
+
+    public function updateContract(Request $request, Client $client, Contract $contract)
+    {
+        $request->validate([
+            'contract_content' => 'required|string',
+            'start_date' => 'required|date',
+            'expiration_date' => 'required|date|after:start_date'
+        ]);
+
+        $user = Auth::user();
+        $shop = $user->shop;
+
+        // Verificar que el cliente pertenece a la tienda
+        if ($client->shop_id !== $shop->id) {
+            abort(404);
+        }
+
+        // Verificar que el contrato pertenece al cliente
+        if ($contract->client_id !== $client->id) {
+            abort(404);
+        }
+
+        // Actualizar contrato
+        $contract->update([
+            'contract_content' => $request->contract_content,
+            'start_date' => $request->start_date,
+            'expiration_date' => $request->expiration_date,
+            'status' => 'draft' // Volver a borrador después de editar
+        ]);
+
+        return redirect()->route('admin.clients.contracts', $client)
+                        ->with('success', 'Contrato actualizado exitosamente');
     }
 
     public function getContractPreview(Request $request, Client $client)

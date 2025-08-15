@@ -52,6 +52,23 @@
                                         @endswitch
                                     </p>
                                     <p><strong>Fecha de Creación:</strong> {{ $contract->created_at->format('d/m/Y H:i') }}</p>
+                                    @if($contract->start_date)
+                                    <p><strong>Fecha de Inicio:</strong> 
+                                        <span class="badge badge-success">{{ $contract->start_date->format('d/m/Y') }}</span>
+                                    </p>
+                                    @endif
+                                    @if($contract->expiration_date)
+                                    <p><strong>Fecha de Vencimiento:</strong> 
+                                        <span class="badge {{ $contract->expiration_date->isPast() ? 'badge-danger' : ($contract->expiration_date->diffInDays() <= 30 ? 'badge-warning' : 'badge-info') }}">
+                                            {{ $contract->expiration_date->format('d/m/Y') }}
+                                            @if($contract->expiration_date->isPast())
+                                                (Vencido)
+                                            @elseif($contract->expiration_date->diffInDays() <= 30)
+                                                ({{ $contract->expiration_date->diffInDays() }} días restantes)
+                                            @endif
+                                        </span>
+                                    </p>
+                                    @endif
                                     @if($contract->updated_at != $contract->created_at)
                                     <p><strong>Última Modificación:</strong> {{ $contract->updated_at->format('d/m/Y H:i') }}</p>
                                     @endif

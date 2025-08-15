@@ -44,6 +44,7 @@
                                     <tr>
                                         <th>ID</th>
                                         <th>Plantilla</th>
+                                        <th>Vigencia</th>
                                         <th>Estado</th>
                                         <th>Fecha Creación</th>
                                         <th>Acciones</th>
@@ -56,6 +57,21 @@
                                         <td>
                                             <i class="fa fa-file-text-o text-primary"></i>
                                             {{ $contract->template->name }}
+                                        </td>
+                                        <td>
+                                            @if($contract->start_date && $contract->expiration_date)
+                                                <div class="small">
+                                                    <i class="fa fa-calendar text-success"></i> {{ $contract->start_date->format('d/m/Y') }}<br>
+                                                    <i class="fa fa-calendar text-danger"></i> {{ $contract->expiration_date->format('d/m/Y') }}
+                                                    @if($contract->expiration_date->isPast())
+                                                        <span class="badge badge-danger ms-1">Vencido</span>
+                                                    @elseif($contract->expiration_date->diffInDays() <= 30)
+                                                        <span class="badge badge-warning ms-1">Por vencer</span>
+                                                    @endif
+                                                </div>
+                                            @else
+                                                <span class="text-muted">No definida</span>
+                                            @endif
                                         </td>
                                         <td>
                                             @switch($contract->status)
@@ -86,12 +102,28 @@
                                                    title="Ver Contrato">
                                                     <i class="fa fa-eye"></i>
                                                 </a>
+                                                <a href="{{ route('admin.clients.edit-contract', ['client' => $client, 'contract' => $contract]) }}" 
+                                                   class="btn btn-warning btn-sm" 
+                                                   title="Editar Contrato">
+                                                    <i class="fa fa-edit"></i>
+                                                </a>
                                                 @if($contract->pdf_path)
                                                 <a href="{{ asset('storage/' . $contract->pdf_path) }}" 
                                                    target="_blank" 
                                                    class="btn btn-primary btn-sm" 
                                                    title="Descargar PDF">
                                                     <i class="fa fa-download"></i>
+                                                </a>
+                                                <a href="{{ route('contracts.generate-pdf', $contract) }}" 
+                                                   class="btn btn-info btn-sm" 
+                                                   title="Regenerar PDF con firmas actualizadas">
+                                                    <i class="fa fa-refresh"></i>
+                                                </a>
+                                                @else
+                                                <a href="{{ route('contracts.generate-pdf', $contract) }}" 
+                                                   class="btn btn-success btn-sm" 
+                                                   title="Generar PDF">
+                                                    <i class="fa fa-file-pdf-o"></i>
                                                 </a>
                                                 @endif
                                                 <form action="{{ route('admin.contracts.delete', $contract) }}" 

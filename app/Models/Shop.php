@@ -24,4 +24,15 @@ class Shop extends Model
     {
         return $this->hasMany(Client::class);
     }
+
+    /**
+     * Accessor para obtener la URL pública de la firma del representante legal
+     */
+    public function getLegalRepresentativeSignatureUrlAttribute()
+    {
+        if ($this->legal_representative_signature_path) {
+            return asset('storage/' . $this->legal_representative_signature_path);
+        }
+        return null;
+    }
 }

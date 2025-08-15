@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Shop;
-use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Auth;
 
 class ShopController extends Controller
 {
@@ -58,7 +58,6 @@ class ShopController extends Controller
 
     public function updateWeb(Request $request)
     {
-
         $wa = (isset($request['whatsapp']))?$request['whatsapp']:0;
 
         $shop= Shop::findOrFail($request->id);
@@ -91,10 +90,59 @@ class ShopController extends Controller
         $shop->owner_name = $request->owner_name;
         $shop->save();
 
-        return redirect()->route('client.shop')->with('success', 'Actualización exitosa');
+        return redirect()->route('admin.shop')->with('success', 'Información de la tienda actualizada exitosamente');
+    }
 
-        //return view('client.shop', ['shop' => $shop])->with('success', 'Actualización exitosa');
+    public function updateSignature(Request $request, Shop $shop)
+    {
+        // Validar que el usuario tenga acceso a esta tienda
+        if ($shop->id !== Auth::user()->shop->id) {
+            abort(403, 'No tienes permisos para modificar esta tienda');
+        }
 
+        // Validar archivo de firma
+        $request->validate([
+            'legal_representative_signature' => 'required|image|mimes:jpeg,png,jpg|max:2048'
+        ]);
+
+        // Eliminar firma anterior si existe
+        if ($shop->legal_representative_signature_path) {
+            $oldPath = storage_path('app/public/' . $shop->legal_representative_signature_path);
+            if (file_exists($oldPath)) {
+                unlink($oldPath);
+            }
+        }
+
+        // Subir nueva firma
+        $file = $request->file('legal_representative_signature');
+        $filename = 'legal_signature_shop_' . $shop->id . '_' . time() . '.' . $file->getClientOriginalExtension();
+        $path = $file->storeAs('signatures', $filename, 'public');
+        
+        $shop->legal_representative_signature_path = $path;
+        $shop->save();
+
+        return redirect()->route('admin.shop.edit')->with('success', 'Firma del representante legal actualizada correctamente');
+    }
+
+    public function deleteSignature(Shop $shop)
+    {
+        // Validar que el usuario tenga acceso a esta tienda
+        if ($shop->id !== Auth::user()->shop->id) {
+            abort(403, 'No tienes permisos para modificar esta tienda');
+        }
+
+        // Eliminar archivo de firma si existe
+        if ($shop->legal_representative_signature_path) {
+            $oldPath = storage_path('app/public/' . $shop->legal_representative_signature_path);
+            if (file_exists($oldPath)) {
+                unlink($oldPath);
+            }
+            
+            $shop->legal_representative_signature_path = null;
+            $shop->save();
+        }
+
+        return redirect()->route('admin.shop.edit')->with('success', 'Firma del representante legal eliminada correctamente');
     }
 
 }

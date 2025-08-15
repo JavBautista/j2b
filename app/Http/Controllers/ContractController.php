@@ -129,8 +129,13 @@ class ContractController extends Controller
             $finalHtml = $template->replaceVariables($contractData);
         }
         
-        // Crear PDF con CSS integrado
-        $htmlWithStyles = '<style>' . $template->css_styles . '</style>' . $finalHtml;
+        // Agregar sección de firmas al final del contenido
+        $signaturesHtml = $this->generateSignaturesSection($contract);
+        $finalHtml .= $signaturesHtml;
+        
+        // Crear PDF con CSS integrado y estilos para firmas
+        $pdfStyles = '<style>' . $template->css_styles . $this->getSignatureStyles() . '</style>';
+        $htmlWithStyles = $pdfStyles . $finalHtml;
         $pdf = Pdf::loadHTML($htmlWithStyles);
         
         // Guardar PDF
@@ -144,6 +149,191 @@ class ContractController extends Controller
         ]);
 
         return $pdf->download('contrato_' . $contract->id . '.pdf');
+    }
+
+    private function generateSignaturesSection(Contract $contract)
+    {
+        $client = $contract->client;
+        $shop = $client->shop;
+        
+        $html = '<div class="signatures-section">';
+        $html .= '<br><br>'; // Espaciado en lugar de salto de página
+        $html .= '<h3 class="signatures-title">Firmas del Contrato</h3>';
+        $html .= '<div class="signatures-container">';
+        
+        // Firma del Cliente
+        $html .= '<div class="signature-box">';
+        $html .= '<h4 class="signature-label">Firma del Cliente</h4>';
+        if ($contract->signature_path) {
+            $clientSignaturePath = storage_path('app/public/' . $contract->signature_path);
+            if (file_exists($clientSignaturePath)) {
+                $clientSignatureData = base64_encode(file_get_contents($clientSignaturePath));
+                $clientSignatureType = pathinfo($clientSignaturePath, PATHINFO_EXTENSION);
+                $html .= '<div class="signature-image-container">';
+                $html .= '<img src="data:image/' . $clientSignatureType . ';base64,' . $clientSignatureData . '" class="signature-image" alt="Firma del Cliente">';
+                $html .= '</div>';
+            } else {
+                $html .= '<div class="signature-placeholder">Firma no disponible</div>';
+            }
+        } else {
+            $html .= '<div class="signature-placeholder">Sin firma del cliente</div>';
+        }
+        $html .= '<div class="signature-line"></div>';
+        $html .= '<p class="signature-name">' . $client->name . '</p>';
+        $html .= '<p class="signature-title">Cliente</p>';
+        $html .= '</div>';
+        
+        // Firma del Representante Legal (Vendedor/Tienda)
+        $html .= '<div class="signature-box">';
+        $html .= '<h4 class="signature-label">Firma del Representante Legal</h4>';
+        if ($shop->legal_representative_signature_path) {
+            $shopSignaturePath = storage_path('app/public/' . $shop->legal_representative_signature_path);
+            if (file_exists($shopSignaturePath)) {
+                $shopSignatureData = base64_encode(file_get_contents($shopSignaturePath));
+                $shopSignatureType = pathinfo($shopSignaturePath, PATHINFO_EXTENSION);
+                $html .= '<div class="signature-image-container">';
+                $html .= '<img src="data:image/' . $shopSignatureType . ';base64,' . $shopSignatureData . '" class="signature-image" alt="Firma del Representante Legal">';
+                $html .= '</div>';
+            } else {
+                $html .= '<div class="signature-placeholder">Firma no disponible</div>';
+            }
+        } else {
+            $html .= '<div class="signature-placeholder">Sin firma del representante legal</div>';
+        }
+        $html .= '<div class="signature-line"></div>';
+        $html .= '<p class="signature-name">' . ($shop->owner_name ?: $shop->name) . '</p>';
+        $html .= '<p class="signature-title">Representante Legal</p>';
+        $html .= '</div>';
+        
+        $html .= '</div>'; // End signatures-container
+        
+        // Información adicional
+        $html .= '<div class="signature-info">';
+        $html .= '<p><strong>Fecha del Contrato:</strong> ' . ($contract->start_date ? $contract->start_date->format('d/m/Y') : $contract->created_at->format('d/m/Y')) . '</p>';
+        if ($contract->expiration_date) {
+            $html .= '<p><strong>Fecha de Vencimiento:</strong> ' . $contract->expiration_date->format('d/m/Y') . '</p>';
+        }
+        $html .= '<p><strong>Contrato ID:</strong> #' . $contract->id . '</p>';
+        $html .= '</div>';
+        
+        $html .= '</div>'; // End signatures-section
+        
+        return $html;
+    }
+    
+    private function getSignatureStyles()
+    {
+        return '
+        .signatures-section {
+            margin-top: 40px;
+            padding: 20px 0;
+            border-top: 2px solid #333;
+        }
+        
+        .page-break {
+            page-break-before: always;
+        }
+        
+        .signatures-title {
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 30px;
+            color: #333;
+        }
+        
+        .signatures-container {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+            margin-bottom: 30px;
+        }
+        
+        .signature-box {
+            display: table-cell;
+            width: 50%;
+            text-align: center;
+            padding: 20px;
+            vertical-align: top;
+            border: 1px solid #ddd;
+        }
+        
+        .signature-box:first-child {
+            border-right: none;
+        }
+        
+        .signature-label {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #555;
+        }
+        
+        .signature-image-container {
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 15px auto;
+            background-color: #f9f9f9;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            width: 90%;
+        }
+        
+        .signature-image {
+            max-height: 80px;
+            max-width: 180px;
+            object-fit: contain;
+        }
+        
+        .signature-placeholder {
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f5f5f5;
+            border: 1px dashed #ccc;
+            color: #888;
+            font-style: italic;
+            margin: 15px auto;
+            border-radius: 4px;
+            width: 90%;
+            font-size: 12px;
+        }
+        
+        .signature-line {
+            border-bottom: 2px solid #333;
+            margin: 15px auto 10px auto;
+            width: 85%;
+        }
+        
+        .signature-name {
+            font-weight: bold;
+            margin: 8px 0 3px 0;
+            font-size: 13px;
+            color: #333;
+        }
+        
+        .signature-title {
+            font-size: 11px;
+            color: #666;
+            margin: 0;
+            font-style: italic;
+        }
+        
+        .signature-info {
+            text-align: center;
+            font-size: 11px;
+            color: #666;
+            border-top: 1px solid #eee;
+            padding-top: 15px;
+        }
+        
+        .signature-info p {
+            margin: 3px 0;
+        }
+        ';
     }
 
     public function destroy(Contract $contract)
@@ -475,75 +665,22 @@ class ContractController extends Controller
             'fecha_contrato' => $contract->created_at->format('d/m/Y'),
         ], $contract->contract_data ?? []);
 
-        // Generar HTML final
-        $finalHtml = $template->replaceVariables($contractData);
-        
-        // Crear PDF con CSS integrado y estilos adicionales para firma
-        $additionalStyles = '
-            <style>
-                .signature-section {
-                    margin-top: 40px;
-                    page-break-inside: avoid;
-                }
-                .signature-container {
-                    text-align: center;
-                    margin: 20px 0;
-                }
-                .signature-title {
-                    color: #333;
-                    margin-bottom: 15px;
-                    font-size: 16px;
-                    font-weight: bold;
-                }
-                .signature-frame {
-                    border: 2px solid #007bff;
-                    padding: 15px;
-                    margin: 10px auto;
-                    width: fit-content;
-                    border-radius: 8px;
-                    background-color: #f8f9fa;
-                }
-                .signature-image {
-                    max-width: 350px;
-                    height: auto;
-                    max-height: 150px;
-                }
-                .signature-info {
-                    margin-top: 10px;
-                    color: #666;
-                    font-size: 12px;
-                    line-height: 1.4;
-                }
-                .signature-separator {
-                    margin: 20px 0;
-                    border: none;
-                    height: 1px;
-                    background-color: #ddd;
-                }
-            </style>
-        ';
-        $htmlWithStyles = $additionalStyles . '<style>' . $template->css_styles . '</style>' . $finalHtml;
-        
-        // Agregar firma si existe (usando public_path para PDFs)
-        if ($contract->signature_path) {
-            $signaturePublicPath = public_path('storage/' . $contract->signature_path);
-            $signatureHtml = '
-                <div class="signature-section">
-                    <hr class="signature-separator">
-                    <div class="signature-container">
-                        <h3 class="signature-title">Firma Digital del Cliente</h3>
-                        <div class="signature-frame">
-                            <img src="' . $signaturePublicPath . '" class="signature-image" alt="Firma Digital">
-                        </div>
-                        <div class="signature-info">
-                            <strong>Firmado digitalmente el ' . $contract->updated_at->format('d/m/Y \a \l\a\s H:i') . '</strong><br>
-                            <em>Este documento tiene validez legal con la firma digital del cliente</em><br>
-                            <small>Contrato ID: ' . $contract->id . ' | Cliente: ' . $client->name . '</small>
-                        </div>
-                    </div>
-                </div>';
-            $htmlWithStyles .= $signatureHtml;
+        // Verificar si existe contenido personalizado del editor Quill (igual que generatePdf)
+        if (!empty($contract->contract_content)) {
+            // Usar contenido personalizado creado con el editor Quill
+            $finalHtml = $contract->contract_content;
+        } else {
+            // Fallback: usar plantilla original con variables reemplazadas
+            $finalHtml = $template->replaceVariables($contractData);
         }
+        
+        // Agregar sección de firmas al final del contenido (igual que generatePdf)
+        $signaturesHtml = $this->generateSignaturesSection($contract);
+        $finalHtml .= $signaturesHtml;
+        
+        // Crear PDF con CSS integrado y estilos para firmas (igual que generatePdf)
+        $pdfStyles = '<style>' . $template->css_styles . $this->getSignatureStyles() . '</style>';
+        $htmlWithStyles = $pdfStyles . $finalHtml;
         
         $pdf = Pdf::loadHTML($htmlWithStyles);
         

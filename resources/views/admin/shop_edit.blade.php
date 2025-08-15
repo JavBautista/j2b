@@ -234,6 +234,7 @@
                 </div>
             </div>
 
+
             <!-- Información Bancaria -->
             <div class="col-12 mb-4">
                 <div class="card shadow-sm border-0">
@@ -283,7 +284,89 @@
             </div>
         </div>
     </form>
+
+    <!-- Formulario Independiente para Firma del Representante Legal -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-danger text-white">
+                    <h6 class="mb-0"><i class="fas fa-signature me-2"></i>Firma del Representante Legal</h6>
+                </div>
+                <div class="card-body">
+                    <form action="{{ route('admin.shop.update-signature', $shop->id) }}" method="POST" enctype="multipart/form-data" id="signatureForm">
+                        @csrf
+                        @method('PUT')
+                        <input type="hidden" name="id" value="{{ $shop->id }}">
+                        
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="mb-3">
+                                    <label for="legal_representative_signature" class="form-label fw-bold">
+                                        <i class="fas fa-pen-nib text-danger me-1"></i>Subir Firma Digital
+                                    </label>
+                                    <input type="file" class="form-control" id="legal_representative_signature" name="legal_representative_signature" accept="image/*" required>
+                                    <small class="form-text text-muted">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Formatos permitidos: PNG, JPG, JPEG. Tamaño máximo: 2MB.
+                                    </small>
+                                </div>
+                                <div class="alert alert-warning">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>
+                                    <small><strong>Importante:</strong> Esta firma será utilizada en los contratos generados. Asegúrate de que sea legible y oficial.</small>
+                                </div>
+                                <div class="text-center">
+                                    <button type="submit" class="btn btn-danger btn-lg">
+                                        <i class="fas fa-upload me-1"></i>Actualizar Firma
+                                    </button>
+                                    @if($shop->legal_representative_signature_path)
+                                    <button type="button" class="btn btn-outline-danger btn-lg ms-2" onclick="deleteSignature()">
+                                        <i class="fas fa-trash me-1"></i>Eliminar Firma
+                                    </button>
+                                    @endif
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="signature-preview text-center">
+                                    <label class="form-label fw-bold">
+                                        <i class="fas fa-eye text-info me-1"></i>Vista Actual
+                                    </label>
+                                    <div class="signature-container border rounded p-3" style="min-height: 120px; background-color: #f8f9fa;">
+                                        @if($shop->legal_representative_signature_path)
+                                            <img src="{{ $shop->legal_representative_signature_url }}" 
+                                                 alt="Firma del representante legal" 
+                                                 class="img-fluid signature-image"
+                                                 style="max-height: 100px;">
+                                            <small class="d-block text-muted mt-2">Firma actual</small>
+                                        @else
+                                            <div class="d-flex flex-column justify-content-center align-items-center h-100">
+                                                <i class="fas fa-signature fa-3x text-muted mb-2"></i>
+                                                <small class="text-muted">Sin firma cargada</small>
+                                            </div>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulario oculto para eliminar firma -->
+    <form id="deleteSignatureForm" action="{{ route('admin.shop.delete-signature', $shop->id) }}" method="POST" style="display: none;">
+        @csrf
+        @method('DELETE')
+    </form>
 </div>
+
+<script>
+function deleteSignature() {
+    if (confirm('¿Estás seguro de que deseas eliminar la firma del representante legal?')) {
+        document.getElementById('deleteSignatureForm').submit();
+    }
+}
+</script>
 
 <style>
 .form-label.fw-bold {

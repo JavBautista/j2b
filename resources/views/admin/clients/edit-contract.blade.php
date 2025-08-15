@@ -7,11 +7,16 @@
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h4 class="mb-0">
-                        <i class="fas fa-file-contract"></i> Asignar Contrato a {{ $client->name }}
+                        <i class="fas fa-edit text-warning"></i> Editar Contrato #{{ $contract->id }} - {{ $client->name }}
                     </h4>
-                    <a href="{{ route('admin.clients') }}" class="btn btn-secondary">
-                        <i class="fas fa-arrow-left"></i> Volver a Clientes
-                    </a>
+                    <div>
+                        <a href="{{ route('admin.clients.contracts', $client) }}" class="btn btn-secondary me-2">
+                            <i class="fas fa-arrow-left"></i> Volver a Contratos
+                        </a>
+                        <a href="{{ route('admin.contracts.view', $contract) }}" class="btn btn-info">
+                            <i class="fas fa-eye"></i> Ver Original
+                        </a>
+                    </div>
                 </div>
                 <div class="card-body">
                     <!-- Información del Cliente - Fila completa arriba -->
@@ -85,13 +90,13 @@
                                                 <label for="start_date" class="form-label small">
                                                     <i class="fas fa-play text-success"></i> Fecha de Inicio
                                                 </label>
-                                                <input type="date" class="form-control form-control-sm" id="start_date" name="start_date" value="{{ date('Y-m-d') }}">
+                                                <input type="date" class="form-control form-control-sm" id="start_date" name="start_date" value="{{ $contract->start_date ? $contract->start_date->format('Y-m-d') : date('Y-m-d') }}">
                                             </div>
                                             <div class="col-12">
                                                 <label for="expiration_date" class="form-label small">
                                                     <i class="fas fa-stop text-danger"></i> Fecha de Vencimiento
                                                 </label>
-                                                <input type="date" class="form-control form-control-sm" id="expiration_date" name="expiration_date" value="{{ date('Y-m-d', strtotime('+1 year')) }}">
+                                                <input type="date" class="form-control form-control-sm" id="expiration_date" name="expiration_date" value="{{ $contract->expiration_date ? $contract->expiration_date->format('Y-m-d') : date('Y-m-d', strtotime('+1 year')) }}">
                                             </div>
                                         </div>
                                         <small class="form-text text-muted">
@@ -133,14 +138,15 @@
                                         <a href="{{ route('admin.clients') }}" class="btn btn-secondary btn-sm me-2">
                                             <i class="fas fa-arrow-left"></i> Volver
                                         </a>
-                                        <button type="button" class="btn btn-warning btn-sm" id="create-contract-btn" disabled onclick="submitContractForm()">
-                                            <i class="fas fa-check"></i> Crear Contrato
+                                        <button type="button" class="btn btn-success btn-sm" id="create-contract-btn" onclick="submitContractForm()">
+                                            <i class="fas fa-save"></i> Actualizar Contrato
                                         </button>
                                     </div>
                                 </div>
                                 <div class="card-body p-0">
-                                    <form action="{{ route('admin.clients.create-contract', $client) }}" method="POST" id="contract-form">
+                                    <form action="{{ route('admin.clients.update-contract', ['client' => $client, 'contract' => $contract]) }}" method="POST" id="contract-form">
                                         @csrf
+                                        @method('PUT')
 
                                         <!-- Editor Quill -->
                                         <div style="height: 500px;" id="contract-editor">
@@ -247,6 +253,10 @@ const clientData = {
     address: "{{ $client->address ?: '' }}"
 };
 
+// Contenido existente del contrato para edición
+const existingContractContent = {!! json_encode($contract->contract_content) !!};
+const existingTemplateId = {{ $contract->contract_template_id }};
+
 let quillEditor;
 let currentTemplateData = null;
 let templates = @json($templates);
@@ -267,6 +277,17 @@ document.addEventListener('DOMContentLoaded', function() {
         },
         placeholder: 'El contenido de la plantilla aparecerá aquí para que puedas editarlo...'
     });
+
+    // Cargar contenido existente del contrato
+    if (existingContractContent) {
+        quillEditor.root.innerHTML = existingContractContent;
+        document.getElementById('contract-content').value = existingContractContent;
+        // Pre-seleccionar la plantilla original
+        if (existingTemplateId) {
+            document.getElementById('template-selector').value = existingTemplateId;
+            document.getElementById('selected-template-id').value = existingTemplateId;
+        }
+    }
 
     // Escuchar cambios en el editor
     quillEditor.on('text-change', function(delta, oldDelta, source) {
@@ -498,14 +519,10 @@ function submitContractForm() {
     const content = quillEditor.root.innerHTML.trim();
     const templateId = document.getElementById('selected-template-id').value;
     
-    // Validar que hay plantilla seleccionada
-    if (!templateId) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Plantilla requerida',
-            text: 'Por favor, selecciona una plantilla antes de crear el contrato.'
-        });
-        return false;
+    // Para edición, no es necesario validar plantilla (ya existe)
+    // Solo asegurar que tenemos el ID de template en el campo hidden
+    if (!templateId && existingTemplateId) {
+        document.getElementById('selected-template-id').value = existingTemplateId;
     }
     
     // Validar que hay contenido
@@ -547,13 +564,13 @@ function submitContractForm() {
     
     // Mostrar confirmación antes de crear
     Swal.fire({
-        title: '¿Crear contrato personalizado?',
-        text: 'El contrato será creado con el contenido actual del editor.',
+        title: '¿Actualizar contrato?',
+        text: 'El contrato será actualizado con el contenido actual del editor.',
         icon: 'question',
         showCancelButton: true,
         confirmButtonColor: '#28a745',
         cancelButtonColor: '#6c757d',
-        confirmButtonText: 'Sí, crear contrato',
+        confirmButtonText: 'Sí, actualizar contrato',
         cancelButtonText: 'Cancelar'
     }).then((result) => {
         if (result.isConfirmed) {
@@ -561,7 +578,7 @@ function submitContractForm() {
             document.getElementById('contract-content').value = content;
             // Mostrar loading
             Swal.fire({
-                title: 'Creando contrato...',
+                title: 'Actualizando contrato...',
                 text: 'Por favor espera mientras se procesa.',
                 icon: 'info',
                 allowOutsideClick: false,

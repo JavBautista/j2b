@@ -102,11 +102,19 @@
                                                    title="Ver Contrato">
                                                     <i class="fa fa-eye"></i>
                                                 </a>
-                                                <a href="{{ route('admin.clients.edit-contract', ['client' => $client, 'contract' => $contract]) }}" 
-                                                   class="btn btn-warning btn-sm" 
-                                                   title="Editar Contrato">
-                                                    <i class="fa fa-edit"></i>
-                                                </a>
+                                                @if(!$contract->signature_path)
+                                                    <a href="{{ route('admin.clients.edit-contract', ['client' => $client, 'contract' => $contract]) }}" 
+                                                       class="btn btn-warning btn-sm" 
+                                                       title="Editar Contrato">
+                                                        <i class="fa fa-edit"></i>
+                                                    </a>
+                                                @else
+                                                    <button class="btn btn-secondary btn-sm" 
+                                                            title="Contrato firmado - No se puede editar" 
+                                                            disabled>
+                                                        <i class="fa fa-lock"></i>
+                                                    </button>
+                                                @endif
                                                 @if($contract->pdf_path)
                                                 <a href="{{ asset('storage/' . $contract->pdf_path) }}" 
                                                    target="_blank" 

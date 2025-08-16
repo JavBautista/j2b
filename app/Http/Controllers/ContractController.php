@@ -434,19 +434,33 @@ class ContractController extends Controller
             }
             
             $client = $contract->client;
-            $template = $contract->template;
             
-            // Preparar datos para mostrar
-            $contractData = array_merge([
-                'cliente_nombre' => $client->name,
-                'cliente_email' => $client->email,
-                'cliente_telefono' => $client->phone,
-                'cliente_direccion' => $client->address,
-                'fecha_contrato' => $contract->created_at->format('d/m/Y'),
-            ], $contract->contract_data ?? []);
-
-            // Generar HTML final
-            $finalHtml = $template ? $template->replaceVariables($contractData) : 'Contenido no disponible';
+            // Para clientes autenticados, mostrar el contenido personalizado real del contrato
+            // No el template genérico con variables reemplazadas
+            $finalHtml = 'Contenido del contrato no disponible';
+            
+            if ($contract->contract_content) {
+                // Si tiene contenido personalizado, mostrarlo
+                $finalHtml = $contract->contract_content;
+            } else if ($contract->contract_data) {
+                // Si tiene datos del contrato, mostrarlos en formato legible
+                try {
+                    $data = is_string($contract->contract_data) 
+                        ? json_decode($contract->contract_data, true) 
+                        : $contract->contract_data;
+                    
+                    if (is_array($data)) {
+                        $finalHtml = '<h3>Datos del Contrato:</h3>';
+                        foreach ($data as $key => $value) {
+                            $finalHtml .= '<p><strong>' . ucfirst(str_replace('_', ' ', $key)) . ':</strong> ' . $value . '</p>';
+                        }
+                    } else {
+                        $finalHtml = '<p>Datos del contrato: ' . $contract->contract_data . '</p>';
+                    }
+                } catch (\Exception $e) {
+                    $finalHtml = '<p>Datos del contrato: ' . $contract->contract_data . '</p>';
+                }
+            }
             
             return response()->json([
                 'ok' => true,

@@ -48,7 +48,6 @@ class PurchaseController extends Controller
                         ->with('client')
                         ->where('shop_id',$shop->id)
                         ->where('client_id',$client_id)
-                        ->where('origin','CLIENT')
                         ->orderBy('id','desc')
                         ->paginate(10);
         return $receipts;

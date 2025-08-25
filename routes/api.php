@@ -12,6 +12,11 @@ use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\ReceiptController;
 use App\Http\Controllers\EmailConfirmationController;
 
+use App\Http\Controllers\Clients\PurchaseController as ClientPurchaseController;
+use App\Http\Controllers\Clients\LocationController as ClientLocationController;
+use App\Http\Controllers\ClientServiceController as ClientServiceController;
+use App\Http\Controllers\ReceiptDetailController;
+
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -149,26 +154,26 @@ Route::group([
         Route::post('shop/update','App\Http\Controllers\ShopController@update');
 
         /*RECIBOS*/
-        Route::get('receipt/all','App\Http\Controllers\ReceiptController@getAll');
-        Route::get('receipt/{client_id}','App\Http\Controllers\ReceiptController@index');
+        Route::get('receipt/all',[ReceiptController::class,'getAll']);
+        Route::get('receipt/{client_id}',[ReceiptController::class,'index']);
         Route::get('receipt/detail/{receipt_id}','App\Http\Controllers\ReceiptDetailController@getDetail');
         Route::get('receipt/detail/get-stock-current/{receipt_id}','App\Http\Controllers\ReceiptDetailController@getgetStockCurrentDetail');
-        Route::post('receipt/store','App\Http\Controllers\ReceiptController@store');
-        Route::post('receipt/edit/update-status','App\Http\Controllers\ReceiptController@updateStatus');
-        Route::post('receipt/edit/cancel','App\Http\Controllers\ReceiptController@cancel');
-        Route::post('receipt/edit/devolucion','App\Http\Controllers\ReceiptController@devolucion');
-        Route::post('receipt/edit/update-info','App\Http\Controllers\ReceiptController@updateInfo');
-        Route::post('receipt/edit/update-venta/','App\Http\Controllers\ReceiptController@updateReceiptVentas');
+        Route::post('receipt/store',[ReceiptController::class,'store']);
+        Route::post('receipt/edit/update-status',[ReceiptController::class,'updateStatus']);
+        Route::post('receipt/edit/cancel',[ReceiptController::class,'cancel']);
+        Route::post('receipt/edit/devolucion',[ReceiptController::class,'devolucion']);
+        Route::post('receipt/edit/update-info',[ReceiptController::class,'updateInfo']);
+        Route::post('receipt/edit/update-venta/',[ReceiptController::class,'updateReceiptVentas']);
         
         Route::patch('receipt/{id}/update-invoiced/',[ReceiptController::class,'updateInvoiced']);
         
-        Route::post('receipt/delete','App\Http\Controllers\ReceiptController@delete');
+        Route::post('receipt/delete',[ReceiptController::class,'delete']);
             /*PRINT PDF*/
-            Route::get('receipt/pdf/print-receipt-rent', 'App\Http\Controllers\ReceiptController@printReceiptRent');
+            Route::get('receipt/pdf/print-receipt-rent', [ReceiptController::class,'printReceiptRent']);
             /*NUEVO PDF PARA COMPARTIR DESDE APP CON AUTENTICACIÓN*/
             Route::get('receipt/{id}/pdf', [ReceiptController::class, 'createPDFReceiptRent']);
 
-        Route::post('receipt/edit/update/quotation-to-sale','App\Http\Controllers\ReceiptController@updateQuotationToSale');
+        Route::post('receipt/edit/update/quotation-to-sale',[ReceiptController::class,'updateQuotationToSale']);
         /*PartialPayments*/
         Route::post('receipt/partial-payment/store','App\Http\Controllers\PartialPaymentsController@store');
         Route::post('receipt/partial-payment/delete','App\Http\Controllers\PartialPaymentsController@delete');
@@ -290,23 +295,23 @@ Route::group([
         Route::post('administrator/update-lmited','App\Http\Controllers\AdministratorController@updateLimited');
 
         /*ROUTES APP-CLIENTS*/
-        Route::get('client-services','App\Http\Controllers\ClientServiceController@index');
-        Route::post('client-services/store','App\Http\Controllers\ClientServiceController@store');
-        Route::post('client-services/update','App\Http\Controllers\ClientServiceController@update');
-        Route::post('client-services/delete-main-image','App\Http\Controllers\ClientServiceController@deleteMainImage');
-        Route::post('client-services/upload-image','App\Http\Controllers\ClientServiceController@uploadImage');
+        Route::get('client-services',[ClientServiceController::class,'index']);
+        Route::post('client-services/store',[ClientServiceController::class,'store']);
+        Route::post('client-services/update',[ClientServiceController::class,'update']);
+        Route::post('client-services/delete-main-image',[ClientServiceController::class,'deleteMainImage']);
+        Route::post('client-services/upload-image',[ClientServiceController::class,'uploadImage']);
 
         Route::get('app-client/catalogo/categories','App\Http\Controllers\CatalogoController@categories');
         Route::get('app-client/catalogo/products','App\Http\Controllers\CatalogoController@products');
 
-        Route::get('app-client/pruchases/get','App\Http\Controllers\Clients\PurchaseController@getPurchasesClient');
-        Route::post('app-client/pruchase/store','App\Http\Controllers\Clients\PurchaseController@store');
-        Route::post('app-client/pruchase/update','App\Http\Controllers\Clients\PurchaseController@update');
+        Route::get('app-client/pruchases/get',  [ ClientPurchaseController::class, 'getPurchasesClient']);
+        Route::post('app-client/pruchase/store',  [ ClientPurchaseController::class, 'store']);
+        Route::post('app-client/pruchase/update',  [ ClientPurchaseController::class, 'update']);
 
         // RUTAS PARA UBICACIÓN DEL CLIENTE AUTENTICADO (my-location)
-        Route::get('app-client/location/my', 'App\Http\Controllers\Clients\LocationController@getMyLocation');
-        Route::post('app-client/location/save', 'App\Http\Controllers\Clients\LocationController@saveMyLocation');
-        Route::get('app-client/location/can-save', 'App\Http\Controllers\Clients\LocationController@canSaveLocation');
+        Route::get('app-client/location/my', [ClientLocationController::class, 'getMyLocation']);
+        Route::post('app-client/location/save', [ClientLocationController::class, 'saveMyLocation']);
+        Route::get('app-client/location/can-save', [ClientLocationController::class, 'canSaveLocation']);
 
 
 

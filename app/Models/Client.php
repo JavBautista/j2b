@@ -36,4 +36,16 @@ class Client extends Model
     public function contracts(){
         return $this->hasMany(Contract::class);
     }
+
+    public function addresses(){
+        return $this->hasMany(ClientAddress::class);
+    }
+
+    public function activeAddresses(){
+        return $this->hasMany(ClientAddress::class)->where('active', true);
+    }
+
+    public function primaryAddress(){
+        return $this->hasOne(ClientAddress::class)->where('is_primary', true);
+    }
 }

@@ -120,6 +120,16 @@ Route::group([
         Route::get('client/verify-user-email','App\Http\Controllers\ClientController@verifyUserEmail');
         Route::post('client/store-user-app','App\Http\Controllers\ClientController@storeUserApp');
 
+        /*DIRECCIONES DE CLIENTES*/
+        Route::get('client-address','App\Http\Controllers\ClientAddressController@index');
+        Route::post('client-address','App\Http\Controllers\ClientAddressController@store');
+        Route::post('client-address/update','App\Http\Controllers\ClientAddressController@update');
+        Route::post('client-address/delete','App\Http\Controllers\ClientAddressController@inactive');
+        Route::post('client-address/upload-location-image','App\Http\Controllers\ClientAddressController@uploadLocationImage');
+        Route::post('client-address/delete-location-image','App\Http\Controllers\ClientAddressController@deleteLocationImage');
+        Route::post('client-address/update-location','App\Http\Controllers\ClientAddressController@updateLocation');
+        Route::post('client-address/remove-location','App\Http\Controllers\ClientAddressController@removeLocation');
+
         /*PROVEEDORES*/
         Route::get('supplier','App\Http\Controllers\SupplierController@index');
         Route::post('supplier/store','App\Http\Controllers\SupplierController@store');
@@ -152,6 +162,8 @@ Route::group([
         /* SHOP */
         Route::get('/shop','App\Http\Controllers\ShopController@getShop');
         Route::post('shop/update','App\Http\Controllers\ShopController@update');
+        Route::post('shop/upload-logo','App\Http\Controllers\ShopController@uploadLogo');
+        Route::post('shop/delete-logo','App\Http\Controllers\ShopController@deleteLogo');
 
         /*RECIBOS*/
         Route::get('receipt/all',[ReceiptController::class,'getAll']);

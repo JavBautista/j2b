@@ -30,7 +30,7 @@
             <button class="navbar-toggler mobile-sidebar-toggler d-lg-none mr-auto" type="button">
               <span class="navbar-toggler-icon"></span>
             </button>
-                <a class="" href="/">J2Biznes</a>
+                <a class="" href="/"><img src="{{ asset('img/j2b_b_60px.png') }}" alt="J2Biznes" style="height: 30px;"></a>
             <button class="navbar-toggler sidebar-toggler d-md-down-none" type="button">
               <span class="navbar-toggler-icon"></span>
             </button>

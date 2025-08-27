@@ -17,6 +17,8 @@ import ExampleComponent from './components/ExampleComponent.vue';
 //Componenetes de tiendas
 import ClientsComponent from './components/shops/ClientsComponent.vue';
 import TemplateCreatorComponent from './components/shops/TemplateCreator.vue';
+//Componentes de admin
+import ReceiptsComponent from './components/admin/ReceiptsComponent.vue';
 
 const app = createApp({});
 
@@ -28,6 +30,8 @@ app.component('superadmin-users-component', UsersComponent);
 //Tiendas
 app.component('shop-template-creator-component', TemplateCreatorComponent);
 app.component('shop-clients-component', ClientsComponent);
+//Admin
+app.component('receipts-component', ReceiptsComponent);
 
 
 //app.component('example-component', ExampleComponent);

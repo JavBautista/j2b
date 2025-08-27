@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Shop;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class ShopController extends Controller
 {
@@ -144,5 +145,57 @@ class ShopController extends Controller
 
         return redirect()->route('admin.shop.edit')->with('success', 'Firma del representante legal eliminada correctamente');
     }
+
+    public function uploadLogo(Request $request)
+    {
+        $user = $request->user();
+        $shop = $user->shop;
+
+        // Validar la existencia del archivo de imagen
+        if ($request->hasFile('logo')) {
+            $image = $request->file('logo');
+            
+            // Eliminar logo anterior si existe
+            $file = $shop->logo;
+            if($file){
+                $existe = Storage::disk('public')->exists($file);
+                if($existe){
+                    Storage::disk('public')->delete($file);
+                }
+            }
+
+            // Guardar la nueva imagen en la ubicación 'public'
+            $imagePath = $image->store('shop_logos', 'public');
+            
+            // Actualizar el logo en el modelo shop
+            $shop->logo = $imagePath;
+            $shop->save();
+        }
+
+        return response()->json([
+            'ok' => true,
+            'shop' => $shop,
+        ]);
+    }
+
+    public function deleteLogo(Request $request){        
+        $user = $request->user();
+        $shop = $user->shop;
+        // Obtener la ruta de la imagen actual
+        $imagePath = $shop->logo;
+        // Verificar si hay una imagen almacenada y eliminarla
+        if ($imagePath) {
+            // Eliminar la imagen del almacenamiento
+            Storage::disk('public')->delete($imagePath);
+            // Limpiar el atributo de la imagen en el modelo
+            $shop->logo = null;
+            $shop->save();
+        }
+
+        return response()->json([
+            'ok' => true,
+            'shop' => $shop,
+        ]);
+    }//.deleteMainImage()
 
 }

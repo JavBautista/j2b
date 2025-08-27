@@ -27,53 +27,93 @@
                         </div>
                     </div>
                 </div>
-                <table class="table table-bordered table-striped table-sm">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Nombre</th>
-                            <th>Email</th>
-                            <th>Empresa</th>
-                            <th>Teléfono</th>
-                            <th>Estado</th>
-                            <th>Opciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="client in arrayClients" :key="client.id">
-                            <td v-text="client.id"></td>
-                            <td v-text="client.name"></td>
-                            <td v-text="client.email"></td>
-                            <td v-text="client.company || '-'"></td>
-                            <td v-text="client.movil || '-'"></td>
-                            <td>
-                                <span v-if="client.active" class="badge badge-success">Activo</span>
-                                <span v-else class="badge badge-danger">Inactivo</span>
-                            </td>
-                            <td>
-                                <template v-if="client.active">
-                                    <button type="button" class="btn btn-info btn-sm" @click="actualizarAInactivo(client.id)" title="Desactivar">
-                                        <i class="fa fa-toggle-on"></i>
+                <!-- Grid de Cards de Clientes -->
+                <div class="row">
+                    <div class="col-md-4 col-lg-3 mb-4" v-for="client in arrayClients" :key="client.id">
+                        <div class="card client-card h-100" :class="{'inactive-card': !client.active}">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="client-id">#{{ client.id }}</span>
+                                    <span v-if="client.active" class="badge badge-success ml-2">Activo</span>
+                                    <span v-else class="badge badge-danger ml-2">Inactivo</span>
+                                </div>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-light dropdown-toggle" 
+                                            type="button" 
+                                            data-bs-toggle="dropdown" 
+                                            aria-expanded="false">
+                                        <i class="fa fa-ellipsis-v"></i>
                                     </button>
-                                </template>
-                                <template v-else>
-                                    <button type="button" class="btn btn-secondary btn-sm" @click="actualizarAActivo(client.id)" title="Activar">
-                                        <i class="fa fa-toggle-off"></i>
-                                    </button>
-                                </template>
-                                <button class="btn btn-info btn-sm" @click="abrirModal('client','actualizar_datos', client)" title="Editar">
-                                    <i class="fa fa-edit"></i>
-                                </button>
-                                <a :href="`/admin/clients/${client.id}/contracts`" class="btn btn-primary btn-sm" title="Ver Contratos">
-                                    <i class="fa fa-folder-open"></i>
-                                </a>
-                                <a :href="`/admin/clients/${client.id}/assign-contract`" class="btn btn-success btn-sm" title="Crear Contrato">
-                                    <i class="fa fa-plus"></i>
-                                </a>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li><a class="dropdown-item" href="#" @click="abrirModal('client','actualizar_datos', client)">
+                                            <i class="fa fa-edit text-info"></i> Editar Cliente
+                                        </a></li>
+                                        <li><a class="dropdown-item" href="#" @click="abrirModalDirecciones(client)">
+                                            <i class="fa fa-map-marker text-warning"></i> Gestionar Direcciones
+                                        </a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item" :href="`/admin/clients/${client.id}/contracts`">
+                                            <i class="fa fa-folder-open text-primary"></i> Ver Contratos
+                                        </a></li>
+                                        <li><a class="dropdown-item" :href="`/admin/clients/${client.id}/assign-contract`">
+                                            <i class="fa fa-plus text-success"></i> Crear Contrato
+                                        </a></li>
+                                        <li><a class="dropdown-item" :href="`/admin/clients/${client.id}/receipts`">
+                                            <i class="fa fa-receipt text-info"></i> Ver Recibos
+                                        </a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <template v-if="client.active">
+                                            <li><a class="dropdown-item" href="#" @click="actualizarAInactivo(client.id)">
+                                                <i class="fa fa-toggle-off text-danger"></i> Desactivar Cliente
+                                            </a></li>
+                                        </template>
+                                        <template v-else>
+                                            <li><a class="dropdown-item" href="#" @click="actualizarAActivo(client.id)">
+                                                <i class="fa fa-toggle-on text-success"></i> Activar Cliente
+                                            </a></li>
+                                        </template>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <h5 class="card-title client-name">
+                                    <i class="fa fa-user text-primary"></i>
+                                    {{ client.name }}
+                                </h5>
+                                <div class="client-info">
+                                    <div class="info-item" v-if="client.email">
+                                        <i class="fa fa-envelope text-muted"></i>
+                                        <span>{{ client.email }}</span>
+                                    </div>
+                                    <div class="info-item" v-if="client.company">
+                                        <i class="fa fa-building text-muted"></i>
+                                        <span>{{ client.company }}</span>
+                                    </div>
+                                    <div class="info-item" v-if="client.movil">
+                                        <i class="fa fa-phone text-muted"></i>
+                                        <span>{{ client.movil }}</span>
+                                    </div>
+                                    <div class="info-item" v-if="client.address">
+                                        <i class="fa fa-map-marker text-muted"></i>
+                                        <span>{{ client.address }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-footer bg-transparent text-center">
+                                <small class="text-muted">
+                                    <i class="fa fa-clock-o"></i> 
+                                    Cliente #{{ client.id }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mostrar mensaje si no hay clientes -->
+                <div v-if="arrayClients.length === 0" class="text-center py-5">
+                    <i class="fa fa-users fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">No se encontraron clientes con los criterios de búsqueda.</p>
+                </div>
                 <nav>
                     <ul class="pagination">
                         <li class="page-item" v-if="pagination.current_page > 1">
@@ -90,6 +130,9 @@
             </div>
         </div>
     </div>
+
+    <!-- Componente de direcciones -->
+    <client-addresses-component ref="clientAddresses"></client-addresses-component>
 
     <!-- Modal agregar/actualizar -->
     <div class="modal fade" tabindex="-1" :class="{'mostrar':modal}" role="dialog" aria-labelledby="myModalLabel" style="display: none;" aria-hidden="true">
@@ -169,7 +212,12 @@
 </template>
 
 <script>
-    export default {
+import ClientAddressesComponent from './ClientAddressesComponent.vue';
+
+export default {
+        components: {
+            ClientAddressesComponent
+        },
         props: ['shop'],
         data(){
             return {
@@ -438,6 +486,9 @@
                 this.modal=0;
                 this.tituloModal='';
             },
+            abrirModalDirecciones(client) {
+                this.$refs.clientAddresses.abrirModal(client);
+            },
         },
         mounted() {
             this.loadClients(1,'','name','active');
@@ -466,5 +517,144 @@
     .text-error{
         color: red !important;
         font-weight: bold;
+    }
+
+    /* Estilos para Cards de Clientes */
+    .client-card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+        overflow: hidden;
+    }
+
+    .client-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    }
+
+    .client-card.inactive-card {
+        opacity: 0.7;
+        background-color: #f8f9fa;
+    }
+
+    .client-card .card-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 1rem;
+    }
+
+    .client-card.inactive-card .card-header {
+        background: linear-gradient(135deg, #868e96 0%, #6c757d 100%);
+    }
+
+    .client-id {
+        font-weight: bold;
+        font-size: 0.9rem;
+    }
+
+    .client-name {
+        color: #2c3e50;
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .client-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .info-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+
+    .info-item i {
+        width: 16px;
+        text-align: center;
+    }
+
+    .info-item span {
+        flex: 1;
+        word-break: break-word;
+    }
+
+    .client-card .card-footer {
+        border-top: 1px solid #e9ecef;
+        padding: 0.75rem 1rem;
+    }
+
+    .client-card .btn-group .btn {
+        border-radius: 6px;
+        font-size: 0.85rem;
+        padding: 0.375rem 0.5rem;
+    }
+
+    .client-card .btn-group .btn:not(:last-child) {
+        margin-right: 0.25rem;
+    }
+
+    .client-card .dropdown-menu {
+        border: none;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        border-radius: 8px;
+    }
+
+    .client-card .dropdown-item {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
+
+    .client-card .dropdown-item:hover {
+        background-color: #f8f9fa;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .col-md-4 {
+            margin-bottom: 1rem;
+        }
+        
+        .client-card .btn-group .btn {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.4rem;
+        }
+    }
+
+    /* Paginación moderna */
+    .pagination {
+        justify-content: center;
+        margin-top: 2rem;
+    }
+
+    .pagination .page-link {
+        border: none;
+        color: #667eea;
+        font-weight: 500;
+        padding: 0.5rem 1rem;
+        margin: 0 0.125rem;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+    }
+
+    .pagination .page-link:hover {
+        background-color: #667eea;
+        color: white;
+        transform: translateY(-1px);
+    }
+
+    .pagination .page-item.active .page-link {
+        background-color: #667eea;
+        border-color: #667eea;
+        color: white;
     }
 </style>

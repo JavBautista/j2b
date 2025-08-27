@@ -22,7 +22,7 @@ class TaskController extends Controller
         $ordenar = $request->filtro_ordenar;
         $status = $request->filtro_status;
 
-        $query = Task::with('client')
+        $query = Task::with('client.addresses')
                         ->with('images')
                         ->with('logs')
                         ->where('shop_id', $shop->id);
@@ -110,7 +110,7 @@ class TaskController extends Controller
         $this->storeTaskLog($task->id,$user->name,'Creación del registro.');
 
 
-        $task->load('client');
+        $task->load('client.addresses');
         $task->load('images');
         $task->load('logs');
 
@@ -132,7 +132,7 @@ class TaskController extends Controller
         //Una ves guardado el task, insertamos un log-history
         $this->storeTaskLog($task->id,$user->name,'Edición del registro.');
 
-        $task->load('client');
+        $task->load('client.addresses');
         $task->load('images');
         $task->load('logs');
 
@@ -152,7 +152,7 @@ class TaskController extends Controller
         //Una ves guardado el task, insertamos un log-history
         $this->storeTaskLog($task->id,$user->name,'Activado.');
 
-        $task->load('client');
+        $task->load('client.addresses');
         $task->load('images');
         $task->load('logs');
 
@@ -169,7 +169,7 @@ class TaskController extends Controller
         //Una ves guardado el task, insertamos un log-history
         $this->storeTaskLog($task->id,$user->name,'Desactivado.');
 
-        $task->load('client');
+        $task->load('client.addresses');
         $task->load('images');
         $task->load('logs');
         return response()->json([
@@ -251,7 +251,7 @@ class TaskController extends Controller
 
 
 
-        $task->load('client');
+        $task->load('client.addresses');
         $task->load('images');
         $task->load('logs');
         return response()->json([
@@ -270,7 +270,7 @@ class TaskController extends Controller
         $log_desc = 'Actualización reseña.';
         $this->storeTaskLog($task->id,$user->name,$log_desc);
 
-        $task->load('client');
+        $task->load('client.addresses');
         $task->load('images');
         $task->load('logs');
 
@@ -312,7 +312,7 @@ class TaskController extends Controller
             }
         }
 
-        $task->load('client');
+        $task->load('client.addresses');
         $task->load('images');
         $task->load('logs');
         return response()->json([
@@ -405,7 +405,7 @@ class TaskController extends Controller
             $this->storeTaskLog($task->id,$user->name,$log_desc);
         }
 
-        $task->load('client');
+        $task->load('client.addresses');
         $task->load('images');
         $task->load('logs');
         return response()->json([
@@ -443,7 +443,7 @@ class TaskController extends Controller
             $this->storeTaskLog($taskId, $user->name, $logDesc);
 
             // Cargar el task con las relaciones actualizadas
-            $task = Task::with('client', 'images', 'logs')->findOrFail($taskId);
+            $task = Task::with('client.addresses', 'images', 'logs')->findOrFail($taskId);
 
             return response()->json([
                 'ok' => true,

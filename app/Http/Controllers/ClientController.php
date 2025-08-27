@@ -20,7 +20,7 @@ class ClientController extends Controller
 
         $buscar = $request->buscar;
         if($buscar==''){
-            $clients = Client::with(['rents' => function ($query) {
+            $clients = Client::with('addresses')->with(['rents' => function ($query) {
                         $query->where('active', 1);
                     }])
                     ->where('shop_id',$shop->id)
@@ -28,7 +28,7 @@ class ClientController extends Controller
                     ->orderBy('id','desc')
                     ->paginate(10);
         }else{
-            $clients = Client::with(['rents' => function ($query) {
+            $clients = Client::with('addresses')->with(['rents' => function ($query) {
                         $query->where('active', 1);
                     }])
                     ->where('shop_id',$shop->id)

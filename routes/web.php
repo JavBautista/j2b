@@ -184,6 +184,19 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::get('/admin/contracts/{contract}/view', [ClientsController::class,'viewContract'])->name('admin.contracts.view');
         Route::delete('/admin/contracts/{contract}', [ClientsController::class,'deleteContract'])->name('admin.contracts.delete');
 
+        // Rutas AJAX para CRUD de direcciones de clientes (admin web - separadas de Ionic)
+        Route::get('/admin/client-addresses/get', [App\Http\Controllers\Admin\ClientAddressController::class,'index'])->name('admin.client-addresses.get');
+        Route::post('/admin/client-addresses/store', [App\Http\Controllers\Admin\ClientAddressController::class,'store'])->name('admin.client-addresses.store');
+        Route::put('/admin/client-addresses/update', [App\Http\Controllers\Admin\ClientAddressController::class,'update'])->name('admin.client-addresses.update');
+        Route::put('/admin/client-addresses/inactive', [App\Http\Controllers\Admin\ClientAddressController::class,'inactive'])->name('admin.client-addresses.inactive');
+        Route::put('/admin/client-addresses/active', [App\Http\Controllers\Admin\ClientAddressController::class,'active'])->name('admin.client-addresses.active');
+        Route::post('/admin/client-addresses/upload-location-image', [App\Http\Controllers\Admin\ClientAddressController::class,'uploadLocationImage'])->name('admin.client-addresses.upload-image');
+        Route::delete('/admin/client-addresses/delete-location-image', [App\Http\Controllers\Admin\ClientAddressController::class,'deleteLocationImage'])->name('admin.client-addresses.delete-image');
+
+        // Rutas para recibos de clientes (admin web)
+        Route::get('/admin/clients/{client}/receipts', [App\Http\Controllers\Admin\ReceiptsController::class,'index'])->name('admin.clients.receipts');
+        Route::get('/admin/clients/receipts/get', [App\Http\Controllers\Admin\ReceiptsController::class,'getReceipts'])->name('admin.clients.receipts.get');
+
 
 
 

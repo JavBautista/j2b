@@ -11,6 +11,8 @@ use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Database\Eloquent\Builder;
+use App\Events\ClientServiceNotification;
+use App\Services\FirebaseService;
 
 class ClientServiceController extends Controller
 {
@@ -18,6 +20,7 @@ class ClientServiceController extends Controller
         //crearemos notificaiones para los distintos admins de la tienda
         $shop_id = $client_service->shop_id;
         $client_service_id = $client_service->id;
+        $client_service_title = $client_service->title;
         $client_name = $client_service->client->name;
         //Obtenemos los usuarios tipo admin o superadmin dela tienda
         $shop_users_admin = User::where('shop_id', $shop_id)
@@ -27,16 +30,33 @@ class ClientServiceController extends Controller
                                 ->where('active', 1)
                                 ->get();
 
+        $ntf_description = 'Solicitud de Servicio: '.$client_name.': '.$client_service_title;
         foreach($shop_users_admin as $user){
             $new_ntf = new Notification();
             $new_ntf->user_id     = $user->id;
-            $new_ntf->description = 'Solicitud de Servicio: '.$client_name;
+            $new_ntf->description = $ntf_description; 
             $new_ntf->type        = 'client_service';
             $new_ntf->action      = 'client_service_id';
             $new_ntf->data        = $client_service_id;
             $new_ntf->read        = 0;
             $new_ntf->save();
+            
+            // 🔥 NUEVO: Disparar evento en tiempo real (Pusher)
+            event(new ClientServiceNotification($new_ntf, $shop_id));
         }
+
+        // 🔥 NUEVO: Push notification para app cerrada (FCM) - FUERA del loop
+        $firebaseService = app(FirebaseService::class);
+        $firebaseService->sendToShopAdmins(
+            $shop_id,
+            'Nueva Solicitud de Servicio',
+            "Solicitud de Servicio: {$client_name}",
+            [
+                'type' => 'client_service',
+                'client_service_id' => (string)$client_service_id,
+                'shop_id' => (string)$shop_id
+            ]
+        );
     }//storeNotificationsForShop()
 
     private function storeLog($client_service_id, $user, $description){

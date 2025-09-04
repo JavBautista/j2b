@@ -11,6 +11,8 @@ use App\Http\Controllers\PurchaseOrderPartialPaymentsController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\ReceiptController;
 use App\Http\Controllers\EmailConfirmationController;
+use App\Http\Controllers\ServicesClientController;
+use App\Http\Controllers\TaskController;
 
 use App\Http\Controllers\Clients\PurchaseController as ClientPurchaseController;
 use App\Http\Controllers\Clients\LocationController as ClientLocationController;
@@ -240,6 +242,51 @@ Route::group([
 
         Route::get('notifications/get/receipt/{receipt_id}','App\Http\Controllers\NotificationController@getReceiptxID');
 
+        /*FCM PUSH NOTIFICATIONS*/
+        Route::post('fcm/register-token', function (Request $request) {
+            $request->validate([
+                'token' => 'required|string',
+                'device_type' => 'in:android,ios'
+            ]);
+            
+            $user = $request->user();
+            
+            \App\Models\FcmToken::updateOrCreate(
+                ['user_id' => $user->id, 'token' => $request->token],
+                [
+                    'device_type' => $request->device_type ?? 'android',
+                    'last_used_at' => now()
+                ]
+            );
+            
+            return response()->json(['success' => true, 'message' => 'FCM token registered']);
+        });
+        
+        Route::post('fcm/test-push', function (Request $request) {
+            $user = $request->user();
+            $firebaseService = app(\App\Services\FirebaseService::class);
+            
+            $sent = $firebaseService->sendToUser(
+                $user->id,
+                'Test Push J2B',
+                'Esta es una notificación push de prueba',
+                ['type' => 'test']
+            );
+            
+            return response()->json([
+                'success' => $sent,
+                'message' => $sent ? 'Push notification sent' : 'No tokens found'
+            ]);
+        });
+
+        Route::post('fcm/unregister-token', function (Request $request) {
+            $user = $request->user();
+            
+            \App\Models\FcmToken::where('user_id', $user->id)->delete();
+            
+            return response()->json(['success' => true, 'message' => 'FCM tokens removed']);
+        });
+
         /*RENTAS*/
         Route::get('rents/get/by-cutoff','App\Http\Controllers\RentController@getByCutoff');
         /*Usuario Reset Pass*/
@@ -257,37 +304,37 @@ Route::group([
          Route::post('equipment/delete-image','App\Http\Controllers\EquipmentController@deleteImage');
 
          /*SERVICES CLIENTS*/
-         Route::get('services-clients','App\Http\Controllers\ServicesClientController@index');
-         Route::get('services-clients/get-num-status','App\Http\Controllers\ServicesClientController@getNumPorEstatus');
-         Route::post('services-clients/store','App\Http\Controllers\ServicesClientController@store');
-         Route::post('services-clients/update','App\Http\Controllers\ServicesClientController@update');
-         Route::post('services-clients/delete','App\Http\Controllers\ServicesClientController@destroy');
-         Route::post('services-clients/active','App\Http\Controllers\ServicesClientController@active');
-         Route::post('services-clients/inactive','App\Http\Controllers\ServicesClientController@inactive');
-         Route::post('services-clients/update-status','App\Http\Controllers\ServicesClientController@updateEstatus');
-         Route::post('services-clients/update-resena','App\Http\Controllers\ServicesClientController@updateResena');
-         Route::post('services-clients/upload-image-client-service','App\Http\Controllers\ServicesClientController@uploadImageClientService');
-         Route::post('services-clients/delete-main-image','App\Http\Controllers\ServicesClientController@deleteMainImage');
-         Route::post('services-clients/delete-alt-image','App\Http\Controllers\ServicesClientController@deleteAltImage');
-         Route::post('services-clients/sign','App\Http\Controllers\ServicesClientController@signService');
-         Route::post('services-clients/delete-signature','App\Http\Controllers\ServicesClientController@deleteSignature');
+         Route::get('services-clients',[ServicesClientController::class,'index']);
+         Route::get('services-clients/get-num-status',[ServicesClientController::class,'getNumPorEstatus']);
+         Route::post('services-clients/store',[ServicesClientController::class,'store']);
+         Route::post('services-clients/update',[ServicesClientController::class,'update']);
+         Route::post('services-clients/delete',[ServicesClientController::class,'destroy']);
+         Route::post('services-clients/active',[ServicesClientController::class,'active']);
+         Route::post('services-clients/inactive',[ServicesClientController::class,'inactive']);
+         Route::post('services-clients/update-status',[ServicesClientController::class,'updateEstatus']);
+         Route::post('services-clients/update-resena',[ServicesClientController::class,'updateResena']);
+         Route::post('services-clients/upload-image-client-service',[ServicesClientController::class,'uploadImageClientService']);
+         Route::post('services-clients/delete-main-image',[ServicesClientController::class,'deleteMainImage']);
+         Route::post('services-clients/delete-alt-image',[ServicesClientController::class,'deleteAltImage']);
+         Route::post('services-clients/sign',[ServicesClientController::class,'signService']);
+         Route::post('services-clients/delete-signature',[ServicesClientController::class,'deleteSignature']);
 
          /*TASKS*/
-         Route::get('tasks','App\Http\Controllers\TaskController@index');
-         Route::get('tasks/get-num-status','App\Http\Controllers\TaskController@getNumPorEstatus');
-         Route::post('task/store','App\Http\Controllers\TaskController@store');
-         Route::post('task/update','App\Http\Controllers\TaskController@update');
-         Route::post('task/delete','App\Http\Controllers\TaskController@destroy');
-         Route::post('task/active','App\Http\Controllers\TaskController@active');
-         Route::post('task/inactive','App\Http\Controllers\TaskController@inactive');
-         Route::post('task/update-status','App\Http\Controllers\TaskController@updateEstatus');
-         Route::post('task/update-resena','App\Http\Controllers\TaskController@updateResena');
-         Route::post('task/upload-image-task','App\Http\Controllers\TaskController@uploadImageTask');
-         Route::post('task/delete-main-image','App\Http\Controllers\TaskController@deleteMainImage');
-         Route::post('task/delete-alt-image','App\Http\Controllers\TaskController@deleteAltImage');
-         Route::post('task/save-signature','App\Http\Controllers\TaskController@saveSignature');
-         Route::post('task/update-signature','App\Http\Controllers\TaskController@updateSignature');
-         Route::post('task/delete-signature','App\Http\Controllers\TaskController@deleteSignature');
+         Route::get('tasks',[TaskController::class,'index']);
+         Route::get('tasks/get-num-status',[TaskController::class,'getNumPorEstatus']);
+         Route::post('task/store',[TaskController::class,'store']);
+         Route::post('task/update',[TaskController::class,'update']);
+         Route::post('task/delete',[TaskController::class,'destroy']);
+         Route::post('task/active',[TaskController::class,'active']);
+         Route::post('task/inactive',[TaskController::class,'inactive']);
+         Route::post('task/update-status',[TaskController::class,'updateEstatus']);
+         Route::post('task/update-resena',[TaskController::class,'updateResena']);
+         Route::post('task/upload-image-task',[TaskController::class,'uploadImageTask']);
+         Route::post('task/delete-main-image',[TaskController::class,'deleteMainImage']);
+         Route::post('task/delete-alt-image',[TaskController::class,'deleteAltImage']);
+         Route::post('task/save-signature',[TaskController::class,'saveSignature']);
+         Route::post('task/update-signature',[TaskController::class,'updateSignature']);
+         Route::post('task/delete-signature',[TaskController::class,'deleteSignature']);
 
         /*COLLABORATORS*/
         Route::get('collaborators','App\Http\Controllers\CollaboratorController@index');
@@ -368,6 +415,27 @@ Route::group([
         /* SHARED FUNCTIONS - Para ambos roles */
         Route::get('contracts/{contract}/pdf', 'App\Http\Controllers\ContractController@generatePdf');       // Descargar PDF del contrato
         Route::get('contracts/{contract}/preview', 'App\Http\Controllers\ContractController@show');          // Preview del contrato con datos
+
+        /* PUSHER NOTIFICATIONS - Ruta de prueba para notificaciones J2B */
+        Route::post('/test-notification-j2b', function (Request $request) {
+            $user = $request->user();
+            $shop_id = $user->shop_id;
+            
+            // Crear notificación de prueba
+            $notification = new \App\Models\Notification();
+            $notification->user_id = $user->id;
+            $notification->description = 'Notificación de prueba en tiempo real J2B';
+            $notification->type = 'test';
+            $notification->action = 'test';
+            $notification->data = 0;
+            $notification->read = 0;
+            $notification->save();
+            
+            // Disparar evento
+            event(new \App\Events\ClientServiceNotification($notification, $shop_id));
+            
+            return response()->json(['success' => true, 'message' => 'Notificación J2B enviada']);
+        });
 
 
 

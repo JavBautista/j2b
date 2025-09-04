@@ -17,6 +17,31 @@
         </div>
     </div>
 
+    <!-- Mensajes Flash para Test FCM -->
+    @if(session('success'))
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fas fa-check-circle me-2"></i>
+                    {!! session('success') !!}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    @if(session('error'))
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    {!! session('error') !!}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            </div>
+        </div>
+    @endif
+
     <!-- Accesos Rápidos -->
     <div class="row mb-4">
         <div class="col-12">
@@ -67,6 +92,25 @@
                     <h6 class="card-title">Clientes</h6>
                     <p class="card-text text-muted small">Administra tu base de clientes</p>
                     <a href="#" class="btn btn-outline-info btn-sm">Próximamente</a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 🔥 TEMPORAL: Botón de prueba FCM -->
+        <div class="col-md-4 col-lg-3 mb-3">
+            <div class="card h-100 shadow-sm border-0 hover-card border-warning">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-mobile-alt fa-2x text-danger"></i>
+                    </div>
+                    <h6 class="card-title text-danger">🔥 Test FCM</h6>
+                    <p class="card-text text-muted small">Crear servicio de prueba para notificaciones push</p>
+                    <form method="POST" action="{{ route('admin.test.create.service') }}" style="display: inline;">
+                        @csrf
+                        <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('¿Crear servicio de prueba FCM?')">
+                            📱 Probar Push
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>

@@ -1,6 +1,0 @@
-Personal access client created successfully.
-Client ID: 3
-Client secret: ThwEAj8z9U44a6C5XUOhQgYfcCt00T9bIFKIWga6
-Password grant client created successfully.
-Client ID: 4
-Client secret: IBNxaeWWK99uaDHVcnPDi20h6NWP0EPSqO7HWhmS

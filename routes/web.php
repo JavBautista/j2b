@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Broadcast;
 use App\Http\Controllers\EmailConfirmationController;
 use App\Http\Controllers\ReceiptController;
 use App\Http\Controllers\AdminPagesController;
@@ -53,6 +54,9 @@ Auth::routes([
     'confirm'  => false,
     'verify'   => false,
 ]);
+
+// Ruta para autorización de broadcasting (Pusher)
+Broadcast::routes(['middleware' => ['auth:api']]);
 
 // Ruta para acceso no autorizado
 Route::get('/unauthorized', [UnauthorizedController::class, 'index'])->name('unauthorized');
@@ -110,6 +114,9 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
     Route::group(['middleware' => ['admin', 'web.access']], function () {
         //Index
         Route::get('/admin', [AdminPagesController::class,'index'])->name('admin.index');
+        
+        // 🔥 TEMPORAL: Crear servicio de prueba para testing FCM
+        Route::post('/admin/test-create-service', [AdminPagesController::class,'testCreateService'])->name('admin.test.create.service');
         //Shops
         Route::get('/admin/shop', [AdminPagesController::class,'shop'])->name('admin.shop');
         Route::get('/admin/shop/edit', [AdminPagesController::class,'shopEdit'])->name('admin.shop.edit');

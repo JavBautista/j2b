@@ -62,11 +62,6 @@
                                             <i class="fa fa-receipt text-info"></i> Ver Recibos
                                         </a></li>
                                         <li><hr class="dropdown-divider"></li>
-                                        <!-- 🔥 TEMPORAL: Botón de prueba FCM -->
-                                        <li><a class="dropdown-item" href="#" @click="testFCMForClient(client)">
-                                            <i class="fa fa-mobile text-danger"></i> 🔥 Test FCM Push
-                                        </a></li>
-                                        <li><hr class="dropdown-divider"></li>
                                         <template v-if="client.active">
                                             <li><a class="dropdown-item" href="#" @click="actualizarAInactivo(client.id)">
                                                 <i class="fa fa-toggle-off text-danger"></i> Desactivar Cliente
@@ -104,11 +99,15 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="card-footer bg-transparent text-center">
+                            <div class="card-footer bg-transparent d-flex justify-content-between align-items-center">
                                 <small class="text-muted">
                                     <i class="fa fa-clock-o"></i> 
                                     Cliente #{{ client.id }}
                                 </small>
+                                <!-- 🔥 TEMPORAL: Botón de prueba FCM -->
+                                <button class="btn btn-sm btn-danger" @click="testFCMForClient(client)" title="Probar notificación FCM">
+                                    <i class="fa fa-mobile"></i> Test FCM
+                                </button>
                             </div>
                         </div>
                     </div>

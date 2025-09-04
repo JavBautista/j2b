@@ -117,6 +117,7 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         
         // 🔥 TEMPORAL: Crear servicio de prueba para testing FCM
         Route::post('/admin/test-create-service', [AdminPagesController::class,'testCreateService'])->name('admin.test.create.service');
+        Route::post('/admin/test-create-service-client', [AdminPagesController::class,'testCreateServiceClient'])->name('admin.test.create.service.client');
         //Shops
         Route::get('/admin/shop', [AdminPagesController::class,'shop'])->name('admin.shop');
         Route::get('/admin/shop/edit', [AdminPagesController::class,'shopEdit'])->name('admin.shop.edit');

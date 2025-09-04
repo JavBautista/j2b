@@ -134,4 +134,55 @@ class AdminPagesController extends Controller
             return back()->with('error', '❌ Error creando servicio de prueba: ' . $e->getMessage());
         }
     }
+
+    /**
+     * 🔥 TEMPORAL: Crear servicio de prueba para testing FCM con cliente específico
+     * Este método crea un servicio usando el cliente seleccionado dinámicamente
+     */
+    public function testCreateServiceClient(Request $request)
+    {
+        try {
+            $request->validate([
+                'client_id' => 'required|integer|exists:clients,id'
+            ]);
+
+            $clientId = $request->client_id;
+            
+            // Obtener el cliente seleccionado
+            $testClient = \App\Models\Client::find($clientId);
+            if (!$testClient) {
+                return response()->json([
+                    'success' => false, 
+                    'message' => '❌ Cliente no encontrado'
+                ]);
+            }
+
+            // Crear servicio de prueba con datos del cliente seleccionado
+            $clientService = new ClientService();
+            $clientService->client_id = $testClient->id;
+            $clientService->shop_id = $testClient->shop_id;
+            $clientService->title = '🔥 Servicio de Prueba FCM - ' . $testClient->name;
+            $clientService->description = 'Servicio creado automáticamente para probar notificaciones push FCM. Cliente: ' . $testClient->name . '. Usuario admin: ' . auth()->user()->name;
+            $clientService->status = 'NUEVO';
+            $clientService->priority = 1;
+            $clientService->active = 1;
+            $clientService->save();
+
+            // Disparar las notificaciones (Pusher + FCM)
+            $clientServiceController = new ClientServiceController();
+            $clientServiceController->storeNotificationsForShop($clientService);
+
+            return response()->json([
+                'success' => true,
+                'message' => "✅ Servicio de prueba FCM creado exitosamente!<br>📱 Revisa tu app móvil para la notificación push<br>🔧 Servicio ID: {$clientService->id}<br>🏪 Tienda destino: {$testClient->shop_id}<br>👤 Cliente: {$testClient->name}"
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error creando servicio de prueba FCM por cliente: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => '❌ Error creando servicio de prueba: ' . $e->getMessage()
+            ]);
+        }
+    }
 }

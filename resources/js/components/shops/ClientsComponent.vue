@@ -62,6 +62,11 @@
                                             <i class="fa fa-receipt text-info"></i> Ver Recibos
                                         </a></li>
                                         <li><hr class="dropdown-divider"></li>
+                                        <!-- 🔥 TEMPORAL: Botón de prueba FCM -->
+                                        <li><a class="dropdown-item" href="#" @click="testFCMForClient(client)">
+                                            <i class="fa fa-mobile text-danger"></i> 🔥 Test FCM Push
+                                        </a></li>
+                                        <li><hr class="dropdown-divider"></li>
                                         <template v-if="client.active">
                                             <li><a class="dropdown-item" href="#" @click="actualizarAInactivo(client.id)">
                                                 <i class="fa fa-toggle-off text-danger"></i> Desactivar Cliente
@@ -488,6 +493,48 @@ export default {
             },
             abrirModalDirecciones(client) {
                 this.$refs.clientAddresses.abrirModal(client);
+            },
+            // 🔥 TEMPORAL: Método para probar FCM con cliente específico
+            testFCMForClient(client) {
+                if (!confirm(`¿Crear servicio de prueba FCM para ${client.name}?`)) {
+                    return;
+                }
+
+                const form = new FormData();
+                form.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+                form.append('client_id', client.id);
+
+                fetch('/admin/test-create-service-client', {
+                    method: 'POST',
+                    body: form
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: '✅ FCM Test Exitoso',
+                            html: data.message,
+                            showConfirmButton: true
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: '❌ Error FCM Test',
+                            text: data.message,
+                            showConfirmButton: true
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error de conexión',
+                        text: 'No se pudo conectar con el servidor',
+                        showConfirmButton: true
+                    });
+                });
             },
         },
         mounted() {

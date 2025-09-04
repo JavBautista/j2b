@@ -4,7 +4,7 @@
         <!-- Tabla de clientes -->
         <div class="card">
             <div class="card-header">
-                <i class="fa fa-users"></i> Clientes {{ shop.name }}
+                <i class="fa fa-users"></i> Clientes De {{ shop.name }}
                 <button type="button" @click="abrirModal('client','registrar')" class="btn btn-primary">
                     <i class="icon-plus"></i>&nbsp;Nuevo Cliente
                 </button>

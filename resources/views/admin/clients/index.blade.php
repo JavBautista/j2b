@@ -4,7 +4,7 @@
     <div class="container-fluid">
         <div class="row">
             <div class="col-md-12">
-                <h1 class="page-header">Clientes</h1>
+                <h1 class="page-header">Clientes de la tienda</h1>
             </div>
         </div>
         <div class="row">

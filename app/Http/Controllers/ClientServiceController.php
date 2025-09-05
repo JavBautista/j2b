@@ -31,6 +31,8 @@ class ClientServiceController extends Controller
                                 ->get();
 
         $ntf_description = 'Solicitud de Servicio: '.$client_name.': '.$client_service_title;
+        $first_notification = null; // Para guardar la primera notificación
+        
         foreach($shop_users_admin as $user){
             $new_ntf = new Notification();
             $new_ntf->user_id     = $user->id;
@@ -41,8 +43,15 @@ class ClientServiceController extends Controller
             $new_ntf->read        = 0;
             $new_ntf->save();
             
-            // 🔥 NUEVO: Disparar evento en tiempo real (Pusher)
-            event(new ClientServiceNotification($new_ntf, $shop_id));
+            // Guardar la primera notificación para el evento Pusher
+            if ($first_notification === null) {
+                $first_notification = $new_ntf;
+            }
+        }
+
+        // 🔥 CORREGIDO: Disparar evento Pusher UNA SOLA VEZ (fuera del loop)
+        if ($first_notification) {
+            event(new ClientServiceNotification($first_notification, $shop_id));
         }
 
         // 🔥 NUEVO: Push notification para app cerrada (FCM) - FUERA del loop

@@ -244,22 +244,49 @@ Route::group([
 
         /*FCM PUSH NOTIFICATIONS*/
         Route::post('fcm/register-token', function (Request $request) {
-            $request->validate([
-                'token' => 'required|string',
-                'device_type' => 'in:android,ios'
+            \Log::info('📱 FCM Register Token - Request received', [
+                'headers' => $request->headers->all(),
+                'body' => $request->all(),
+                'user' => $request->user() ? $request->user()->id : 'NO USER'
             ]);
             
-            $user = $request->user();
-            
-            \App\Models\FcmToken::updateOrCreate(
-                ['user_id' => $user->id, 'token' => $request->token],
-                [
-                    'device_type' => $request->device_type ?? 'android',
-                    'last_used_at' => now()
-                ]
-            );
-            
-            return response()->json(['success' => true, 'message' => 'FCM token registered']);
+            try {
+                $request->validate([
+                    'token' => 'required|string',
+                    'device_type' => 'in:android,ios'
+                ]);
+                
+                $user = $request->user();
+                
+                if (!$user) {
+                    \Log::error('❌ FCM Register Token - No authenticated user');
+                    return response()->json(['error' => 'Unauthenticated'], 401);
+                }
+                
+                \Log::info('📱 FCM Register Token - Saving token for user', [
+                    'user_id' => $user->id,
+                    'token' => substr($request->token, 0, 20) . '...',
+                    'device_type' => $request->device_type ?? 'android'
+                ]);
+                
+                \App\Models\FcmToken::updateOrCreate(
+                    ['user_id' => $user->id, 'token' => $request->token],
+                    [
+                        'device_type' => $request->device_type ?? 'android',
+                        'last_used_at' => now()
+                    ]
+                );
+                
+                \Log::info('✅ FCM Register Token - Token saved successfully');
+                
+                return response()->json(['success' => true, 'message' => 'FCM token registered']);
+            } catch (\Exception $e) {
+                \Log::error('❌ FCM Register Token - Error:', [
+                    'message' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+                return response()->json(['error' => $e->getMessage()], 500);
+            }
         });
         
         Route::post('fcm/test-push', function (Request $request) {

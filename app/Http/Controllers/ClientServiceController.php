@@ -55,17 +55,32 @@ class ClientServiceController extends Controller
         }
 
         // 🔥 NUEVO: Push notification para app cerrada (FCM) - FUERA del loop
-        $firebaseService = app(FirebaseService::class);
-        $firebaseService->sendToShopAdmins(
-            $shop_id,
-            'Nueva Solicitud de Servicio',
-            "Solicitud de Servicio: {$client_name}",
-            [
-                'type' => 'client_service',
-                'client_service_id' => (string)$client_service_id,
-                'shop_id' => (string)$shop_id
-            ]
-        );
+        try {
+            \Log::info('🚀 FCM: Iniciando envío de push notification', [
+                'shop_id' => $shop_id,
+                'client_service_id' => $client_service_id,
+                'client_name' => $client_name
+            ]);
+            
+            $firebaseService = app(FirebaseService::class);
+            $result = $firebaseService->sendToShopAdmins(
+                $shop_id,
+                'Nueva Solicitud de Servicio',
+                "Solicitud de Servicio: {$client_name}",
+                [
+                    'type' => 'client_service',
+                    'client_service_id' => (string)$client_service_id,
+                    'shop_id' => (string)$shop_id
+                ]
+            );
+            
+            \Log::info('✅ FCM: Push notification procesada', ['result' => $result]);
+        } catch (\Exception $e) {
+            \Log::error('❌ FCM: Error enviando push notification', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+        }
     }//storeNotificationsForShop()
 
     private function storeLog($client_service_id, $user, $description){

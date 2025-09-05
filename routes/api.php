@@ -286,6 +286,70 @@ Route::group([
             
             return response()->json(['success' => true, 'message' => 'FCM tokens removed']);
         });
+        
+        // 🧪 TEMPORAL: Test FCM directo (sin tokens reales)
+        Route::post('fcm/test-direct', function (Request $request) {
+            try {
+                $user = $request->user();
+                $firebaseService = app(\App\Services\FirebaseService::class);
+                
+                // Simular token de prueba (este token NO existe, solo para test)
+                $fakeToken = 'test-token-' . $user->id . '-' . time();
+                
+                \Log::info("🧪 Test FCM Directo - Usuario: {$user->id}, Token fake: {$fakeToken}");
+                
+                // Test directo usando Firebase SDK
+                $factory = (new \Kreait\Firebase\Factory)->withServiceAccount(config('firebase.credentials'));
+                $messaging = $factory->createMessaging();
+                
+                \Log::info("✅ Firebase Factory creado correctamente");
+                
+                // Test con token fake (fallará pero confirmará configuración)
+                try {
+                    $notification = \Kreait\Firebase\Messaging\Notification::create(
+                        'Test FCM Directo J2B',
+                        'Este es un test directo de Firebase desde backend'
+                    );
+                    
+                    $message = \Kreait\Firebase\Messaging\CloudMessage::withTarget('token', $fakeToken)
+                        ->withNotification($notification)
+                        ->withData(['type' => 'test_direct', 'user_id' => (string)$user->id]);
+                    
+                    $result = $messaging->send($message);
+                    
+                    \Log::info("🚀 Mensaje FCM enviado (fake): " . json_encode($result));
+                    
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'FCM Test directo ejecutado correctamente',
+                        'firebase_config' => 'OK',
+                        'fake_token' => $fakeToken,
+                        'result' => 'Enviado a token fake (esperado fallo en entrega)'
+                    ]);
+                    
+                } catch (\Exception $fcmError) {
+                    \Log::error("❌ Error FCM específico: " . $fcmError->getMessage());
+                    
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'FCM configurado pero falló envío (normal con token fake)',
+                        'firebase_config' => 'OK',
+                        'fcm_error' => $fcmError->getMessage(),
+                        'note' => 'Error esperado con token fake - configuración correcta'
+                    ]);
+                }
+                
+            } catch (\Exception $e) {
+                \Log::error("💥 Error Firebase Config: " . $e->getMessage());
+                
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error de configuración Firebase',
+                    'error' => $e->getMessage(),
+                    'firebase_config' => 'ERROR'
+                ]);
+            }
+        });
 
         /*RENTAS*/
         Route::get('rents/get/by-cutoff','App\Http\Controllers\RentController@getByCutoff');

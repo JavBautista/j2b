@@ -211,6 +211,8 @@ Route::group([
         Route::post('puchase-order/edit/porpagarpagar',[PurchaseOrderController::class,'updatePorpagarpagar']);
         Route::post('purchase-order/partial-payment/store',[PurchaseOrderPartialPaymentsController::class,'store']);
         Route::post('purchase-order/partial-payment/delete',[PurchaseOrderPartialPaymentsController::class,'delete']);
+        /*NUEVO PDF PARA COMPARTIR DESDE APP CON AUTENTICACIÓN*/
+        Route::get('purchase-order/{id}/pdf', [PurchaseOrderController::class, 'createPDFPurchaseOrder']);
 
         Route::patch('purchase-order/{id}/update-invoiced/',[PurchaseOrderController::class,'updateInvoiced']);
 

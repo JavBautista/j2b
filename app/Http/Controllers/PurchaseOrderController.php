@@ -9,7 +9,7 @@ use App\Models\PurchaseOrderPayments;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Database\Eloquent\Builder;
-use PDF;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 
 class PurchaseOrderController extends Controller
@@ -247,4 +247,18 @@ class PurchaseOrderController extends Controller
                 'purchase_order' => $purchase_order,
         ]);
     }//updateInvoiced()
+
+    public function createPDFPurchaseOrder(Request $request, $id)
+    {
+        $purchase_order = PurchaseOrder::with('partialPayments')
+                            ->with('detail')
+                            ->with('shop')
+                            ->with('supplier')
+                            ->findOrFail($id);
+
+        $name_file = $purchase_order->id;
+
+        $pdf = PDF::loadView('purchase_order_pdf',['purchase_order'=>$purchase_order]);
+        return $pdf->stream($name_file.'.pdf',array("Attachment" => false));
+    }
 }

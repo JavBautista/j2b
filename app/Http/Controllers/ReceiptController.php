@@ -721,7 +721,6 @@ class ReceiptController extends Controller
                             ->with('client')
                             ->findOrFail($id);
         
-        //$name_file = $this->removeSpecialChar($receipt->folio);
         $name_file = $receipt->folio;
        
         $pdf = PDF::loadView('receipt_rent_pdf',['receipt'=>$receipt]);

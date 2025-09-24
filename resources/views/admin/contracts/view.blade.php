@@ -100,15 +100,8 @@
                             <h6 class="mb-0"><i class="fa fa-file-text-o"></i> Contenido del Contrato</h6>
                         </div>
                         <div class="card-body">
-                            <div class="contract-content" style="border: 1px solid #ddd; padding: 20px; background: white; min-height: 400px;">
+                            <div class="contract-content" style="border: 1px solid #ddd; padding: 20px; background: white; min-height: 400px;" v-pre>
                                 @if($contract->contract_content)
-                                    <!-- DEBUG: Contract content length: {{ strlen($contract->contract_content) }} chars -->
-                                    <script>
-                                        console.log('=== CONTRACT CONTENT DEBUG ===');
-                                        console.log('Contract ID:', {{ $contract->id }});
-                                        console.log('Contract content preview:', @json(substr($contract->contract_content, 0, 200)) + '...');
-                                        console.log('Full contract content:', @json($contract->contract_content));
-                                    </script>
                                     {!! $contract->contract_content !!}
                                 @else
                                     <div class="text-center text-muted p-5">

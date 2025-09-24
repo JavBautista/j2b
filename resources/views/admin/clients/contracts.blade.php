@@ -89,7 +89,7 @@
                                                     @break
                                                 @case('cancelled')
                                                     <span class="badge badge-danger"
-                                                          title="Motivo: {{ $contract->cancellation_reason }}"
+                                                          title="Motivo: {{ $contract->cancellation_reason ? htmlspecialchars($contract->cancellation_reason, ENT_QUOTES, 'UTF-8') : 'No especificado' }}"
                                                           data-bs-toggle="tooltip">
                                                         Cancelado
                                                     </span>
@@ -267,12 +267,33 @@
 
 @push('scripts')
 <script>
+    // DEBUG: Log contract data
+    console.log('=== CONTRACT DEBUG ===');
+    console.log('Contracts data:', @json($contracts));
+
+    @foreach($contracts as $contract)
+        console.log('Contract {{ $contract->id }}:', {
+            id: {{ $contract->id }},
+            status: '{{ $contract->status }}',
+            cancellation_reason: @json($contract->cancellation_reason),
+            template_name: @json($contract->template->name ?? null),
+            pdf_path: @json($contract->pdf_path),
+            signature_path: @json($contract->signature_path)
+        });
+    @endforeach
+
     // Activar tooltips
     document.addEventListener('DOMContentLoaded', function() {
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl);
-        });
+        try {
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                console.log('Initializing tooltip for:', tooltipTriggerEl);
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+            console.log('Tooltips initialized successfully');
+        } catch (error) {
+            console.error('Error initializing tooltips:', error);
+        }
     });
 </script>
 @endpush

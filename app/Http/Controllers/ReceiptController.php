@@ -197,6 +197,7 @@ class ReceiptController extends Controller
 
         $receipt->shop_id     = $shop->id;
         $receipt->client_id   = $rcp['client_id'];
+        $receipt->created_by  = $user->name;
         $receipt->rent_id     = $rcp['rent_id'];
         $receipt->type        = $rcp['type'];
 

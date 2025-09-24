@@ -72,7 +72,7 @@ class NotificationController extends Controller
         $user_id=$request->user_id;
 
         //Traemos todas la notificaciones sin leer del usuario
-        $all_notifications = Notification::where('user_id',$user_id)->where('read',0)->get();
+        $all_notifications = Notification::where('user_id',$user_id)->get();
 
         //Adicionalmente verificamos que las notificaciones no leidas aun sean de clientes activos
         //Puede haber notificaciones de dias pasados, y en ese lapso haberse dado de baja algun cliente
@@ -88,9 +88,9 @@ class NotificationController extends Controller
             }
         }
 
-        //Traemos las notificaciones paginadas sin leer del usuario
+        //Traemos las notificaciones paginadas visibles del usuario
         $notifications = Notification::where('user_id',$user_id)
-                            ->where('read',0)
+                            ->where('visible', 1)
                             ->orderBy('created_at','desc')
                             ->paginate(10);
 
@@ -186,4 +186,132 @@ class NotificationController extends Controller
         $shop = $user->shop;
         dd($shop);
     }//test
+
+    /**
+     * Marcar como leídas todas las notificaciones de un grupo
+     * Solo usuarios limitados pueden usar esta función
+     */
+    public function markAllAsRead(Request $request)
+    {
+        $request->validate([
+            'notification_group_id' => 'required|string'
+        ]);
+
+        $user = $request->user();
+        $notification_group_id = $request->notification_group_id;
+
+        // Verificar que el usuario tenga acceso a este grupo de notificaciones
+        $userNotification = Notification::where('notification_group_id', $notification_group_id)
+            ->where('user_id', $user->id)
+            ->visible()
+            ->first();
+
+        if (!$userNotification) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'No tienes acceso a esta notificación'
+            ], 403);
+        }
+
+        // Debug: Log información del request
+        \Log::info("NotificationController::markAllAsRead - Usuario: {$user->id}, Grupo: $notification_group_id");
+
+        // Marcar como leídas todas las notificaciones del grupo
+        $updated = Notification::markGroupAsRead($notification_group_id);
+
+        \Log::info("NotificationController::markAllAsRead - Resultado: $updated registros actualizados");
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Notificaciones marcadas como leídas',
+            'updated_count' => $updated
+        ]);
+    }
+
+    /**
+     * Eliminar (ocultar) todas las notificaciones de un grupo
+     * Solo usuarios FULL (superadmin) pueden usar esta función
+     */
+    public function deleteForAll(Request $request)
+    {
+        $request->validate([
+            'notification_group_id' => 'required|string'
+        ]);
+
+        $user = $request->user();
+        $notification_group_id = $request->notification_group_id;
+
+        // Debug: Log información de roles del usuario
+        \Log::info("NotificationController::deleteForAll - Verificando permisos para usuario: {$user->id}");
+
+        $userRoles = $user->roles()->get();
+        \Log::info("NotificationController::deleteForAll - Roles del usuario: " . $userRoles->pluck('role_id')->implode(', '));
+
+        // Verificar permisos - permitir usuarios que NO sean limitados
+        // Lógica coincidente con el frontend: !usuarioLimitado
+
+        // Verificar si es usuario limitado (role_id = 3 o similar)
+        $isLimitedUser = $user->roles()->where('role_id', 3)->exists();
+
+        // También verificar si tiene rol de superadmin (role_id = 1)
+        $isSuperAdmin = $user->roles()->where('role_id', 1)->exists();
+
+        // También verificar si tiene rol de admin (role_id = 2)
+        $isAdmin = $user->roles()->where('role_id', 2)->exists();
+
+        \Log::info("NotificationController::deleteForAll - Es limitado: " . ($isLimitedUser ? 'SÍ' : 'NO'));
+        \Log::info("NotificationController::deleteForAll - Es superadmin: " . ($isSuperAdmin ? 'SÍ' : 'NO'));
+        \Log::info("NotificationController::deleteForAll - Es admin: " . ($isAdmin ? 'SÍ' : 'NO'));
+
+        // Permitir eliminar si NO es usuario limitado (si es admin o superadmin)
+        $canDelete = !$isLimitedUser && ($isSuperAdmin || $isAdmin);
+
+        if (!$canDelete) {
+            \Log::warning("NotificationController::deleteForAll - Acceso denegado para usuario {$user->id}");
+            return response()->json([
+                'ok' => false,
+                'message' => 'Solo usuarios con permisos completos pueden eliminar notificaciones'
+            ], 403);
+        }
+
+        // Verificar que el usuario tenga acceso a este grupo de notificaciones
+        $userNotification = Notification::where('notification_group_id', $notification_group_id)
+            ->where('user_id', $user->id)
+            ->visible()
+            ->first();
+
+        if (!$userNotification) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'No tienes acceso a esta notificación'
+            ], 403);
+        }
+
+        // Ocultar todas las notificaciones del grupo (soft delete)
+        $updated = Notification::hideGroup($notification_group_id);
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Notificaciones eliminadas para todos los usuarios',
+            'updated_count' => $updated
+        ]);
+    }
+
+    /**
+     * Obtener estadísticas de un grupo de notificaciones
+     */
+    public function getGroupStats(Request $request)
+    {
+        $request->validate([
+            'notification_group_id' => 'required|string'
+        ]);
+
+        $notification_group_id = $request->notification_group_id;
+        $stats = Notification::getGroupStats($notification_group_id);
+
+        return response()->json([
+            'ok' => true,
+            'stats' => $stats
+        ]);
+    }
 }

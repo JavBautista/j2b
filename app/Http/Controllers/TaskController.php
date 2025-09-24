@@ -214,6 +214,9 @@ class TaskController extends Controller
         $shop_id = $task->shop_id;
         $task_id = $task->id;
 
+        // Generar notification_group_id único para esta tarea
+        $notification_group_id = Notification::generateGroupId();
+
         //Obtenemos los usuarios tipo admin o superadmin dela tienda
         $shop_users_admin = User::where('shop_id', $shop_id)
                                 ->whereHas('roles', function($query) {
@@ -224,12 +227,14 @@ class TaskController extends Controller
 
         foreach($shop_users_admin as $user){
             $new_ntf = new Notification();
+            $new_ntf->notification_group_id = $notification_group_id;
             $new_ntf->user_id     = $user->id;
             $new_ntf->description = 'F# '.$task->id.' '.$task->title;
             $new_ntf->type        = 'task';
             $new_ntf->action      = 'task_id';
             $new_ntf->data        = $task_id;
             $new_ntf->read        = 0;
+            $new_ntf->visible     = 1;
             $new_ntf->save();
         }
     }//storeNotificationsTaskForShop()

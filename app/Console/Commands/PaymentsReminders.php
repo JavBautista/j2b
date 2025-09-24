@@ -77,6 +77,8 @@ class PaymentsReminders extends Command
                 $receipt_id  = $receipt->id;
                 $client_name = $receipt->client->name;
                 
+                // Generar notification_group_id único para este recordatorio de pago
+                $notification_group_id = Notification::generateGroupId();
 
                 //Obtenemos los usuarios tipo admin o superadmin dela tienda
                 $shop_users_admin = User::where('shop_id', $shop_id)
@@ -88,12 +90,14 @@ class PaymentsReminders extends Command
                 //Crea la notificaciones para los diferentes usuarios
                 foreach($shop_users_admin as $user){
                     $new_ntf = new Notification();
+                    $new_ntf->notification_group_id = $notification_group_id;
                     $new_ntf->user_id = $user->id;
                     $new_ntf->description = 'Recordatorio de Pago: '.$client_name;
                     $new_ntf->type = 'payment_reminders';
                     $new_ntf->action = 'receipt_id';
                     $new_ntf->data = $receipt->id;
                     $new_ntf->read = 0;
+                    $new_ntf->visible = 1;
                     $new_ntf->save();
                 }
 

@@ -33,14 +33,19 @@ class ClientServiceController extends Controller
         $ntf_description = 'Solicitud de Servicio: '.$client_name.': '.$client_service_title;
         $first_notification = null; // Para guardar la primera notificación
         
+        // Generar notification_group_id único para esta solicitud de servicio
+        $notification_group_id = Notification::generateGroupId();
+        
         foreach($shop_users_admin as $user){
             $new_ntf = new Notification();
+            $new_ntf->notification_group_id = $notification_group_id;
             $new_ntf->user_id     = $user->id;
             $new_ntf->description = $ntf_description; 
             $new_ntf->type        = 'client_service';
             $new_ntf->action      = 'client_service_id';
             $new_ntf->data        = $client_service_id;
             $new_ntf->read        = 0;
+            $new_ntf->visible     = 1;
             $new_ntf->save();
             
             // Guardar la primera notificación para el evento Pusher

@@ -191,6 +191,8 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::put('/admin/clients/{client}/contracts/{contract}', [ClientsController::class,'updateContract'])->name('admin.clients.update-contract');
         Route::get('/admin/contracts/{contract}/view', [ClientsController::class,'viewContract'])->name('admin.contracts.view');
         Route::delete('/admin/contracts/{contract}', [ClientsController::class,'deleteContract'])->name('admin.contracts.delete');
+        Route::post('/admin/clients/{client}/contracts/{contract}/cancel', [ClientsController::class,'cancelContract'])->name('admin.clients.cancel-contract');
+        Route::get('/admin/clients/{client}/contracts/{contract}/logs', [ClientsController::class,'contractLogs'])->name('admin.clients.contract-logs');
 
         // Rutas AJAX para CRUD de direcciones de clientes (admin web - separadas de Ionic)
         Route::get('/admin/client-addresses/get', [App\Http\Controllers\Admin\ClientAddressController::class,'index'])->name('admin.client-addresses.get');

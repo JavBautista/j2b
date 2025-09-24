@@ -38,7 +38,7 @@
                     </div>
 
                     @if($contracts->count() > 0)
-                        <div class="table-responsive">
+                        <div class="table-responsive" style="overflow: visible !important; padding-bottom: 200px;">
                             <table class="table table-striped table-hover">
                                 <thead class="thead-dark">
                                     <tr>
@@ -87,6 +87,13 @@
                                                 @case('signed')
                                                     <span class="badge badge-success">Firmado</span>
                                                     @break
+                                                @case('cancelled')
+                                                    <span class="badge badge-danger"
+                                                          title="Motivo: {{ $contract->cancellation_reason }}"
+                                                          data-bs-toggle="tooltip">
+                                                        Cancelado
+                                                    </span>
+                                                    @break
                                                 @default
                                                     <span class="badge badge-light">{{ $contract->status }}</span>
                                             @endswitch
@@ -94,65 +101,145 @@
                                         <td>
                                             <i class="fa fa-calendar text-muted"></i>
                                             {{ $contract->created_at->format('d/m/Y H:i') }}
+                                            @if($contract->status === 'cancelled')
+                                                <br>
+                                                <small class="text-danger">
+                                                    <i class="fa fa-ban"></i> Cancelado: {{ $contract->cancelled_at->format('d/m/Y H:i') }}
+                                                </small>
+                                            @endif
                                         </td>
-                                        <td>
-                                            <div class="btn-group" role="group">
-                                                <a href="{{ route('admin.contracts.view', $contract) }}" 
-                                                   class="btn btn-info btn-sm" 
-                                                   title="Ver Contrato">
-                                                    <i class="fa fa-eye"></i>
-                                                </a>
-                                                @if(!$contract->signature_path)
-                                                    <a href="{{ route('admin.clients.edit-contract', ['client' => $client, 'contract' => $contract]) }}" 
-                                                       class="btn btn-warning btn-sm" 
-                                                       title="Editar Contrato">
-                                                        <i class="fa fa-edit"></i>
-                                                    </a>
-                                                @else
-                                                    <button class="btn btn-secondary btn-sm" 
-                                                            title="Contrato firmado - No se puede editar" 
-                                                            disabled>
-                                                        <i class="fa fa-lock"></i>
-                                                    </button>
-                                                @endif
-                                                @if($contract->pdf_path)
-                                                <a href="{{ asset('storage/' . $contract->pdf_path) }}" 
-                                                   target="_blank" 
-                                                   class="btn btn-primary btn-sm" 
-                                                   title="Descargar PDF">
-                                                    <i class="fa fa-download"></i>
-                                                </a>
-                                                <a href="{{ route('contracts.generate-pdf', $contract) }}" 
-                                                   class="btn btn-info btn-sm" 
-                                                   title="Regenerar PDF con firmas actualizadas">
-                                                    <i class="fa fa-refresh"></i>
-                                                </a>
-                                                @else
-                                                <a href="{{ route('contracts.generate-pdf', $contract) }}" 
-                                                   class="btn btn-success btn-sm" 
-                                                   title="Generar PDF">
-                                                    <i class="fa fa-file-pdf-o"></i>
-                                                </a>
-                                                @endif
-                                                <form action="{{ route('admin.contracts.delete', $contract) }}" 
-                                                      method="POST" 
-                                                      style="display: inline;">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" 
-                                                            class="btn btn-danger btn-sm" 
-                                                            title="Eliminar"
-                                                            onclick="return confirm('¿Estás seguro de que quieres eliminar este contrato?')">
-                                                        <i class="fa fa-trash"></i>
-                                                    </button>
-                                                </form>
+                                        <td style="position: relative;">
+                                            <div class="dropdown" style="position: static;">
+                                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                                                        type="button"
+                                                        data-bs-toggle="dropdown"
+                                                        aria-expanded="false">
+                                                    <i class="fa fa-ellipsis-v"></i>
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end dropdown-menu-responsive" style="position: absolute !important; top: 100% !important; right: 0 !important; left: auto !important; z-index: 1050 !important; transform: none !important;">
+                                                    <li>
+                                                        <a class="dropdown-item" href="{{ route('admin.contracts.view', $contract) }}">
+                                                            <i class="fa fa-eye text-info"></i> Ver Contrato
+                                                        </a>
+                                                    </li>
+                                                    @if(!$contract->signature_path && $contract->status !== 'cancelled')
+                                                        <li>
+                                                            <a class="dropdown-item" href="{{ route('admin.clients.edit-contract', ['client' => $client, 'contract' => $contract]) }}">
+                                                                <i class="fa fa-edit text-warning"></i> Editar Contrato
+                                                            </a>
+                                                        </li>
+                                                    @endif
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    @if($contract->pdf_path)
+                                                        <li>
+                                                            <a class="dropdown-item" href="{{ route('contracts.generate-pdf', $contract) }}" target="_blank">
+                                                                <i class="fa fa-download text-primary"></i> Descargar PDF
+                                                            </a>
+                                                        </li>
+                                                        <li>
+                                                            <a class="dropdown-item" href="{{ route('contracts.generate-pdf', $contract) }}">
+                                                                <i class="fa fa-refresh text-info"></i> Regenerar PDF
+                                                            </a>
+                                                        </li>
+                                                    @else
+                                                        <li>
+                                                            <a class="dropdown-item" href="{{ route('contracts.generate-pdf', $contract) }}">
+                                                                <i class="fa fa-file-pdf-o text-success"></i> Generar PDF
+                                                            </a>
+                                                        </li>
+                                                    @endif
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    <li>
+                                                        <a class="dropdown-item" href="{{ route('admin.clients.contract-logs', ['client' => $client, 'contract' => $contract]) }}">
+                                                            <i class="fa fa-history text-secondary"></i> Ver Historial
+                                                        </a>
+                                                    </li>
+                                                    @if($contract->status !== 'cancelled' && $contract->status !== 'signed')
+                                                        <li><hr class="dropdown-divider"></li>
+                                                        <li>
+                                                            <a class="dropdown-item" href="#"
+                                                               data-bs-toggle="modal"
+                                                               data-bs-target="#cancelModal{{ $contract->id }}">
+                                                                <i class="fa fa-ban text-danger"></i> Cancelar Contrato
+                                                            </a>
+                                                        </li>
+                                                    @endif
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    <li>
+                                                        <a class="dropdown-item" href="#"
+                                                           onclick="event.preventDefault(); if(confirm('¿Estás seguro de que quieres eliminar este contrato?')) { document.getElementById('delete-form-{{ $contract->id }}').submit(); }">
+                                                            <i class="fa fa-trash text-danger"></i> Eliminar Contrato
+                                                        </a>
+                                                    </li>
+                                                </ul>
                                             </div>
+                                            <form id="delete-form-{{ $contract->id }}" action="{{ route('admin.contracts.delete', $contract) }}" method="POST" style="display: none;">
+                                                @csrf
+                                                @method('DELETE')
+                                            </form>
                                         </td>
                                     </tr>
                                     @endforeach
                                 </tbody>
                             </table>
                         </div>
+
+                        <!-- Modales de cancelación -->
+                        @foreach($contracts as $contract)
+                            <div class="modal fade" id="cancelModal{{ $contract->id }}" tabindex="-1" aria-labelledby="cancelModalLabel{{ $contract->id }}" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="cancelModalLabel{{ $contract->id }}">
+                                                <i class="fa fa-ban text-danger"></i> Cancelar Contrato #{{ $contract->id }}
+                                            </h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <form action="{{ route('admin.clients.cancel-contract', ['client' => $client, 'contract' => $contract]) }}" method="POST">
+                                            @csrf
+                                            <div class="modal-body">
+                                                <div class="alert alert-warning">
+                                                    <i class="fa fa-exclamation-triangle"></i>
+                                                    <strong>¿Estás seguro de cancelar este contrato?</strong><br>
+                                                    Esta acción no se puede deshacer.
+                                                </div>
+
+                                                <div class="mb-3">
+                                                    <strong>Contrato:</strong> {{ $contract->template->name }}<br>
+                                                    <strong>Estado actual:</strong>
+                                                    @switch($contract->status)
+                                                        @case('draft') <span class="badge badge-secondary">Borrador</span> @break
+                                                        @case('generated') <span class="badge badge-info">Generado</span> @break
+                                                        @case('sent') <span class="badge badge-warning">Enviado</span> @break
+                                                    @endswitch
+                                                </div>
+
+                                                <div class="mb-3">
+                                                    <label for="cancellation_reason{{ $contract->id }}" class="form-label">
+                                                        <strong class="text-danger">*</strong> Motivo de cancelación:
+                                                    </label>
+                                                    <textarea class="form-control"
+                                                              id="cancellation_reason{{ $contract->id }}"
+                                                              name="cancellation_reason"
+                                                              rows="4"
+                                                              placeholder="Ej: El cliente se echó para atrás y decidió comprar en lugar de rentar..."
+                                                              required></textarea>
+                                                    <div class="form-text">Máximo 1000 caracteres</div>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                                    <i class="fa fa-times"></i> Cancelar
+                                                </button>
+                                                <button type="submit" class="btn btn-danger">
+                                                    <i class="fa fa-ban"></i> Confirmar Cancelación
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
                     @else
                         <div class="text-center py-5">
                             <i class="fa fa-file-text fa-3x text-muted mb-3"></i>
@@ -168,4 +255,25 @@
         </div>
     </div>
 </div>
+
+@push('styles')
+<style>
+    /* Minimal fix for dropdown overflow */
+    .card-body {
+        overflow: visible;
+    }
+</style>
+@endpush
+
+@push('scripts')
+<script>
+    // Activar tooltips
+    document.addEventListener('DOMContentLoaded', function() {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    });
+</script>
+@endpush
 @endsection

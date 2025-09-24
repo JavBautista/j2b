@@ -10,13 +10,11 @@
                         <i class="fa fa-file-text"></i> Contrato #{{ $contract->id }}
                     </h4>
                     <div>
-                        @if($contract->pdf_path)
-                        <a href="{{ asset('storage/' . $contract->pdf_path) }}" 
-                           target="_blank" 
+                        <a href="{{ route('contracts.generate-pdf', $contract) }}"
+                           target="_blank"
                            class="btn btn-primary">
                             <i class="fa fa-download"></i> Descargar PDF
                         </a>
-                        @endif
                         <a href="{{ route('admin.clients.contracts', $contract->client) }}" class="btn btn-secondary">
                             <i class="fa fa-arrow-left"></i> Volver a Contratos
                         </a>
@@ -46,6 +44,9 @@
                                                 @break
                                             @case('signed')
                                                 <span class="badge badge-success">Firmado</span>
+                                                @break
+                                            @case('cancelled')
+                                                <span class="badge badge-danger">Cancelado</span>
                                                 @break
                                             @default
                                                 <span class="badge badge-light">{{ $contract->status }}</span>

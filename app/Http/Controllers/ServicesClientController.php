@@ -352,10 +352,25 @@ class ServicesClientController extends Controller
                 ], 400);
             }
 
-            // Decodificar la imagen base64
+            // Decodificar la imagen base64 (usando lógica robusta de TaskController)
             $imageData = $request->signature;
-            $imageData = str_replace('data:image/png;base64,', '', $imageData);
-            $imageData = str_replace(' ', '+', $imageData);
+
+            // Remover el prefijo data:image/...;base64, si existe
+            if (preg_match('/^data:image\/(\w+);base64,/', $imageData, $matches)) {
+                $imageType = $matches[1]; // png, jpeg, etc.
+                $imageData = substr($imageData, strpos($imageData, ',') + 1);
+            } else {
+                $imageType = 'png'; // Tipo por defecto
+            }
+
+            // Validar que sea PNG o JPEG
+            if (!in_array(strtolower($imageType), ['png', 'jpeg', 'jpg'])) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'Formato de imagen no válido. Solo se permiten PNG y JPEG.'
+                ], 400);
+            }
+
             $imageData = base64_decode($imageData);
 
             if ($imageData === false) {

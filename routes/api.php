@@ -13,6 +13,7 @@ use App\Http\Controllers\ReceiptController;
 use App\Http\Controllers\EmailConfirmationController;
 use App\Http\Controllers\ServicesClientController;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\NotificationController;
 
 use App\Http\Controllers\Clients\PurchaseController as ClientPurchaseController;
 use App\Http\Controllers\Clients\LocationController as ClientLocationController;
@@ -33,7 +34,7 @@ use App\Http\Controllers\ReceiptDetailController;
 Route::post('/api-pre-registro', [EmailConfirmationController::class, 'store']);
 
 
-Route::get('notifications/test','App\Http\Controllers\NotificationController@test');
+Route::get('notifications/test',[NotificationController::class,'test']);
 
 /*RENTAS*/
 Route::get('rents/{client_id}','App\Http\Controllers\RentController@index');
@@ -235,14 +236,19 @@ Route::group([
         
 
         /*NOTIFICATIONS*/
-        Route::get('notifications/get','App\Http\Controllers\NotificationController@get');
-        Route::post('notifications/read','App\Http\Controllers\NotificationController@read');
-        Route::get('notifications/get/client/{client_id}','App\Http\Controllers\NotificationController@getClientxID');
-        Route::get('notifications/get/task/{task_id}','App\Http\Controllers\NotificationController@getTaskxID');
+        Route::get('notifications/get',[NotificationController::class,'get']);
+        Route::post('notifications/read',[NotificationController::class,'read']);
+        Route::get('notifications/get/client/{client_id}',[NotificationController::class,'getClientxID']);
+        Route::get('notifications/get/task/{task_id}',[NotificationController::class,'getTaskxID']);
 
-        Route::get('notifications/get/client-service/{client_service_id}','App\Http\Controllers\NotificationController@getClientServicexID');
+        Route::get('notifications/get/client-service/{client_service_id}',[NotificationController::class,'getClientServicexID']);
 
-        Route::get('notifications/get/receipt/{receipt_id}','App\Http\Controllers\NotificationController@getReceiptxID');
+        Route::get('notifications/get/receipt/{receipt_id}',[NotificationController::class,'getReceiptxID']);
+
+        /*NOTIFICATIONS - FUNCIONALIDAD GRUPAL*/
+        Route::post('notifications/mark-all-read',[NotificationController::class,'markAllAsRead']);
+        Route::post('notifications/delete-for-all',[NotificationController::class,'deleteForAll']);
+        Route::get('notifications/group-stats',[NotificationController::class,'getGroupStats']);
 
         /*FCM PUSH NOTIFICATIONS*/
         Route::post('fcm/register-token', function (Request $request) {

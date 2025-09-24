@@ -132,21 +132,68 @@ class ContractController extends Controller
         // Agregar sección de firmas al final del contenido
         $signaturesHtml = $this->generateSignaturesSection($contract);
         $finalHtml .= $signaturesHtml;
-        
+
         // Crear PDF con CSS integrado y estilos para firmas
-        $pdfStyles = '<style>' . $template->css_styles . $this->getSignatureStyles() . '</style>';
-        $htmlWithStyles = $pdfStyles . $finalHtml;
+        $pdfStyles = '<style>' . $template->css_styles . $this->getSignatureStyles();
+
+        // Agregar marca de agua "CANCELADO" si el contrato está cancelado
+        if ($contract->status === 'cancelled') {
+            $pdfStyles .= $this->getCancelledWatermarkStyles();
+        }
+
+        $pdfStyles .= '</style>';
+
+        // CAMBIO CLAVE: Estructurar HTML completo con DOCTYPE
+        $htmlWithStyles = '<!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            ' . $pdfStyles . '
+        </head>
+        <body>';
+
+        // Insertar marca de agua JUSTO DESPUÉS de abrir el body
+        if ($contract->status === 'cancelled') {
+            $htmlWithStyles .= $this->getCancelledWatermarkHtml();
+        }
+
+        // Agregar el contenido del contrato
+        $htmlWithStyles .= $finalHtml;
+
+        // Cerrar HTML
+        $htmlWithStyles .= '</body></html>';
+
         $pdf = Pdf::loadHTML($htmlWithStyles);
-        
+
+        // IMPORTANTE: Configurar DomPDF para renderizar correctamente
+        $pdf->setPaper('A4', 'portrait');
+        $pdf->render();
+
         // Guardar PDF
         $pdfPath = 'contracts/' . $contract->id . '_' . time() . '.pdf';
         Storage::put('public/' . $pdfPath, $pdf->output());
         
-        // Actualizar contrato
-        $contract->update([
-            'pdf_path' => $pdfPath,
-            'status' => 'generated'
-        ]);
+        // Actualizar contrato - NO cambiar status si está cancelado
+        $updateData = ['pdf_path' => $pdfPath];
+
+        // Solo cambiar status a 'generated' si NO está cancelado
+        if ($contract->status !== 'cancelled') {
+            $updateData['status'] = 'generated';
+        }
+
+        $contract->update($updateData);
+
+        // Log: PDF generado
+        \App\Models\ContractLog::log(
+            $contract->id,
+            'pdf_generated',
+            'PDF del contrato generado y descargado',
+            null,
+            [
+                'pdf_path' => $pdfPath,
+                'status' => $contract->status
+            ]
+        );
 
         return $pdf->download('contrato_' . $contract->id . '.pdf');
     }
@@ -402,6 +449,7 @@ class ContractController extends Controller
             // Obtener contratos del cliente
             $contracts = Contract::where('client_id', $client_id)
                                ->with(['template'])
+                               ->with('logs')
                                ->orderBy('created_at', 'desc')
                                ->get();
             
@@ -496,11 +544,31 @@ class ContractController extends Controller
             
             // Procesar base64 y guardar como archivo
             $signaturePath = $this->processBase64ToImage($signature_base64, $contract->id, 'contract');
-            
+
+            // Capturar valores anteriores para el log
+            $oldValues = [
+                'signature_path' => $contract->signature_path,
+                'status' => $contract->status
+            ];
+
             // Guardar la ruta en la base de datos y actualizar estado
             $contract->signature_path = $signaturePath;
             $contract->status = 'signed';
             $contract->save();
+
+            // Log: Contrato firmado desde API
+            \App\Models\ContractLog::log(
+                $contract->id,
+                'signed',
+                "Contrato firmado digitalmente desde app móvil por {$user->name}",
+                $oldValues,
+                [
+                    'signature_path' => $signaturePath,
+                    'status' => 'signed',
+                    'signed_by' => $user->name,
+                    'signed_via' => 'mobile_app'
+                ]
+            );
             
             return response()->json([
                 'ok' => true,
@@ -534,18 +602,38 @@ class ContractController extends Controller
                 ], 400);
             }
             
+            // Capturar valores anteriores para el log
+            $oldValues = [
+                'signature_path' => $contract->signature_path,
+                'status' => $contract->status
+            ];
+
             // Eliminar la firma anterior si existe
             if ($contract->signature_path) {
                 $this->deleteSignatureFile($contract->signature_path);
             }
-            
+
             // Procesar la nueva firma y guardar como archivo
             $signaturePath = $this->processBase64ToImage($signature_base64, $contract->id, 'contract');
-            
+
             // Actualizar la ruta en la base de datos
             $contract->signature_path = $signaturePath;
             $contract->status = 'signed';
             $contract->save();
+
+            // Log: Firma actualizada desde API
+            \App\Models\ContractLog::log(
+                $contract->id,
+                'signature_updated',
+                "Firma del contrato actualizada desde app móvil por {$user->name}",
+                $oldValues,
+                [
+                    'signature_path' => $signaturePath,
+                    'status' => 'signed',
+                    'updated_by' => $user->name,
+                    'updated_via' => 'mobile_app'
+                ]
+            );
             
             return response()->json([
                 'ok' => true,
@@ -571,10 +659,30 @@ class ContractController extends Controller
             $this->authorize('view', $contract);
             
             if ($contract->signature_path) {
+                // Capturar valores anteriores para el log
+                $oldValues = [
+                    'signature_path' => $contract->signature_path,
+                    'status' => $contract->status
+                ];
+
                 $this->deleteSignatureFile($contract->signature_path);
                 $contract->signature_path = null;
                 $contract->status = 'generated'; // Volver a estado anterior
                 $contract->save();
+
+                // Log: Firma eliminada desde API
+                \App\Models\ContractLog::log(
+                    $contract->id,
+                    'signature_deleted',
+                    "Firma del contrato eliminada desde app móvil por {$user->name}",
+                    $oldValues,
+                    [
+                        'signature_path' => null,
+                        'status' => 'generated',
+                        'deleted_by' => $user->name,
+                        'deleted_via' => 'mobile_app'
+                    ]
+                );
             }
             
             return response()->json([
@@ -693,12 +801,75 @@ class ContractController extends Controller
         $finalHtml .= $signaturesHtml;
         
         // Crear PDF con CSS integrado y estilos para firmas (igual que generatePdf)
-        $pdfStyles = '<style>' . $template->css_styles . $this->getSignatureStyles() . '</style>';
-        $htmlWithStyles = $pdfStyles . $finalHtml;
-        
+        $pdfStyles = '<style>' . $template->css_styles . $this->getSignatureStyles();
+
+        // Agregar marca de agua "CANCELADO" si el contrato está cancelado
+        if ($contract->status === 'cancelled') {
+            $pdfStyles .= $this->getCancelledWatermarkStyles();
+        }
+
+        $pdfStyles .= '</style>';
+
+        // CAMBIO CLAVE: Estructurar HTML completo con DOCTYPE
+        $htmlWithStyles = '<!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            ' . $pdfStyles . '
+        </head>
+        <body>';
+
+        // Insertar marca de agua JUSTO DESPUÉS de abrir el body
+        if ($contract->status === 'cancelled') {
+            $htmlWithStyles .= $this->getCancelledWatermarkHtml();
+        }
+
+        // Agregar el contenido del contrato
+        $htmlWithStyles .= $finalHtml;
+
+        // Cerrar HTML
+        $htmlWithStyles .= '</body></html>';
+
         $pdf = Pdf::loadHTML($htmlWithStyles);
-        
+
+        // IMPORTANTE: Configurar DomPDF para renderizar correctamente
+        $pdf->setPaper('A4', 'portrait');
+        $pdf->render();
+
         return $pdf->stream($name_file . '.pdf', array("Attachment" => false));
+    }
+
+    private function getCancelledWatermarkStyles()
+    {
+        return '
+        .cancelled-watermark {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            font-size: 120px;
+            font-weight: bold;
+            color: rgba(255, 0, 0, 0.2);
+            font-family: Arial, sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 15px;
+            z-index: -1;
+            pointer-events: none;
+            white-space: nowrap;
+            user-select: none;
+        }
+
+        /* Asegurar que el contenido esté sobre la marca de agua */
+        body {
+            position: relative;
+            z-index: 1;
+        }
+        ';
+    }
+
+    private function getCancelledWatermarkHtml()
+    {
+        return '<div class="cancelled-watermark">CANCELADO</div>';
     }
 
     // Método auxiliar para limpiar caracteres especiales (como en ReceiptController)

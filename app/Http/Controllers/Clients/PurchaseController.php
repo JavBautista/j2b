@@ -18,6 +18,10 @@ class PurchaseController extends Controller
         $shop_id = $receipt->shop_id;
         $receipt_id = $receipt->id;
         $client_name = $receipt->client->name;
+        
+        // Generar notification_group_id único para esta compra
+        $notification_group_id = Notification::generateGroupId();
+        
         //Obtenemos los usuarios tipo admin o superadmin dela tienda
         $shop_users_admin = User::where('shop_id', $shop_id)
                                 ->whereHas('roles', function($query) {
@@ -28,12 +32,14 @@ class PurchaseController extends Controller
 
         foreach($shop_users_admin as $user){
             $new_ntf = new Notification();
+            $new_ntf->notification_group_id = $notification_group_id;
             $new_ntf->user_id     = $user->id;
             $new_ntf->description = 'Compra: '.$client_name;
             $new_ntf->type        = 'client_purchase';
             $new_ntf->action      = 'receipt_id';
             $new_ntf->data        = $receipt_id;
             $new_ntf->read        = 0;
+            $new_ntf->visible     = 1;
             $new_ntf->save();
         }
     }//storeNotificationsReceiptForShop()

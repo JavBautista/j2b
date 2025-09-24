@@ -56,7 +56,6 @@ class RentsNotifications extends Command
         //con cada renta obtenida
         foreach ($rents_today as $rent) {
 
-
             //Aqui hay que verificar, ya que la renta tiene relacion al cliente, y el cliente es el que tiene la relacion a shop
             $shop = $rent->client->shop;
             $shop_id = $shop->id;
@@ -64,6 +63,9 @@ class RentsNotifications extends Command
 
             $log_text = "[" . now() . "] Se encuentra renta ".$rent->id." de Shop ".$shop_id." (".$ntf_description.")";
             Storage::append("log_ntf_rents.txt", $log_text);
+
+            // Generar notification_group_id único para esta renta
+            $notification_group_id = Notification::generateGroupId();
 
             //Obtenemos los usuarios tipo admin o superadmin dela tienda a los que se les genrara una notificacion
             $shop_users_admin = User::where('shop_id', $shop_id)
@@ -78,12 +80,14 @@ class RentsNotifications extends Command
                 Storage::append("log_ntf_rents.txt", $log_text);
 
                 $new_ntf = new Notification();
+                $new_ntf->notification_group_id = $notification_group_id;
                 $new_ntf->user_id = $user->id;
                 $new_ntf->description = $ntf_description;
                 $new_ntf->type = 'renta';
                 $new_ntf->action = 'client_id';
                 $new_ntf->data = $rent->client->id;
                 $new_ntf->read = 0;
+                $new_ntf->visible = 1;
                 $new_ntf->save();
             }//.foreach($shop_users_admin as $user)
         }//.foreach ($rents_today as $rent)

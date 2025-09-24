@@ -79,6 +79,9 @@ class ShopCutoffNotifications extends Command
 
             // Si hay un mensaje, generamos notificaciones
             if ($ntf_description) {
+                // Generar notification_group_id único para esta tienda
+                $notification_group_id = Notification::generateGroupId();
+                
                 $shop_users_admin = User::where('shop_id', $shop_id)
                     ->whereHas('roles', function ($query) {
                         $query->whereIn('role_user.role_id', [1, 2]);
@@ -91,12 +94,14 @@ class ShopCutoffNotifications extends Command
                     Storage::append("log_ntf_shops_cutoff.txt", $log_text);
 
                     Notification::create([
+                        'notification_group_id' => $notification_group_id,
                         'user_id' => $user->id,
                         'description' => $ntf_description,
                         'type' => 'tienda_fecha_pago',
                         'action' => 'shop_id',
                         'data' => $shop_id,
                         'read' => 0,
+                        'visible' => 1,
                     ]);
                 }
             }

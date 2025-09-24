@@ -220,7 +220,21 @@ class ClientsController extends Controller
             'status' => 'draft'
         ]);
 
-        return redirect()->route('admin.clients')
+        // Log: Contrato creado
+        \App\Models\ContractLog::log(
+            $contract->id,
+            'created',
+            "Contrato creado con plantilla '{$template->name}' para cliente '{$client->name}'",
+            null,
+            [
+                'template' => $template->name,
+                'client' => $client->name,
+                'start_date' => $request->start_date,
+                'expiration_date' => $request->expiration_date
+            ]
+        );
+
+        return redirect()->route('admin.clients.contracts', $client)
                         ->with('success', 'Contrato personalizado creado exitosamente para ' . $client->name);
     }
 
@@ -272,6 +286,13 @@ class ClientsController extends Controller
             abort(404);
         }
 
+        // Capturar valores anteriores para el log
+        $oldValues = [
+            'start_date' => $contract->start_date?->format('Y-m-d'),
+            'expiration_date' => $contract->expiration_date?->format('Y-m-d'),
+            'status' => $contract->status
+        ];
+
         // Actualizar contrato
         $contract->update([
             'contract_content' => $request->contract_content,
@@ -279,6 +300,19 @@ class ClientsController extends Controller
             'expiration_date' => $request->expiration_date,
             'status' => 'draft' // Volver a borrador después de editar
         ]);
+
+        // Log: Contrato actualizado
+        \App\Models\ContractLog::log(
+            $contract->id,
+            'updated',
+            'Contrato editado - contenido y fechas actualizadas',
+            $oldValues,
+            [
+                'start_date' => $request->start_date,
+                'expiration_date' => $request->expiration_date,
+                'status' => 'draft'
+            ]
+        );
 
         return redirect()->route('admin.clients.contracts', $client)
                         ->with('success', 'Contrato actualizado exitosamente');
@@ -368,6 +402,19 @@ class ClientsController extends Controller
             abort(404);
         }
 
+        // Log: Contrato visualizado (comentado - poco relevante por ahora)
+        // \App\Models\ContractLog::log(
+        //     $contract->id,
+        //     'viewed',
+        //     'Contrato visualizado en detalle',
+        //     null,
+        //     [
+        //         'template' => $contract->template->name,
+        //         'client' => $contract->client->name,
+        //         'status' => $contract->status
+        //     ]
+        // );
+
         return view('admin.contracts.view', [
             'contract' => $contract
         ]);
@@ -384,9 +431,103 @@ class ClientsController extends Controller
         }
 
         $clientId = $contract->client_id;
+        $contractData = [
+            'template' => $contract->template->name,
+            'client' => $contract->client->name,
+            'status' => $contract->status,
+            'created_at' => $contract->created_at->format('Y-m-d H:i:s')
+        ];
+
+        // Log: Contrato eliminado (antes de eliminarlo)
+        \App\Models\ContractLog::log(
+            $contract->id,
+            'deleted',
+            "Contrato eliminado - Template: {$contract->template->name}",
+            $contractData,
+            null
+        );
+
         $contract->delete();
 
         return redirect()->route('admin.clients.contracts', $clientId)
                         ->with('success', 'Contrato eliminado correctamente');
+    }
+
+    public function cancelContract(Request $request, Client $client, Contract $contract)
+    {
+        $request->validate([
+            'cancellation_reason' => 'required|string|max:1000'
+        ]);
+
+        $user = Auth::user();
+        $shop = $user->shop;
+
+        // Verificar que el cliente pertenece a la tienda
+        if ($client->shop_id !== $shop->id) {
+            abort(404);
+        }
+
+        // Verificar que el contrato pertenece al cliente
+        if ($contract->client_id !== $client->id) {
+            abort(404);
+        }
+
+        // Verificar que el contrato se puede cancelar
+        if (!$contract->canBeCancelled()) {
+            return redirect()->back()->with('error', 'Este contrato no se puede cancelar. Estado actual: ' . $contract->status);
+        }
+
+        try {
+            $oldStatus = $contract->status;
+
+            $contract->update([
+                'status' => 'cancelled',
+                'cancelled_at' => now(),
+                'cancellation_reason' => $request->cancellation_reason,
+                'cancelled_by' => $user->id
+            ]);
+
+            // Log: Contrato cancelado
+            \App\Models\ContractLog::log(
+                $contract->id,
+                'cancelled',
+                "Contrato cancelado. Motivo: {$request->cancellation_reason}",
+                ['status' => $oldStatus],
+                [
+                    'status' => 'cancelled',
+                    'cancelled_at' => now()->format('Y-m-d H:i:s'),
+                    'cancellation_reason' => $request->cancellation_reason,
+                    'cancelled_by' => $user->name
+                ]
+            );
+
+            return redirect()->back()->with('success', 'Contrato cancelado exitosamente.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Error al cancelar el contrato: ' . $e->getMessage());
+        }
+    }
+
+    public function contractLogs(Client $client, Contract $contract)
+    {
+        $user = Auth::user();
+        $shop = $user->shop;
+
+        // Verificar que el cliente pertenece a la tienda
+        if ($client->shop_id !== $shop->id) {
+            abort(404);
+        }
+
+        // Verificar que el contrato pertenece al cliente
+        if ($contract->client_id !== $client->id) {
+            abort(404);
+        }
+
+        $logs = $contract->logs()->with('user')->paginate(20);
+
+        return view('admin.clients.contract-logs', [
+            'client' => $client,
+            'contract' => $contract,
+            'logs' => $logs
+        ]);
     }
 }

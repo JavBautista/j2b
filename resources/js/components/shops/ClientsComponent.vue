@@ -99,21 +99,11 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="card-footer bg-transparent d-flex justify-content-between align-items-center">
+                            <div class="card-footer bg-transparent">
                                 <small class="text-muted">
-                                    <i class="fa fa-clock-o"></i> 
+                                    <i class="fa fa-clock-o"></i>
                                     Cliente #{{ client.id }}
                                 </small>
-                                <div class="btn-group">
-                                    <!-- 🔥 TEMPORAL: Botón de prueba FCM -->
-                                    <button class="btn btn-sm btn-danger" @click="testFCMForClient(client)" title="Probar notificación FCM">
-                                        <i class="fa fa-mobile"></i> Test FCM
-                                    </button>
-                                    <!-- 🧪 TEMPORAL: Test FCM Direct (Backend Only) -->
-                                    <button class="btn btn-sm btn-warning" @click="testFCMDirect()" title="Test FCM configuración backend">
-                                        <i class="fa fa-cog"></i> FCM Direct
-                                    </button>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -498,105 +488,6 @@ export default {
             },
             abrirModalDirecciones(client) {
                 this.$refs.clientAddresses.abrirModal(client);
-            },
-            // 🔥 TEMPORAL: Método para probar FCM con cliente específico
-            testFCMForClient(client) {
-                if (!confirm(`¿Crear servicio de prueba FCM para ${client.name}?`)) {
-                    return;
-                }
-
-                const form = new FormData();
-                form.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
-                form.append('client_id', client.id);
-
-                fetch('/admin/test-create-service-client', {
-                    method: 'POST',
-                    body: form
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        Swal.fire({
-                            icon: 'success',
-                            title: '✅ FCM Test Exitoso',
-                            html: data.message,
-                            showConfirmButton: true
-                        });
-                    } else {
-                        Swal.fire({
-                            icon: 'error',
-                            title: '❌ Error FCM Test',
-                            text: data.message,
-                            showConfirmButton: true
-                        });
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error de conexión',
-                        text: 'No se pudo conectar con el servidor',
-                        showConfirmButton: true
-                    });
-                });
-            },
-            // 🧪 TEMPORAL: Test FCM Direct (solo configuración backend)
-            testFCMDirect() {
-                if (!confirm('¿Probar configuración FCM en backend? (No enviará notificación real)')) {
-                    return;
-                }
-
-                const form = new FormData();
-                form.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
-
-                fetch('/api/auth/fcm/test-direct', {
-                    method: 'POST',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'Accept': 'application/json',
-                    },
-                    body: form
-                })
-                .then(response => response.json())
-                .then(data => {
-                    console.log('🧪 FCM Direct Test Result:', data);
-                    
-                    if (data.success) {
-                        Swal.fire({
-                            icon: 'success',
-                            title: '✅ FCM Backend Configurado',
-                            html: `
-                                <strong>✅ ${data.message}</strong><br>
-                                🔧 Config: ${data.firebase_config || 'OK'}<br>
-                                🎯 Token fake: ${data.fake_token || 'N/A'}<br>
-                                📝 Resultado: ${data.result || 'N/A'}
-                            `,
-                            showConfirmButton: true
-                        });
-                    } else {
-                        Swal.fire({
-                            icon: 'warning',
-                            title: '⚠️ FCM Test Info',
-                            html: `
-                                <strong>${data.message}</strong><br>
-                                🔧 Config: ${data.firebase_config || 'UNKNOWN'}<br>
-                                ❌ Error: ${data.error || data.fcm_error || 'N/A'}<br>
-                                📝 Nota: ${data.note || 'Revisar logs Laravel'}
-                            `,
-                            showConfirmButton: true
-                        });
-                    }
-                })
-                .catch(error => {
-                    console.error('❌ FCM Direct Error:', error);
-                    Swal.fire({
-                        icon: 'error',
-                        title: '❌ Error de conexión FCM Direct',
-                        text: 'No se pudo conectar con el endpoint de FCM',
-                        showConfirmButton: true
-                    });
-                });
             },
         },
         mounted() {

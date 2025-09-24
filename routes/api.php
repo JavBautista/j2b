@@ -238,6 +238,7 @@ Route::group([
         /*NOTIFICATIONS*/
         Route::get('notifications/get',[NotificationController::class,'get']);
         Route::post('notifications/read',[NotificationController::class,'read']);
+        Route::post('notifications/delete',[NotificationController::class,'delete']);
         Route::get('notifications/get/client/{client_id}',[NotificationController::class,'getClientxID']);
         Route::get('notifications/get/task/{task_id}',[NotificationController::class,'getTaskxID']);
 

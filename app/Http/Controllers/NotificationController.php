@@ -145,6 +145,17 @@ class NotificationController extends Controller
             'ok'=>true
         ]);
     }//.read()
+    
+    public function delete(Request $request){
+
+        $notification= Notification::findOrFail($request->id);
+        $notification->read = 1;
+        $notification->visible = 0;
+        $notification->save();
+        return response()->json([
+            'ok'=>true
+        ]);
+    }//.read()
 
 
     public function getClientxID(Request $request){

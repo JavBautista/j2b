@@ -22,12 +22,23 @@ class PurchaseOrderController extends Controller
         $filtro_status = $request->status;
         $filtro_pagadas = $request->filtro_pagadas;
         $filtro_buscar = isset($request->buscar)?trim($request->buscar):'';
+        $search_scope = $request->search_scope ?? 'purchase_orders'; // Nuevo parámetro para scope de búsqueda
 
         $purchase_orders = PurchaseOrder::with('partialPayments')
                         ->with('shop')
                         ->with('supplier')
-                        ->whereHas('supplier', function (Builder $query) use($filtro_buscar) {
-                            $query->where('name', 'like', '%'.$filtro_buscar.'%');
+                        // Búsqueda condicional según el scope
+                        ->when(!empty($filtro_buscar) && $search_scope === 'items', function ($query) use($filtro_buscar) {
+                            // NUEVA: Buscar en artículos del detalle
+                            return $query->whereHas('detail', function (Builder $subquery) use($filtro_buscar) {
+                                $subquery->where('description', 'like', '%'.$filtro_buscar.'%');
+                            });
+                        })
+                        ->when(!empty($filtro_buscar) && $search_scope !== 'items', function ($query) use($filtro_buscar) {
+                            // ACTUAL: Buscar en proveedores (comportamiento original)
+                            return $query->whereHas('supplier', function (Builder $subquery) use($filtro_buscar) {
+                                $subquery->where('name', 'like', '%'.$filtro_buscar.'%');
+                            });
                         })
                         ->where('shop_id',$shop->id)
                         ->where('payable',$filtro_pagadas)

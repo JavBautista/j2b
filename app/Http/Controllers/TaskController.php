@@ -9,6 +9,7 @@ use App\Models\TaskImage;
 use App\Models\TaskLog;
 use App\Models\Notification;
 use App\Models\User;
+use App\Services\NotificationFcmService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 
@@ -229,7 +230,7 @@ class TaskController extends Controller
             $new_ntf = new Notification();
             $new_ntf->notification_group_id = $notification_group_id;
             $new_ntf->user_id     = $user->id;
-            $new_ntf->description = 'F# '.$task->id.' '.$task->title;
+            $new_ntf->description = 'Tarea #'.$task->id.' '.$task->title.' - '.$task->status;
             $new_ntf->type        = 'task';
             $new_ntf->action      = 'task_id';
             $new_ntf->data        = $task_id;
@@ -238,6 +239,36 @@ class TaskController extends Controller
             $new_ntf->save();
         }
     }//storeNotificationsTaskForShop()
+
+    /**
+     * Envía notificación FCM cuando una tarea se completa
+     */
+    private function sendTaskCompletedFcm(Task $task, User $user)
+    {
+        try {
+            $fcmService = app(NotificationFcmService::class);
+
+            $result = $fcmService->taskCompleted(
+                $task->shop_id,
+                $task->title,
+                $user->name,
+                $task->id
+            );
+
+            \Log::info("📱 FCM: Tarea completada enviada", [
+                'task_id' => $task->id,
+                'shop_id' => $task->shop_id,
+                'user' => $user->name,
+                'result' => $result
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error("❌ FCM: Error enviando tarea completada", [
+                'task_id' => $task->id,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
 
     public function updateEstatus(Request $request){
         $user = $request->user();
@@ -252,7 +283,11 @@ class TaskController extends Controller
 
         // Disparar el evento
          //event(new TaskUpdated($task, $user));
-        if($new_status == 'ATENDIDO'){ $this->storeNotificationsTaskForShop($task); }
+        if($new_status == 'ATENDIDO'){
+            $this->storeNotificationsTaskForShop($task);
+            // 🔔 FCM: Notificar cuando tarea se marca como atendida
+            $this->sendTaskCompletedFcm($task, $user);
+        }
 
 
 

@@ -65,6 +65,7 @@ class ReceiptController extends Controller
 
 
         $filtro_buscar = isset($request->buscar)?trim($request->buscar):'';
+        $search_scope = $request->search_scope ?? 'receipts'; // Nuevo parámetro para scope de búsqueda
         $quotation     = (isset($request->type_cotizacion)&&$request->type_cotizacion=='true')?1:0;
 
         $where_type =($filtro_type_receipt=='todos')?null:$filtro_type_receipt;
@@ -74,8 +75,18 @@ class ReceiptController extends Controller
                         ->with('infoExtra')
                         ->with('shop')
                         ->with('client')
-                        ->whereHas('client', function (Builder $query) use($filtro_buscar) {
-                            $query->where('name', 'like', '%'.$filtro_buscar.'%');
+                        // Búsqueda condicional según el scope
+                        ->when(!empty($filtro_buscar) && $search_scope === 'items', function ($query) use($filtro_buscar) {
+                            // NUEVA: Buscar en artículos del detalle
+                            return $query->whereHas('detail', function (Builder $subquery) use($filtro_buscar) {
+                                $subquery->where('descripcion', 'like', '%'.$filtro_buscar.'%');
+                            });
+                        })
+                        ->when(!empty($filtro_buscar) && $search_scope !== 'items', function ($query) use($filtro_buscar) {
+                            // ACTUAL: Buscar en clientes (comportamiento original)
+                            return $query->whereHas('client', function (Builder $subquery) use($filtro_buscar) {
+                                $subquery->where('name', 'like', '%'.$filtro_buscar.'%');
+                            });
                         })
                         ->where('shop_id',$shop->id)
                         ->where('quotation',$quotation)

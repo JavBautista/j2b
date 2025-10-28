@@ -13,6 +13,7 @@ use App\Http\Controllers\ReceiptController;
 use App\Http\Controllers\EmailConfirmationController;
 use App\Http\Controllers\ServicesClientController;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\TaskTrackingController;
 use App\Http\Controllers\NotificationController;
 
 use App\Http\Controllers\Clients\PurchaseController as ClientPurchaseController;
@@ -435,6 +436,17 @@ Route::group([
          Route::post('task/save-signature',[TaskController::class,'saveSignature']);
          Route::post('task/update-signature',[TaskController::class,'updateSignature']);
          Route::post('task/delete-signature',[TaskController::class,'deleteSignature']);
+
+        /*TASK TRACKING GPS*/
+        Route::post('tasks/{id}/tracking/start', [TaskTrackingController::class, 'start']);
+        Route::post('tasks/{id}/tracking/finish', [TaskTrackingController::class, 'finish']);
+        Route::get('tasks/tracking/active', [TaskTrackingController::class, 'getActiveTasks']);
+        Route::get('tasks/{id}/tracking/history', [TaskTrackingController::class, 'getHistory']);
+
+        /*TASK ASSIGNMENT - Asignación de colaboradores a tareas*/
+        Route::get('tasks/collaborators', [TaskController::class, 'getCollaborators']);
+        Route::post('tasks/{id}/assign', [TaskController::class, 'assignUser']);
+        Route::post('tasks/{id}/unassign', [TaskController::class, 'unassignUser']);
 
         /*COLLABORATORS*/
         Route::get('collaborators','App\Http\Controllers\CollaboratorController@index');

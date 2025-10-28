@@ -26,6 +26,7 @@ class TaskController extends Controller
         $query = Task::with('client.addresses')
                         ->with('images')
                         ->with('logs')
+                        ->with('assignedUser')
                         ->where('shop_id', $shop->id);
 
         if ($buscar != '') {
@@ -591,31 +592,31 @@ class TaskController extends Controller
 
     public function deleteSignature(Request $request){
         $user = $request->user();
-        
+
         try {
             $task = Task::findOrFail($request->task_id);
-            
+
             // Eliminar el archivo físico si existe
             if ($task->signature_path) {
                 $this->deleteSignatureFile($task->signature_path);
             }
-            
+
             // Limpiar el campo en la base de datos
             $task->signature_path = null;
             $task->save();
-            
+
             $log_desc = 'Firma eliminada.';
             $this->storeTaskLog($task->id, $user->name, $log_desc);
-            
+
             $task->load('client');
             $task->load('images');
             $task->load('logs');
-            
+
             return response()->json([
                 'ok' => true,
                 'task' => $task,
             ]);
-            
+
         } catch (\Exception $e) {
             return response()->json([
                 'ok' => false,
@@ -624,5 +625,136 @@ class TaskController extends Controller
             ], 500);
         }
     }//.deleteSignature()
+
+    /**
+     * POST /api/auth/tasks/{id}/assign
+     * Asigna un colaborador a una tarea
+     */
+    public function assignUser(Request $request){
+        $user = $request->user();
+
+        try {
+            // Validar que user_id venga en el request
+            $request->validate([
+                'user_id' => 'required|integer|exists:users,id'
+            ]);
+
+            $task = Task::where('shop_id', $user->shop_id)->findOrFail($request->id);
+
+            // Validar que el colaborador pertenezca al mismo shop
+            $collaborator = User::where('id', $request->user_id)
+                                ->where('shop_id', $user->shop_id)
+                                ->first();
+
+            if (!$collaborator) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'El colaborador no pertenece a tu tienda.',
+                ], 403);
+            }
+
+            // Asignar el colaborador
+            $task->assigned_user_id = $request->user_id;
+            $task->save();
+
+            // Registrar log
+            $log_desc = 'Tarea asignada a: ' . $collaborator->name;
+            $this->storeTaskLog($task->id, $user->name, $log_desc);
+
+            // Cargar relaciones
+            $task->load('client.addresses');
+            $task->load('assignedUser');
+            $task->load('images');
+            $task->load('logs');
+
+            return response()->json([
+                'ok' => true,
+                'task' => $task,
+                'message' => 'Tarea asignada correctamente.'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Error al asignar la tarea.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }//.assignUser()
+
+    /**
+     * POST /api/auth/tasks/{id}/unassign
+     * Desasigna al colaborador de una tarea
+     */
+    public function unassignUser(Request $request){
+        $user = $request->user();
+
+        try {
+            $task = Task::where('shop_id', $user->shop_id)->findOrFail($request->id);
+
+            // Guardar nombre del colaborador anterior para el log
+            $previousAssignedName = $task->assignedUser ? $task->assignedUser->name : 'Sin asignar';
+
+            // Desasignar
+            $task->assigned_user_id = null;
+            $task->save();
+
+            // Registrar log
+            $log_desc = 'Tarea desasignada (anteriormente: ' . $previousAssignedName . ')';
+            $this->storeTaskLog($task->id, $user->name, $log_desc);
+
+            // Cargar relaciones
+            $task->load('client.addresses');
+            $task->load('assignedUser');
+            $task->load('images');
+            $task->load('logs');
+
+            return response()->json([
+                'ok' => true,
+                'task' => $task,
+                'message' => 'Tarea desasignada correctamente.'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Error al desasignar la tarea.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }//.unassignUser()
+
+    /**
+     * GET /api/auth/tasks/collaborators
+     * Obtiene lista de usuarios colaboradores del shop (role_id = 4)
+     */
+    public function getCollaborators(Request $request){
+        $user = $request->user();
+
+        try {
+            // Obtener usuarios colaboradores activos del mismo shop
+            $collaborators = User::where('shop_id', $user->shop_id)
+                ->where('active', 1)
+                ->whereHas('roles', function($query) {
+                    $query->where('roles.id', 4); // role_id = 4 (collaborator)
+                })
+                ->select('id', 'name', 'email')
+                ->orderBy('name', 'asc')
+                ->get();
+
+            return response()->json([
+                'ok' => true,
+                'collaborators' => $collaborators,
+                'count' => $collaborators->count()
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Error al obtener colaboradores.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }//.getCollaborators()
 
 }

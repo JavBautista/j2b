@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl:*)",
+      "Bash(npm run dev:*)",
+      "Bash(php artisan:*)",
+      "Bash(sudo chmod:*)",
+      "Bash(sudo chown:*)",
+      "Read(/home/dev/Proyectos/Ionic/j2b-app/src/app/pages/notificaciones/**)",
+      "Read(//home/dev/Proyectos/Ionic/j2b-app/src/app/**)",
+      "Bash(git add:*)",
+      "Read(//home/dev/Proyectos/Ionic/j2b-app/**)"
+    ],
+    "deny": []
+  }
+}

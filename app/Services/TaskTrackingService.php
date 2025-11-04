@@ -132,8 +132,11 @@ class TaskTrackingService
         // Calcular velocidad promedio
         $avgSpeed = $durationMinutes > 0 ? ($distanceTotal / $durationMinutes) * 60 : 0;
 
-        // Simplificar ruta (guardar 1 punto cada 5 minutos aprox)
-        $simplifiedRoute = $this->simplifyRoute($pointsArray, 5);
+        // CAMBIO (4 Nov 2025): Guardar TODOS los puntos GPS sin simplificar
+        // Antes: simplificaba a 1 punto cada 5 min (solo ~3 puntos en 15 min)
+        // Ahora: guardamos todos para tener ruta completa en mapa
+        // $simplifiedRoute = $this->simplifyRoute($pointsArray, 5); // Versión anterior
+        $simplifiedRoute = $pointsArray; // Guardar TODOS los puntos
 
         // Actualizar tarea en MySQL
         $task->update([

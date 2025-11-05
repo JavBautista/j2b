@@ -16,6 +16,19 @@ class Task extends Model
         'tracking_finished_at' => 'datetime',
     ];
 
+    // Agregar tracking_history al JSON cuando está cargada
+    protected $appends = ['tracking_history'];
+
+    // Accessor para incluir tracking_history en serialización JSON
+    public function getTrackingHistoryAttribute()
+    {
+        // Solo incluir si la relación fue cargada con eager loading
+        if ($this->relationLoaded('trackingHistory')) {
+            return $this->trackingHistory;
+        }
+        return null;
+    }
+
     public function client(){
         return $this->belongsTo(Client::class);
     }

@@ -27,6 +27,7 @@ class TaskController extends Controller
                         ->with('images')
                         ->with('logs')
                         ->with('assignedUser')
+                        ->with('trackingHistory.assignedUser') // ✅ Agregar histórico de tracking con usuario asignado
                         ->where('shop_id', $shop->id);
 
         if ($buscar != '') {

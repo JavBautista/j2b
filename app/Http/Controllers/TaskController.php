@@ -27,6 +27,7 @@ class TaskController extends Controller
                         ->with('images')
                         ->with('logs')
                         ->with('assignedUser')
+                        ->with('trackingHistory')
                         ->where('shop_id', $shop->id);
 
         if ($buscar != '') {

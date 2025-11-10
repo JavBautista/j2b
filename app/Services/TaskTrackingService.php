@@ -77,6 +77,28 @@ class TaskTrackingService
             ]);
         }
 
+        // 🔔 FCM: Notificar a admins cuando se inicia el tracking
+        try {
+            $fcmService = app(NotificationFcmService::class);
+            $fcmService->sendToShopAdmins(
+                $task->shop_id,
+                '🚀 Tarea Iniciada',
+                ($task->assignedUser->name ?? 'Colaborador') . ' inició: ' . $task->title,
+                'task_started',
+                ['task_id' => (string) $task->id]
+            );
+            \Log::info("📱 FCM: Tarea iniciada enviada", [
+                'task_id' => $task->id,
+                'shop_id' => $task->shop_id,
+                'user' => $task->assignedUser->name ?? 'Sin nombre'
+            ]);
+        } catch (\Exception $e) {
+            \Log::error("❌ FCM: Error enviando tarea iniciada", [
+                'task_id' => $task->id,
+                'error' => $e->getMessage()
+            ]);
+        }
+
         return [
             'success' => true,
             'firebase_path' => $firebasePath,
@@ -178,6 +200,37 @@ class TaskTrackingService
             $this->firebase->update($userPath, [
                 'last_activity' => now()->toIso8601String(),
                 'active_task_id' => null,
+            ]);
+        }
+
+        // 🔔 FCM: Notificar a admins cuando se finaliza el tracking
+        try {
+            $fcmService = app(NotificationFcmService::class);
+            $mensaje = ($task->assignedUser->name ?? 'Colaborador') . ' finalizó: ' . $task->title;
+            $mensaje .= ' (' . round($distanceTotal, 2) . ' km, ' . $durationMinutes . ' min)';
+
+            $fcmService->sendToShopAdmins(
+                $task->shop_id,
+                '✅ Tarea Finalizada',
+                $mensaje,
+                'task_finished',
+                [
+                    'task_id' => (string) $task->id,
+                    'distance_km' => (string) round($distanceTotal, 2),
+                    'duration_minutes' => (string) $durationMinutes
+                ]
+            );
+            \Log::info("📱 FCM: Tarea finalizada enviada", [
+                'task_id' => $task->id,
+                'shop_id' => $task->shop_id,
+                'user' => $task->assignedUser->name ?? 'Sin nombre',
+                'distance_km' => round($distanceTotal, 2),
+                'duration_minutes' => $durationMinutes
+            ]);
+        } catch (\Exception $e) {
+            \Log::error("❌ FCM: Error enviando tarea finalizada", [
+                'task_id' => $task->id,
+                'error' => $e->getMessage()
             ]);
         }
 

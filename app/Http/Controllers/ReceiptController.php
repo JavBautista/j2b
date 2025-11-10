@@ -63,41 +63,45 @@ class ReceiptController extends Controller
 
         $filtro_origin_receipt = $request->filtro_origin_receipt;
 
+        // ✅ NUEVO: Dos búsquedas independientes
+        $buscar_cliente = isset($request->buscar_cliente) ? trim($request->buscar_cliente) : '';
+        $buscar_articulo = isset($request->buscar_articulo) ? trim($request->buscar_articulo) : '';
 
-        $filtro_buscar = isset($request->buscar)?trim($request->buscar):'';
-        $search_scope = $request->search_scope ?? 'receipts'; // Nuevo parámetro para scope de búsqueda
-        $quotation     = (isset($request->type_cotizacion)&&$request->type_cotizacion=='true')?1:0;
+        $quotation = (isset($request->type_cotizacion) && $request->type_cotizacion == 'true') ? 1 : 0;
 
-        $where_type =($filtro_type_receipt=='todos')?null:$filtro_type_receipt;
-        $where_origin =($filtro_origin_receipt=='TODOS')?null:$filtro_origin_receipt;
+        $where_type = ($filtro_type_receipt == 'todos') ? null : $filtro_type_receipt;
+        $where_origin = ($filtro_origin_receipt == 'TODOS') ? null : $filtro_origin_receipt;
 
         $receipts = Receipt::with('partialPayments')
                         ->with('infoExtra')
                         ->with('shop')
                         ->with('client')
-                        // Búsqueda condicional según el scope
-                        ->when(!empty($filtro_buscar) && $search_scope === 'items', function ($query) use($filtro_buscar) {
-                            // NUEVA: Buscar en artículos del detalle
-                            return $query->whereHas('detail', function (Builder $subquery) use($filtro_buscar) {
-                                $subquery->where('descripcion', 'like', '%'.$filtro_buscar.'%');
+
+                        // ✅ NUEVO: Filtro por CLIENTE (si existe)
+                        ->when(!empty($buscar_cliente), function ($query) use($buscar_cliente) {
+                            return $query->whereHas('client', function (Builder $subquery) use($buscar_cliente) {
+                                $subquery->where('name', 'like', '%'.$buscar_cliente.'%');
                             });
                         })
-                        ->when(!empty($filtro_buscar) && $search_scope !== 'items', function ($query) use($filtro_buscar) {
-                            // ACTUAL: Buscar en clientes (comportamiento original)
-                            return $query->whereHas('client', function (Builder $subquery) use($filtro_buscar) {
-                                $subquery->where('name', 'like', '%'.$filtro_buscar.'%');
+
+                        // ✅ NUEVO: Filtro por ARTÍCULO (si existe)
+                        ->when(!empty($buscar_articulo), function ($query) use($buscar_articulo) {
+                            return $query->whereHas('detail', function (Builder $subquery) use($buscar_articulo) {
+                                $subquery->where('descripcion', 'like', '%'.$buscar_articulo.'%');
                             });
                         })
-                        ->where('shop_id',$shop->id)
-                        ->where('quotation',$quotation)
-                        ->when( $request->status!='TODOS', function ($query) use($request) {
-                            return $query->where('status',$request->status);
+
+                        // Filtros existentes (sin cambios)
+                        ->where('shop_id', $shop->id)
+                        ->where('quotation', $quotation)
+                        ->when($request->status != 'TODOS', function ($query) use($request) {
+                            return $query->where('status', $request->status);
                         })
-                        ->when( $where_type, function ($query, $where_type) {
-                            return $query->where('type',$where_type);
+                        ->when($where_type, function ($query, $where_type) {
+                            return $query->where('type', $where_type);
                         })
-                        ->when( $where_origin, function ($query, $where_origin) {
-                            return $query->where('origin',$where_origin);
+                        ->when($where_origin, function ($query, $where_origin) {
+                            return $query->where('origin', $where_origin);
                         })
                         ->orderBy('id', 'desc')
                         ->paginate(10);

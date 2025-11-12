@@ -14,6 +14,16 @@
                 <a href=" {{ route('superadmin.plans') }} " class="nav-link"> Planes </a>
             </li>
             <li class="nav-item">
+                <a href=" {{ route('superadmin.subscription-settings') }} " class="nav-link">
+                    <i class="fa fa-cog"></i> Configuración Suscripciones
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href=" {{ route('superadmin.subscription-management') }} " class="nav-link">
+                    <i class="fa fa-credit-card"></i> Gestión Suscripciones
+                </a>
+            </li>
+            <li class="nav-item">
                 <a href=" {{ route('superadmin.upload_apk') }} " class="nav-link"> Upload APK </a>
             </li>
 

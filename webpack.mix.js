@@ -70,4 +70,12 @@ mix.webpackConfig({
     });
 
 
- mix.browserSync('http://j2b.test/');
+// Configuración de BrowserSync para desarrollo
+if (!mix.inProduction()) {
+    mix.browserSync({
+        proxy: 'j2b.test',
+        open: true,
+        notify: false,
+        reloadOnRestart: true
+    });
+}

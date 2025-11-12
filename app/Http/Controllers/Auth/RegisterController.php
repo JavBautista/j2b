@@ -8,6 +8,7 @@ use App\Models\Role;
 use App\Models\User;
 use App\Models\Shop;
 use App\Models\RequestsJ2b;
+use App\Models\SubscriptionSetting;
 use Illuminate\Foundation\Auth\RegistersUsers;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -98,11 +99,17 @@ class RegisterController extends Controller
         try {
             return DB::transaction(function () use ($data) {
 
+                // Obtener configuración de trial desde BD
+                $trialDays = SubscriptionSetting::get('trial_days', 30);
+
                 $shop = Shop::create([
-                    'plan_id' => 1,
+                    'plan_id' => 2, // Plan BASIC para trial
                     'active' => 1,
                     'name' => $data['shop_name'],
-                    'cutoff'=>1
+                    'cutoff' => 1,
+                    'is_trial' => true,
+                    'trial_ends_at' => now()->addDays($trialDays),
+                    'subscription_status' => 'trial'
                 ]);
 
                 $user = User::create([
@@ -111,6 +118,10 @@ class RegisterController extends Controller
                     'email' => $data['email'],
                     'password' => Hash::make($data['password']),
                 ]);
+
+                // Asignar como owner de la tienda
+                $shop->owner_user_id = $user->id;
+                $shop->save();
 
                 $user->roles()->attach(Role::where('name', 'admin')->first());
 

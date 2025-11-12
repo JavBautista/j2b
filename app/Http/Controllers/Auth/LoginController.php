@@ -29,6 +29,36 @@ class LoginController extends Controller
     protected $redirectTo = RouteServiceProvider::HOME;
 
     /**
+     * Validar credenciales adicionales (shop y usuario activos)
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  array  $credentials
+     * @return bool
+     */
+    protected function credentials($request)
+    {
+        return array_merge($request->only($this->username(), 'password'), ['active' => 1]);
+    }
+
+    /**
+     * Validar que el shop también esté activo después de autenticación
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  mixed  $user
+     * @return mixed
+     */
+    protected function authenticated($request, $user)
+    {
+        // Verificar que el shop esté activo
+        if (!$user->shop || !$user->shop->active) {
+            auth()->logout();
+            return redirect()->back()
+                ->withErrors(['email' => 'Tu tienda ha sido desactivada. Contacta a soporte.'])
+                ->withInput($request->only('email'));
+        }
+    }
+
+    /**
      * Get the post-login redirect path based on user role.
      *
      * @return string

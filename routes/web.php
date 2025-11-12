@@ -16,7 +16,8 @@ use App\Http\Controllers\ExtraFieldsShopController;
 use App\Http\Controllers\ContractController;
 use App\Http\Controllers\ContractTemplateController;
 use App\Http\Controllers\SuperadminPagesController;
-use App\Http\Controllers\Superadmin\ShopsController; 
+use App\Http\Controllers\SuperAdminController;
+use App\Http\Controllers\Superadmin\ShopsController;
 use  App\Http\Controllers\Superadmin\PlansController;
 use App\Http\Controllers\Superadmin\UsersController;
 use App\Http\Controllers\Admin\ClientsController;
@@ -102,9 +103,21 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::post('/superadmin/upload-apk/store', [UsersController::class,'storeApk'])->name('superadmin.store.apk');
 
 
-        //Users
+        //Pre Registers
         Route::get('/superadmin/pre-registers', [SuperadminPagesController::class,'preRegisters'])->name('superadmin.pre-registers');
         Route::get('/superadmin/pre-registers/get', [App\Http\Controllers\Superadmin\RequestsJ2bController::class,'getRegisters']);
+
+        //Subscription Settings
+        Route::get('/superadmin/subscription-settings', [SuperAdminController::class,'subscriptionSettings'])->name('superadmin.subscription-settings');
+        Route::post('/superadmin/subscription-settings/update', [SuperAdminController::class,'updateSubscriptionSettings'])->name('superadmin.subscription-settings.update');
+
+        //Subscription Management (Shops)
+        Route::get('/superadmin/subscription-management', [SuperAdminController::class,'subscriptionManagement'])->name('superadmin.subscription-management');
+        Route::post('/superadmin/shops/{id}/extend-trial', [SuperAdminController::class,'extendTrial'])->name('superadmin.shops.extend-trial');
+        Route::post('/superadmin/shops/{id}/change-plan', [SuperAdminController::class,'changePlan'])->name('superadmin.shops.change-plan');
+        Route::get('/superadmin/shops/{id}/subscription-info', [SuperAdminController::class,'getSubscriptionInfo'])->name('superadmin.shops.subscription-info');
+        Route::post('/superadmin/shops/{id}/assign-owner', [SuperAdminController::class,'assignOwner'])->name('superadmin.shops.assign-owner');
+        Route::get('/superadmin/shops/{id}/users', [SuperAdminController::class,'getShopUsers'])->name('superadmin.shops.users');
         Route::put('/superadmin/pre-registers/delete', [App\Http\Controllers\Superadmin\RequestsJ2bController::class,'destroy']);
 
 

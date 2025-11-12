@@ -16,6 +16,7 @@ use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TaskTrackingController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\BackupController;
+use App\Http\Controllers\SubscriptionController;
 
 use App\Http\Controllers\Clients\PurchaseController as ClientPurchaseController;
 use App\Http\Controllers\Clients\LocationController as ClientLocationController;
@@ -554,6 +555,11 @@ Route::group([
         Route::prefix('backups')->group(function () {
             Route::get('export-clients', [BackupController::class, 'exportClients']);
             Route::get('export-products', [BackupController::class, 'exportProducts']);
+        });
+
+        /* SUBSCRIPTION - Información de suscripción y plan */
+        Route::prefix('subscription')->group(function () {
+            Route::get('status', [SubscriptionController::class, 'getStatus']);
         });
 
     });

@@ -31,6 +31,9 @@ class Kernel extends ConsoleKernel
         $schedule->command('payment_reminders:generate')->daily();
         $schedule->command('create:rents_notifications')->daily();
         $schedule->command('create:shop_cutoff_notifications')->daily();
+
+        // Verificar suscripciones vencidas (trials, grace periods, bloqueos)
+        $schedule->command('subscriptions:check-expired')->dailyAt('02:00');
     }
 
     /**

@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Superadmin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Shop;
+use App\Models\User;
+use App\Models\SubscriptionSetting;
 use Illuminate\Support\Facades\Storage;
 
 class ShopsController extends Controller
@@ -50,10 +52,16 @@ class ShopsController extends Controller
         //Desde la app validamos en wl whatsapp asi:
         //$wa = (isset($request['whatsapp']))?$request['whatsapp']:0;
 
+        // Obtener configuración de trial desde BD
+        $trialDays = SubscriptionSetting::get('trial_days', 30);
+
         $shop= new Shop();
-        $shop->plan_id = 1; //De momento los planes es 1
+        $shop->plan_id = 2; // Plan BASIC para trial
         $shop->active = 1;
         $shop->name = $request->name; // Solo name es obligatorio
+        $shop->is_trial = true;
+        $shop->trial_ends_at = now()->addDays($trialDays);
+        $shop->subscription_status = 'trial';
         $shop->description = $request->description;
         $shop->zip_code = $request->zip_code;
         $shop->address = $request->address;
@@ -132,6 +140,9 @@ class ShopsController extends Controller
         $shop= Shop::findOrFail($request->id);
         $shop->active= 1;
         $shop->save();
+
+        // Reactivar todos los usuarios de esta tienda
+        User::where('shop_id', $shop->id)->update(['active' => 1]);
     }//active()
 
     public function deactive(Request $request)
@@ -140,6 +151,9 @@ class ShopsController extends Controller
         $shop= Shop::findOrFail($request->id);
         $shop->active= 0;
         $shop->save();
+
+        // Desactivar todos los usuarios de esta tienda en cascada
+        User::where('shop_id', $shop->id)->update(['active' => 0]);
     }//deactive()
 
     public function uploadLogo(Request $request){

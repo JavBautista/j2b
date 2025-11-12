@@ -59,6 +59,8 @@ class Kernel extends HttpKernel
         'client'=> \App\Http\Middleware\ClientMiddleware::class,
         'web.access'=> \App\Http\Middleware\WebAccessMiddleware::class,
 
+        'subscription.active' => \App\Http\Middleware\CheckSubscriptionActive::class,
+
         'auth.basic' => \Illuminate\Auth\Middleware\AuthenticateWithBasicAuth::class,
         'cache.headers' => \Illuminate\Http\Middleware\SetCacheHeaders::class,
         'can' => \Illuminate\Auth\Middleware\Authorize::class,

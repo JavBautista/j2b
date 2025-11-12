@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\Role;
 use App\Models\Shop;
 use App\Models\EmailConfirmation;
+use App\Models\SubscriptionSetting;
 use App\Mail\EmailConfirmation as EmailConfirmationMail;
 
 use Illuminate\Http\Request;
@@ -71,32 +72,42 @@ class EmailConfirmationController extends Controller
             }
 
             try {
-                // 2. Crear la tienda (Shop)
+                // 2. Obtener configuración de trial desde BD
+                $trialDays = SubscriptionSetting::get('trial_days', 30);
+
+                // 3. Crear la tienda (Shop) con datos completos de suscripción
                 $shop = Shop::create([
-                    'plan_id' => 1, // Plan básico por defecto
+                    'plan_id' => 2, // Plan BASIC para trial
                     'active' => 1, // Activada por defecto
                     'name' => $registro->shop,
-                    'cutoff' => now()->day // Corte diario por defecto
+                    'cutoff' => now()->day, // Corte diario por defecto
+                    'is_trial' => true,
+                    'trial_ends_at' => now()->addDays($trialDays),
+                    'subscription_status' => 'trial'
                 ]);
 
-                // 3. Crear usuario asociado a la tienda
+                // 4. Crear usuario asociado a la tienda
                 $user = User::create([
                     'shop_id' => $shop->id,
                     'name' => $registro->name,
                     'email' => $registro->email,
                     'password' => $registro->password,
                     'avatar' => $registro->avatar,
-                    'phone' => $registro->phone // Asegúrate de añadir este campo si existe
+                    'phone' => $registro->phone
                 ]);
 
-                // 4. Asignar rol (client/admin según necesidad)
+                // 5. Asignar como owner de la tienda
+                $shop->owner_user_id = $user->id;
+                $shop->save();
+
+                // 6. Asignar rol (client/admin según necesidad)
                 $role = $this->determinarRolParaUsuario($registro);
                 $user->roles()->attach($role);
 
-                // 5. Eliminar registro temporal
+                // 7. Eliminar registro temporal
                 $registro->delete();
 
-                // 6. Opcional: Enviar email de bienvenida
+                // 8. Opcional: Enviar email de bienvenida
                 //Mail::to($user->email)->send(new WelcomeEmail($user, $shop));
 
                 return view('emails.confirmado');

@@ -25,6 +25,73 @@ class Shop extends Model
         return $this->hasMany(Client::class);
     }
 
+    // Relaciones de suscripción
+    public function owner()
+    {
+        return $this->belongsTo(User::class, 'owner_user_id');
+    }
+
+    public function subscriptions()
+    {
+        return $this->hasMany(Subscription::class);
+    }
+
+    public function plan()
+    {
+        return $this->belongsTo(Plan::class);
+    }
+
+    public function planFeatures()
+    {
+        return $this->hasOneThrough(
+            PlanFeature::class,
+            Plan::class,
+            'id',           // Foreign key en plans
+            'plan_id',      // Foreign key en plan_features
+            'plan_id',      // Local key en shops
+            'id'            // Local key en plans
+        );
+    }
+
+    /**
+     * Verifica si el shop está activo (no bloqueado)
+     */
+    public function isActive()
+    {
+        // Si está en trial y no ha vencido
+        if ($this->is_trial && $this->trial_ends_at && $this->trial_ends_at > now()) {
+            return true;
+        }
+
+        // Si tiene suscripción activa y no ha vencido
+        if ($this->subscription_status === 'active' && $this->subscription_ends_at && $this->subscription_ends_at > now()) {
+            return true;
+        }
+
+        // Si está en periodo de gracia
+        if ($this->subscription_status === 'grace_period' && $this->grace_period_ends_at && $this->grace_period_ends_at > now()) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Días restantes de suscripción
+     */
+    public function daysRemaining()
+    {
+        if ($this->is_trial && $this->trial_ends_at) {
+            return now()->diffInDays($this->trial_ends_at, false);
+        }
+
+        if ($this->subscription_ends_at) {
+            return now()->diffInDays($this->subscription_ends_at, false);
+        }
+
+        return 0;
+    }
+
     /**
      * Accessor para obtener la URL pública de la firma del representante legal
      */

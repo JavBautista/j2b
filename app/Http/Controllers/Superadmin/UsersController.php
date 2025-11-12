@@ -86,5 +86,26 @@ class UsersController extends Controller
         $user->save();
     }//updateToInactive
 
+    public function resetPassword(Request $request){
+        if(!$request->ajax()) return redirect('/');
+
+        // Validar
+        $request->validate([
+            'id' => 'required',
+            'password' => 'required|min:8',
+            'password_confirmation' => 'required|same:password'
+        ]);
+
+        $user = User::findOrFail($request->id);
+
+        // Actualizar contraseña con Hash (igual que en RegisterController)
+        $user->password = Hash::make($request->password);
+        $user->save();
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Contraseña actualizada correctamente'
+        ]);
+    }//resetPassword
 
 }

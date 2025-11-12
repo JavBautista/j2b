@@ -97,6 +97,7 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::put('/superadmin/users/update', [UsersController::class,'updateInfo']);
         Route::put('/superadmin/users/active', [UsersController::class,'updateToActive']);
         Route::put('/superadmin/users/inactive', [UsersController::class,'updateToInactive']);
+        Route::put('/superadmin/users/reset-password', [UsersController::class,'resetPassword']);
 
         //UPLOAD APK
         Route::get('/superadmin/upload', [SuperadminPagesController::class,'uploadApk'])->name('superadmin.upload_apk');

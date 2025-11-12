@@ -67,6 +67,7 @@
                                   </template>
 
                                   <button class="btn btn-info btn-sm" @click="abrirModal('user','actualizar_datos', user)" title="Editar"><i class="fa fa-edit"></i></button>
+                                  <button class="btn btn-warning btn-sm" @click="resetearPassword(user.id)" title="Resetear Contraseña"><i class="fa fa-key"></i></button>
                               </td>
 
                           </tr>
@@ -333,6 +334,161 @@
 
                   }
                 })
+            },
+            generarPasswordAleatorio(){
+                // Generar contraseña aleatoria de 12 caracteres
+                const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%&*';
+                let password = '';
+                for (let i = 0; i < 12; i++) {
+                    password += chars.charAt(Math.floor(Math.random() * chars.length));
+                }
+                return password;
+            },
+            copiarAlPortapapeles(texto, btnElement){
+                // Copiar al portapapeles
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(texto).then(() => {
+                        // Cambiar ícono del botón temporalmente
+                        const iconoOriginal = btnElement.innerHTML;
+                        btnElement.innerHTML = '<i class="fa fa-check"></i>';
+                        btnElement.classList.add('btn-success');
+                        btnElement.classList.remove('btn-secondary');
+
+                        setTimeout(() => {
+                            btnElement.innerHTML = iconoOriginal;
+                            btnElement.classList.remove('btn-success');
+                            btnElement.classList.add('btn-secondary');
+                        }, 1500);
+                    });
+                } else {
+                    // Fallback para navegadores antiguos
+                    const textarea = document.createElement('textarea');
+                    textarea.value = texto;
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textarea);
+
+                    // Cambiar ícono del botón temporalmente
+                    const iconoOriginal = btnElement.innerHTML;
+                    btnElement.innerHTML = '<i class="fa fa-check"></i>';
+                    btnElement.classList.add('btn-success');
+                    btnElement.classList.remove('btn-secondary');
+
+                    setTimeout(() => {
+                        btnElement.innerHTML = iconoOriginal;
+                        btnElement.classList.remove('btn-success');
+                        btnElement.classList.add('btn-secondary');
+                    }, 1500);
+                }
+            },
+            resetearPassword(id){
+                Swal.fire({
+                    title: 'Resetear Contraseña',
+                    html: `
+                        <div class="form-group text-left">
+                            <label for="swal-password" class="font-weight-bold">Nueva Contraseña</label>
+                            <div class="input-group">
+                                <input type="text" id="swal-password" class="form-control" placeholder="Mínimo 8 caracteres">
+                                <div class="input-group-append">
+                                    <button class="btn btn-primary" type="button" id="btn-generar" title="Generar contraseña">
+                                        <i class="fa fa-random"></i>
+                                    </button>
+                                    <button class="btn btn-secondary" type="button" id="btn-copiar" title="Copiar">
+                                        <i class="fa fa-copy"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group text-left mt-3">
+                            <label for="swal-password-confirm" class="font-weight-bold">Confirmar Contraseña</label>
+                            <input type="text" id="swal-password-confirm" class="form-control">
+                        </div>
+                        <p class="text-muted small mt-2">
+                            <i class="fa fa-info-circle"></i> Usa el botón <i class="fa fa-random"></i> para generar una contraseña aleatoria segura
+                        </p>
+                    `,
+                    showCancelButton: true,
+                    confirmButtonText: 'Actualizar Contraseña',
+                    cancelButtonText: 'Cancelar',
+                    confirmButtonColor: '#28a745',
+                    cancelButtonColor: '#6c757d',
+                    width: '600px',
+                    didOpen: () => {
+                        // Agregar eventos a los botones
+                        const btnGenerar = document.getElementById('btn-generar');
+                        const btnCopiar = document.getElementById('btn-copiar');
+                        const inputPassword = document.getElementById('swal-password');
+                        const inputConfirm = document.getElementById('swal-password-confirm');
+
+                        btnGenerar.addEventListener('click', () => {
+                            const password = this.generarPasswordAleatorio();
+                            inputPassword.value = password;
+                            inputConfirm.value = password;
+                        });
+
+                        btnCopiar.addEventListener('click', () => {
+                            const password = inputPassword.value;
+                            if (password) {
+                                this.copiarAlPortapapeles(password, btnCopiar);
+                            } else {
+                                Swal.showValidationMessage('Genera o escribe una contraseña primero');
+                            }
+                        });
+                    },
+                    preConfirm: () => {
+                        const password = document.getElementById('swal-password').value;
+                        const passwordConfirm = document.getElementById('swal-password-confirm').value;
+
+                        if (!password) {
+                            Swal.showValidationMessage('Ingresa la nueva contraseña');
+                            return false;
+                        }
+
+                        if (password.length < 8) {
+                            Swal.showValidationMessage('La contraseña debe tener al menos 8 caracteres');
+                            return false;
+                        }
+
+                        if (password !== passwordConfirm) {
+                            Swal.showValidationMessage('Las contraseñas no coinciden');
+                            return false;
+                        }
+
+                        return { password, password_confirmation: passwordConfirm };
+                    }
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        let me = this;
+                        axios.put('/superadmin/users/reset-password', {
+                            'id': id,
+                            'password': result.value.password,
+                            'password_confirmation': result.value.password_confirmation
+                        }).then(function (response){
+                            Swal.fire({
+                                icon: 'success',
+                                title: '¡Contraseña Actualizada!',
+                                html: `
+                                    <p>La nueva contraseña es:</p>
+                                    <h4 class="text-primary"><strong>${result.value.password}</strong></h4>
+                                    <p class="text-muted">Comparte esta contraseña con el usuario</p>
+                                `,
+                                confirmButtonText: 'Entendido'
+                            });
+                        }).catch(function (error){
+                            console.log(error);
+                            let errorMsg = 'Ocurrió un error al actualizar la contraseña.';
+                            if (error.response && error.response.data && error.response.data.errors) {
+                                errorMsg = Object.values(error.response.data.errors).flat().join('<br>');
+                            }
+                            Swal.fire(
+                                'Error!',
+                                errorMsg,
+                                'error'
+                            );
+                        });
+                    }
+                });
             },
             registrar(){
                 if(this.validarDatos('registrar')){

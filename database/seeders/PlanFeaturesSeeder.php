@@ -71,6 +71,14 @@ class PlanFeaturesSeeder extends Seeder
         ];
 
         foreach ($features as $feature) {
+            // VALIDAR que el plan exista antes de insertar features
+            $planExists = DB::table('plans')->where('id', $feature['plan_id'])->exists();
+
+            if (!$planExists) {
+                // Skip si el plan no existe
+                continue;
+            }
+
             // Usar updateOrInsert para evitar duplicados (idempotente)
             DB::table('plan_features')->updateOrInsert(
                 ['plan_id' => $feature['plan_id']], // Condición de búsqueda

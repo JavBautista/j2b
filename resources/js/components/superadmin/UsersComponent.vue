@@ -460,11 +460,22 @@
                 }).then((result) => {
                     if (result.isConfirmed) {
                         let me = this;
-                        axios.put('/superadmin/users/reset-password', {
+
+                        // 🔍 LOG: Ver qué datos se envían
+                        const dataToSend = {
                             'id': id,
                             'password': result.value.password,
                             'password_confirmation': result.value.password_confirmation
-                        }).then(function (response){
+                        };
+                        console.log('🔍 [RESET PASSWORD] Enviando al servidor:', dataToSend);
+
+                        axios.put('/superadmin/users/reset-password', dataToSend)
+                        .then(function (response){
+                            // 🔍 LOG: Ver respuesta completa del servidor
+                            console.log('✅ [RESET PASSWORD] Respuesta del servidor:', response);
+                            console.log('✅ [RESET PASSWORD] Data:', response.data);
+                            console.log('✅ [RESET PASSWORD] Status:', response.status);
+
                             Swal.fire({
                                 icon: 'success',
                                 title: '¡Contraseña Actualizada!',
@@ -476,7 +487,12 @@
                                 confirmButtonText: 'Entendido'
                             });
                         }).catch(function (error){
-                            console.log(error);
+                            // 🔍 LOG: Ver error completo
+                            console.error('❌ [RESET PASSWORD] Error completo:', error);
+                            console.error('❌ [RESET PASSWORD] Response:', error.response);
+                            console.error('❌ [RESET PASSWORD] Status:', error.response?.status);
+                            console.error('❌ [RESET PASSWORD] Data:', error.response?.data);
+
                             let errorMsg = 'Ocurrió un error al actualizar la contraseña.';
                             if (error.response && error.response.data && error.response.data.errors) {
                                 errorMsg = Object.values(error.response.data.errors).flat().join('<br>');

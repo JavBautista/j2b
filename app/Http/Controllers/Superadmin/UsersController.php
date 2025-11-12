@@ -96,16 +96,49 @@ class UsersController extends Controller
             'password_confirmation' => 'required|same:password'
         ]);
 
-        $user = User::findOrFail($request->id);
+        try {
+            $user = User::findOrFail($request->id);
 
-        // Actualizar contraseña con Hash (igual que en RegisterController)
-        $user->password = Hash::make($request->password);
-        $user->save();
+            // 🔍 LOG: Capturar hash antes de guardar (para debugging en producción)
+            $oldPasswordHash = $user->password;
+            $newPasswordHash = Hash::make($request->password);
 
-        return response()->json([
-            'ok' => true,
-            'message' => 'Contraseña actualizada correctamente'
-        ]);
+            \Log::info('Password Reset Attempt', [
+                'user_id' => $user->id,
+                'user_email' => $user->email,
+                'old_hash' => $oldPasswordHash,
+                'new_hash' => $newPasswordHash,
+                'timestamp' => now()
+            ]);
+
+            // Actualizar contraseña con Hash (igual que en RegisterController)
+            $user->password = $newPasswordHash;
+            $saved = $user->save();
+
+            // 🔍 LOG: Verificar si save() retornó true
+            \Log::info('Password Save Result', [
+                'user_id' => $user->id,
+                'save_result' => $saved ? 'SUCCESS' : 'FAILED',
+                'password_in_db' => $user->fresh()->password, // Leer directo de BD
+            ]);
+
+            return response()->json([
+                'ok' => true,
+                'message' => 'Contraseña actualizada correctamente'
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Password Reset Error', [
+                'user_id' => $request->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'ok' => false,
+                'message' => 'Error al actualizar contraseña: ' . $e->getMessage()
+            ], 500);
+        }
     }//resetPassword
 
 }

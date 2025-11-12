@@ -10,6 +10,18 @@ class Shop extends Model
     use HasFactory;
     protected $guarded=[];
 
+    /**
+     * The attributes that should be cast.
+     */
+    protected $casts = [
+        'trial_ends_at' => 'datetime',
+        'subscription_ends_at' => 'datetime',
+        'grace_period_ends_at' => 'datetime',
+        'last_payment_at' => 'datetime',
+        'is_trial' => 'boolean',
+        'active' => 'boolean',
+    ];
+
     public function extraFields()
     {
         return $this->hasMany(ExtraFieldShop::class);

@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\PasswordReset as PasswordResetMail;
 
 
 class AuthController extends Controller
@@ -20,11 +22,23 @@ class AuthController extends Controller
         ]);
 
          if ($validator->fails()) {
+            // Mensaje más específico dependiendo del error
+            $mensaje = 'Por favor verifica los datos ingresados.';
+
+            if ($validator->errors()->has('email')) {
+                $emailErrors = $validator->errors()->get('email');
+                if (str_contains($emailErrors[0], 'unique')) {
+                    $mensaje = 'Este email ya está registrado. Intenta iniciar sesión o recupera tu contraseña.';
+                } else if (str_contains($emailErrors[0], 'email')) {
+                    $mensaje = 'El formato del email no es válido.';
+                }
+            }
+
             return response()->json([
                 'ok'=>false,
-                'message' => 'Fallo la creacion de usaurio.',
+                'message' => $mensaje,
                 'errors'=> $validator->errors()
-            ]);
+            ], 422);
          }
 
 
@@ -42,7 +56,7 @@ class AuthController extends Controller
         return response()->json([
             'ok'=>true,
             'access_token' => $tokenResult->accessToken,
-            'message' => 'Successfully created user!'
+            'message' => '¡Cuenta creada exitosamente! Bienvenido.'
         ]);
     }
 
@@ -60,27 +74,41 @@ class AuthController extends Controller
         if ($validator->fails()) {
             return response()->json([
                 'ok'=>false,
-                'message' => 'Fallo logueo de usaurio.',
+                'message' => 'Por favor verifica tu email y contraseña.',
                 'errors'=> $validator->errors()
-            ]);
+            ], 422);
          }
 
         $credentials = request(['email', 'password']);
 
-        if (!Auth::attempt($credentials))
+        // Verificar si las credenciales son correctas
+        if (!Auth::attempt($credentials)) {
             return response()->json([
                 'ok'=>false,
-                'message' => 'Unauthorized'
-            ]);
+                'message' => 'Email o contraseña incorrectos. Verifica tus datos e intenta nuevamente.'
+            ], 401);
+        }
 
         $user = $request->user();
         $shop = $user->shop;
-        // Validación adicional para verificar si el usuario está activo
-        if (!$shop->active || !$user->active ) {
+
+        // Validar si la tienda está activa
+        if (!$shop->active) {
+            // Cerrar sesión para limpiar el intento
+            Auth::logout();
             return response()->json([
                 'ok'=>false,
-                'message' => 'Tienda o Usuario inactivo.'
-            ]);
+                'message' => 'Tu tienda ha sido desactivada. Contacta al soporte para más información.'
+            ], 403);
+        }
+
+        // Validar si el usuario está activo
+        if (!$user->active) {
+            Auth::logout();
+            return response()->json([
+                'ok'=>false,
+                'message' => 'Tu usuario ha sido desactivado. Contacta al administrador de tu tienda.'
+            ], 403);
         }
 
         $tokenResult = $user->createToken('Personal Access Token');
@@ -124,7 +152,16 @@ class AuthController extends Controller
      */
     public function user(Request $request)
     {
-        $user = $request->user()->load('roles')->load('client');
+        // 🔥 MODIFICADO: Cargar shop con plan y plan_features para verificar suscripción
+        $user = $request->user()
+            ->load('roles')
+            ->load('client')
+            ->load('shop.plan');
+
+        // Si el usuario tiene shop, cargar también las features del plan
+        if ($user->shop && $user->shop->plan) {
+            $user->shop->load('plan.features');
+        }
 
         return response()->json([
             'ok'=>true,
@@ -155,5 +192,143 @@ class AuthController extends Controller
             return response()->json(['ok' => true, 'term'=>'si', 'user'=>$user]); // Puedes enviar un nuevo token si es necesario.
         }
         return response()->json(['ok' => false, 'term'=>'no', 'user'=>$user]);
+    }
+
+    /**
+     * Solicitar recuperación de contraseña
+     * Envía email con link para resetear
+     */
+    public function forgotPassword(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email|exists:users,email'
+        ]);
+
+        if ($validator->fails()) {
+            // Mensaje más claro dependiendo del error
+            $mensaje = 'Por favor verifica el email ingresado.';
+
+            if ($validator->errors()->has('email')) {
+                $emailErrors = $validator->errors()->get('email');
+                if (str_contains($emailErrors[0], 'exists') || str_contains($emailErrors[0], 'selected')) {
+                    $mensaje = 'No encontramos una cuenta con este email. Verifica que sea correcto.';
+                } else if (str_contains($emailErrors[0], 'email')) {
+                    $mensaje = 'El formato del email no es válido.';
+                }
+            }
+
+            return response()->json([
+                'ok' => false,
+                'message' => $mensaje,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $user = User::where('email', $request->email)->first();
+
+        if (!$user) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'No encontramos una cuenta registrada con este email.'
+            ], 404);
+        }
+
+        // Generar token de recuperación
+        $token = \Str::random(60);
+
+        // Guardar token en base de datos
+        \DB::table('password_resets')->updateOrInsert(
+            ['email' => $user->email],
+            [
+                'email' => $user->email,
+                'token' => $token, // Sin hashear para poder validar después
+                'created_at' => now()
+            ]
+        );
+
+        // Generar URL de reseteo
+        $url = route('password.reset.form', ['token' => $token]);
+
+        // Enviar email con link de recuperación
+        Mail::to($user->email)->send(new PasswordResetMail($user->name, $url));
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Te hemos enviado un correo con un enlace para restablecer tu contraseña.'
+        ]);
+    }
+
+    /**
+     * Mostrar formulario de reseteo de contraseña (página web)
+     */
+    public function showResetForm($token)
+    {
+        // Validar que el token existe y no ha expirado
+        $passwordReset = \DB::table('password_resets')
+            ->where('token', $token)
+            ->first();
+
+        if (!$passwordReset) {
+            return view('emails.error_token');
+        }
+
+        // Verificar expiración (24 horas)
+        if (now()->diffInHours($passwordReset->created_at) > 24) {
+            return view('emails.error_expirado');
+        }
+
+        return view('emails.password-reset-form', [
+            'token' => $token,
+            'email' => $passwordReset->email
+        ]);
+    }
+
+    /**
+     * Procesar reseteo de contraseña desde formulario web
+     */
+    public function processResetPassword(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email',
+            'token' => 'required|string',
+            'password' => 'required|string|min:8',
+            'password_confirmation' => 'required|string|min:8|same:password'
+        ]);
+
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput();
+        }
+
+        // Buscar token en base de datos
+        $passwordReset = \DB::table('password_resets')
+            ->where('email', $request->email)
+            ->where('token', $request->token)
+            ->first();
+
+        if (!$passwordReset) {
+            return view('emails.error_token');
+        }
+
+        // Verificar que no haya expirado (24 horas)
+        if (now()->diffInHours($passwordReset->created_at) > 24) {
+            return view('emails.error_expirado');
+        }
+
+        // Actualizar contraseña
+        $user = User::where('email', $request->email)->first();
+
+        if (!$user) {
+            return view('emails.error_token');
+        }
+
+        $user->password = bcrypt($request->password);
+        $user->save();
+
+        // Eliminar token usado
+        \DB::table('password_resets')
+            ->where('email', $request->email)
+            ->delete();
+
+        return view('emails.password-reset-success');
     }
 }

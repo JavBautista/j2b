@@ -29,9 +29,29 @@ class EmailConfirmationController extends Controller
         ]);
 
         if ($validator->fails()) {
+            // Mensaje más específico dependiendo del error
+            $mensaje = 'Por favor verifica los datos ingresados.';
+
+            if ($validator->errors()->has('email')) {
+                $emailErrors = $validator->errors()->get('email');
+                if (str_contains($emailErrors[0], 'unique')) {
+                    $mensaje = 'Este email ya está registrado. Si ya tienes cuenta, inicia sesión o recupera tu contraseña.';
+                } else if (str_contains($emailErrors[0], 'email')) {
+                    $mensaje = 'El formato del email no es válido.';
+                }
+            } else if ($validator->errors()->has('phone')) {
+                $mensaje = 'El teléfono debe tener exactamente 10 dígitos numéricos.';
+            } else if ($validator->errors()->has('password')) {
+                $mensaje = 'La contraseña debe tener al menos 8 caracteres.';
+            } else if ($validator->errors()->has('name')) {
+                $mensaje = 'El nombre es obligatorio.';
+            } else if ($validator->errors()->has('shop')) {
+                $mensaje = 'El nombre de la tienda es obligatorio.';
+            }
+
             return response()->json([
                 'ok' => false,
-                'message' => 'Validación fallida',
+                'message' => $mensaje,
                 'errors' => $validator->errors(),
             ], 422);
         }
@@ -140,8 +160,65 @@ class EmailConfirmationController extends Controller
     {
         // Lógica para asignar rol (puedes personalizar esto)
         return Role::where('name', 'admin')->first();
-        
+
         // O si necesitas lógica más compleja:
         // return Role::where('name', $registro->esAdmin ? 'admin' : 'client')->first();
+    }
+
+    /**
+     * Reenviar email de confirmación
+     */
+    public function resendConfirmation(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email|exists:email_confirmations,email'
+        ]);
+
+        if ($validator->fails()) {
+            // Mensaje específico dependiendo del error
+            $mensaje = 'Por favor verifica el email ingresado.';
+
+            if ($validator->errors()->has('email')) {
+                $emailErrors = $validator->errors()->get('email');
+                if (str_contains($emailErrors[0], 'exists') || str_contains($emailErrors[0], 'selected')) {
+                    $mensaje = 'No encontramos un registro pendiente con este email. Verifica tu email o intenta registrarte nuevamente.';
+                } else if (str_contains($emailErrors[0], 'email')) {
+                    $mensaje = 'El formato del email no es válido.';
+                }
+            }
+
+            return response()->json([
+                'ok' => false,
+                'message' => $mensaje
+            ], 422);
+        }
+
+        // Buscar el registro pendiente
+        $confirmation = EmailConfirmation::where('email', $request->email)->first();
+
+        if (!$confirmation) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'No encontramos un registro pendiente con este email. Es posible que ya hayas confirmado tu cuenta.'
+            ], 404);
+        }
+
+        // Verificar si el token ya expiró (opcional - eliminar registro expirado)
+        if ($confirmation->expires_at && Carbon::now()->greaterThan($confirmation->expires_at)) {
+            $confirmation->delete();
+            return response()->json([
+                'ok' => false,
+                'message' => 'Tu solicitud de registro ha expirado. Por favor regístrate nuevamente.'
+            ], 410);
+        }
+
+        // Reenviar el email de confirmación
+        $url = route('email.confirmar', ['token' => $confirmation->token]);
+        Mail::to($confirmation->email)->send(new EmailConfirmationMail($confirmation->name, $url));
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Hemos reenviado el correo de confirmación. Revisa tu bandeja de entrada.'
+        ]);
     }
 }

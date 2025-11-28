@@ -6,6 +6,8 @@ use App\Models\SubscriptionSetting;
 use App\Models\Plan;
 use App\Models\Shop;
 use App\Models\Subscription;
+use App\Models\User;
+use App\Models\Notification;
 use Illuminate\Http\Request;
 
 class SuperAdminController extends Controller
@@ -89,9 +91,31 @@ class SuperAdminController extends Controller
         $request->validate([
             'plan_id' => 'required|exists:plans,id',
             'duration_months' => 'required|integer|min:1|max:12',
+            'custom_price' => 'nullable|numeric|min:0',
         ]);
 
         $plan = Plan::findOrFail($request->plan_id);
+
+        // Determinar precio a usar
+        $useCustomPrice = $request->has('custom_price') && $request->custom_price > 0;
+
+        if ($useCustomPrice) {
+            // Usar precio personalizado (sin IVA)
+            $priceWithoutIva = (float) $request->custom_price;
+            $ivaPercentage = $plan->iva_percentage ?? 16;
+            $ivaAmount = round($priceWithoutIva * ($ivaPercentage / 100), 2);
+            $totalAmount = $priceWithoutIva + $ivaAmount;
+        } else {
+            // Usar precio del plan
+            $priceWithoutIva = $plan->price_without_iva;
+            $ivaAmount = $plan->price - $plan->price_without_iva;
+            $totalAmount = $plan->price;
+        }
+
+        // Multiplicar por meses
+        $priceWithoutIvaTotal = $priceWithoutIva * $request->duration_months;
+        $ivaAmountTotal = $ivaAmount * $request->duration_months;
+        $totalAmountFinal = $totalAmount * $request->duration_months;
 
         // Actualizar shop
         $shop->update([
@@ -108,9 +132,9 @@ class SuperAdminController extends Controller
             'shop_id' => $shop->id,
             'plan_id' => $plan->id,
             'user_id' => auth()->id(),
-            'price_without_iva' => $plan->price_without_iva * $request->duration_months,
-            'iva_amount' => ($plan->price - $plan->price_without_iva) * $request->duration_months,
-            'total_amount' => $plan->price * $request->duration_months,
+            'price_without_iva' => $priceWithoutIvaTotal,
+            'iva_amount' => $ivaAmountTotal,
+            'total_amount' => $totalAmountFinal,
             'currency' => $plan->currency,
             'payment_method' => 'other',
             'transaction_id' => 'MANUAL-' . now()->timestamp,
@@ -118,10 +142,45 @@ class SuperAdminController extends Controller
             'starts_at' => now(),
             'ends_at' => now()->addMonths($request->duration_months),
             'status' => 'active',
-            'admin_notes' => 'Cambio manual por superadmin: ' . auth()->user()->name,
+            'admin_notes' => $useCustomPrice
+                ? "Cambio manual por superadmin: " . auth()->user()->name . " - Precio personalizado: {$plan->currency} \${$totalAmount}/mes"
+                : "Cambio manual por superadmin: " . auth()->user()->name,
         ]);
 
-        return redirect()->back()->with('success', "Plan de {$shop->name} cambiado a {$plan->name} por {$request->duration_months} meses");
+        // Crear notificación de pago recibido
+        $this->createPaymentNotification($shop, $plan, $request->duration_months, $totalAmountFinal);
+
+        $priceInfo = $useCustomPrice ? " (precio personalizado: {$plan->currency} \${$totalAmount}/mes)" : "";
+        return redirect()->back()->with('success', "Plan de {$shop->name} cambiado a {$plan->name} por {$request->duration_months} meses{$priceInfo}");
+    }
+
+    /**
+     * Crear notificación de pago recibido para todos los admins del shop
+     */
+    private function createPaymentNotification(Shop $shop, Plan $plan, int $months, float $totalAmount)
+    {
+        // Obtener admins del shop
+        $admins = User::where('shop_id', $shop->id)
+            ->whereHas('roles', function($query) {
+                $query->whereIn('role_user.role_id', [1, 2]);
+            })
+            ->where('active', 1)
+            ->get();
+
+        $notificationGroupId = Notification::generateGroupId();
+
+        foreach ($admins as $admin) {
+            Notification::create([
+                'notification_group_id' => $notificationGroupId,
+                'user_id' => $admin->id,
+                'type' => 'payment_received',
+                'description' => '✅ Pago recibido - Suscripción activa',
+                'action' => 'subscription',
+                'data' => $shop->id,
+                'read' => false,
+                'visible' => true,
+            ]);
+        }
     }
 
     /**
@@ -182,5 +241,30 @@ class SuperAdminController extends Controller
             ->get(['id', 'name', 'email']);
 
         return response()->json($users);
+    }
+
+    /**
+     * Desactivar/Reactivar shop (y todos sus usuarios)
+     */
+    public function toggleShopActive($id)
+    {
+        $shop = Shop::findOrFail($id);
+
+        $newStatus = !$shop->active;
+
+        // Actualizar shop
+        $shop->update([
+            'active' => $newStatus,
+            'subscription_status' => $newStatus ? 'active' : 'cancelled',
+        ]);
+
+        // Desactivar/Reactivar TODOS los usuarios de esta tienda
+        \App\Models\User::where('shop_id', $shop->id)
+            ->update(['active' => $newStatus]);
+
+        $action = $newStatus ? 'reactivada' : 'desactivada';
+        $userCount = \App\Models\User::where('shop_id', $shop->id)->count();
+
+        return redirect()->back()->with('success', "Tienda {$shop->name} {$action}. {$userCount} usuarios también fueron {$action}s.");
     }
 }

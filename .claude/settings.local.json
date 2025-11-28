@@ -9,7 +9,10 @@
       "Read(/home/dev/Proyectos/Ionic/j2b-app/src/app/pages/notificaciones/**)",
       "Read(//home/dev/Proyectos/Ionic/j2b-app/src/app/**)",
       "Bash(git add:*)",
-      "Read(//home/dev/Proyectos/Ionic/j2b-app/**)"
+      "Read(//home/dev/Proyectos/Ionic/j2b-app/**)",
+      "Bash(mkdir:*)",
+      "Bash(mv:*)",
+      "Bash(dpkg:*)"
     ],
     "deny": []
   }

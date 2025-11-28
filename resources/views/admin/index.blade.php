@@ -1,197 +1,125 @@
 @extends('admin.layouts.app')
 
 @section('content')
-<div class="container-fluid">
-    <!-- Header de Bienvenida -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card border-0 shadow-sm bg-gradient-primary text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                <div class="card-body text-center py-5">
-                    <div class="d-flex justify-content-center align-items-center mb-3">
-                        <img src="{{ asset('img/j2b_1200px.png') }}" alt="J2Biznes Logo" class="img-fluid" style="max-height: 60px; filter: brightness(0) invert(1);">
-                    </div>
-                    <h1 class="display-6 fw-bold mb-3">¡Bienvenido a J2Biznes!</h1>
-                    <p class="lead mb-0">Hola {{ auth()->user()->name }}, gestiona tu negocio de manera eficiente y efectiva</p>
-                </div>
-            </div>
-        </div>
-    </div>
+<div class="container-fluid admin-dashboard">
+    <div class="animated fadeIn">
 
-    <!-- Mensajes Flash para Test FCM -->
-    @if(session('success'))
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    <i class="fas fa-check-circle me-2"></i>
-                    {!! session('success') !!}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
+        <!-- Welcome Banner -->
+        <div class="welcome-banner mb-4">
+            <div class="welcome-content">
+                <h1 class="welcome-title">Hola, {{ auth()->user()->name }} 👋</h1>
+                <p class="welcome-subtitle">Panel de administración · ¿En qué puedo ayudarte?</p>
             </div>
         </div>
-    @endif
 
-    @if(session('error'))
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    <i class="fas fa-exclamation-circle me-2"></i>
-                    {!! session('error') !!}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
+        <!-- Mensajes Flash -->
+        @if(session('success'))
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="fas fa-check-circle me-2"></i>
+                {!! session('success') !!}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
-        </div>
-    @endif
+        @endif
 
-    <!-- Accesos Rápidos -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <h4 class="text-muted mb-3"><i class="fas fa-tachometer-alt me-2"></i>Accesos Rápidos</h4>
-        </div>
-        <div class="col-md-4 col-lg-3 mb-3">
-            <div class="card h-100 shadow-sm border-0 hover-card">
-                <div class="card-body text-center">
-                    <div class="mb-3">
-                        <i class="fas fa-store fa-2x text-primary"></i>
-                    </div>
-                    <h6 class="card-title">Mi Tienda</h6>
-                    <p class="card-text text-muted small">Gestiona información de tu negocio</p>
-                    <a href="{{ route('admin.shop') }}" class="btn btn-outline-primary btn-sm">Ver Detalles</a>
-                </div>
+        @if(session('error'))
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                {!! session('error') !!}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
-        </div>
-        <div class="col-md-4 col-lg-3 mb-3">
-            <div class="card h-100 shadow-sm border-0 hover-card">
-                <div class="card-body text-center">
-                    <div class="mb-3">
-                        <i class="fas fa-file-contract fa-2x text-success"></i>
-                    </div>
-                    <h6 class="card-title">Contratos</h6>
-                    <p class="card-text text-muted small">Administra plantillas y contratos</p>
-                    <a href="{{ route('contract-templates.index') }}" class="btn btn-outline-success btn-sm">Gestionar</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4 col-lg-3 mb-3">
-            <div class="card h-100 shadow-sm border-0 hover-card">
-                <div class="card-body text-center">
-                    <div class="mb-3">
-                        <i class="fas fa-cogs fa-2x text-warning"></i>
-                    </div>
-                    <h6 class="card-title">Configuraciones</h6>
-                    <p class="card-text text-muted small">Personaliza tu plataforma</p>
-                    <a href="{{ route('admin.configurations') }}" class="btn btn-outline-warning btn-sm">Configurar</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4 col-lg-3 mb-3">
-            <div class="card h-100 shadow-sm border-0 hover-card">
-                <div class="card-body text-center">
-                    <div class="mb-3">
-                        <i class="fas fa-users fa-2x text-info"></i>
-                    </div>
-                    <h6 class="card-title">Clientes</h6>
-                    <p class="card-text text-muted small">Administra tu base de clientes</p>
-                    <a href="#" class="btn btn-outline-info btn-sm">Próximamente</a>
-                </div>
-            </div>
-        </div>
-        
-        <!-- 🔥 TEMPORAL: Botón de prueba FCM -->
-        <div class="col-md-4 col-lg-3 mb-3">
-            <div class="card h-100 shadow-sm border-0 hover-card border-warning">
-                <div class="card-body text-center">
-                    <div class="mb-3">
-                        <i class="fas fa-mobile-alt fa-2x text-danger"></i>
-                    </div>
-                    <h6 class="card-title text-danger">🔥 Test FCM</h6>
-                    <p class="card-text text-muted small">Crear servicio de prueba para notificaciones push</p>
-                    <form method="POST" action="{{ route('admin.test.create.service') }}" style="display: inline;">
-                        @csrf
-                        <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('¿Crear servicio de prueba FCM?')">
-                            📱 Probar Push
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
+        @endif
 
-    <!-- Información del Sistema -->
-    <div class="row">
-        <div class="col-md-8">
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-white border-bottom-0">
-                    <h5 class="mb-0 text-dark"><i class="fas fa-info-circle me-2 text-primary"></i>Acerca de J2Biznes</h5>
-                </div>
-                <div class="card-body">
-                    <p class="text-muted mb-3">J2Biznes es una plataforma diseñada para ayudarte a gestionar tu negocio de manera eficiente y efectiva. Con nuestras herramientas, podrás administrar tus ventas, inventario, clientes y más, todo desde una sola plataforma integrada.</p>
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <span class="small">Gestión integral de negocio</span>
+        <div class="row">
+            <!-- ASISTENTE IA - PROTAGONISTA (70%) -->
+            <div class="col-lg-8 col-xl-9 mb-4">
+                <div class="card chat-card shadow-lg">
+                    <div class="card-header chat-header">
+                        <div class="d-flex align-items-center">
+                            <div class="chat-icon-wrapper">
+                                <i class="fas fa-robot"></i>
                             </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <span class="small">Contratos digitales</span>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <span class="small">Administración de clientes</span>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <span class="small">Reportes y análisis</span>
+                            <div>
+                                <h5 class="mb-0">Asistente Administrativo J2Biznes</h5>
+                                <small class="text-muted">Gestión inteligente con IA</small>
                             </div>
                         </div>
                     </div>
+
+                    <!-- Componente Vue del Chat IA -->
+                    <admin-chat-ai-component></admin-chat-ai-component>
+                </div>
+            </div>
+
+            <!-- ACCESOS RÁPIDOS - DISCRETOS (30%) -->
+            <div class="col-lg-4 col-xl-3">
+                <div class="quick-access-section">
+                    <h6 class="quick-access-title mb-3">
+                        <i class="fas fa-bolt me-2"></i>Accesos Rápidos
+                    </h6>
+
+                    <!-- Mi Tienda -->
+                    <a href="{{ route('admin.shop') }}" class="quick-action-card mb-3">
+                        <div class="quick-icon bg-gradient-primary">
+                            <i class="fas fa-store"></i>
+                        </div>
+                        <div class="quick-info">
+                            <h6 class="mb-0">Mi Tienda</h6>
+                            <small>Gestionar información</small>
+                        </div>
+                        <i class="fas fa-chevron-right quick-arrow"></i>
+                    </a>
+
+                    <!-- Contratos -->
+                    <a href="{{ route('contract-templates.index') }}" class="quick-action-card mb-3">
+                        <div class="quick-icon bg-gradient-success">
+                            <i class="fas fa-file-contract"></i>
+                        </div>
+                        <div class="quick-info">
+                            <h6 class="mb-0">Contratos</h6>
+                            <small>Plantillas y contratos</small>
+                        </div>
+                        <i class="fas fa-chevron-right quick-arrow"></i>
+                    </a>
+
+                    <!-- Clientes -->
+                    <a href="{{ route('admin.clients') }}" class="quick-action-card mb-3">
+                        <div class="quick-icon bg-gradient-info">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="quick-info">
+                            <h6 class="mb-0">Clientes</h6>
+                            <small>Gestionar clientes</small>
+                        </div>
+                        <i class="fas fa-chevron-right quick-arrow"></i>
+                    </a>
+
+                    <!-- Configuraciones -->
+                    <a href="{{ route('admin.configurations') }}" class="quick-action-card mb-3">
+                        <div class="quick-icon bg-gradient-warning">
+                            <i class="fas fa-cogs"></i>
+                        </div>
+                        <div class="quick-info">
+                            <h6 class="mb-0">Configuraciones</h6>
+                            <small>Personalizar sistema</small>
+                        </div>
+                        <i class="fas fa-chevron-right quick-arrow"></i>
+                    </a>
+
+                    <!-- Descargas -->
+                    <a href="{{ route('admin.download') }}" class="quick-action-card">
+                        <div class="quick-icon bg-gradient-secondary">
+                            <i class="fas fa-download"></i>
+                        </div>
+                        <div class="quick-info">
+                            <h6 class="mb-0">Descargas</h6>
+                            <small>Archivos APK</small>
+                        </div>
+                        <i class="fas fa-chevron-right quick-arrow"></i>
+                    </a>
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-white border-bottom-0">
-                    <h6 class="mb-0 text-dark"><i class="fas fa-chart-line me-2 text-success"></i>Estado del Sistema</h6>
-                </div>
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="small text-muted">Sistema</span>
-                        <span class="badge bg-success">Activo</span>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="small text-muted">Conexión</span>
-                        <span class="badge bg-success">Estable</span>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="small text-muted">Última actividad</span>
-                        <span class="small text-muted">Ahora</span>
-                    </div>
-                    <hr class="my-3">
-                    <div class="text-center">
-                        <small class="text-muted">Versión 1.0.0</small>
-                    </div>
-                </div>
-            </div>
-        </div>
+
     </div>
 </div>
-
-<style>
-.hover-card {
-    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-}
-.hover-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
-}
-.bg-gradient-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-}
-</style>
 @endsection

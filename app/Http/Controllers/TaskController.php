@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Events\TaskUpdated;
+use App\Events\ClientServiceNotification;
 use Illuminate\Http\Request;
 use App\Models\Task;
 use App\Models\TaskImage;
@@ -10,6 +11,7 @@ use App\Models\TaskLog;
 use App\Models\Notification;
 use App\Models\User;
 use App\Services\NotificationFcmService;
+use App\Services\FirebaseService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 
@@ -757,5 +759,303 @@ class TaskController extends Controller
             ], 500);
         }
     }//.getCollaborators()
+
+    /**
+     * POST /api/auth/tasks/store-from-client
+     * Crea una tarea desde la app del cliente (solicitud de servicio)
+     * Reemplaza ClientServiceController@store
+     */
+    public function storeFromClient(Request $request){
+        try {
+            $user = $request->user();
+            $shop = $user->shop;
+            $client = $user->client;
+
+            // Validar que el usuario tenga un cliente asociado
+            if (!$client) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'Usuario no tiene cliente asociado.',
+                ], 403);
+            }
+
+            $task = new Task();
+            $task->shop_id = $shop->id;
+            $task->client_id = $client->id;
+            $task->origin = 'client';
+            $task->requested_by_user_id = $user->id;
+            $task->active = 1;
+            $task->status = 'NUEVO';
+            $task->priority = 0;
+            $task->title = $request->title;
+            $task->description = $request->description;
+
+            if ($request->hasFile('image')) {
+                $task->image = $request->file('image')->store('tasks', 'public');
+            }
+
+            $task->save();
+
+            // Registrar log
+            $this->storeTaskLog($task->id, $user->name, 'Solicitud de servicio creada por cliente.');
+
+            // Cargar relaciones
+            $task->load('client.addresses');
+            $task->load('images');
+            $task->load('logs');
+            $task->load('requestedBy');
+
+            // Enviar notificaciones a admins de la tienda
+            $this->storeNotificationsForClientRequest($task, $client->name);
+
+            return response()->json([
+                'ok' => true,
+                'task' => $task,
+                'message' => 'Solicitud de servicio creada correctamente.'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Error al crear la solicitud.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }//.storeFromClient()
+
+    /**
+     * Crea notificaciones para admins cuando un cliente solicita servicio
+     * Envía Pusher (tiempo real) + FCM (push notification)
+     */
+    private function storeNotificationsForClientRequest(Task $task, string $clientName){
+        $shop_id = $task->shop_id;
+        $task_id = $task->id;
+        $task_title = $task->title;
+
+        // Generar notification_group_id único
+        $notification_group_id = Notification::generateGroupId();
+
+        // Obtener usuarios admin/superadmin de la tienda
+        $shop_users_admin = User::where('shop_id', $shop_id)
+                                ->whereHas('roles', function($query) {
+                                    $query->whereIn('role_user.role_id', [1, 2]);
+                                })
+                                ->where('active', 1)
+                                ->get();
+
+        $ntf_description = 'Solicitud de Servicio: ' . $clientName . ': ' . $task_title;
+        $first_notification = null;
+
+        foreach ($shop_users_admin as $user) {
+            $new_ntf = new Notification();
+            $new_ntf->notification_group_id = $notification_group_id;
+            $new_ntf->user_id = $user->id;
+            $new_ntf->description = $ntf_description;
+            $new_ntf->type = 'task';
+            $new_ntf->action = 'task_id';
+            $new_ntf->data = $task_id;
+            $new_ntf->read = 0;
+            $new_ntf->visible = 1;
+            $new_ntf->save();
+
+            if ($first_notification === null) {
+                $first_notification = $new_ntf;
+            }
+        }
+
+        // Pusher: notificación en tiempo real (una sola vez)
+        if ($first_notification) {
+            event(new ClientServiceNotification($first_notification, $shop_id));
+        }
+
+        // FCM: push notification para app cerrada
+        try {
+            \Log::info('🚀 FCM: Enviando push de solicitud de servicio (Task)', [
+                'shop_id' => $shop_id,
+                'task_id' => $task_id,
+                'client_name' => $clientName
+            ]);
+
+            $firebaseService = app(FirebaseService::class);
+            $result = $firebaseService->sendToShopAdmins(
+                $shop_id,
+                'Nueva Solicitud de Servicio',
+                "Solicitud de Servicio: {$clientName}",
+                [
+                    'type' => 'task',
+                    'task_id' => (string)$task_id,
+                    'origin' => 'client',
+                    'shop_id' => (string)$shop_id
+                ]
+            );
+
+            \Log::info('✅ FCM: Push notification procesada', ['result' => $result]);
+        } catch (\Exception $e) {
+            \Log::error('❌ FCM: Error enviando push notification', [
+                'error' => $e->getMessage()
+            ]);
+        }
+    }//.storeNotificationsForClientRequest()
+
+    /**
+     * GET /api/auth/tasks/client
+     * Lista tareas del cliente autenticado (origin='client')
+     * Reemplaza ClientServiceController@index
+     */
+    public function indexFromClient(Request $request){
+        $user = $request->user();
+        $shop = $user->shop;
+        $client = $user->client;
+
+        if (!$client) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Usuario no tiene cliente asociado.',
+            ], 403);
+        }
+
+        $buscar = $request->buscar;
+
+        $query = Task::with('client.addresses')
+                    ->with('images')
+                    ->with('logs')
+                    ->with('assignedUser')
+                    ->where('shop_id', $shop->id)
+                    ->where('client_id', $client->id)
+                    ->where('origin', 'client');
+
+        if ($buscar != '') {
+            $query->where(function ($q) use ($buscar) {
+                $q->where('title', 'like', '%' . $buscar . '%')
+                  ->orWhere('description', 'like', '%' . $buscar . '%');
+            });
+        }
+
+        $query->orderBy('id', 'desc');
+
+        $tasks = $query->paginate(15);
+
+        return $tasks;
+    }//.indexFromClient()
+
+    /**
+     * POST /api/auth/tasks/client/upload-image
+     * Subir imagen a tarea desde cliente
+     */
+    public function uploadImageFromClient(Request $request){
+        $user = $request->user();
+        $client = $user->client;
+
+        if (!$client) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Usuario no tiene cliente asociado.',
+            ], 403);
+        }
+
+        $taskId = $request->task_id;
+        $task = Task::where('client_id', $client->id)
+                    ->where('origin', 'client')
+                    ->findOrFail($taskId);
+
+        if ($request->hasFile('image')) {
+            $image = $request->file('image');
+            $imagePath = $image->store('tasks', 'public');
+
+            if ($task->image) {
+                $taskImage = new TaskImage();
+                $taskImage->task_id = $taskId;
+                $taskImage->image = $imagePath;
+                $taskImage->save();
+            } else {
+                $task->image = $imagePath;
+                $task->save();
+            }
+
+            $this->storeTaskLog($task->id, $user->name, 'Subida de imagen por cliente.');
+        }
+
+        $task->load('client.addresses');
+        $task->load('images');
+        $task->load('logs');
+
+        return response()->json([
+            'ok' => true,
+            'task' => $task,
+        ]);
+    }//.uploadImageFromClient()
+
+    /**
+     * POST /api/auth/tasks/client/delete-main-image
+     * Eliminar imagen principal desde cliente
+     */
+    public function deleteMainImageFromClient(Request $request){
+        $user = $request->user();
+        $client = $user->client;
+
+        if (!$client) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Usuario no tiene cliente asociado.',
+            ], 403);
+        }
+
+        $task_id = $request->id;
+        $task = Task::where('client_id', $client->id)
+                    ->where('origin', 'client')
+                    ->findOrFail($task_id);
+
+        if ($task->image) {
+            Storage::disk('public')->delete($task->image);
+            $task->image = null;
+            $task->save();
+
+            $this->storeTaskLog($task->id, $user->name, 'Eliminación de imagen principal por cliente.');
+        }
+
+        $task->load('client.addresses');
+        $task->load('images');
+        $task->load('logs');
+
+        return response()->json([
+            'ok' => true,
+            'task' => $task,
+        ]);
+    }//.deleteMainImageFromClient()
+
+    /**
+     * POST /api/auth/tasks/client/update
+     * Actualizar tarea desde cliente
+     */
+    public function updateFromClient(Request $request){
+        $user = $request->user();
+        $client = $user->client;
+
+        if (!$client) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Usuario no tiene cliente asociado.',
+            ], 403);
+        }
+
+        $task = Task::where('client_id', $client->id)
+                    ->where('origin', 'client')
+                    ->findOrFail($request->id);
+
+        $task->title = $request->title;
+        $task->description = $request->description;
+        $task->save();
+
+        $this->storeTaskLog($task->id, $user->name, 'Edición del registro por cliente.');
+
+        $task->load('client.addresses');
+        $task->load('images');
+        $task->load('logs');
+
+        return response()->json([
+            'ok' => true,
+            'task' => $task
+        ]);
+    }//.updateFromClient()
 
 }

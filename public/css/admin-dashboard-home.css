@@ -1,0 +1,194 @@
+/* ========================================
+   ADMIN DASHBOARD HOME - J2BIZNES
+   Carga DESPUÉS de dashboard.css para sobrescribir CoreUI
+   ======================================== */
+
+/* Dashboard General */
+.admin-dashboard {
+    padding: 1.5rem !important;
+}
+
+/* Welcome Banner */
+.welcome-banner {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    padding: 2rem !important;
+    border-radius: 12px !important;
+    color: white !important;
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3) !important;
+}
+
+.welcome-title {
+    font-size: 2rem !important;
+    font-weight: 700 !important;
+    margin-bottom: 0.5rem !important;
+    color: white !important;
+}
+
+.welcome-subtitle {
+    font-size: 1.1rem !important;
+    opacity: 0.95 !important;
+    margin: 0 !important;
+    color: white !important;
+}
+
+/* Chat Card */
+.chat-card {
+    border: none !important;
+    border-radius: 12px !important;
+    overflow: hidden !important;
+    height: 700px !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.chat-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    color: white !important;
+    padding: 1.25rem 1.5rem !important;
+    border: none !important;
+}
+
+.chat-header h5,
+.chat-header small {
+    color: white !important;
+}
+
+.chat-icon-wrapper {
+    width: 50px !important;
+    height: 50px !important;
+    background: rgba(255, 255, 255, 0.2) !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 1.5rem !important;
+    margin-right: 1rem !important;
+    color: white !important;
+}
+
+.chat-card .card-body {
+    flex: 1 !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+}
+
+/* Quick Access Section */
+.quick-access-section {
+    background: white !important;
+    padding: 1.5rem !important;
+    border-radius: 12px !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08) !important;
+}
+
+.quick-access-title {
+    font-weight: 600 !important;
+    color: #333 !important;
+    font-size: 0.95rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+}
+
+.quick-action-card {
+    display: flex !important;
+    align-items: center !important;
+    padding: 1rem !important;
+    background: #f8f9fa !important;
+    border: 1px solid #e9ecef !important;
+    border-radius: 8px !important;
+    text-decoration: none !important;
+    transition: all 0.3s ease !important;
+    gap: 1rem !important;
+}
+
+.quick-action-card:hover {
+    background: white !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+    transform: translateY(-2px) !important;
+    border-color: #667eea !important;
+    text-decoration: none !important;
+}
+
+.quick-icon {
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 8px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 1.2rem !important;
+    color: white !important;
+    flex-shrink: 0 !important;
+}
+
+.quick-info {
+    flex: 1 !important;
+}
+
+.quick-info h6 {
+    font-size: 0.9rem !important;
+    font-weight: 600 !important;
+    color: #333 !important;
+    margin-bottom: 0.15rem !important;
+}
+
+.quick-info small {
+    font-size: 0.75rem !important;
+    color: #6c757d !important;
+}
+
+.quick-arrow {
+    font-size: 0.9rem !important;
+    color: #adb5bd !important;
+    transition: transform 0.3s ease !important;
+}
+
+.quick-action-card:hover .quick-arrow {
+    transform: translateX(4px) !important;
+    color: #667eea !important;
+}
+
+/* Gradientes para iconos */
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+}
+
+.bg-gradient-success {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%) !important;
+}
+
+.bg-gradient-info {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%) !important;
+}
+
+.bg-gradient-warning {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%) !important;
+}
+
+.bg-gradient-secondary {
+    background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%) !important;
+}
+
+/* Responsive */
+@media (max-width: 991px) {
+    .quick-access-section {
+        position: static !important;
+    }
+
+    .chat-card {
+        height: 600px !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .welcome-title {
+        font-size: 1.5rem !important;
+    }
+
+    .welcome-subtitle {
+        font-size: 1rem !important;
+    }
+
+    .chat-card {
+        height: 500px !important;
+    }
+}

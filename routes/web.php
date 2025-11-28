@@ -35,6 +35,11 @@ use App\Http\Controllers\Admin\ClientsController;
 */
 
 Route::get('confirmar-email/{token}', [EmailConfirmationController::class, 'confirmar'])->name('email.confirmar');
+
+// Password reset routes (public)
+Route::get('reset-password/{token}', [\App\Http\Controllers\AuthController::class, 'showResetForm'])->name('password.reset.form');
+Route::post('reset-password', [\App\Http\Controllers\AuthController::class, 'processResetPassword'])->name('password.reset.process');
+
 Route::get('/', [HomeController::class, 'index']);
 Route::get('/pre-registro', [RequestsJ2bController::class, 'j2bSolicitar'])->name('solicitud');
 Route::post('/pre-registro/create', [RequestsJ2bController::class, 'store'])->name('solicitud.store');
@@ -116,6 +121,7 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::get('/superadmin/subscription-management', [SuperAdminController::class,'subscriptionManagement'])->name('superadmin.subscription-management');
         Route::post('/superadmin/shops/{id}/extend-trial', [SuperAdminController::class,'extendTrial'])->name('superadmin.shops.extend-trial');
         Route::post('/superadmin/shops/{id}/change-plan', [SuperAdminController::class,'changePlan'])->name('superadmin.shops.change-plan');
+        Route::post('/superadmin/shops/{id}/toggle-active', [SuperAdminController::class,'toggleShopActive'])->name('superadmin.shops.toggle-active');
         Route::get('/superadmin/shops/{id}/subscription-info', [SuperAdminController::class,'getSubscriptionInfo'])->name('superadmin.shops.subscription-info');
         Route::post('/superadmin/shops/{id}/assign-owner', [SuperAdminController::class,'assignOwner'])->name('superadmin.shops.assign-owner');
         Route::get('/superadmin/shops/{id}/users', [SuperAdminController::class,'getShopUsers'])->name('superadmin.shops.users');
@@ -132,6 +138,10 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         // 🔥 TEMPORAL: Crear servicio de prueba para testing FCM
         Route::post('/admin/test-create-service', [AdminPagesController::class,'testCreateService'])->name('admin.test.create.service');
         Route::post('/admin/test-create-service-client', [AdminPagesController::class,'testCreateServiceClient'])->name('admin.test.create.service.client');
+
+        // Asistente IA
+        Route::post('/admin/asistente/chat', [App\Http\Controllers\Admin\AdminAIChatController::class, 'chat'])
+            ->name('admin.asistente.chat');
         //Shops
         Route::get('/admin/shop', [AdminPagesController::class,'shop'])->name('admin.shop');
         Route::get('/admin/shop/edit', [AdminPagesController::class,'shopEdit'])->name('admin.shop.edit');

@@ -35,6 +35,7 @@ use App\Http\Controllers\ReceiptDetailController;
 */
 
 Route::post('/api-pre-registro', [EmailConfirmationController::class, 'store']);
+Route::post('/api-reenviar-confirmacion', [EmailConfirmationController::class, 'resendConfirmation']);
 
 
 Route::get('notifications/test',[NotificationController::class,'test']);
@@ -100,6 +101,9 @@ Route::group([
 ], function () {
     Route::post('login', '\App\Http\Controllers\AuthController@login');
     Route::post('signup', '\App\Http\Controllers\AuthController@signUp');
+
+    // Password recovery route (public - no auth required)
+    Route::post('password/forgot', '\App\Http\Controllers\AuthController@forgotPassword');
 
     Route::group([
       'middleware' => 'auth:api'
@@ -230,6 +234,12 @@ Route::group([
         //REPORTES / egresos
         Route::get('report/egresos-xfechas', [ReportsController::class, 'egresosxFechas']);
         Route::get('report/egresos-xfechas/excel', [ReportsController::class, 'descargarEgresosExcel']);
+        //REPORTES / ventas con utilidad
+        Route::get('report/ventas-utilidad', [ReportsController::class, 'ventasUtilidad']);
+        Route::get('report/ventas-utilidad/excel', [ReportsController::class, 'descargarVentasUtilidadExcel']);
+        //REPORTES / ventas por período
+        Route::get('report/ventas-periodo', [ReportsController::class, 'ventasPeriodo']);
+        Route::get('report/ventas-periodo/excel', [ReportsController::class, 'descargarVentasPeriodoExcel']);
 
         Route::post('reports/diferencias-mensual', [ReportsController::class, 'diferenciasMensual']);
 
@@ -468,11 +478,19 @@ Route::group([
         Route::post('administrator/update-lmited','App\Http\Controllers\AdministratorController@updateLimited');
 
         /*ROUTES APP-CLIENTS*/
+        // DEPRECATED: Rutas antiguas de client-services (usar tasks/client/* en su lugar)
         Route::get('client-services',[ClientServiceController::class,'index']);
         Route::post('client-services/store',[ClientServiceController::class,'store']);
         Route::post('client-services/update',[ClientServiceController::class,'update']);
         Route::post('client-services/delete-main-image',[ClientServiceController::class,'deleteMainImage']);
         Route::post('client-services/upload-image',[ClientServiceController::class,'uploadImage']);
+
+        // NUEVAS RUTAS: Solicitudes de servicio unificadas (Tasks con origin='client')
+        Route::get('tasks/client',[TaskController::class,'indexFromClient']);
+        Route::post('tasks/client/store',[TaskController::class,'storeFromClient']);
+        Route::post('tasks/client/update',[TaskController::class,'updateFromClient']);
+        Route::post('tasks/client/delete-main-image',[TaskController::class,'deleteMainImageFromClient']);
+        Route::post('tasks/client/upload-image',[TaskController::class,'uploadImageFromClient']);
 
         Route::get('app-client/catalogo/categories','App\Http\Controllers\CatalogoController@categories');
         Route::get('app-client/catalogo/products','App\Http\Controllers\CatalogoController@products');

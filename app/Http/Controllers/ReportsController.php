@@ -564,5 +564,314 @@ class ReportsController extends Controller
     }
     //.diferenciasMensual
 
+    public function ventasUtilidad(Request $request){
+        // Obtener usuario autenticado y su tienda
+        $user = $request->user();
+        $shop = $user->shop;
+
+        // Validar que las fechas sean correctas
+        $request->validate([
+            'fechaInicio' => 'required|date',
+            'fechaFin' => 'required|date|after_or_equal:fechaInicio',
+        ]);
+
+        // Convertir fechas a formato Carbon
+        $fechaInicio = Carbon::parse($request->fechaInicio)->startOfDay();
+        $fechaFin    = Carbon::parse($request->fechaFin)->endOfDay();
+
+        // Obtener receipt_detail con productos en el rango de fechas
+        $receipts = Receipt::with(['detail.product.category', 'client'])
+            ->where('shop_id', $shop->id)
+            ->where('quotation', 0)
+            ->whereNotIn('status', ['CANCELADA', 'DEVOLUCION'])
+            ->whereBetween('created_at', [$fechaInicio, $fechaFin])
+            ->get();
+
+        // Agrupar por producto/servicio
+        $ventasAgrupadas = [];
+
+        foreach ($receipts as $receipt) {
+            foreach ($receipt->detail as $detail) {
+                // Clave única por producto o servicio
+                if ($detail->type === 'product' && $detail->product) {
+                    $key = 'product_' . $detail->product->id;
+                    $nombre = $detail->product->name;
+                    $categoria = $detail->product->category->name ?? 'Sin categoría';
+                    $costo = $detail->product->cost ?? 0;
+                    $imagen = $detail->product->image ?? null;
+                } else {
+                    // Es servicio
+                    $key = 'service_' . md5($detail->descripcion);
+                    $nombre = $detail->descripcion;
+                    $categoria = 'Servicios';
+                    $costo = 0;
+                    $imagen = null;
+                }
+
+                if (!isset($ventasAgrupadas[$key])) {
+                    $ventasAgrupadas[$key] = [
+                        'product_id' => $detail->product_id ?? 0,
+                        'nombre' => $nombre,
+                        'categoria' => $categoria,
+                        'type' => $detail->type,
+                        'cantidad_vendida' => 0,
+                        'total_ventas' => 0,
+                        'costo_total' => 0,
+                        'imagen' => $imagen
+                    ];
+                }
+
+                $ventasAgrupadas[$key]['cantidad_vendida'] += $detail->qty;
+                $ventasAgrupadas[$key]['total_ventas'] += ($detail->qty * $detail->price);
+                $ventasAgrupadas[$key]['costo_total'] += ($detail->qty * $costo);
+            }
+        }
+
+        // Calcular utilidad y margen
+        $ventas = [];
+        $totalVentas = 0;
+        $totalCosto = 0;
+
+        foreach ($ventasAgrupadas as $item) {
+            $utilidad_bruta = $item['total_ventas'] - $item['costo_total'];
+            $margen_porcentaje = $item['total_ventas'] > 0
+                ? round(($utilidad_bruta / $item['total_ventas']) * 100, 2)
+                : 0;
+
+            $totalVentas += $item['total_ventas'];
+            $totalCosto += $item['costo_total'];
+
+            $ventas[] = [
+                'product_id' => $item['product_id'],
+                'nombre' => $item['nombre'],
+                'categoria' => $item['categoria'],
+                'type' => $item['type'],
+                'cantidad_vendida' => $item['cantidad_vendida'],
+                'total_ventas' => round($item['total_ventas'], 2),
+                'costo_total' => round($item['costo_total'], 2),
+                'utilidad_bruta' => round($utilidad_bruta, 2),
+                'margen_porcentaje' => $margen_porcentaje,
+                'imagen' => $item['imagen']
+            ];
+        }
+
+        // Ordenar por utilidad bruta descendente
+        usort($ventas, function($a, $b) {
+            return $b['utilidad_bruta'] <=> $a['utilidad_bruta'];
+        });
+
+        // Agregar porcentaje del total
+        foreach ($ventas as &$venta) {
+            $venta['porcentaje_del_total'] = $totalVentas > 0
+                ? round(($venta['total_ventas'] / $totalVentas) * 100, 2)
+                : 0;
+        }
+
+        $utilidadBrutaTotal = $totalVentas - $totalCosto;
+        $margenPromedioTotal = $totalVentas > 0
+            ? round(($utilidadBrutaTotal / $totalVentas) * 100, 2)
+            : 0;
+
+        return response()->json([
+            'ok' => true,
+            'fechaInicio' => $fechaInicio->format('Y-m-d'),
+            'fechaFin' => $fechaFin->format('Y-m-d'),
+            'resumen' => [
+                'total_ventas' => number_format($totalVentas, 2, '.', ''),
+                'costo_total' => number_format($totalCosto, 2, '.', ''),
+                'utilidad_bruta' => number_format($utilidadBrutaTotal, 2, '.', ''),
+                'margen_promedio' => $margenPromedioTotal,
+                'cantidad_productos' => count($ventas)
+            ],
+            'ventas' => $ventas
+        ]);
+    }//.ventasUtilidad()
+
+    public function descargarVentasUtilidadExcel(Request $request){
+        // Obtener usuario autenticado y su tienda
+        $user = $request->user();
+        $shop = $user->shop;
+
+        // Validar que las fechas sean correctas
+        $request->validate([
+            'fechaInicio' => 'required|date',
+            'fechaFin' => 'required|date|after_or_equal:fechaInicio',
+        ]);
+
+        // Generar archivo Excel
+        $fileName = 'ventas_utilidad_' . now()->format('Ymd_His') . '.xlsx';
+        return Excel::download(new \App\Exports\VentasUtilidadExport($request->fechaInicio, $request->fechaFin, $shop), $fileName);
+    }//.descargarVentasUtilidadExcel
+
+
+    /**
+     * Reporte de Ventas por Período (Semanal/Mensual/Trimestral)
+     * Muestra tendencias de ventas en el tiempo
+     *
+     * @param Request $request
+     * - tipo_periodo: 'semanal', 'mensual', 'trimestral'
+     * - fechaInicio, fechaFin (opcional, por defecto últimos 3 meses)
+     *
+     * @return JsonResponse
+     */
+    public function ventasPeriodo(Request $request)
+    {
+        $user = auth()->user();
+        $shop = Shop::find($user->shop_id);
+
+        // Validar tipo de período
+        $tipoPeriodo = $request->input('tipo_periodo', 'mensual'); // semanal, mensual, trimestral
+
+        // Fechas por defecto: últimos 3 meses si no se especifican
+        $fechaInicio = $request->input('fechaInicio', now()->subMonths(3)->format('Y-m-d'));
+        $fechaFin = $request->input('fechaFin', now()->format('Y-m-d'));
+
+        // Formato SQL para agrupación según tipo de período
+        $formatoPeriodo = match($tipoPeriodo) {
+            'semanal' => '%Y-W%u',     // Año-Semana (2025-W47)
+            'trimestral' => '%Y-Q',    // Año-Trimestre (se calculará manualmente)
+            default => '%Y-%m',        // Año-Mes (2025-11)
+        };
+
+        // Query base: obtener receipts en el rango de fechas
+        $receiptsQuery = Receipt::where('shop_id', $shop->id)
+            ->whereBetween('date', [$fechaInicio, $fechaFin])
+            ->whereNotIn('status', ['CANCELADA', 'DEVOLUCION'])
+            ->where('quotation', false);
+
+        // Agrupación por período
+        if ($tipoPeriodo === 'trimestral') {
+            // Para trimestral, calculamos manualmente
+            $periodos = $receiptsQuery->get()->groupBy(function($receipt) {
+                $fecha = \Carbon\Carbon::parse($receipt->date);
+                $trimestre = ceil($fecha->month / 3);
+                return $fecha->year . '-T' . $trimestre;
+            })->map(function($grupo, $periodo) {
+                return [
+                    'periodo' => $periodo,
+                    'num_tickets' => $grupo->count(),
+                    'total_ventas' => $grupo->sum('total'),
+                    'ticket_promedio' => $grupo->avg('total'),
+                    'ticket_maximo' => $grupo->max('total'),
+                    'ticket_minimo' => $grupo->min('total'),
+                    'mejor_fecha' => $grupo->sortByDesc('total')->first()->date ?? null,
+                    'peor_fecha' => $grupo->sortBy('total')->first()->date ?? null,
+                ];
+            })->values();
+        } else {
+            // Para semanal y mensual usamos DATE_FORMAT
+            $periodos = \DB::table('receipts')
+                ->selectRaw("
+                    DATE_FORMAT(date, '{$formatoPeriodo}') as periodo,
+                    COUNT(id) as num_tickets,
+                    SUM(total) as total_ventas,
+                    AVG(total) as ticket_promedio,
+                    MAX(total) as ticket_maximo,
+                    MIN(total) as ticket_minimo
+                ")
+                ->where('shop_id', $shop->id)
+                ->whereBetween('date', [$fechaInicio, $fechaFin])
+                ->whereNotIn('status', ['CANCELADA', 'DEVOLUCION'])
+                ->where('quotation', false)
+                ->groupBy('periodo')
+                ->orderBy('periodo', 'ASC')
+                ->get();
+
+            // Formatear números
+            $periodos = $periodos->map(function($item) {
+                return [
+                    'periodo' => $item->periodo,
+                    'num_tickets' => (int)$item->num_tickets,
+                    'total_ventas' => number_format($item->total_ventas, 2, '.', ''),
+                    'ticket_promedio' => number_format($item->ticket_promedio, 2, '.', ''),
+                    'ticket_maximo' => number_format($item->ticket_maximo, 2, '.', ''),
+                    'ticket_minimo' => number_format($item->ticket_minimo, 2, '.', ''),
+                ];
+            });
+        }
+
+        // Calcular resumen general
+        $totalVentas = $periodos->sum(function($p) {
+            return is_numeric($p['total_ventas']) ? $p['total_ventas'] : 0;
+        });
+        $totalTickets = $periodos->sum('num_tickets');
+        $ticketPromedio = $totalTickets > 0 ? $totalVentas / $totalTickets : 0;
+
+        // Encontrar mejor y peor período
+        $mejorPeriodo = $periodos->sortByDesc(function($p) {
+            return is_numeric($p['total_ventas']) ? $p['total_ventas'] : 0;
+        })->first();
+
+        $peorPeriodo = $periodos->sortBy(function($p) {
+            return is_numeric($p['total_ventas']) ? $p['total_ventas'] : 0;
+        })->first();
+
+        // Calcular comparación vs período anterior (si hay al menos 2 períodos)
+        $comparacionPeriodoAnterior = null;
+        if ($periodos->count() >= 2) {
+            $ultimoPeriodo = $periodos->last();
+            $penultimoPeriodo = $periodos->slice(-2, 1)->first();
+
+            $ventasUltimo = is_numeric($ultimoPeriodo['total_ventas']) ? floatval($ultimoPeriodo['total_ventas']) : 0;
+            $ventasPenultimo = is_numeric($penultimoPeriodo['total_ventas']) ? floatval($penultimoPeriodo['total_ventas']) : 0;
+
+            if ($ventasPenultimo > 0) {
+                $cambio = (($ventasUltimo - $ventasPenultimo) / $ventasPenultimo) * 100;
+                $comparacionPeriodoAnterior = [
+                    'periodo_actual' => $ultimoPeriodo['periodo'],
+                    'ventas_actual' => number_format($ventasUltimo, 2, '.', ''),
+                    'periodo_anterior' => $penultimoPeriodo['periodo'],
+                    'ventas_anterior' => number_format($ventasPenultimo, 2, '.', ''),
+                    'cambio_porcentaje' => number_format($cambio, 2, '.', ''),
+                    'tendencia' => $cambio > 0 ? 'alza' : ($cambio < 0 ? 'baja' : 'estable'),
+                ];
+            }
+        }
+
+        // Resumen general
+        $resumen = [
+            'total_ventas' => number_format($totalVentas, 2, '.', ''),
+            'total_tickets' => $totalTickets,
+            'ticket_promedio' => number_format($ticketPromedio, 2, '.', ''),
+            'cantidad_periodos' => $periodos->count(),
+            'mejor_periodo' => $mejorPeriodo,
+            'peor_periodo' => $peorPeriodo,
+            'comparacion_periodo_anterior' => $comparacionPeriodoAnterior,
+        ];
+
+        return response()->json([
+            'ok' => true,
+            'tipo_periodo' => $tipoPeriodo,
+            'fechaInicio' => $fechaInicio,
+            'fechaFin' => $fechaFin,
+            'resumen' => $resumen,
+            'periodos' => $periodos->values(),
+        ]);
+    }//.ventasPeriodo
+
+
+    /**
+     * Descargar Reporte de Ventas por Período en Excel
+     */
+    public function descargarVentasPeriodoExcel(Request $request)
+    {
+        $user = auth()->user();
+        $shop = Shop::find($user->shop_id);
+
+        // Generar archivo Excel
+        $tipoPeriodo = $request->input('tipo_periodo', 'mensual');
+        $fileName = 'ventas_periodo_' . $tipoPeriodo . '_' . now()->format('Ymd_His') . '.xlsx';
+
+        return Excel::download(
+            new \App\Exports\VentasPeriodoExport(
+                $request->input('fechaInicio', now()->subMonths(3)->format('Y-m-d')),
+                $request->input('fechaFin', now()->format('Y-m-d')),
+                $shop,
+                $tipoPeriodo
+            ),
+            $fileName
+        );
+    }//.descargarVentasPeriodoExcel
+
 
 }//.class ReportsController

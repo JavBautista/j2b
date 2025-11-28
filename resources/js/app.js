@@ -19,6 +19,7 @@ import ClientsComponent from './components/shops/ClientsComponent.vue';
 import TemplateCreatorComponent from './components/shops/TemplateCreator.vue';
 //Componentes de admin
 import ReceiptsComponent from './components/admin/ReceiptsComponent.vue';
+import AdminChatAIComponent from './components/admin/AdminChatAIComponent.vue';
 
 const app = createApp({});
 
@@ -32,6 +33,7 @@ app.component('shop-template-creator-component', TemplateCreatorComponent);
 app.component('shop-clients-component', ClientsComponent);
 //Admin
 app.component('receipts-component', ReceiptsComponent);
+app.component('admin-chat-ai-component', AdminChatAIComponent);
 
 
 //app.component('example-component', ExampleComponent);

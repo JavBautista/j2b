@@ -33,6 +33,11 @@ class Task extends Model
         return $this->belongsTo(User::class, 'assigned_user_id');
     }
 
+    // Relación con usuario cliente que solicitó el servicio (cuando origin='client')
+    public function requestedBy(){
+        return $this->belongsTo(User::class, 'requested_by_user_id');
+    }
+
     // Relación con histórico de tracking
     public function trackingHistory(){
         return $this->hasMany(TaskTrackingHistory::class);

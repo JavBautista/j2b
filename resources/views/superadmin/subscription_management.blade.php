@@ -99,13 +99,21 @@
                                     @endif
                                 </td>
                                 <td>
-                                    <div class="btn-group" role="group">
-                                        <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#extendModal{{ $shop->id }}">
-                                            <i class="fa fa-clock-o"></i> Extender
-                                        </button>
-                                        <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#changePlanModal{{ $shop->id }}">
-                                            <i class="fa fa-exchange"></i> Cambiar Plan
-                                        </button>
+                                    <div class="btn-group-vertical d-grid gap-1" role="group">
+                                        <div class="btn-group" role="group">
+                                            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#extendModal{{ $shop->id }}">
+                                                <i class="fa fa-clock-o"></i> Extender
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#changePlanModal{{ $shop->id }}">
+                                                <i class="fa fa-exchange"></i> Cambiar Plan
+                                            </button>
+                                        </div>
+                                        <form method="POST" action="{{ route('superadmin.shops.toggle-active', $shop->id) }}" onsubmit="return confirm('¿Estás seguro? Esto también {{ $shop->active ? 'desactivará' : 'reactivará' }} TODOS los usuarios de esta tienda.');">
+                                            @csrf
+                                            <button type="submit" class="btn btn-sm btn-{{ $shop->active ? 'danger' : 'warning' }} w-100">
+                                                <i class="fa fa-{{ $shop->active ? 'ban' : 'check-circle' }}"></i> {{ $shop->active ? 'Desactivar' : 'Reactivar' }}
+                                            </button>
+                                        </form>
                                     </div>
 
                                     <!-- Modal Extender Trial/Suscripción -->
@@ -174,6 +182,23 @@
                                                                 <option value="6">6 meses</option>
                                                                 <option value="12">12 meses (anual)</option>
                                                             </select>
+                                                        </div>
+                                                        <hr>
+                                                        <div class="mb-3">
+                                                            <label class="form-label">
+                                                                <i class="fa fa-star text-warning"></i> Precio Personalizado (opcional)
+                                                            </label>
+                                                            <div class="input-group">
+                                                                <span class="input-group-text">$</span>
+                                                                <input type="number" step="0.01" name="custom_price" class="form-control" placeholder="Dejar vacío para usar precio del plan">
+                                                                <span class="input-group-text">MXN/mes (sin IVA)</span>
+                                                            </div>
+                                                            <small class="text-muted">
+                                                                💡 Para respetar precios antiguos. Si se deja vacío, usará el precio actual del plan.
+                                                            </small>
+                                                        </div>
+                                                        <div class="alert alert-info">
+                                                            <strong>💰 Ejemplo:</strong> Si el plan cuesta $999 pero esta tienda paga $300 (precio antiguo), ingresa 258.62 (300 ÷ 1.16 para quitar IVA).
                                                         </div>
                                                         <div class="alert alert-warning">
                                                             <strong>⚠️ Nota:</strong> Esto cambiará el plan actual y creará un registro de pago manual.

@@ -296,14 +296,29 @@ class ReceiptController extends Controller
         $details = json_decode($request->detail);
 
         foreach($details as $data){
+            // Variable para guardar el costo del producto (para reportes de utilidad)
+            $product_cost = 0;
+
             //Si es un PRODUCTO y NO es un cotizacion: Actualizamos el Stock Inventario
             if(!$es_cotizacion && $data->type=='product'){
                 $qty=$data->qty;
                 $product = Product::find($data->id);
-                $new_stock = $product->stock - $qty;
-                $product->stock = $new_stock;
-                $product->save();
+                if ($product) {
+                    $new_stock = $product->stock - $qty;
+                    $product->stock = $new_stock;
+                    $product->save();
+                    // Guardamos el costo actual del producto
+                    $product_cost = $product->cost ?? 0;
+                }
             }//.if(!$es_cotizacion && $data->type=='product')
+
+            // Si es cotización pero es producto, igual obtenemos el costo
+            if($es_cotizacion && $data->type=='product'){
+                $product = Product::find($data->id);
+                if ($product) {
+                    $product_cost = $product->cost ?? 0;
+                }
+            }
 
             //Si es un EQUIPO de venta y NO es un cotizacion: Actualizamos el estatus del equipo
             if(!$es_cotizacion && $data->type=='equipment'){
@@ -319,6 +334,7 @@ class ReceiptController extends Controller
             $detail->descripcion = $data->name;
             $detail->qty         = $data->qty;
             $detail->price       = $data->cost;
+            $detail->cost        = $product_cost; // Costo del producto al momento de la venta
             $detail->discount    = $data->discount;
             $detail->discount_concept = $data->discount_concept;
             $detail->subtotal    = $data->subtotal;
@@ -468,14 +484,29 @@ class ReceiptController extends Controller
         //Guardaremos el detalle de la nota
         $details = json_decode($request->detail);
         foreach($details as $data){
+            // Variable para guardar el costo del producto (para reportes de utilidad)
+            $product_cost = 0;
+
             //Solo alteraremos el Stock si el item es un producto y la nota NO es un cotizacion
             if(!$es_cotizacion && $data->type=='product'){
                 $qty=$data->qty;
                 $product = Product::find($data->id);
-                $new_stock = $product->stock - $qty;
-                $product->stock = $new_stock;
-                $product->save();
+                if ($product) {
+                    $new_stock = $product->stock - $qty;
+                    $product->stock = $new_stock;
+                    $product->save();
+                    // Guardamos el costo actual del producto
+                    $product_cost = $product->cost ?? 0;
+                }
             }//.if(!$es_cotizacion && $data->type=='product')
+
+            // Si es cotización pero es producto, igual obtenemos el costo
+            if($es_cotizacion && $data->type=='product'){
+                $product = Product::find($data->id);
+                if ($product) {
+                    $product_cost = $product->cost ?? 0;
+                }
+            }
 
             //Si es un EQUIPO de venta y NO es un cotizacion: Actualizamos el estatus del equipo
             if(!$es_cotizacion && $data->type=='equipment'){
@@ -491,6 +522,7 @@ class ReceiptController extends Controller
             $detail->descripcion = $data->name;
             $detail->qty         = $data->qty;
             $detail->price       = $data->cost;
+            $detail->cost        = $product_cost; // Costo del producto al momento de la venta
             $detail->discount    = $data->discount;
             $detail->discount_concept = $data->discount_concept;
             $detail->subtotal    = $data->subtotal;

@@ -597,14 +597,15 @@ class ReportsController extends Controller
                     $key = 'product_' . $detail->product->id;
                     $nombre = $detail->product->name;
                     $categoria = $detail->product->category->name ?? 'Sin categoría';
-                    $costo = $detail->product->cost ?? 0;
+                    // Usar el costo guardado en el detalle (costo al momento de la venta)
+                    $costo = $detail->cost ?? 0;
                     $imagen = $detail->product->image ?? null;
                 } else {
                     // Es servicio
                     $key = 'service_' . md5($detail->descripcion);
                     $nombre = $detail->descripcion;
                     $categoria = 'Servicios';
-                    $costo = 0;
+                    $costo = $detail->cost ?? 0;
                     $imagen = null;
                 }
 

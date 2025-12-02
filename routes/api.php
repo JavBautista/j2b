@@ -460,6 +460,9 @@ Route::group([
         Route::post('tasks/{id}/assign', [TaskController::class, 'assignUser']);
         Route::post('tasks/{id}/unassign', [TaskController::class, 'unassignUser']);
 
+        /*TASK PRODUCTS - Productos asignados a tareas*/
+        Route::get('tasks/{id}/products', [TaskController::class, 'getProducts']);
+
         /*COLLABORATORS*/
         Route::get('collaborators','App\Http\Controllers\CollaboratorController@index');
         Route::get('collaborator/verify-user-email','App\Http\Controllers\CollaboratorController@verifyUserEmail');

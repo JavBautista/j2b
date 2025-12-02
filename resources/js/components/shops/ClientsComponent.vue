@@ -38,7 +38,7 @@
                                     <span v-else class="badge badge-danger ml-2">Inactivo</span>
                                 </div>
                                 <div class="dropdown">
-                                    <button class="btn btn-sm btn-outline-light dropdown-toggle" 
+                                    <button class="btn btn-sm btn-outline-dark dropdown-toggle" 
                                             type="button" 
                                             data-bs-toggle="dropdown" 
                                             aria-expanded="false">
@@ -539,14 +539,15 @@ export default {
     }
 
     .client-card .card-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
+        background: linear-gradient(135deg, #00F5A0 0%, #00D9F5 100%);
+        color: #0D1117;
         border: none;
         padding: 1rem;
     }
 
     .client-card.inactive-card .card-header {
         background: linear-gradient(135deg, #868e96 0%, #6c757d 100%);
+        color: white;
     }
 
     .client-id {

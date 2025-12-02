@@ -42,4 +42,9 @@ class Task extends Model
     public function trackingHistory(){
         return $this->hasMany(TaskTrackingHistory::class);
     }
+
+    // Relación con productos asignados a la tarea
+    public function products(){
+        return $this->hasMany(TaskProduct::class);
+    }
 }

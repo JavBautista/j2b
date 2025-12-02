@@ -717,8 +717,8 @@ class ReportsController extends Controller
      */
     public function ventasPeriodo(Request $request)
     {
-        $user = auth()->user();
-        $shop = Shop::find($user->shop_id);
+        $user = $request->user();
+        $shop = $user->shop;
 
         // Validar tipo de período
         $tipoPeriodo = $request->input('tipo_periodo', 'mensual'); // semanal, mensual, trimestral
@@ -736,7 +736,7 @@ class ReportsController extends Controller
 
         // Query base: obtener receipts en el rango de fechas
         $receiptsQuery = Receipt::where('shop_id', $shop->id)
-            ->whereBetween('date', [$fechaInicio, $fechaFin])
+            ->whereBetween('created_at', [$fechaInicio . ' 00:00:00', $fechaFin . ' 23:59:59'])
             ->whereNotIn('status', ['CANCELADA', 'DEVOLUCION'])
             ->where('quotation', false);
 
@@ -744,7 +744,7 @@ class ReportsController extends Controller
         if ($tipoPeriodo === 'trimestral') {
             // Para trimestral, calculamos manualmente
             $periodos = $receiptsQuery->get()->groupBy(function($receipt) {
-                $fecha = \Carbon\Carbon::parse($receipt->date);
+                $fecha = \Carbon\Carbon::parse($receipt->created_at);
                 $trimestre = ceil($fecha->month / 3);
                 return $fecha->year . '-T' . $trimestre;
             })->map(function($grupo, $periodo) {
@@ -755,15 +755,15 @@ class ReportsController extends Controller
                     'ticket_promedio' => $grupo->avg('total'),
                     'ticket_maximo' => $grupo->max('total'),
                     'ticket_minimo' => $grupo->min('total'),
-                    'mejor_fecha' => $grupo->sortByDesc('total')->first()->date ?? null,
-                    'peor_fecha' => $grupo->sortBy('total')->first()->date ?? null,
+                    'mejor_fecha' => $grupo->sortByDesc('total')->first()->created_at ?? null,
+                    'peor_fecha' => $grupo->sortBy('total')->first()->created_at ?? null,
                 ];
             })->values();
         } else {
             // Para semanal y mensual usamos DATE_FORMAT
             $periodos = \DB::table('receipts')
                 ->selectRaw("
-                    DATE_FORMAT(date, '{$formatoPeriodo}') as periodo,
+                    DATE_FORMAT(created_at, '{$formatoPeriodo}') as periodo,
                     COUNT(id) as num_tickets,
                     SUM(total) as total_ventas,
                     AVG(total) as ticket_promedio,
@@ -771,7 +771,7 @@ class ReportsController extends Controller
                     MIN(total) as ticket_minimo
                 ")
                 ->where('shop_id', $shop->id)
-                ->whereBetween('date', [$fechaInicio, $fechaFin])
+                ->whereBetween('created_at', [$fechaInicio . ' 00:00:00', $fechaFin . ' 23:59:59'])
                 ->whereNotIn('status', ['CANCELADA', 'DEVOLUCION'])
                 ->where('quotation', false)
                 ->groupBy('periodo')
@@ -856,8 +856,8 @@ class ReportsController extends Controller
      */
     public function descargarVentasPeriodoExcel(Request $request)
     {
-        $user = auth()->user();
-        $shop = Shop::find($user->shop_id);
+        $user = $request->user();
+        $shop = $user->shop;
 
         // Generar archivo Excel
         $tipoPeriodo = $request->input('tipo_periodo', 'mensual');

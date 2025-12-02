@@ -20,6 +20,16 @@ import TemplateCreatorComponent from './components/shops/TemplateCreator.vue';
 //Componentes de admin
 import ReceiptsComponent from './components/admin/ReceiptsComponent.vue';
 import AdminChatAIComponent from './components/admin/AdminChatAIComponent.vue';
+import TasksComponent from './components/admin/TasksComponent.vue';
+import ProductsComponent from './components/admin/ProductsComponent.vue';
+import ReceiptCreateComponent from './components/admin/ReceiptCreateComponent.vue';
+import ReceiptListComponent from './components/admin/ReceiptListComponent.vue';
+
+// Componentes Shared (reutilizables)
+import ModalSelectClient from './components/shared/ModalSelectClient.vue';
+import ModalSelectProduct from './components/shared/ModalSelectProduct.vue';
+import ModalSelectService from './components/shared/ModalSelectService.vue';
+import ModalSelectEquipment from './components/shared/ModalSelectEquipment.vue';
 
 const app = createApp({});
 
@@ -34,6 +44,16 @@ app.component('shop-clients-component', ClientsComponent);
 //Admin
 app.component('receipts-component', ReceiptsComponent);
 app.component('admin-chat-ai-component', AdminChatAIComponent);
+app.component('tasks-component', TasksComponent);
+app.component('products-component', ProductsComponent);
+app.component('receipt-create-component', ReceiptCreateComponent);
+app.component('receipt-list-component', ReceiptListComponent);
+
+// Shared (reutilizables en cualquier módulo)
+app.component('modal-select-client', ModalSelectClient);
+app.component('modal-select-product', ModalSelectProduct);
+app.component('modal-select-service', ModalSelectService);
+app.component('modal-select-equipment', ModalSelectEquipment);
 
 
 //app.component('example-component', ExampleComponent);

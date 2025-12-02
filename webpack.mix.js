@@ -74,7 +74,8 @@ mix.webpackConfig({
 if (!mix.inProduction()) {
     mix.browserSync({
         proxy: 'j2b.test',
-        open: true,
+        open: 'external',
+        browser: 'brave-browser',
         notify: false,
         reloadOnRestart: true
     });

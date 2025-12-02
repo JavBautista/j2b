@@ -21,6 +21,7 @@ use App\Http\Controllers\Superadmin\ShopsController;
 use  App\Http\Controllers\Superadmin\PlansController;
 use App\Http\Controllers\Superadmin\UsersController;
 use App\Http\Controllers\Admin\ClientsController;
+use App\Http\Controllers\Admin\TasksController;
 
 
 /*
@@ -48,7 +49,7 @@ Route::get('/pre-registro/completar', [RequestsJ2bController::class, 'completar'
 Route::get('/pre-registro/error', [RequestsJ2bController::class, 'error'])->name('solicitud.error');
 Route::post('/registro/create', [RequestsJ2bController::class, 'store'])->name('X.solicitud.store');
 Route::get('/print-receipt-rent', [ReceiptController::class, 'printReceiptRent']);
-Route::get('/print-purchase-order', [PurchaseOrderController::class,'printPurchaseOrder']);
+Route::get('/print-purchase-order', [PurchaseOrderController::class, 'printPurchaseOrder']);
 Route::get('/print-contract', [ContractController::class, 'printContract']);
 
 
@@ -69,88 +70,86 @@ Route::get('/unauthorized', [UnauthorizedController::class, 'index'])->name('una
 Route::post('/unauthorized/logout', [UnauthorizedController::class, 'logout'])->name('unauthorized.logout');
 
 Route::group(['middleware' => ['auth', 'web.access']], function () {
-    Route::get('/user/passwords/reset', [HomeController::class,'passwordReset'])->name('password.reset');
-    Route::post('/user/passwords/update', [HomeController::class,'updatePassword'])->name('password.update');
+    Route::get('/user/passwords/reset', [HomeController::class, 'passwordReset'])->name('password.reset');
+    Route::post('/user/passwords/update', [HomeController::class, 'updatePassword'])->name('password.update');
 
     //====================RUTAS AUTH/SUPER ADMIN DE TODO====================
     Route::group(['middleware' => 'superadmin'], function () {
         //Index
-        Route::get('/superadmin', [SuperadminPagesController::class,'index'])->name('superadmin.index');
+        Route::get('/superadmin', [SuperadminPagesController::class, 'index'])->name('superadmin.index');
         //Shops
-        Route::get('/superadmin/shops', [SuperadminPagesController::class,'shops'])->name('superadmin.shops');
+        Route::get('/superadmin/shops', [SuperadminPagesController::class, 'shops'])->name('superadmin.shops');
 
-        Route::get('/superadmin/shops/get', [ShopsController::class,'get']);
-        Route::post('/superadmin/shops/store', [ShopsController::class,'store']);
-        Route::put('/superadmin/shops/update', [ShopsController::class,'update']);
-        Route::put('/superadmin/shops/active', [ShopsController::class,'active']);
-        Route::put('/superadmin/shops/deactive', [ShopsController::class,'deactive']);
-        Route::post('/superadmin/shops/upload-logo', [ShopsController::class,'uploadLogo']);
-        Route::put('/superadmin/shops/update-cutoff', [ShopsController::class,'updateCutoff']);
+        Route::get('/superadmin/shops/get', [ShopsController::class, 'get']);
+        Route::post('/superadmin/shops/store', [ShopsController::class, 'store']);
+        Route::put('/superadmin/shops/update', [ShopsController::class, 'update']);
+        Route::put('/superadmin/shops/active', [ShopsController::class, 'active']);
+        Route::put('/superadmin/shops/deactive', [ShopsController::class, 'deactive']);
+        Route::post('/superadmin/shops/upload-logo', [ShopsController::class, 'uploadLogo']);
+        Route::put('/superadmin/shops/update-cutoff', [ShopsController::class, 'updateCutoff']);
 
         //Plans
-        Route::get('/superadmin/plans', [SuperadminPagesController::class,'plans'])->name('superadmin.plans');
-        Route::get('/superadmin/plans/get', [PlansController::class,'get']);
-        Route::post('/superadmin/plans/store', [PlansController::class,'store']);
-        Route::put('/superadmin/plans/update', [PlansController::class,'update']);
-        Route::put('/superadmin/plans/active', [PlansController::class,'active']);
-        Route::put('/superadmin/plans/deactive', [PlansController::class,'deactive']);
+        Route::get('/superadmin/plans', [SuperadminPagesController::class, 'plans'])->name('superadmin.plans');
+        Route::get('/superadmin/plans/get', [PlansController::class, 'get']);
+        Route::post('/superadmin/plans/store', [PlansController::class, 'store']);
+        Route::put('/superadmin/plans/update', [PlansController::class, 'update']);
+        Route::put('/superadmin/plans/active', [PlansController::class, 'active']);
+        Route::put('/superadmin/plans/deactive', [PlansController::class, 'deactive']);
 
         //Users
-        Route::get('/superadmin/users', [SuperadminPagesController::class,'users'])->name('superadmin.users');
-        Route::get('/superadmin/users/get', [UsersController::class,'get']);
-        Route::post('/superadmin/users/store', [UsersController::class,'store']);
-        Route::put('/superadmin/users/update', [UsersController::class,'updateInfo']);
-        Route::put('/superadmin/users/active', [UsersController::class,'updateToActive']);
-        Route::put('/superadmin/users/inactive', [UsersController::class,'updateToInactive']);
-        Route::put('/superadmin/users/reset-password', [UsersController::class,'resetPassword']);
+        Route::get('/superadmin/users', [SuperadminPagesController::class, 'users'])->name('superadmin.users');
+        Route::get('/superadmin/users/get', [UsersController::class, 'get']);
+        Route::post('/superadmin/users/store', [UsersController::class, 'store']);
+        Route::put('/superadmin/users/update', [UsersController::class, 'updateInfo']);
+        Route::put('/superadmin/users/active', [UsersController::class, 'updateToActive']);
+        Route::put('/superadmin/users/inactive', [UsersController::class, 'updateToInactive']);
+        Route::put('/superadmin/users/reset-password', [UsersController::class, 'resetPassword']);
 
         //UPLOAD APK
-        Route::get('/superadmin/upload', [SuperadminPagesController::class,'uploadApk'])->name('superadmin.upload_apk');
-        Route::post('/superadmin/upload-apk/store', [UsersController::class,'storeApk'])->name('superadmin.store.apk');
+        Route::get('/superadmin/upload', [SuperadminPagesController::class, 'uploadApk'])->name('superadmin.upload_apk');
+        Route::post('/superadmin/upload-apk/store', [UsersController::class, 'storeApk'])->name('superadmin.store.apk');
 
 
         //Pre Registers
-        Route::get('/superadmin/pre-registers', [SuperadminPagesController::class,'preRegisters'])->name('superadmin.pre-registers');
-        Route::get('/superadmin/pre-registers/get', [App\Http\Controllers\Superadmin\RequestsJ2bController::class,'getRegisters']);
+        Route::get('/superadmin/pre-registers', [SuperadminPagesController::class, 'preRegisters'])->name('superadmin.pre-registers');
+        Route::get('/superadmin/pre-registers/get', [App\Http\Controllers\Superadmin\RequestsJ2bController::class, 'getRegisters']);
 
         //Subscription Settings
-        Route::get('/superadmin/subscription-settings', [SuperAdminController::class,'subscriptionSettings'])->name('superadmin.subscription-settings');
-        Route::post('/superadmin/subscription-settings/update', [SuperAdminController::class,'updateSubscriptionSettings'])->name('superadmin.subscription-settings.update');
+        Route::get('/superadmin/subscription-settings', [SuperAdminController::class, 'subscriptionSettings'])->name('superadmin.subscription-settings');
+        Route::post('/superadmin/subscription-settings/update', [SuperAdminController::class, 'updateSubscriptionSettings'])->name('superadmin.subscription-settings.update');
 
         //Subscription Management (Shops)
-        Route::get('/superadmin/subscription-management', [SuperAdminController::class,'subscriptionManagement'])->name('superadmin.subscription-management');
-        Route::post('/superadmin/shops/{id}/extend-trial', [SuperAdminController::class,'extendTrial'])->name('superadmin.shops.extend-trial');
-        Route::post('/superadmin/shops/{id}/change-plan', [SuperAdminController::class,'changePlan'])->name('superadmin.shops.change-plan');
-        Route::post('/superadmin/shops/{id}/toggle-active', [SuperAdminController::class,'toggleShopActive'])->name('superadmin.shops.toggle-active');
-        Route::get('/superadmin/shops/{id}/subscription-info', [SuperAdminController::class,'getSubscriptionInfo'])->name('superadmin.shops.subscription-info');
-        Route::post('/superadmin/shops/{id}/assign-owner', [SuperAdminController::class,'assignOwner'])->name('superadmin.shops.assign-owner');
-        Route::get('/superadmin/shops/{id}/users', [SuperAdminController::class,'getShopUsers'])->name('superadmin.shops.users');
-        Route::put('/superadmin/pre-registers/delete', [App\Http\Controllers\Superadmin\RequestsJ2bController::class,'destroy']);
-
-
-    });//./Routes Middleware superadmin
+        Route::get('/superadmin/subscription-management', [SuperAdminController::class, 'subscriptionManagement'])->name('superadmin.subscription-management');
+        Route::post('/superadmin/shops/{id}/extend-trial', [SuperAdminController::class, 'extendTrial'])->name('superadmin.shops.extend-trial');
+        Route::post('/superadmin/shops/{id}/change-plan', [SuperAdminController::class, 'changePlan'])->name('superadmin.shops.change-plan');
+        Route::post('/superadmin/shops/{id}/toggle-active', [SuperAdminController::class, 'toggleShopActive'])->name('superadmin.shops.toggle-active');
+        Route::get('/superadmin/shops/{id}/subscription-info', [SuperAdminController::class, 'getSubscriptionInfo'])->name('superadmin.shops.subscription-info');
+        Route::post('/superadmin/shops/{id}/assign-owner', [SuperAdminController::class, 'assignOwner'])->name('superadmin.shops.assign-owner');
+        Route::get('/superadmin/shops/{id}/users', [SuperAdminController::class, 'getShopUsers'])->name('superadmin.shops.users');
+        Route::put('/superadmin/pre-registers/delete', [App\Http\Controllers\Superadmin\RequestsJ2bController::class, 'destroy']);
+    }); //./Routes Middleware superadmin
 
     //====================RUTAS AUTH/ADMIN DE TIENDAS====================
     Route::group(['middleware' => ['admin', 'web.access']], function () {
         //Index
-        Route::get('/admin', [AdminPagesController::class,'index'])->name('admin.index');
-        
+        Route::get('/admin', [AdminPagesController::class, 'index'])->name('admin.index');
+
         // 🔥 TEMPORAL: Crear servicio de prueba para testing FCM
-        Route::post('/admin/test-create-service', [AdminPagesController::class,'testCreateService'])->name('admin.test.create.service');
-        Route::post('/admin/test-create-service-client', [AdminPagesController::class,'testCreateServiceClient'])->name('admin.test.create.service.client');
+        Route::post('/admin/test-create-service', [AdminPagesController::class, 'testCreateService'])->name('admin.test.create.service');
+        Route::post('/admin/test-create-service-client', [AdminPagesController::class, 'testCreateServiceClient'])->name('admin.test.create.service.client');
 
         // Asistente IA
         Route::post('/admin/asistente/chat', [App\Http\Controllers\Admin\AdminAIChatController::class, 'chat'])
             ->name('admin.asistente.chat');
         //Shops
-        Route::get('/admin/shop', [AdminPagesController::class,'shop'])->name('admin.shop');
-        Route::get('/admin/shop/edit', [AdminPagesController::class,'shopEdit'])->name('admin.shop.edit');
-        Route::put('/admin/shop/update', [ShopController::class,'updateWeb'])->name('admin.shop.update');
-        Route::put('/admin/shop/{shop}/update-signature', [ShopController::class,'updateSignature'])->name('admin.shop.update-signature');
-        Route::delete('/admin/shop/{shop}/delete-signature', [ShopController::class,'deleteSignature'])->name('admin.shop.delete-signature');
+        Route::get('/admin/shop', [AdminPagesController::class, 'shop'])->name('admin.shop');
+        Route::get('/admin/shop/edit', [AdminPagesController::class, 'shopEdit'])->name('admin.shop.edit');
+        Route::put('/admin/shop/update', [ShopController::class, 'updateWeb'])->name('admin.shop.update');
+        Route::put('/admin/shop/{shop}/update-signature', [ShopController::class, 'updateSignature'])->name('admin.shop.update-signature');
+        Route::delete('/admin/shop/{shop}/delete-signature', [ShopController::class, 'deleteSignature'])->name('admin.shop.delete-signature');
 
-        Route::get('/admin/download', [AdminPagesController::class,'download'])->name('admin.download');
-       
+        Route::get('/admin/download', [AdminPagesController::class, 'download'])->name('admin.download');
+
         Route::get('/admin/download-apk/{filename}', function ($filename) {
             // Verifica si el archivo existe en la carpeta de almacenamiento público
             if (Storage::disk('public')->exists('apk/' . $filename)) {
@@ -166,76 +165,123 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         })->name('download.apk');
 
 
-        Route::get('/admin/configurations', [AdminPagesController::class,'configurations'])->name('admin.configurations');
+        Route::get('/admin/configurations', [AdminPagesController::class, 'configurations'])->name('admin.configurations');
 
-        Route::get('/admin/configurations/extra-fields-shop', [ExtraFieldsShopController::class,'index'])->name('admin.configurations.extra_fields');
+        Route::get('/admin/configurations/extra-fields-shop', [ExtraFieldsShopController::class, 'index'])->name('admin.configurations.extra_fields');
 
-        Route::get('/admin/configurations/extra-fields-shop/create', [ExtraFieldsShopController::class,'create'])->name('admin.configurations.extra_fields.create');
+        Route::get('/admin/configurations/extra-fields-shop/create', [ExtraFieldsShopController::class, 'create'])->name('admin.configurations.extra_fields.create');
 
-        Route::get('/admin/configurations/extra-fields-shop/edit/{id}', [ExtraFieldsShopController::class,'edit'])->name('admin.configurations.extra_fields.edit');
+        Route::get('/admin/configurations/extra-fields-shop/edit/{id}', [ExtraFieldsShopController::class, 'edit'])->name('admin.configurations.extra_fields.edit');
 
-        Route::post('/admin/configurations/extra-fields/store', [ExtraFieldsShopController::class,'store'])->name('admin.configurations.extra-fields.store');
+        Route::post('/admin/configurations/extra-fields/store', [ExtraFieldsShopController::class, 'store'])->name('admin.configurations.extra-fields.store');
 
-        Route::put('/admin/configurations/extra-fields-shop/{id}/toggle', [ExtraFieldsShopController::class,'toggleShow'])->name('admin.configurations.extra_fields.toggle');
+        Route::put('/admin/configurations/extra-fields-shop/{id}/toggle', [ExtraFieldsShopController::class, 'toggleShow'])->name('admin.configurations.extra_fields.toggle');
 
         Route::delete('/admin/configurations/extra-fields/{id}', [ExtraFieldsShopController::class, 'destroy'])->name('admin.configurations.extra_fields.destroy');
 
-        Route::put('/admin/configurations/extra-fields-shop/update/{id}', [ExtraFieldsShopController::class,'update'])->name('admin.configurations.extra-fields.update');
+        Route::put('/admin/configurations/extra-fields-shop/update/{id}', [ExtraFieldsShopController::class, 'update'])->name('admin.configurations.extra-fields.update');
 
-        Route::get('/admin/contracts', [AdminPagesController::class,'contracts'])->name('admin.contracts');
-        
+        Route::get('/admin/contracts', [AdminPagesController::class, 'contracts'])->name('admin.contracts');
+
         // Rutas para plantillas de contratos
         Route::resource('contract-templates', ContractTemplateController::class);
-        
+
         // Rutas para contratos
         Route::resource('contracts', ContractController::class);
         Route::get('contracts/{contract}/generate-pdf', [ContractController::class, 'generatePdf'])->name('contracts.generate-pdf');
-        
+
         // Rutas para firmas de contratos
         Route::post('contracts/save-signature', [ContractController::class, 'saveSignature'])->name('contracts.save-signature');
         Route::post('contracts/update-signature', [ContractController::class, 'updateSignature'])->name('contracts.update-signature');
         Route::post('contracts/delete-signature', [ContractController::class, 'deleteSignature'])->name('contracts.delete-signature');
 
 
-        Route::get('/admin/clients', [AdminPagesController::class,'clients'])->name('admin.clients');
-        
+        Route::get('/admin/clients', [AdminPagesController::class, 'clients'])->name('admin.clients');
+
         // Rutas AJAX para CRUD de clientes (admin web - separadas de Ionic)
-        Route::get('/admin/clients/get', [ClientsController::class,'index'])->name('admin.clients.get');
-        Route::post('/admin/clients/store', [ClientsController::class,'store'])->name('admin.clients.store');
-        Route::put('/admin/clients/update', [ClientsController::class,'update'])->name('admin.clients.update');
-        Route::put('/admin/clients/inactive', [ClientsController::class,'inactive'])->name('admin.clients.inactive');
-        Route::put('/admin/clients/active', [ClientsController::class,'active'])->name('admin.clients.active');
-        
+        Route::get('/admin/clients/get', [ClientsController::class, 'index'])->name('admin.clients.get');
+        Route::post('/admin/clients/store', [ClientsController::class, 'store'])->name('admin.clients.store');
+        Route::put('/admin/clients/update', [ClientsController::class, 'update'])->name('admin.clients.update');
+        Route::put('/admin/clients/inactive', [ClientsController::class, 'inactive'])->name('admin.clients.inactive');
+        Route::put('/admin/clients/active', [ClientsController::class, 'active'])->name('admin.clients.active');
+
         // Rutas para contratos desde clientes
-        Route::get('/admin/clients/{client}/assign-contract', [ClientsController::class,'assignContractPage'])->name('admin.clients.assign-contract');
-        Route::post('/admin/clients/{client}/create-contract', [ClientsController::class,'createContract'])->name('admin.clients.create-contract');
-        Route::post('/admin/clients/{client}/contract-preview', [ClientsController::class,'getContractPreview'])->name('admin.clients.contract-preview');
-        Route::get('/admin/clients/{client}/contracts', [ClientsController::class,'clientContracts'])->name('admin.clients.contracts');
-        Route::get('/admin/clients/{client}/contracts/{contract}/edit', [ClientsController::class,'editContract'])->name('admin.clients.edit-contract');
-        Route::put('/admin/clients/{client}/contracts/{contract}', [ClientsController::class,'updateContract'])->name('admin.clients.update-contract');
-        Route::get('/admin/contracts/{contract}/view', [ClientsController::class,'viewContract'])->name('admin.contracts.view');
-        Route::delete('/admin/contracts/{contract}', [ClientsController::class,'deleteContract'])->name('admin.contracts.delete');
-        Route::post('/admin/clients/{client}/contracts/{contract}/cancel', [ClientsController::class,'cancelContract'])->name('admin.clients.cancel-contract');
-        Route::get('/admin/clients/{client}/contracts/{contract}/logs', [ClientsController::class,'contractLogs'])->name('admin.clients.contract-logs');
+        Route::get('/admin/clients/{client}/assign-contract', [ClientsController::class, 'assignContractPage'])->name('admin.clients.assign-contract');
+        Route::post('/admin/clients/{client}/create-contract', [ClientsController::class, 'createContract'])->name('admin.clients.create-contract');
+        Route::post('/admin/clients/{client}/contract-preview', [ClientsController::class, 'getContractPreview'])->name('admin.clients.contract-preview');
+        Route::get('/admin/clients/{client}/contracts', [ClientsController::class, 'clientContracts'])->name('admin.clients.contracts');
+        Route::get('/admin/clients/{client}/contracts/{contract}/edit', [ClientsController::class, 'editContract'])->name('admin.clients.edit-contract');
+        Route::put('/admin/clients/{client}/contracts/{contract}', [ClientsController::class, 'updateContract'])->name('admin.clients.update-contract');
+        Route::get('/admin/contracts/{contract}/view', [ClientsController::class, 'viewContract'])->name('admin.contracts.view');
+        Route::delete('/admin/contracts/{contract}', [ClientsController::class, 'deleteContract'])->name('admin.contracts.delete');
+        Route::post('/admin/clients/{client}/contracts/{contract}/cancel', [ClientsController::class, 'cancelContract'])->name('admin.clients.cancel-contract');
+        Route::get('/admin/clients/{client}/contracts/{contract}/logs', [ClientsController::class, 'contractLogs'])->name('admin.clients.contract-logs');
 
         // Rutas AJAX para CRUD de direcciones de clientes (admin web - separadas de Ionic)
-        Route::get('/admin/client-addresses/get', [App\Http\Controllers\Admin\ClientAddressController::class,'index'])->name('admin.client-addresses.get');
-        Route::post('/admin/client-addresses/store', [App\Http\Controllers\Admin\ClientAddressController::class,'store'])->name('admin.client-addresses.store');
-        Route::put('/admin/client-addresses/update', [App\Http\Controllers\Admin\ClientAddressController::class,'update'])->name('admin.client-addresses.update');
-        Route::put('/admin/client-addresses/inactive', [App\Http\Controllers\Admin\ClientAddressController::class,'inactive'])->name('admin.client-addresses.inactive');
-        Route::put('/admin/client-addresses/active', [App\Http\Controllers\Admin\ClientAddressController::class,'active'])->name('admin.client-addresses.active');
-        Route::post('/admin/client-addresses/upload-location-image', [App\Http\Controllers\Admin\ClientAddressController::class,'uploadLocationImage'])->name('admin.client-addresses.upload-image');
-        Route::delete('/admin/client-addresses/delete-location-image', [App\Http\Controllers\Admin\ClientAddressController::class,'deleteLocationImage'])->name('admin.client-addresses.delete-image');
+        Route::get('/admin/client-addresses/get', [App\Http\Controllers\Admin\ClientAddressController::class, 'index'])->name('admin.client-addresses.get');
+        Route::post('/admin/client-addresses/store', [App\Http\Controllers\Admin\ClientAddressController::class, 'store'])->name('admin.client-addresses.store');
+        Route::put('/admin/client-addresses/update', [App\Http\Controllers\Admin\ClientAddressController::class, 'update'])->name('admin.client-addresses.update');
+        Route::put('/admin/client-addresses/inactive', [App\Http\Controllers\Admin\ClientAddressController::class, 'inactive'])->name('admin.client-addresses.inactive');
+        Route::put('/admin/client-addresses/active', [App\Http\Controllers\Admin\ClientAddressController::class, 'active'])->name('admin.client-addresses.active');
+        Route::post('/admin/client-addresses/upload-location-image', [App\Http\Controllers\Admin\ClientAddressController::class, 'uploadLocationImage'])->name('admin.client-addresses.upload-image');
+        Route::delete('/admin/client-addresses/delete-location-image', [App\Http\Controllers\Admin\ClientAddressController::class, 'deleteLocationImage'])->name('admin.client-addresses.delete-image');
 
         // Rutas para recibos de clientes (admin web)
-        Route::get('/admin/clients/{client}/receipts', [App\Http\Controllers\Admin\ReceiptsController::class,'index'])->name('admin.clients.receipts');
-        Route::get('/admin/clients/receipts/get', [App\Http\Controllers\Admin\ReceiptsController::class,'getReceipts'])->name('admin.clients.receipts.get');
+        Route::get('/admin/clients/{client}/receipts', [App\Http\Controllers\Admin\ReceiptsController::class, 'index'])->name('admin.clients.receipts');
+        Route::get('/admin/clients/receipts/get', [App\Http\Controllers\Admin\ReceiptsController::class, 'getReceipts'])->name('admin.clients.receipts.get');
 
+        // Rutas para Notas de Venta (admin web)
+        Route::get('/admin/receipts', [App\Http\Controllers\Admin\ReceiptsController::class, 'list'])->name('admin.receipts');
+        Route::get('/admin/receipts/list/get', [App\Http\Controllers\Admin\ReceiptsController::class, 'getList'])->name('admin.receipts.list.get');
+        Route::get('/admin/receipts/create', [App\Http\Controllers\Admin\ReceiptsController::class, 'create'])->name('admin.receipts.create');
+        Route::post('/admin/receipts/store', [App\Http\Controllers\Admin\ReceiptsController::class, 'store'])->name('admin.receipts.store');
+        Route::get('/admin/receipts/extra-fields', [App\Http\Controllers\Admin\ReceiptsController::class, 'getExtraFields'])->name('admin.receipts.extra-fields');
+        Route::get('/admin/receipts/{id}/detail', [App\Http\Controllers\Admin\ReceiptsController::class, 'getDetail'])->name('admin.receipts.detail');
 
+        // Rutas auxiliares para modales shared
+        Route::get('/admin/services/get', [App\Http\Controllers\Admin\ReceiptsController::class, 'getServices'])->name('admin.services.get');
+        Route::get('/admin/equipment/get', [App\Http\Controllers\Admin\ReceiptsController::class, 'getEquipment'])->name('admin.equipment.get');
 
+        // Rutas para recibos de Tareas(admin web)
+        Route::get('/admin/tasks', [TasksController::class, 'index'])->name('admin.tasks');
+        Route::get('/admin/tasks/get', [TasksController::class, 'get'])->name('admin.tasks.get');
+        Route::get('/admin/tasks/get-num-status', [TasksController::class, 'getNumStatus'])->name('admin.tasks.get-num-status');
+        Route::get('/admin/tasks/collaborators', [TasksController::class, 'getCollaborators'])->name('admin.tasks.collaborators');
 
+        Route::get('/admin/tasks/clients', [TasksController::class, 'getClients'])->name('admin.tasks.clients');
 
+        Route::post('/admin/tasks/store', [TasksController::class, 'store'])->name('admin.tasks.store');
 
-    });//./Routes Middleware admin
+        Route::put('/admin/tasks/update', [TasksController::class, 'update'])->name('admin.tasks.update');
+        Route::put('/admin/tasks/update-status', [TasksController::class, 'updateStatus'])->name('admin.tasks.update-status');
+        Route::put('/admin/tasks/update-review', [TasksController::class, 'updateReview'])->name('admin.tasks.update-review');
 
+        Route::delete('/admin/tasks/{id}', [TasksController::class, 'delete'])->name('admin.tasks.delete');
+        Route::post('/admin/tasks/{id}/assign', [TasksController::class, 'assignUser'])->name('admin.tasks.assign');
+        Route::post('/admin/tasks/{id}/unassign', [TasksController::class, 'unassignUser'])->name('admin.tasks.unassign');
+        Route::put('/admin/tasks/{id}/activate', [TasksController::class, 'activate'])->name('admin.tasks.activate');
+        Route::put('/admin/tasks/{id}/deactivate', [TasksController::class, 'deactivate'])->name('admin.tasks.deactivate');
+
+        // Rutas para productos de tarea
+        Route::get('/admin/tasks/products', [TasksController::class, 'getProducts'])->name('admin.tasks.products');
+        Route::get('/admin/tasks/{taskId}/products', [TasksController::class, 'getTaskProducts'])->name('admin.tasks.task-products');
+        Route::post('/admin/tasks/{taskId}/products', [TasksController::class, 'addTaskProduct'])->name('admin.tasks.add-product');
+        Route::put('/admin/tasks/{taskId}/products/{taskProductId}', [TasksController::class, 'updateTaskProduct'])->name('admin.tasks.update-product');
+        Route::delete('/admin/tasks/{taskId}/products/{taskProductId}', [TasksController::class, 'removeTaskProduct'])->name('admin.tasks.remove-product');
+
+        // Rutas para Productos (CRUD admin)
+        Route::get('/admin/products', [\App\Http\Controllers\Admin\ProductsController::class, 'index'])->name('admin.products');
+        Route::get('/admin/products/get', [\App\Http\Controllers\Admin\ProductsController::class, 'get'])->name('admin.products.get');
+        Route::get('/admin/products/categories', [\App\Http\Controllers\Admin\ProductsController::class, 'getCategories'])->name('admin.products.categories');
+        Route::post('/admin/products/store', [\App\Http\Controllers\Admin\ProductsController::class, 'store'])->name('admin.products.store');
+        Route::put('/admin/products/update', [\App\Http\Controllers\Admin\ProductsController::class, 'update'])->name('admin.products.update');
+        Route::put('/admin/products/{id}/activate', [\App\Http\Controllers\Admin\ProductsController::class, 'activate'])->name('admin.products.activate');
+        Route::put('/admin/products/{id}/deactivate', [\App\Http\Controllers\Admin\ProductsController::class, 'deactivate'])->name('admin.products.deactivate');
+        Route::put('/admin/products/{id}/stock', [\App\Http\Controllers\Admin\ProductsController::class, 'updateStock'])->name('admin.products.stock');
+        Route::delete('/admin/products/{id}', [\App\Http\Controllers\Admin\ProductsController::class, 'delete'])->name('admin.products.delete');
+        // Rutas de imágenes de productos
+        Route::post('/admin/products/{id}/upload-image', [\App\Http\Controllers\Admin\ProductsController::class, 'uploadImage'])->name('admin.products.upload-image');
+        Route::delete('/admin/products/{id}/delete-main-image', [\App\Http\Controllers\Admin\ProductsController::class, 'deleteMainImage'])->name('admin.products.delete-main-image');
+        Route::delete('/admin/products/delete-alt-image/{imageId}', [\App\Http\Controllers\Admin\ProductsController::class, 'deleteAltImage'])->name('admin.products.delete-alt-image');
+    }); //./Routes Middleware admin
 });#./Middlware AUTH

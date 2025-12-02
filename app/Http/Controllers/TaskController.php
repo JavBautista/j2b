@@ -1024,6 +1024,34 @@ class TaskController extends Controller
     }//.deleteMainImageFromClient()
 
     /**
+     * GET /api/auth/tasks/{id}/products
+     * Obtiene los productos asignados a una tarea
+     */
+    public function getProducts(Request $request, $id){
+        $user = $request->user();
+
+        try {
+            $task = Task::where('shop_id', $user->shop_id)->findOrFail($id);
+
+            // Cargar productos con relación al producto base
+            $task->load(['products.product']);
+
+            return response()->json([
+                'ok' => true,
+                'products' => $task->products,
+                'count' => $task->products->count()
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Error al obtener productos de la tarea.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }//.getProducts()
+
+    /**
      * POST /api/auth/tasks/client/update
      * Actualizar tarea desde cliente
      */

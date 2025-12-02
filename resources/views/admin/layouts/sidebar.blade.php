@@ -28,6 +28,26 @@
                 </a>
             </li>
             <li class="nav-item">
+                <a href="{{ route('admin.tasks') }}" class="nav-link">
+                    <i class="fa fa-tasks"></i> Tareas
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ route('admin.products') }}" class="nav-link">
+                    <i class="fa fa-cube"></i> Productos
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ route('admin.receipts') }}" class="nav-link">
+                    <i class="fa fa-list-alt"></i> Ventas
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ route('admin.receipts.create') }}" class="nav-link">
+                    <i class="fa fa-plus-circle"></i> Nueva Venta
+                </a>
+            </li>
+            <li class="nav-item">
                 <a href="{{ route('admin.contracts') }}" class="nav-link">
                     <i class="fa fa-file-text-o"></i> Plantillas Contratos
                 </a>

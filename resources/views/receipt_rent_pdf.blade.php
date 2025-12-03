@@ -106,16 +106,33 @@
         <table style="border-collapse: collapse; width: 100%;" width="100%">
             <thead>
                 <tr>
+                    @if(isset($withImages) && $withImages)
+                        <th style="width: 60px;">Imagen</th>
+                    @endif
                     <th>Descripción</th>
                     <th>Costo/Unidad</th>
                     <th>Qty</th>
-
                     <th>Subtotal</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach($receipt->detail as $data)
                 <tr style="border-top: 1px solid #ccc !important;">
+                    @if(isset($withImages) && $withImages)
+                        <td style="width: 60px; text-align: center; vertical-align: middle;">
+                            @if($data->image)
+                                <img src="{{ public_path('storage/'.$data->image) }}" width="50" height="50" style="object-fit: contain;">
+                            @else
+                                @if($data->type == 'product')
+                                    <span style="font-size: 20px; color: #999;">&#9634;</span>
+                                @elseif($data->type == 'service')
+                                    <span style="font-size: 20px; color: #999;">&#9881;</span>
+                                @else
+                                    <span style="font-size: 20px; color: #999;">&#9634;</span>
+                                @endif
+                            @endif
+                        </td>
+                    @endif
 
                     <td style="max-width: 50%; word-wrap: break-word;">{!! nl2br(e($data->descripcion)) !!}</td>
 

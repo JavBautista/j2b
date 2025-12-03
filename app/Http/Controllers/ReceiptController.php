@@ -42,15 +42,38 @@ class ReceiptController extends Controller
 
         $id= $request->id;
         $name_file = $this->removeSpecialChar($request->name_file);
+        $withImages = $request->has('with_images') && $request->with_images == '1';
+
         $receipt = Receipt::with('partialPayments')
                             ->with('shop')
                             ->with('detail')
                             ->with('client')
                             ->findOrFail($id);
 
+        // Si se solicitan imágenes, cargar la imagen de cada producto/servicio en el detalle
+        if ($withImages) {
+            foreach ($receipt->detail as $detail) {
+                $detail->image = null;
+                if ($detail->type === 'product') {
+                    $product = Product::find($detail->product_id);
+                    if ($product && $product->image) {
+                        $detail->image = $product->image;
+                    }
+                } elseif ($detail->type === 'equipment') {
+                    $equipo = RentDetail::with('images')->find($detail->product_id);
+                    if ($equipo && $equipo->images && count($equipo->images) > 0) {
+                        $detail->image = $equipo->images[0]->image;
+                    }
+                }
+            }
+        }
+
         //$shop = Shop::findOrFail($shop_id);
 
-        $pdf = PDF::loadView('receipt_rent_pdf',['receipt'=>$receipt]);
+        $pdf = PDF::loadView('receipt_rent_pdf', [
+            'receipt' => $receipt,
+            'withImages' => $withImages
+        ]);
         return $pdf->stream($name_file.'.pdf',array("Attachment" => false));
     }//printReceiptRent()
 

@@ -24,6 +24,7 @@ import TasksComponent from './components/admin/TasksComponent.vue';
 import ProductsComponent from './components/admin/ProductsComponent.vue';
 import ReceiptCreateComponent from './components/admin/ReceiptCreateComponent.vue';
 import ReceiptListComponent from './components/admin/ReceiptListComponent.vue';
+import ReceiptFormComponent from './components/admin/ReceiptFormComponent.vue';
 
 // Componentes Shared (reutilizables)
 import ModalSelectClient from './components/shared/ModalSelectClient.vue';
@@ -48,6 +49,7 @@ app.component('tasks-component', TasksComponent);
 app.component('products-component', ProductsComponent);
 app.component('receipt-create-component', ReceiptCreateComponent);
 app.component('receipt-list-component', ReceiptListComponent);
+app.component('receipt-form-component', ReceiptFormComponent);
 
 // Shared (reutilizables en cualquier módulo)
 app.component('modal-select-client', ModalSelectClient);

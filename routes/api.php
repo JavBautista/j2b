@@ -129,6 +129,8 @@ Route::group([
 
         Route::get('client/verify-user-email','App\Http\Controllers\ClientController@verifyUserEmail');
         Route::post('client/store-user-app','App\Http\Controllers\ClientController@storeUserApp');
+        Route::post('client/update-user-app','App\Http\Controllers\ClientController@updateUserApp');
+        Route::get('client/get-user-app','App\Http\Controllers\ClientController@getUserApp');
 
         /*DIRECCIONES DE CLIENTES*/
         Route::get('client-address','App\Http\Controllers\ClientAddressController@index');

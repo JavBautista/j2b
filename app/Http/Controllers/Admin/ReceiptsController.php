@@ -108,6 +108,27 @@ class ReceiptsController extends Controller
             return response()->json(['ok' => false, 'message' => 'Nota no encontrada'], 404);
         }
 
+        // Agregar imagen a cada item del detalle
+        if ($receipt->detail) {
+            foreach ($receipt->detail as $detail) {
+                $detail->image = null;
+                if ($detail->type === 'product') {
+                    $product = Product::find($detail->product_id);
+                    if ($product) {
+                        $detail->image = $product->image;
+                    }
+                } elseif ($detail->type === 'service') {
+                    // Servicios no tienen imagen, se usará placeholder
+                    $detail->image = null;
+                } elseif ($detail->type === 'equipment') {
+                    $equipo = RentDetail::with('images')->find($detail->product_id);
+                    if ($equipo && $equipo->images && count($equipo->images) > 0) {
+                        $detail->image = $equipo->images[0]->image;
+                    }
+                }
+            }
+        }
+
         return response()->json([
             'ok' => true,
             'receipt' => $receipt
@@ -426,5 +447,262 @@ class ReceiptsController extends Controller
         $equipments = $query->orderBy('id', 'desc')->paginate(10);
 
         return response()->json($equipments);
+    }
+
+    /**
+     * Vista para editar una nota de venta
+     */
+    public function edit($id)
+    {
+        $user = Auth::user();
+        $shop = $user->shop;
+
+        // Verificar que el receipt pertenece al shop
+        $receipt = Receipt::where('id', $id)
+                          ->where('shop_id', $shop->id)
+                          ->firstOrFail();
+
+        return view('admin.receipts.edit', ['receiptId' => $id]);
+    }
+
+    /**
+     * Vista para ver una nota de venta (solo lectura)
+     */
+    public function show($id)
+    {
+        $user = Auth::user();
+        $shop = $user->shop;
+
+        // Verificar que el receipt pertenece al shop
+        $receipt = Receipt::where('id', $id)
+                          ->where('shop_id', $shop->id)
+                          ->firstOrFail();
+
+        return view('admin.receipts.show', ['receiptId' => $id]);
+    }
+
+    /**
+     * Obtener stock actual de productos en el detalle del receipt
+     * Necesario para edición: stock_disponible = stock_actual + qty_guardada
+     */
+    public function getStockCurrentDetail($id)
+    {
+        $user = Auth::user();
+        $shop = $user->shop;
+
+        // Verificar que el receipt pertenece al shop
+        $receipt = Receipt::where('id', $id)
+                          ->where('shop_id', $shop->id)
+                          ->firstOrFail();
+
+        $detail = ReceiptDetail::where('receipt_id', $id)->get();
+        $detail_current_stock = [];
+
+        foreach ($detail as $data) {
+            if ($data->type == 'product') {
+                $product = Product::find($data->product_id);
+                if ($product) {
+                    $tmp = [
+                        'product_id' => $product->id,
+                        'stock' => $product->stock
+                    ];
+                    array_push($detail_current_stock, $tmp);
+                }
+            }
+        }
+
+        return response()->json([
+            'ok' => true,
+            'detail_current_stock' => $detail_current_stock
+        ]);
+    }
+
+    /**
+     * Actualizar una nota de venta
+     * Replica la lógica de ReceiptController@updateReceiptVentas para el frontend web
+     */
+    public function update(Request $request, $id)
+    {
+        $user = Auth::user();
+        $shop = $user->shop;
+        $date_today = Carbon::now();
+
+        // Verificar que el receipt pertenece al shop
+        $receipt = Receipt::where('id', $id)
+                          ->where('shop_id', $shop->id)
+                          ->firstOrFail();
+
+        // Verificar que no esté facturado
+        if ($receipt->is_tax_invoiced) {
+            return response()->json(['ok' => false, 'message' => 'No se puede editar una nota facturada'], 422);
+        }
+
+        $rcp = $request->receipt;
+
+        // Verificar datos mínimos
+        if (empty($rcp['client_id'])) {
+            return response()->json(['ok' => false, 'message' => 'Debe seleccionar un cliente'], 422);
+        }
+
+        // Verificar que el cliente pertenece al shop
+        $client = Client::where('id', $rcp['client_id'])
+                        ->where('shop_id', $shop->id)
+                        ->first();
+        if (!$client) {
+            return response()->json(['ok' => false, 'message' => 'Cliente no válido'], 422);
+        }
+
+        $es_cotizacion = isset($rcp['quotation']) ? $rcp['quotation'] : 0;
+        $es_credito = isset($rcp['credit']) ? $rcp['credit'] : 0;
+
+        // La nota no será finalizada por default
+        $finished = 0;
+        if (!$es_cotizacion) {
+            $finished = ($rcp['received'] >= $rcp['total']) ? 1 : 0;
+        }
+
+        // ==================== RESTAURAR STOCK ANTERIOR ====================
+        // Si NO es cotización, devolvemos el stock temporalmente
+        // y reactivamos los equipos (por si los eliminan de la nota)
+        if (!$receipt->quotation) {
+            $detail_bd = ReceiptDetail::where('receipt_id', $receipt->id)->get();
+            foreach ($detail_bd as $dt_bd) {
+                if ($dt_bd->type == 'product') {
+                    $product = Product::find($dt_bd->product_id);
+                    if ($product) {
+                        $product->stock = $product->stock + $dt_bd->qty;
+                        $product->save();
+                    }
+                }
+                if ($dt_bd->type == 'equipment') {
+                    $equipo = RentDetail::find($dt_bd->product_id);
+                    if ($equipo) {
+                        $equipo->active = 1;
+                        $equipo->save();
+                    }
+                }
+            }
+        }
+
+        // ==================== ACTUALIZAR RECEIPT ====================
+        $receipt->client_id = $rcp['client_id'];
+        $receipt->rent_id = $rcp['rent_id'] ?? 0;
+        $receipt->type = $rcp['type'] ?? 'venta';
+        $receipt->description = $rcp['description'] ?? '';
+        $receipt->observation = $rcp['observation'] ?? '';
+        $receipt->discount = $rcp['discount'] ?? 0;
+        $receipt->discount_concept = $rcp['discount_concept'] ?? '$';
+        $receipt->subtotal = $rcp['subtotal'] ?? 0;
+        $receipt->total = $rcp['total'] ?? 0;
+        $receipt->iva = $rcp['iva'] ?? 0;
+        $receipt->finished = $finished;
+        $receipt->status = $rcp['status'] ?? 'POR COBRAR';
+        $receipt->payment = $rcp['payment'] ?? 'EFECTIVO';
+        // No actualizamos received aquí para no perder el historial de pagos
+        $receipt->quotation = $es_cotizacion;
+
+        if ($es_cotizacion && !empty($rcp['quotation_expiration'])) {
+            $ff = Carbon::parse($rcp['quotation_expiration'], 'America/Mexico_City');
+            $receipt->quotation_expiration = $ff->format('Y-m-d');
+        } else {
+            $receipt->quotation_expiration = null;
+        }
+
+        $receipt->credit = $es_credito;
+        if ($es_credito && !empty($rcp['credit_date_notification'])) {
+            $c_ff = Carbon::parse($rcp['credit_date_notification'], 'America/Mexico_City');
+            $receipt->credit_date_notification = $c_ff->format('Y-m-d');
+            $receipt->credit_type = $rcp['credit_type'] ?? 'semanal';
+        } else {
+            $receipt->credit_date_notification = null;
+            $receipt->credit_type = null;
+        }
+
+        $receipt->save();
+
+        // ==================== ACTUALIZAR INFO EXTRA ====================
+        ReceiptInfoExtra::where('receipt_id', $receipt->id)->delete();
+
+        if (!empty($request->info_extra)) {
+            $info_extra = is_string($request->info_extra)
+                ? json_decode($request->info_extra, true)
+                : $request->info_extra;
+
+            if (!empty($info_extra)) {
+                foreach ($info_extra as $field_name => $value) {
+                    $receiptInfoExtra = new ReceiptInfoExtra();
+                    $receiptInfoExtra->receipt_id = $receipt->id;
+                    $receiptInfoExtra->field_name = $field_name;
+                    $receiptInfoExtra->value = $value;
+                    $receiptInfoExtra->save();
+                }
+            }
+        }
+
+        // ==================== ACTUALIZAR DETALLE ====================
+        ReceiptDetail::where('receipt_id', $receipt->id)->delete();
+
+        $details = is_string($request->detail)
+            ? json_decode($request->detail)
+            : $request->detail;
+
+        if (!empty($details)) {
+            foreach ($details as $data) {
+                $product_cost = 0;
+
+                // Si es producto y NO es cotización: descontar stock
+                if (!$es_cotizacion && $data->type == 'product') {
+                    $product = Product::find($data->id);
+                    if ($product) {
+                        $product->stock = $product->stock - $data->qty;
+                        $product->save();
+                        $product_cost = $product->cost ?? 0;
+                    }
+                }
+
+                // Si es cotización pero producto, obtener costo
+                if ($es_cotizacion && $data->type == 'product') {
+                    $product = Product::find($data->id);
+                    if ($product) {
+                        $product_cost = $product->cost ?? 0;
+                    }
+                }
+
+                // Si es equipo y NO es cotización: desactivar
+                if (!$es_cotizacion && $data->type == 'equipment') {
+                    $equipo = RentDetail::find($data->id);
+                    if ($equipo) {
+                        $equipo->active = 0;
+                        $equipo->save();
+                    }
+                }
+
+                $detail = new ReceiptDetail();
+                $detail->receipt_id = $receipt->id;
+                $detail->product_id = $data->id;
+                $detail->type = $data->type;
+                $detail->descripcion = $data->name ?? $data->descripcion ?? '';
+                $detail->qty = $data->qty ?? 1;
+                $detail->price = $data->cost ?? $data->price ?? 0;
+                $detail->cost = $product_cost;
+                $detail->discount = $data->discount ?? 0;
+                $detail->discount_concept = $data->discount_concept ?? '';
+                $detail->subtotal = $data->subtotal ?? 0;
+                $detail->save();
+            }
+        }
+
+        // Obtener el receipt completo
+        $rr = Receipt::with('partialPayments')
+                    ->with('infoExtra')
+                    ->with('shop')
+                    ->with('client')
+                    ->findOrFail($receipt->id);
+
+        return response()->json([
+            'ok' => true,
+            'receipt' => $rr,
+            'message' => 'Nota actualizada exitosamente'
+        ]);
     }
 }

@@ -110,14 +110,20 @@
                                     {{ formatDate(receipt.created_at) }}
                                 </td>
                                 <td class="text-center">
-                                    <button class="btn btn-sm btn-outline-primary me-1"
-                                            @click="verDetalle(receipt)" title="Ver detalle">
-                                        <i class="fa fa-eye"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-secondary"
-                                            @click="descargarPDF(receipt)" title="Descargar PDF">
-                                        <i class="fa fa-file-pdf-o"></i>
-                                    </button>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <button class="btn btn-outline-primary"
+                                                @click="verEnPantalla(receipt)" title="Ver detalle">
+                                            <i class="fa fa-eye"></i>
+                                        </button>
+                                        <button v-if="canEdit(receipt)" class="btn btn-outline-warning"
+                                                @click="editarNota(receipt)" title="Editar">
+                                            <i class="fa fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-outline-secondary"
+                                                @click="descargarPDF(receipt)" title="Descargar PDF">
+                                            <i class="fa fa-file-pdf-o"></i>
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         </tbody>
@@ -148,212 +154,6 @@
             </div>
         </div>
 
-        <!-- Modal Detalle -->
-        <div class="modal fade show" v-if="modalDetalle" style="display: block; background: rgba(0,0,0,0.5);">
-            <div class="modal-dialog modal-xl">
-                <div class="modal-content" v-if="receiptDetalle">
-                    <div class="modal-header">
-                        <h5 class="modal-title">
-                            <i class="fa fa-file-text me-2"></i>
-                            {{ receiptDetalle.quotation ? 'Cotización' : 'Nota de Venta' }} #{{ receiptDetalle.folio }}
-                        </h5>
-                        <button type="button" class="btn-close" @click="cerrarModal()"></button>
-                    </div>
-                    <div class="modal-body">
-                        <!-- Info General -->
-                        <div class="row mb-4">
-                            <div class="col-md-6">
-                                <div class="card h-100">
-                                    <div class="card-header bg-light">
-                                        <strong><i class="fa fa-user me-1"></i> Cliente</strong>
-                                    </div>
-                                    <div class="card-body">
-                                        <p class="mb-1"><strong>{{ receiptDetalle.client?.name }}</strong></p>
-                                        <p class="mb-1 text-muted">{{ receiptDetalle.client?.company }}</p>
-                                        <p class="mb-1"><i class="fa fa-phone me-1"></i> {{ receiptDetalle.client?.movil }}</p>
-                                        <p class="mb-0"><i class="fa fa-envelope me-1"></i> {{ receiptDetalle.client?.mail }}</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="card h-100">
-                                    <div class="card-header bg-light">
-                                        <strong><i class="fa fa-info-circle me-1"></i> Información</strong>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="row">
-                                            <div class="col-6">
-                                                <p class="mb-1"><strong>Folio:</strong> #{{ receiptDetalle.folio }}</p>
-                                                <p class="mb-1"><strong>Fecha:</strong> {{ formatDate(receiptDetalle.created_at) }}</p>
-                                                <p class="mb-1"><strong>Creado por:</strong> {{ receiptDetalle.created_by }}</p>
-                                            </div>
-                                            <div class="col-6">
-                                                <p class="mb-1">
-                                                    <strong>Estado:</strong>
-                                                    <span :class="getStatusClass(receiptDetalle.status)">{{ receiptDetalle.status }}</span>
-                                                </p>
-                                                <p class="mb-1"><strong>Forma de pago:</strong> {{ receiptDetalle.payment }}</p>
-                                                <p class="mb-0" v-if="receiptDetalle.quotation">
-                                                    <strong>Vence:</strong> {{ receiptDetalle.quotation_expiration }}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Campos Extra -->
-                        <div class="card mb-4" v-if="receiptDetalle.info_extra && receiptDetalle.info_extra.length > 0">
-                            <div class="card-header bg-light">
-                                <strong><i class="fa fa-list-alt me-1"></i> Campos Adicionales</strong>
-                            </div>
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-4" v-for="extra in receiptDetalle.info_extra" :key="extra.id">
-                                        <p class="mb-1"><strong>{{ extra.field_name }}:</strong> {{ extra.value }}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Descripción y Observaciones -->
-                        <div class="row mb-4" v-if="receiptDetalle.description || receiptDetalle.observation">
-                            <div class="col-md-6" v-if="receiptDetalle.description">
-                                <div class="card h-100">
-                                    <div class="card-header bg-light">
-                                        <strong>Descripción</strong>
-                                    </div>
-                                    <div class="card-body">
-                                        <p class="mb-0">{{ receiptDetalle.description }}</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6" v-if="receiptDetalle.observation">
-                                <div class="card h-100">
-                                    <div class="card-header bg-light">
-                                        <strong>Observaciones</strong>
-                                    </div>
-                                    <div class="card-body">
-                                        <pre class="mb-0" style="white-space: pre-wrap;">{{ receiptDetalle.observation }}</pre>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Detalle de Items -->
-                        <div class="card mb-4">
-                            <div class="card-header bg-light">
-                                <strong><i class="fa fa-shopping-cart me-1"></i> Detalle de Artículos</strong>
-                            </div>
-                            <div class="card-body p-0">
-                                <div class="table-responsive">
-                                    <table class="table table-sm mb-0">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th>Descripción</th>
-                                                <th class="text-end">Precio</th>
-                                                <th class="text-center">Descuento</th>
-                                                <th class="text-center">Cant.</th>
-                                                <th class="text-end">Subtotal</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr v-for="item in receiptDetalle.detail" :key="item.id">
-                                                <td>
-                                                    <span class="badge bg-secondary me-1">{{ item.type }}</span>
-                                                    {{ item.descripcion }}
-                                                </td>
-                                                <td class="text-end">${{ formatNumber(item.price) }}</td>
-                                                <td class="text-center">
-                                                    <span v-if="item.discount > 0">
-                                                        {{ item.discount_concept === '%' ? item.discount + '%' : '$' + formatNumber(item.discount) }}
-                                                    </span>
-                                                    <span v-else class="text-muted">-</span>
-                                                </td>
-                                                <td class="text-center">{{ item.qty }}</td>
-                                                <td class="text-end">${{ formatNumber(item.subtotal) }}</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Totales -->
-                        <div class="row">
-                            <div class="col-md-6">
-                                <!-- Pagos Parciales (solo si no es cotización) -->
-                                <div class="card" v-if="!receiptDetalle.quotation && receiptDetalle.partial_payments && receiptDetalle.partial_payments.length > 0">
-                                    <div class="card-header bg-light">
-                                        <strong><i class="fa fa-money me-1"></i> Pagos Parciales</strong>
-                                    </div>
-                                    <div class="card-body p-0">
-                                        <table class="table table-sm mb-0">
-                                            <thead>
-                                                <tr>
-                                                    <th>Fecha</th>
-                                                    <th class="text-end">Monto</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <tr v-for="pago in receiptDetalle.partial_payments" :key="pago.id">
-                                                    <td>{{ formatDate(pago.payment_date) }}</td>
-                                                    <td class="text-end">${{ formatNumber(pago.amount) }}</td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="card">
-                                    <div class="card-header bg-primary text-white">
-                                        <strong><i class="fa fa-calculator me-1"></i> Resumen</strong>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="d-flex justify-content-between mb-2">
-                                            <span>Subtotal:</span>
-                                            <span>${{ formatNumber(receiptDetalle.subtotal) }}</span>
-                                        </div>
-                                        <div class="d-flex justify-content-between mb-2" v-if="receiptDetalle.discount > 0">
-                                            <span>Descuento ({{ receiptDetalle.discount_concept }}):</span>
-                                            <span class="text-danger">
-                                                -{{ receiptDetalle.discount_concept === '%' ? receiptDetalle.discount + '%' : '$' + formatNumber(receiptDetalle.discount) }}
-                                            </span>
-                                        </div>
-                                        <div class="d-flex justify-content-between mb-2" v-if="receiptDetalle.iva > 0">
-                                            <span>IVA 16%:</span>
-                                            <span>${{ formatNumber(receiptDetalle.iva) }}</span>
-                                        </div>
-                                        <hr>
-                                        <div class="d-flex justify-content-between mb-2">
-                                            <strong>Total:</strong>
-                                            <strong class="text-primary fs-5">${{ formatNumber(receiptDetalle.total) }}</strong>
-                                        </div>
-                                        <div class="d-flex justify-content-between mb-2" v-if="!receiptDetalle.quotation">
-                                            <span>Recibido:</span>
-                                            <span class="text-success">${{ formatNumber(receiptDetalle.received) }}</span>
-                                        </div>
-                                        <div class="d-flex justify-content-between" v-if="!receiptDetalle.quotation && receiptDetalle.received < receiptDetalle.total">
-                                            <span>Adeudo:</span>
-                                            <span class="text-danger fw-bold">${{ formatNumber(receiptDetalle.total - receiptDetalle.received) }}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" @click="cerrarModal()">Cerrar</button>
-                        <button type="button" class="btn btn-primary" @click="descargarPDF(receiptDetalle)">
-                            <i class="fa fa-file-pdf-o me-1"></i> Descargar PDF
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
     </div>
 </template>
 
@@ -376,9 +176,7 @@ export default {
                 status: '',
                 fecha_desde: '',
                 fecha_hasta: ''
-            },
-            receiptDetalle: null,
-            modalDetalle: false
+            }
         };
     },
     computed: {
@@ -435,25 +233,44 @@ export default {
                 this.cargarReceipts();
             }
         },
-        async verDetalle(receipt) {
-            try {
-                const response = await axios.get(`/admin/receipts/${receipt.id}/detail`);
-                if (response.data.ok) {
-                    this.receiptDetalle = response.data.receipt;
-                    this.modalDetalle = true;
+        async descargarPDF(receipt) {
+            const result = await Swal.fire({
+                title: 'Generar PDF',
+                html: `
+                    <div style="text-align: left; padding: 10px 0;">
+                        <label style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="pdfWithImages" style="width: 18px; height: 18px; cursor: pointer;">
+                            <i class="fa fa-image"></i> Incluir imágenes de productos
+                        </label>
+                    </div>
+                `,
+                showCancelButton: true,
+                confirmButtonText: '<i class="fa fa-file-pdf-o me-1"></i> Generar PDF',
+                cancelButtonText: 'Cancelar',
+                preConfirm: () => {
+                    return { withImages: document.getElementById('pdfWithImages').checked };
                 }
-            } catch (error) {
-                console.error('Error cargando detalle:', error);
-                Swal.fire('Error', 'No se pudo cargar el detalle', 'error');
+            });
+
+            if (result.isConfirmed) {
+                let url = `/print-receipt-rent?id=${receipt.id}&name_file=nota_${receipt.folio}`;
+                if (result.value.withImages) {
+                    url += '&with_images=1';
+                }
+                window.open(url, '_blank');
             }
         },
-        cerrarModal() {
-            this.modalDetalle = false;
-            this.receiptDetalle = null;
+        canEdit(receipt) {
+            // No se puede editar si está facturado
+            if (receipt.is_tax_invoiced) return false;
+            // Se puede editar siempre (cotizaciones y notas)
+            return true;
         },
-        descargarPDF(receipt) {
-            const url = `/print-receipt-rent?id=${receipt.id}&name_file=nota_${receipt.folio}`;
-            window.open(url, '_blank');
+        editarNota(receipt) {
+            window.location.href = `/admin/receipts/${receipt.id}/edit`;
+        },
+        verEnPantalla(receipt) {
+            window.location.href = `/admin/receipts/${receipt.id}/show`;
         },
         formatNumber(num) {
             if (!num) return '0.00';

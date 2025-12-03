@@ -237,6 +237,10 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::post('/admin/receipts/store', [App\Http\Controllers\Admin\ReceiptsController::class, 'store'])->name('admin.receipts.store');
         Route::get('/admin/receipts/extra-fields', [App\Http\Controllers\Admin\ReceiptsController::class, 'getExtraFields'])->name('admin.receipts.extra-fields');
         Route::get('/admin/receipts/{id}/detail', [App\Http\Controllers\Admin\ReceiptsController::class, 'getDetail'])->name('admin.receipts.detail');
+        Route::get('/admin/receipts/{id}/edit', [App\Http\Controllers\Admin\ReceiptsController::class, 'edit'])->name('admin.receipts.edit');
+        Route::get('/admin/receipts/{id}/show', [App\Http\Controllers\Admin\ReceiptsController::class, 'show'])->name('admin.receipts.show');
+        Route::post('/admin/receipts/{id}/update', [App\Http\Controllers\Admin\ReceiptsController::class, 'update'])->name('admin.receipts.update');
+        Route::get('/admin/receipts/{id}/stock-detail', [App\Http\Controllers\Admin\ReceiptsController::class, 'getStockCurrentDetail'])->name('admin.receipts.stock-detail');
 
         // Rutas auxiliares para modales shared
         Route::get('/admin/services/get', [App\Http\Controllers\Admin\ReceiptsController::class, 'getServices'])->name('admin.services.get');

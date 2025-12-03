@@ -76,11 +76,114 @@ class ClientController extends Controller
         $client->user_id=$new_user->id;
         $client->save();
 
+        // Recargar cliente con relaciones para devolver completo
+        $client->load(['rents' => function ($query) {
+            $query->where('active', 1);
+        }, 'addresses']);
+
         return response()->json([
                 'ok'=>true,
+                'client' => $client,
                 'user' => $new_user,
         ]);
 
+    }
+
+    public function updateUserApp(Request $request)
+    {
+        $authUser = $request->user();
+        $shop = $authUser->shop;
+
+        // Validar que el cliente existe y pertenece a la tienda
+        $client = Client::where('id', $request->client_id)
+                       ->where('shop_id', $shop->id)
+                       ->firstOrFail();
+
+        // Verificar que el cliente tiene un user_id asociado
+        if (!$client->user_id) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Este cliente no tiene usuario APP asociado'
+            ], 400);
+        }
+
+        $userApp = User::findOrFail($client->user_id);
+
+        // Actualizar email si se proporciona y es diferente
+        if ($request->has('email') && $request->email !== $userApp->email) {
+            // Verificar que el nuevo email no exista
+            $emailExists = User::where('email', $request->email)
+                              ->where('id', '!=', $userApp->id)
+                              ->exists();
+            if ($emailExists) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'El email ya está en uso por otro usuario'
+                ], 400);
+            }
+            $userApp->email = $request->email;
+        }
+
+        // Actualizar contraseña si se proporciona
+        if ($request->has('password') && !empty($request->password)) {
+            $userApp->password = Hash::make($request->password);
+        }
+
+        // Actualizar nombre con el nombre actual del cliente
+        $userApp->name = $client->name;
+        $userApp->save();
+
+        // Recargar cliente con relaciones para devolver completo
+        $client->load(['rents' => function ($query) {
+            $query->where('active', 1);
+        }, 'addresses']);
+
+        return response()->json([
+            'ok' => true,
+            'client' => $client,
+            'user' => $userApp,
+            'message' => 'Usuario APP actualizado correctamente'
+        ]);
+    }
+
+    public function getUserApp(Request $request)
+    {
+        $authUser = $request->user();
+        $shop = $authUser->shop;
+
+        $client_id = $request->client_id;
+
+        // Validar que el cliente existe y pertenece a la tienda
+        $client = Client::where('id', $client_id)
+                       ->where('shop_id', $shop->id)
+                       ->firstOrFail();
+
+        // Verificar que el cliente tiene un user_id asociado
+        if (!$client->user_id) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Este cliente no tiene usuario APP asociado'
+            ], 400);
+        }
+
+        $userApp = User::find($client->user_id);
+
+        if (!$userApp) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'No se encontró el usuario APP'
+            ], 404);
+        }
+
+        return response()->json([
+            'ok' => true,
+            'user' => [
+                'id' => $userApp->id,
+                'email' => $userApp->email,
+                'name' => $userApp->name,
+                'active' => $userApp->active
+            ]
+        ]);
     }
 
     public function store(Request $request)

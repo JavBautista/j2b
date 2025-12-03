@@ -553,6 +553,14 @@ class TasksController extends Controller
         $task = Task::where('shop_id', $shop->id)->findOrFail($taskId);
         $taskProduct = TaskProduct::where('task_id', $task->id)->findOrFail($taskProductId);
 
+        // Verificar si ya fue facturado (bloqueado)
+        if ($taskProduct->receipt_id) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Este producto ya fue facturado en una nota de venta y no puede modificarse.'
+            ], 422);
+        }
+
         // Validar que qty_used + qty_returned <= qty_delivered
         $total = $request->qty_used + $request->qty_returned;
         if ($total > $taskProduct->qty_delivered) {
@@ -610,6 +618,14 @@ class TasksController extends Controller
         $task = Task::where('shop_id', $shop->id)->findOrFail($taskId);
         $taskProduct = TaskProduct::where('task_id', $task->id)->findOrFail($taskProductId);
 
+        // Verificar si ya fue facturado (bloqueado)
+        if ($taskProduct->receipt_id) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Este producto ya fue facturado y no puede eliminarse.'
+            ], 422);
+        }
+
         // Devolver al stock lo que no se haya usado
         $toReturn = $taskProduct->qty_delivered - $taskProduct->qty_used;
         if ($toReturn > 0) {
@@ -651,6 +667,99 @@ class TasksController extends Controller
         return response()->json([
             'ok' => true,
             'products' => $products
+        ]);
+    }
+
+    /**
+     * Obtener productos USADOS de una tarea para generar nota de venta
+     * Solo devuelve productos con qty_used > 0 y que NO han sido facturados
+     */
+    public function getUsedProductsForReceipt($taskId)
+    {
+        $user = auth()->user();
+        $shop = $user->shop;
+
+        $task = Task::with(['client', 'products.product'])
+            ->where('shop_id', $shop->id)
+            ->findOrFail($taskId);
+
+        // Solo productos con qty_used > 0 Y sin facturar (receipt_id = null)
+        $usedProducts = $task->products->filter(function($tp) {
+            return $tp->qty_used > 0 && !$tp->receipt_id;
+        })->map(function($tp) {
+            return [
+                'task_product_id' => $tp->id,
+                'product_id' => $tp->product_id,
+                'product' => $tp->product,
+                'qty_used' => $tp->qty_used,
+                'price' => $tp->price,
+                'cost' => $tp->cost,
+            ];
+        })->values();
+
+        if ($usedProducts->isEmpty()) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'No hay productos usados pendientes de facturar en esta tarea.'
+            ], 422);
+        }
+
+        return response()->json([
+            'ok' => true,
+            'task' => [
+                'id' => $task->id,
+                'title' => $task->title,
+                'client' => $task->client,
+            ],
+            'usedProducts' => $usedProducts
+        ]);
+    }
+
+    /**
+     * Obtener tareas que tienen productos usados pendientes de facturar
+     * Para el selector en "Nueva Venta"
+     */
+    public function getTasksWithPendingProducts(Request $request)
+    {
+        $user = auth()->user();
+        $shop = $user->shop;
+
+        $buscar = $request->q ?? '';
+
+        // Tareas que tienen al menos un producto con qty_used > 0 y sin facturar
+        $tasks = Task::with(['client', 'products' => function($q) {
+                $q->where('qty_used', '>', 0)->whereNull('receipt_id');
+            }])
+            ->where('shop_id', $shop->id)
+            ->whereHas('products', function($q) {
+                $q->where('qty_used', '>', 0)->whereNull('receipt_id');
+            })
+            ->when($buscar, function($query) use ($buscar) {
+                $query->where(function($q) use ($buscar) {
+                    $q->where('title', 'like', "%{$buscar}%")
+                      ->orWhere('id', $buscar)
+                      ->orWhereHas('client', function($cq) use ($buscar) {
+                          $cq->where('name', 'like', "%{$buscar}%");
+                      });
+                });
+            })
+            ->orderBy('id', 'desc')
+            ->take(20)
+            ->get()
+            ->map(function($task) {
+                $pendingCount = $task->products->count();
+                return [
+                    'id' => $task->id,
+                    'title' => $task->title,
+                    'client' => $task->client,
+                    'pending_products_count' => $pendingCount,
+                    'label' => "#{$task->id} - {$task->title}" . ($task->client ? " ({$task->client->name})" : '') . " - {$pendingCount} prod."
+                ];
+            });
+
+        return response()->json([
+            'ok' => true,
+            'tasks' => $tasks
         ]);
     }
 }

@@ -272,6 +272,8 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::post('/admin/tasks/{taskId}/products', [TasksController::class, 'addTaskProduct'])->name('admin.tasks.add-product');
         Route::put('/admin/tasks/{taskId}/products/{taskProductId}', [TasksController::class, 'updateTaskProduct'])->name('admin.tasks.update-product');
         Route::delete('/admin/tasks/{taskId}/products/{taskProductId}', [TasksController::class, 'removeTaskProduct'])->name('admin.tasks.remove-product');
+        Route::get('/admin/tasks/{taskId}/products-for-receipt', [TasksController::class, 'getUsedProductsForReceipt'])->name('admin.tasks.products-for-receipt');
+        Route::get('/admin/tasks-with-pending-products', [TasksController::class, 'getTasksWithPendingProducts'])->name('admin.tasks.with-pending-products');
 
         // Rutas para Productos (CRUD admin)
         Route::get('/admin/products', [\App\Http\Controllers\Admin\ProductsController::class, 'index'])->name('admin.products');

@@ -54,10 +54,27 @@
     <div class="row">
         <!-- Columna Izquierda: Cliente + Items -->
         <div class="col-lg-8">
+            <!-- Indicador de Tarea Cargada o Botón para cargar -->
+            <div v-if="fromTaskId" class="alert alert-info mb-3 d-flex align-items-center">
+                <i class="fa fa-clipboard-check me-2"></i>
+                <span>Nota vinculada a <strong>Tarea #{{ fromTaskId }}</strong></span>
+                <button v-if="isCreateMode" class="btn btn-sm btn-outline-danger ms-auto" @click="clearTaskData" title="Desvincular tarea">
+                    <i class="fa fa-unlink"></i>
+                </button>
+            </div>
+            <div v-else-if="isCreateMode" class="mb-3">
+                <button class="btn btn-outline-info" @click="openTaskModal">
+                    <i class="fa fa-clipboard-list me-2"></i>Cargar desde Tarea
+                </button>
+            </div>
+
             <!-- Sección Cliente -->
             <div class="card mb-3">
                 <div class="card-header bg-primary text-white py-2">
                     <i class="fa fa-user me-2"></i>Cliente
+                    <span v-if="clientFromTask" class="badge bg-light text-dark ms-2">
+                        <i class="fa fa-lock me-1"></i>De tarea
+                    </span>
                 </div>
                 <div class="card-body">
                     <div v-if="!client" class="text-center py-3">
@@ -81,12 +98,15 @@
                                     </span>
                                 </small>
                             </div>
-                            <button v-if="!isViewMode" class="btn btn-outline-secondary btn-sm me-2" @click="showModalCliente = true" title="Cambiar cliente">
-                                <i class="fa fa-exchange"></i>
-                            </button>
-                            <button v-if="!isViewMode" class="btn btn-outline-danger btn-sm" @click="removeClient">
-                                <i class="fa fa-times"></i>
-                            </button>
+                            <!-- Ocultar botones si el cliente viene de tarea -->
+                            <template v-if="!clientFromTask">
+                                <button v-if="!isViewMode" class="btn btn-outline-secondary btn-sm me-2" @click="showModalCliente = true" title="Cambiar cliente">
+                                    <i class="fa fa-exchange"></i>
+                                </button>
+                                <button v-if="!isViewMode" class="btn btn-outline-danger btn-sm" @click="removeClient">
+                                    <i class="fa fa-times"></i>
+                                </button>
+                            </template>
                         </div>
                     </div>
                 </div>
@@ -189,7 +209,10 @@
                                         <span class="badge" :class="getTypeBadgeClass(item.type)">
                                             {{ getTypeLabel(item.type) }}
                                         </span>
-                                        <span v-if="item.type === 'product'" class="text-muted ms-2">
+                                        <span v-if="item.from_task_product_id" class="badge bg-secondary ms-1" title="Stock ya descontado desde tarea">
+                                            <i class="fa fa-clipboard"></i> De tarea
+                                        </span>
+                                        <span v-if="item.type === 'product' && !item.from_task_product_id" class="text-muted ms-2">
                                             Stock: {{ item.stock }}
                                         </span>
                                     </div>
@@ -198,7 +221,12 @@
                                     <strong>{{ formatCurrency(item.subtotal) }}</strong>
                                 </div>
                                 <div v-if="!isViewMode" class="item-delete">
-                                    <button class="btn btn-outline-danger btn-sm" @click="removeItem(index)" title="Eliminar">
+                                    <button
+                                        class="btn btn-outline-danger btn-sm"
+                                        @click="removeItem(index)"
+                                        :disabled="item.from_task_product_id"
+                                        :title="item.from_task_product_id ? 'No se puede eliminar (viene de tarea)' : 'Eliminar'"
+                                    >
                                         <i class="fa fa-trash"></i>
                                     </button>
                                 </div>
@@ -224,7 +252,14 @@
                                 <!-- Cantidad -->
                                 <div class="item-control">
                                     <label>Cantidad</label>
-                                    <div v-if="!isViewMode" class="qty-control">
+                                    <!-- Si viene de tarea: mostrar solo texto (bloqueado) -->
+                                    <div v-if="item.from_task_product_id" class="qty-locked">
+                                        <span class="form-control form-control-sm text-center bg-light" title="Cantidad fija (viene de tarea)">
+                                            {{ item.qty }}
+                                            <i class="fa fa-lock text-muted ms-1"></i>
+                                        </span>
+                                    </div>
+                                    <div v-else-if="!isViewMode" class="qty-control">
                                         <button class="btn btn-outline-secondary btn-sm" @click="decrementQty(item)">
                                             <i class="fa fa-minus"></i>
                                         </button>
@@ -562,6 +597,68 @@
         @close="showModalEquipo = false"
         @select="onEquipoSeleccionado"
     />
+
+    <!-- Modal Seleccionar Tarea -->
+    <div class="modal" :class="{ 'show d-block': showModalTarea }" tabindex="-1" v-if="showModalTarea">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title">
+                        <i class="fa fa-clipboard-list me-2"></i>Seleccionar Tarea
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @click="showModalTarea = false"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <input
+                            type="text"
+                            class="form-control"
+                            v-model="taskSearchQuery"
+                            @input="searchTasks"
+                            placeholder="Buscar por ID, título o cliente..."
+                            ref="taskSearchInput"
+                        >
+                    </div>
+                    <div v-if="taskSearchLoading" class="text-center py-3">
+                        <i class="fa fa-spinner fa-spin"></i> Cargando...
+                    </div>
+                    <div v-else-if="taskSearchResults.length === 0" class="text-center text-muted py-3">
+                        <i class="fa fa-info-circle me-1"></i>
+                        No hay tareas con productos pendientes de facturar
+                    </div>
+                    <div v-else class="list-group">
+                        <a
+                            v-for="task in taskSearchResults"
+                            :key="task.id"
+                            href="#"
+                            class="list-group-item list-group-item-action"
+                            @click.prevent="selectTask(task)"
+                        >
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>#{{ task.id }}</strong> - {{ task.title }}
+                                    <br>
+                                    <small class="text-muted">
+                                        <span v-if="task.client">
+                                            <i class="fa fa-user me-1"></i>{{ task.client.name }}
+                                        </span>
+                                        <span v-else class="text-warning">
+                                            <i class="fa fa-user-slash me-1"></i>Sin cliente
+                                        </span>
+                                    </small>
+                                </div>
+                                <span class="badge bg-success">{{ task.pending_products_count }} productos</span>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @click="showModalTarea = false">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show" v-if="showModalTarea" @click="showModalTarea = false"></div>
 </div>
 </template>
 
@@ -576,6 +673,11 @@ export default {
         },
         // true = solo lectura
         readOnly: {
+            type: Boolean,
+            default: false
+        },
+        // true = usuario admin limitado
+        userLimited: {
             type: Boolean,
             default: false
         }
@@ -636,6 +738,7 @@ export default {
             receipt: {
                 client_id: 0,
                 rent_id: 0,
+                task_id: null,
                 type: 'venta',
                 description: '',
                 observation: '',
@@ -652,7 +755,18 @@ export default {
                 credit: false,
                 credit_date_notification: null,
                 credit_type: 'semanal'
-            }
+            },
+
+            // Tarea origen (para notas generadas desde tareas)
+            fromTaskId: null,
+            clientFromTask: false, // Si el cliente viene de la tarea (bloqueado)
+
+            // Búsqueda de tareas
+            taskSearchQuery: '',
+            taskSearchResults: [],
+            taskSearchTimeout: null,
+            showModalTarea: false,
+            taskSearchLoading: false
         }
     },
     computed: {
@@ -680,12 +794,26 @@ export default {
         }
     },
     mounted() {
+        // Usuarios limitados no pueden crear ni editar
+        if (this.userLimited && !this.readOnly) {
+            Swal.fire('Acceso denegado', 'No tienes permisos para crear o editar notas de venta', 'warning');
+            window.location.href = '/admin/receipts';
+            return;
+        }
+
         this.loadExtraFields();
 
         if (this.receiptId) {
             this.loadReceiptData();
         } else {
-            this.isLoading = false;
+            // Detectar si viene de una tarea
+            const urlParams = new URLSearchParams(window.location.search);
+            const fromTaskId = urlParams.get('from_task');
+            if (fromTaskId) {
+                this.loadFromTask(fromTaskId);
+            } else {
+                this.isLoading = false;
+            }
         }
     },
     methods: {
@@ -729,12 +857,150 @@ export default {
             }
         },
 
+        // Cargar datos desde una tarea
+        async loadFromTask(taskId) {
+            this.isLoading = true;
+            try {
+                const response = await axios.get(`/admin/tasks/${taskId}/products-for-receipt`);
+                if (response.data.ok) {
+                    const data = response.data;
+
+                    // Guardar referencia a la tarea
+                    this.fromTaskId = taskId;
+                    this.receipt.task_id = taskId;
+
+                    // Pre-cargar cliente de la tarea (si existe)
+                    if (data.task.client) {
+                        this.client = data.task.client;
+                        this.receipt.client_id = data.task.client.id;
+                        this.clientFromTask = true; // Bloquear edición del cliente
+                    } else {
+                        this.clientFromTask = false; // Permitir seleccionar cliente
+                    }
+
+                    // Pre-cargar productos usados
+                    data.usedProducts.forEach(up => {
+                        const item = {
+                            id: up.product_id,
+                            type: 'product',
+                            name: up.product.key ? `${up.product.key} ${up.product.name}` : up.product.name,
+                            price: parseFloat(up.price),
+                            qty: up.qty_used,
+                            stock: 999, // No validar stock (ya descontado)
+                            discount: 0,
+                            discount_concept: '$',
+                            subtotal: parseFloat(up.price) * up.qty_used,
+                            image: up.product.image,
+                            from_task_product_id: up.task_product_id // Marca clave
+                        };
+                        this.items.push(item);
+                    });
+
+                    this.calcularTotales();
+
+                    // Mensaje según si tiene cliente o no
+                    const clienteMsg = data.task.client
+                        ? `Cliente: <strong>${data.task.client.name}</strong> (de la tarea)`
+                        : '<span class="text-warning">La tarea no tiene cliente asignado. Debe seleccionar uno.</span>';
+
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Productos cargados desde tarea #' + taskId,
+                        html: `Se cargaron <strong>${data.usedProducts.length}</strong> productos usados.<br>
+                               ${clienteMsg}<br>
+                               <small class="text-muted">El stock de estos productos NO se descontará al guardar.</small>`,
+                        confirmButtonText: 'Entendido'
+                    });
+                }
+            } catch (error) {
+                console.error('Error al cargar productos de tarea:', error);
+                if (error.response && error.response.data && error.response.data.message) {
+                    Swal.fire('Error', error.response.data.message, 'warning');
+                } else {
+                    Swal.fire('Error', 'Error al cargar productos de la tarea', 'error');
+                }
+            } finally {
+                this.isLoading = false;
+            }
+        },
+
+        // Abrir modal de búsqueda de tareas
+        openTaskModal() {
+            this.showModalTarea = true;
+            this.taskSearchQuery = '';
+            this.taskSearchResults = [];
+            // Cargar tareas recientes automáticamente
+            this.loadRecentTasks();
+        },
+
+        // Cargar tareas recientes con productos pendientes
+        async loadRecentTasks() {
+            this.taskSearchLoading = true;
+            try {
+                const response = await axios.get('/admin/tasks-with-pending-products');
+                if (response.data.ok) {
+                    this.taskSearchResults = response.data.tasks;
+                }
+            } catch (error) {
+                console.error('Error al cargar tareas:', error);
+            } finally {
+                this.taskSearchLoading = false;
+            }
+        },
+
+        // Buscar/filtrar tareas con productos pendientes
+        searchTasks() {
+            clearTimeout(this.taskSearchTimeout);
+            this.taskSearchTimeout = setTimeout(async () => {
+                this.taskSearchLoading = true;
+                try {
+                    const response = await axios.get('/admin/tasks-with-pending-products', {
+                        params: { q: this.taskSearchQuery }
+                    });
+                    if (response.data.ok) {
+                        this.taskSearchResults = response.data.tasks;
+                    }
+                } catch (error) {
+                    console.error('Error al buscar tareas:', error);
+                } finally {
+                    this.taskSearchLoading = false;
+                }
+            }, 300);
+        },
+
+        // Seleccionar tarea del buscador
+        selectTask(task) {
+            this.showModalTarea = false;
+            this.taskSearchQuery = '';
+            this.taskSearchResults = [];
+            this.loadFromTask(task.id);
+        },
+
+        // Limpiar datos de tarea (desvincular)
+        clearTaskData() {
+            this.fromTaskId = null;
+            this.receipt.task_id = null;
+            this.clientFromTask = false;
+            this.client = null;
+            this.receipt.client_id = 0;
+            // Eliminar solo items que vienen de tarea
+            this.items = this.items.filter(item => !item.from_task_product_id);
+            this.calcularTotales();
+        },
+
         initializeFromOriginal() {
             const r = this.receiptOriginal;
 
             // Cliente
             this.client = this.clientOriginal;
             this.receipt.client_id = r.client_id;
+
+            // Si la nota viene de una tarea, bloquear cliente
+            if (r.task_id) {
+                this.fromTaskId = r.task_id;
+                this.receipt.task_id = r.task_id;
+                this.clientFromTask = true;
+            }
 
             // Flags
             this.cotizacion = r.quotation === 1 || r.quotation === true;
@@ -806,7 +1072,8 @@ export default {
                 discount_concept: detail.discount_concept || '$',
                 subtotal: detail.subtotal,
                 image: detail.image || null, // Usar imagen del detalle (viene del backend)
-                isFromOriginal: true
+                isFromOriginal: true,
+                from_task_product_id: detail.from_task_product_id || null // Productos de tarea
             };
 
             this.items.push(item);
@@ -1173,7 +1440,8 @@ export default {
                 qty: item.qty,
                 discount: item.discount,
                 discount_concept: item.discount_concept,
-                subtotal: item.subtotal
+                subtotal: item.subtotal,
+                from_task_product_id: item.from_task_product_id || null
             }));
 
             // Preparar info_extra

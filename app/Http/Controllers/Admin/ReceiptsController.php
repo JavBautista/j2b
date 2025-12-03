@@ -282,6 +282,11 @@ class ReceiptsController extends Controller
             $receipt->credit_type = $rcp['credit_type'] ?? 'semanal';
         }
 
+        // Si viene de una tarea, guardar la referencia
+        if (!empty($rcp['task_id'])) {
+            $receipt->task_id = $rcp['task_id'];
+        }
+
         $receipt->save();
 
         // Guardar pago parcial si aplica
@@ -320,12 +325,17 @@ class ReceiptsController extends Controller
                 $product_cost = 0;
 
                 // Si es producto y NO es cotización: descontar stock
+                // EXCEPCIÓN: Si viene de tarea (from_task_product_id), el stock ya fue descontado
+                $fromTaskProductId = isset($data->from_task_product_id) ? $data->from_task_product_id : null;
                 if (!$es_cotizacion && $data->type == 'product') {
                     $qty = $data->qty;
                     $product = Product::find($data->id);
                     if ($product) {
-                        $product->stock = $product->stock - $qty;
-                        $product->save();
+                        // Solo descontar si NO viene de una tarea
+                        if (!$fromTaskProductId) {
+                            $product->stock = $product->stock - $qty;
+                            $product->save();
+                        }
                         $product_cost = $product->cost ?? 0;
                     }
                 }
@@ -358,7 +368,14 @@ class ReceiptsController extends Controller
                 $detail->discount = $data->discount ?? 0;
                 $detail->discount_concept = $data->discount_concept ?? '';
                 $detail->subtotal = $data->subtotal ?? 0;
+                $detail->from_task_product_id = $fromTaskProductId;
                 $detail->save();
+
+                // Si viene de tarea, marcar el task_product como facturado
+                if ($fromTaskProductId) {
+                    \App\Models\TaskProduct::where('id', $fromTaskProductId)
+                        ->update(['receipt_id' => $receipt->id]);
+                }
             }
         }
 
@@ -564,10 +581,11 @@ class ReceiptsController extends Controller
         // ==================== RESTAURAR STOCK ANTERIOR ====================
         // Si NO es cotización, devolvemos el stock temporalmente
         // y reactivamos los equipos (por si los eliminan de la nota)
+        // EXCEPTO productos que vienen de tarea (from_task_product_id) - ese stock ya fue manejado en la tarea
         if (!$receipt->quotation) {
             $detail_bd = ReceiptDetail::where('receipt_id', $receipt->id)->get();
             foreach ($detail_bd as $dt_bd) {
-                if ($dt_bd->type == 'product') {
+                if ($dt_bd->type == 'product' && !$dt_bd->from_task_product_id) {
                     $product = Product::find($dt_bd->product_id);
                     if ($product) {
                         $product->stock = $product->stock + $dt_bd->qty;
@@ -649,13 +667,17 @@ class ReceiptsController extends Controller
         if (!empty($details)) {
             foreach ($details as $data) {
                 $product_cost = 0;
+                $fromTaskProductId = $data->from_task_product_id ?? null;
 
                 // Si es producto y NO es cotización: descontar stock
+                // EXCEPTO si viene de tarea (from_task_product_id) - ese stock ya fue manejado
                 if (!$es_cotizacion && $data->type == 'product') {
                     $product = Product::find($data->id);
                     if ($product) {
-                        $product->stock = $product->stock - $data->qty;
-                        $product->save();
+                        if (!$fromTaskProductId) {
+                            $product->stock = $product->stock - $data->qty;
+                            $product->save();
+                        }
                         $product_cost = $product->cost ?? 0;
                     }
                 }
@@ -688,6 +710,7 @@ class ReceiptsController extends Controller
                 $detail->discount = $data->discount ?? 0;
                 $detail->discount_concept = $data->discount_concept ?? '';
                 $detail->subtotal = $data->subtotal ?? 0;
+                $detail->from_task_product_id = $data->from_task_product_id ?? null;
                 $detail->save();
             }
         }

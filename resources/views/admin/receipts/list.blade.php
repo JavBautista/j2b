@@ -11,7 +11,9 @@
         </div>
         <div class="row">
             <div class="col-md-12">
-                <receipt-list-component></receipt-list-component>
+                <receipt-list-component
+                    :user-limited="{{ auth()->user()->limited ? 'true' : 'false' }}"
+                ></receipt-list-component>
             </div>
         </div>
     </div>

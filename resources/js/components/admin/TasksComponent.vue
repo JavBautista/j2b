@@ -43,7 +43,7 @@
                             <i class="fa fa-list"></i>
                         </button>
                     </div>
-                    <button type="button" @click="abrirModal('crear')" class="btn btn-primary">
+                    <button v-if="!userLimited" type="button" @click="abrirModal('crear')" class="btn btn-primary">
                         <i class="fa fa-plus"></i>&nbsp;Nueva Tarea
                     </button>
                 </div>
@@ -91,10 +91,10 @@
                                         <li><a class="dropdown-item" href="#" @click.prevent="abrirModal('ver', task)">
                                             <i class="fa fa-eye text-info"></i> Ver Detalle
                                         </a></li>
-                                        <li><a class="dropdown-item" href="#" @click.prevent="abrirModal('editar', task)">
+                                        <li v-if="!userLimited"><a class="dropdown-item" href="#" @click.prevent="abrirModal('editar', task)">
                                             <i class="fa fa-edit text-primary"></i> Editar
                                         </a></li>
-                                        <li><hr class="dropdown-divider"></li>
+                                        <li v-if="!userLimited"><hr class="dropdown-divider"></li>
                                         <li><a class="dropdown-item" href="#" @click.prevent="abrirModal('estatus', task)">
                                             <i class="fa fa-exchange text-warning"></i> Cambiar Estatus
                                         </a></li>
@@ -112,8 +112,8 @@
                                                 <i class="fa fa-toggle-on text-success"></i> Activar
                                             </a></li>
                                         </template>
-                                        <li><hr class="dropdown-divider"></li>
-                                        <li><a class="dropdown-item text-danger" href="#" @click.prevent="confirmarEliminar(task)">
+                                        <li v-if="!userLimited"><hr class="dropdown-divider"></li>
+                                        <li v-if="!userLimited"><a class="dropdown-item text-danger" href="#" @click.prevent="confirmarEliminar(task)">
                                             <i class="fa fa-trash"></i> Eliminar
                                         </a></li>
                                     </ul>
@@ -193,13 +193,13 @@
                                         <button class="btn btn-info btn-sm" @click="abrirModal('ver', task)" title="Ver">
                                             <i class="fa fa-eye"></i>
                                         </button>
-                                        <button class="btn btn-primary btn-sm" @click="abrirModal('editar', task)" title="Editar">
+                                        <button v-if="!userLimited" class="btn btn-primary btn-sm" @click="abrirModal('editar', task)" title="Editar">
                                             <i class="fa fa-edit"></i>
                                         </button>
                                         <button class="btn btn-warning btn-sm" @click="abrirModal('estatus', task)" title="Estatus">
                                             <i class="fa fa-exchange"></i>
                                         </button>
-                                        <button class="btn btn-danger btn-sm" @click="confirmarEliminar(task)" title="Eliminar">
+                                        <button v-if="!userLimited" class="btn btn-danger btn-sm" @click="confirmarEliminar(task)" title="Eliminar">
                                             <i class="fa fa-trash"></i>
                                         </button>
                                     </div>
@@ -393,6 +393,9 @@
                                                     <tr v-for="tp in taskSeleccionada.products" :key="tp.id">
                                                         <td>
                                                             <strong>{{ tp.product ? tp.product.name : 'Producto eliminado' }}</strong>
+                                                            <span v-if="tp.receipt_id" class="badge badge-success ml-2">
+                                                                <i class="fa fa-file-invoice-dollar"></i> Facturado
+                                                            </span>
                                                             <br><small class="text-muted">{{ tp.product ? tp.product.key : '' }}</small>
                                                             <br><small class="text-info" v-if="tp.notes">{{ tp.notes }}</small>
                                                         </td>
@@ -409,7 +412,10 @@
                                                             </span>
                                                         </td>
                                                         <td class="text-center">
-                                                            <button class="btn btn-sm btn-outline-secondary" @click="editarProductoTarea(tp)" title="Actualizar cantidades">
+                                                            <button class="btn btn-sm btn-outline-secondary"
+                                                                    @click="editarProductoTarea(tp)"
+                                                                    :disabled="tp.receipt_id"
+                                                                    :title="tp.receipt_id ? 'Producto ya facturado' : 'Actualizar cantidades'">
                                                                 <i class="fa fa-cog"></i>
                                                             </button>
                                                         </td>
@@ -427,6 +433,19 @@
                                                     Pendientes: {{ getTotalPendientes() }}
                                                 </span>
                                             </small>
+                                        </div>
+                                        <!-- Botón Generar Nota de Venta -->
+                                        <div class="mt-3" v-if="getProductosSinFacturar() > 0">
+                                            <button class="btn btn-success btn-block" @click="generarNotaDesdeProductos()">
+                                                <i class="fa fa-file-invoice-dollar mr-2"></i>
+                                                Generar Nota de Venta ({{ getProductosSinFacturar() }} productos)
+                                            </button>
+                                        </div>
+                                        <div class="mt-3" v-else-if="getTotalUsados() > 0">
+                                            <span class="text-success">
+                                                <i class="fa fa-check-circle mr-1"></i>
+                                                Todos los productos usados ya fueron facturados
+                                            </span>
                                         </div>
                                     </div>
                                     <div v-else class="text-center text-muted py-3">
@@ -490,7 +509,7 @@
                     <button type="button" class="btn btn-lg btn-warning" @click="abrirModal('estatus', taskSeleccionada)">
                         <i class="fa fa-exchange mr-1"></i> Cambiar Estatus
                     </button>
-                    <button type="button" class="btn btn-lg btn-primary" @click="abrirModal('editar', taskSeleccionada)">
+                    <button v-if="!userLimited" type="button" class="btn btn-lg btn-primary" @click="abrirModal('editar', taskSeleccionada)">
                         <i class="fa fa-edit mr-1"></i> Editar
                     </button>
                 </div>
@@ -802,7 +821,7 @@
 
 <script>
 export default {
-    props: ['shop'],
+    props: ['shop', 'userLimited'],
     data() {
         return {
             arrayTasks: [],
@@ -1370,6 +1389,17 @@ export default {
 
         getTotalPendientes() {
             return this.getTotalEntregados() - this.getTotalUsados() - this.getTotalDevueltos();
+        },
+
+        // Obtener productos usados sin facturar
+        getProductosSinFacturar() {
+            if (!this.taskSeleccionada.products) return 0;
+            return this.taskSeleccionada.products.filter(p => p.qty_used > 0 && !p.receipt_id).length;
+        },
+
+        // Generar nota de venta desde productos de tarea
+        generarNotaDesdeProductos() {
+            window.location.href = `/admin/receipts/create?from_task=${this.taskSeleccionada.id}`;
         }
     }
 }

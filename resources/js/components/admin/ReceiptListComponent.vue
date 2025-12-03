@@ -44,8 +44,8 @@
             </div>
         </div>
 
-        <!-- Botón Nueva Venta -->
-        <div class="mb-3">
+        <!-- Botón Nueva Venta (solo admin full) -->
+        <div class="mb-3" v-if="!userLimited">
             <a href="/admin/receipts/create" class="btn btn-success">
                 <i class="fa fa-plus me-1"></i> Nueva Venta
             </a>
@@ -115,7 +115,7 @@
                                                 @click="verEnPantalla(receipt)" title="Ver detalle">
                                             <i class="fa fa-eye"></i>
                                         </button>
-                                        <button v-if="canEdit(receipt)" class="btn btn-outline-warning"
+                                        <button v-if="canEdit(receipt) && !userLimited" class="btn btn-outline-warning"
                                                 @click="editarNota(receipt)" title="Editar">
                                             <i class="fa fa-edit"></i>
                                         </button>
@@ -160,6 +160,7 @@
 <script>
 export default {
     name: 'ReceiptListComponent',
+    props: ['userLimited'],
     data() {
         return {
             loading: false,

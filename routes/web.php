@@ -289,5 +289,34 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::post('/admin/products/{id}/upload-image', [\App\Http\Controllers\Admin\ProductsController::class, 'uploadImage'])->name('admin.products.upload-image');
         Route::delete('/admin/products/{id}/delete-main-image', [\App\Http\Controllers\Admin\ProductsController::class, 'deleteMainImage'])->name('admin.products.delete-main-image');
         Route::delete('/admin/products/delete-alt-image/{imageId}', [\App\Http\Controllers\Admin\ProductsController::class, 'deleteAltImage'])->name('admin.products.delete-alt-image');
+
+        // Rutas para Categorías (CRUD admin)
+        Route::get('/admin/categories', [\App\Http\Controllers\Admin\CategoriesController::class, 'index'])->name('admin.categories');
+        Route::get('/admin/categories/get', [\App\Http\Controllers\Admin\CategoriesController::class, 'get'])->name('admin.categories.get');
+        Route::post('/admin/categories/store', [\App\Http\Controllers\Admin\CategoriesController::class, 'store'])->name('admin.categories.store');
+        Route::put('/admin/categories/update', [\App\Http\Controllers\Admin\CategoriesController::class, 'update'])->name('admin.categories.update');
+        Route::put('/admin/categories/{id}/activate', [\App\Http\Controllers\Admin\CategoriesController::class, 'activate'])->name('admin.categories.activate');
+        Route::put('/admin/categories/{id}/deactivate', [\App\Http\Controllers\Admin\CategoriesController::class, 'deactivate'])->name('admin.categories.deactivate');
+        Route::delete('/admin/categories/{id}', [\App\Http\Controllers\Admin\CategoriesController::class, 'delete'])->name('admin.categories.delete');
+
+        // Rutas para Servicios (CRUD admin)
+        Route::get('/admin/services', [\App\Http\Controllers\Admin\ServicesController::class, 'index'])->name('admin.services');
+        Route::get('/admin/services/get', [\App\Http\Controllers\Admin\ServicesController::class, 'get'])->name('admin.services.get');
+        Route::post('/admin/services/store', [\App\Http\Controllers\Admin\ServicesController::class, 'store'])->name('admin.services.store');
+        Route::put('/admin/services/update', [\App\Http\Controllers\Admin\ServicesController::class, 'update'])->name('admin.services.update');
+        Route::put('/admin/services/{id}/activate', [\App\Http\Controllers\Admin\ServicesController::class, 'activate'])->name('admin.services.activate');
+        Route::put('/admin/services/{id}/deactivate', [\App\Http\Controllers\Admin\ServicesController::class, 'deactivate'])->name('admin.services.deactivate');
+        Route::delete('/admin/services/{id}', [\App\Http\Controllers\Admin\ServicesController::class, 'delete'])->name('admin.services.delete');
+
+        // Rutas para Equipos (CRUD admin)
+        Route::get('/admin/equipments', [\App\Http\Controllers\Admin\EquipmentsController::class, 'index'])->name('admin.equipments');
+        Route::get('/admin/equipments/get', [\App\Http\Controllers\Admin\EquipmentsController::class, 'get'])->name('admin.equipments.get');
+        Route::post('/admin/equipments/store', [\App\Http\Controllers\Admin\EquipmentsController::class, 'store'])->name('admin.equipments.store');
+        Route::put('/admin/equipments/update', [\App\Http\Controllers\Admin\EquipmentsController::class, 'update'])->name('admin.equipments.update');
+        Route::put('/admin/equipments/{id}/activate', [\App\Http\Controllers\Admin\EquipmentsController::class, 'activate'])->name('admin.equipments.activate');
+        Route::put('/admin/equipments/{id}/deactivate', [\App\Http\Controllers\Admin\EquipmentsController::class, 'deactivate'])->name('admin.equipments.deactivate');
+        Route::delete('/admin/equipments/{id}', [\App\Http\Controllers\Admin\EquipmentsController::class, 'delete'])->name('admin.equipments.delete');
+        Route::post('/admin/equipments/{id}/upload-image', [\App\Http\Controllers\Admin\EquipmentsController::class, 'uploadImage'])->name('admin.equipments.upload-image');
+        Route::delete('/admin/equipments/delete-image/{imageId}', [\App\Http\Controllers\Admin\EquipmentsController::class, 'deleteImage'])->name('admin.equipments.delete-image');
     }); //./Routes Middleware admin
 });#./Middlware AUTH

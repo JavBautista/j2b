@@ -341,6 +341,8 @@ export default {
     display: flex;
     flex-direction: column;
     height: 100%;
+    max-height: 90vh;
+    overflow: hidden;
 }
 
 .modal-header-custom {
@@ -360,6 +362,7 @@ export default {
     flex: 1;
     overflow-y: auto;
     padding: 1.5rem;
+    min-height: 0;
 }
 
 .modal-footer-custom {

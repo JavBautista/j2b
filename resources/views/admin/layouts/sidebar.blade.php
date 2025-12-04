@@ -12,29 +12,8 @@
                 </a>
             </li>
             <li class="nav-item">
-                <a href="{{ route('admin.configurations') }}" class="nav-link">
-                    <i class="fa fa-cogs"></i> Configuraciones
-                </a>
-            </li>
-            <li class="nav-item">
-                <a href="{{ route('admin.download') }}" class="nav-link">
-                    <i class="fa fa-download"></i> Descarga
-                </a>
-            </li>
-            
-            <li class="nav-item">
-                <a href="{{ route('admin.clients') }}" class="nav-link">
-                    <i class="fa fa-users"></i> Clientes
-                </a>
-            </li>
-            <li class="nav-item">
                 <a href="{{ route('admin.tasks') }}" class="nav-link">
                     <i class="fa fa-tasks"></i> Tareas
-                </a>
-            </li>
-            <li class="nav-item">
-                <a href="{{ route('admin.products') }}" class="nav-link">
-                    <i class="fa fa-cube"></i> Productos
                 </a>
             </li>
             <li class="nav-item">
@@ -43,8 +22,43 @@
                 </a>
             </li>
             <li class="nav-item">
+                <a href="{{ route('admin.clients') }}" class="nav-link">
+                    <i class="fa fa-users"></i> Clientes
+                </a>
+            </li>
+
+            <li class="nav-item nav-dropdown">
+                <a class="nav-link nav-dropdown-toggle" href="#"><i class="fa fa-th-list"></i> Catálogos</a>
+                <ul class="nav-dropdown-items">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ route('admin.products') }}"><i class="fa fa-cube"></i> Productos</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ route('admin.categories') }}"><i class="fa fa-tags"></i> Categorías</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ route('admin.services') }}"><i class="fa fa-wrench"></i> Servicios</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ route('admin.equipments') }}"><i class="fa fa-print"></i> Equipos</a>
+                    </li>
+                </ul>
+            </li>
+            
+            <li class="nav-item">
                 <a href="{{ route('admin.contracts') }}" class="nav-link">
                     <i class="fa fa-file-text-o"></i> Plantillas Contratos
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a href="{{ route('admin.configurations') }}" class="nav-link">
+                    <i class="fa fa-cogs"></i> Configuraciones
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ route('admin.download') }}" class="nav-link">
+                    <i class="fa fa-download"></i> Descarga
                 </a>
             </li>
 

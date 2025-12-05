@@ -15,7 +15,7 @@
                             <i class="fa fa-list"></i>
                         </button>
                     </div>
-                    <button type="button" @click="abrirModal('crear')" class="btn btn-primary">
+                    <button v-if="!userLimited" type="button" @click="abrirModal('crear')" class="btn btn-primary">
                         <i class="fa fa-plus"></i>&nbsp;Nuevo Producto
                     </button>
                 </div>
@@ -63,28 +63,31 @@
                                         <i class="fa fa-ellipsis-v"></i>
                                     </button>
                                     <ul class="dropdown-menu dropdown-menu-end">
-                                        <li><a class="dropdown-item" href="#" @click.prevent="abrirModal('editar', product)">
+                                        <li><a class="dropdown-item" href="#" @click.prevent="abrirModal('ver', product)">
+                                            <i class="fa fa-eye text-info"></i> Ver
+                                        </a></li>
+                                        <li v-if="!userLimited"><a class="dropdown-item" href="#" @click.prevent="abrirModal('editar', product)">
                                             <i class="fa fa-edit text-primary"></i> Editar
                                         </a></li>
-                                        <li><a class="dropdown-item" href="#" @click.prevent="abrirModalStock(product)">
+                                        <li v-if="!userLimited"><a class="dropdown-item" href="#" @click.prevent="abrirModalStock(product)">
                                             <i class="fa fa-cubes text-info"></i> Ajustar Stock
                                         </a></li>
-                                        <li><a class="dropdown-item" href="#" @click.prevent="abrirModalImagenes(product)">
+                                        <li v-if="!userLimited"><a class="dropdown-item" href="#" @click.prevent="abrirModalImagenes(product)">
                                             <i class="fa fa-image text-success"></i> Gestionar Imágenes
                                         </a></li>
-                                        <li><hr class="dropdown-divider"></li>
-                                        <template v-if="product.active">
+                                        <li v-if="!userLimited"><hr class="dropdown-divider"></li>
+                                        <template v-if="!userLimited && product.active">
                                             <li><a class="dropdown-item" href="#" @click.prevent="desactivarProducto(product.id)">
                                                 <i class="fa fa-toggle-off text-danger"></i> Desactivar
                                             </a></li>
                                         </template>
-                                        <template v-else>
+                                        <template v-if="!userLimited && !product.active">
                                             <li><a class="dropdown-item" href="#" @click.prevent="activarProducto(product.id)">
                                                 <i class="fa fa-toggle-on text-success"></i> Activar
                                             </a></li>
                                         </template>
-                                        <li><hr class="dropdown-divider"></li>
-                                        <li><a class="dropdown-item text-danger" href="#" @click.prevent="confirmarEliminar(product)">
+                                        <li v-if="!userLimited"><hr class="dropdown-divider"></li>
+                                        <li v-if="!userLimited"><a class="dropdown-item text-danger" href="#" @click.prevent="confirmarEliminar(product)">
                                             <i class="fa fa-trash"></i> Eliminar
                                         </a></li>
                                     </ul>
@@ -172,16 +175,19 @@
                                 </td>
                                 <td>
                                     <div class="btn-group btn-group-sm">
-                                        <button class="btn btn-primary btn-sm" @click="abrirModal('editar', product)" title="Editar">
+                                        <button class="btn btn-info btn-sm" @click="abrirModal('ver', product)" title="Ver">
+                                            <i class="fa fa-eye"></i>
+                                        </button>
+                                        <button v-if="!userLimited" class="btn btn-primary btn-sm" @click="abrirModal('editar', product)" title="Editar">
                                             <i class="fa fa-edit"></i>
                                         </button>
-                                        <button class="btn btn-success btn-sm" @click="abrirModalImagenes(product)" title="Imágenes">
+                                        <button v-if="!userLimited" class="btn btn-success btn-sm" @click="abrirModalImagenes(product)" title="Imágenes">
                                             <i class="fa fa-image"></i>
                                         </button>
-                                        <button class="btn btn-info btn-sm" @click="abrirModalStock(product)" title="Ajustar Stock">
+                                        <button v-if="!userLimited" class="btn btn-warning btn-sm" @click="abrirModalStock(product)" title="Ajustar Stock">
                                             <i class="fa fa-cubes"></i>
                                         </button>
-                                        <button class="btn btn-danger btn-sm" @click="confirmarEliminar(product)" title="Eliminar">
+                                        <button v-if="!userLimited" class="btn btn-danger btn-sm" @click="confirmarEliminar(product)" title="Eliminar">
                                             <i class="fa fa-trash"></i>
                                         </button>
                                     </div>
@@ -446,7 +452,7 @@
 
 <script>
 export default {
-    props: ['shop'],
+    props: ['shop', 'userLimited'],
     data() {
         return {
             arrayProducts: [],

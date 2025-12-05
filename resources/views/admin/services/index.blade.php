@@ -9,7 +9,7 @@
         </div>
         <div class="row">
             <div class="col-md-12">
-                <services-component :shop="{{ json_encode($shop) }}"></services-component>
+                <services-component :shop="{{ json_encode($shop) }}" :user-limited="{{ auth()->user()->limited ? 'true' : 'false' }}"></services-component>
             </div>
         </div>
     </div>

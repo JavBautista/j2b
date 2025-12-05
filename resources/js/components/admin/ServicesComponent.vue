@@ -4,7 +4,7 @@
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span><i class="fa fa-wrench"></i> Servicios de {{ shop.name }}</span>
-                <button type="button" @click="abrirModal('crear')" class="btn btn-primary">
+                <button v-if="!userLimited" type="button" @click="abrirModal('crear')" class="btn btn-primary">
                     <i class="fa fa-plus"></i>&nbsp;Nuevo Servicio
                 </button>
             </div>
@@ -49,18 +49,19 @@
                                 </td>
                                 <td>
                                     <div class="btn-group btn-group-sm">
-                                        <button class="btn btn-primary btn-sm" @click="abrirModal('editar', service)" title="Editar">
+                                        <button v-if="!userLimited" class="btn btn-primary btn-sm" @click="abrirModal('editar', service)" title="Editar">
                                             <i class="fa fa-edit"></i>
                                         </button>
-                                        <button v-if="service.active" class="btn btn-warning btn-sm" @click="desactivarServicio(service.id)" title="Desactivar">
+                                        <button v-if="!userLimited && service.active" class="btn btn-warning btn-sm" @click="desactivarServicio(service.id)" title="Desactivar">
                                             <i class="fa fa-toggle-off"></i>
                                         </button>
-                                        <button v-else class="btn btn-success btn-sm" @click="activarServicio(service.id)" title="Activar">
+                                        <button v-if="!userLimited && !service.active" class="btn btn-success btn-sm" @click="activarServicio(service.id)" title="Activar">
                                             <i class="fa fa-toggle-on"></i>
                                         </button>
-                                        <button class="btn btn-danger btn-sm" @click="confirmarEliminar(service)" title="Eliminar">
+                                        <button v-if="!userLimited" class="btn btn-danger btn-sm" @click="confirmarEliminar(service)" title="Eliminar">
                                             <i class="fa fa-trash"></i>
                                         </button>
+                                        <span v-if="userLimited" class="text-muted small">Solo lectura</span>
                                     </div>
                                 </td>
                             </tr>
@@ -140,7 +141,7 @@
 
 <script>
 export default {
-    props: ['shop'],
+    props: ['shop', 'userLimited'],
     data() {
         return {
             arrayServices: [],

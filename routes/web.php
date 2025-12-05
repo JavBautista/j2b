@@ -318,5 +318,15 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::delete('/admin/equipments/{id}', [\App\Http\Controllers\Admin\EquipmentsController::class, 'delete'])->name('admin.equipments.delete');
         Route::post('/admin/equipments/{id}/upload-image', [\App\Http\Controllers\Admin\EquipmentsController::class, 'uploadImage'])->name('admin.equipments.upload-image');
         Route::delete('/admin/equipments/delete-image/{imageId}', [\App\Http\Controllers\Admin\EquipmentsController::class, 'deleteImage'])->name('admin.equipments.delete-image');
+
+        // Reportes
+        Route::get('/admin/reports', [\App\Http\Controllers\Admin\ReportsController::class, 'index'])->name('admin.reports');
+        Route::get('/admin/reports/ventas-resumen', [\App\Http\Controllers\Admin\ReportsController::class, 'ventasResumen']);
+        Route::get('/admin/reports/ventas-utilidad', [\App\Http\Controllers\Admin\ReportsController::class, 'ventasUtilidad']);
+        Route::get('/admin/reports/inventario', [\App\Http\Controllers\Admin\ReportsController::class, 'inventario']);
+        Route::get('/admin/reports/ingresos-egresos', [\App\Http\Controllers\Admin\ReportsController::class, 'ingresosEgresos']);
+        Route::get('/admin/reports/clientes-adeudos', [\App\Http\Controllers\Admin\ReportsController::class, 'clientesAdeudos']);
+        Route::get('/admin/reports/top-productos', [\App\Http\Controllers\Admin\ReportsController::class, 'topProductos']);
+        Route::get('/admin/reports/categorias', [\App\Http\Controllers\Admin\ReportsController::class, 'getCategorias']);
     }); //./Routes Middleware admin
 });#./Middlware AUTH

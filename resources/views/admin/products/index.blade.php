@@ -9,7 +9,7 @@
         </div>
         <div class="row">
             <div class="col-md-12">
-                <products-component :shop="{{ json_encode($shop) }}"></products-component>
+                <products-component :shop="{{ json_encode($shop) }}" :user-limited="{{ auth()->user()->limited ? 'true' : 'false' }}"></products-component>
             </div>
         </div>
     </div>

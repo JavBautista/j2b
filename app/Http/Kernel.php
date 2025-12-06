@@ -58,6 +58,7 @@ class Kernel extends HttpKernel
         'superadmin'=> \App\Http\Middleware\SuperadminMiddleware::class,
         'client'=> \App\Http\Middleware\ClientMiddleware::class,
         'web.access'=> \App\Http\Middleware\WebAccessMiddleware::class,
+        'full.admin'=> \App\Http\Middleware\FullAdminOnly::class,
 
         'subscription.active' => \App\Http\Middleware\CheckSubscriptionActive::class,
 

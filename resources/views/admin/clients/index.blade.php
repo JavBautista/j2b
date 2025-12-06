@@ -9,9 +9,9 @@
         </div>
         <div class="row">
             <div class="col-md-12">
-                <p>Esta es la página de clientes de la tienda: {{ $shop->name }}</p>
                 <shop-clients-component
-                    :shop="{{ json_encode($shop) }}"></shop-clients-component>
+                    :shop="{{ json_encode($shop) }}"
+                    :is-limited-user="{{ json_encode($isLimitedUser) }}"></shop-clients-component>
             </div>
         </div>
     </div>

@@ -19,9 +19,10 @@ use App\Http\Controllers\SuperadminPagesController;
 use App\Http\Controllers\SuperAdminController;
 use App\Http\Controllers\Superadmin\ShopsController;
 use  App\Http\Controllers\Superadmin\PlansController;
-use App\Http\Controllers\Superadmin\UsersController;
+use App\Http\Controllers\Superadmin\UsersController as SuperadminUsersController;
 use App\Http\Controllers\Admin\ClientsController;
 use App\Http\Controllers\Admin\TasksController;
+use App\Http\Controllers\Admin\UsersController as AdminUsersController;
 
 
 /*
@@ -98,16 +99,16 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
 
         //Users
         Route::get('/superadmin/users', [SuperadminPagesController::class, 'users'])->name('superadmin.users');
-        Route::get('/superadmin/users/get', [UsersController::class, 'get']);
-        Route::post('/superadmin/users/store', [UsersController::class, 'store']);
-        Route::put('/superadmin/users/update', [UsersController::class, 'updateInfo']);
-        Route::put('/superadmin/users/active', [UsersController::class, 'updateToActive']);
-        Route::put('/superadmin/users/inactive', [UsersController::class, 'updateToInactive']);
-        Route::put('/superadmin/users/reset-password', [UsersController::class, 'resetPassword']);
+        Route::get('/superadmin/users/get', [SuperadminUsersController::class, 'get']);
+        Route::post('/superadmin/users/store', [SuperadminUsersController::class, 'store']);
+        Route::put('/superadmin/users/update', [SuperadminUsersController::class, 'updateInfo']);
+        Route::put('/superadmin/users/active', [SuperadminUsersController::class, 'updateToActive']);
+        Route::put('/superadmin/users/inactive', [SuperadminUsersController::class, 'updateToInactive']);
+        Route::put('/superadmin/users/reset-password', [SuperadminUsersController::class, 'resetPassword']);
 
         //UPLOAD APK
         Route::get('/superadmin/upload', [SuperadminPagesController::class, 'uploadApk'])->name('superadmin.upload_apk');
-        Route::post('/superadmin/upload-apk/store', [UsersController::class, 'storeApk'])->name('superadmin.store.apk');
+        Route::post('/superadmin/upload-apk/store', [SuperadminUsersController::class, 'storeApk'])->name('superadmin.store.apk');
 
 
         //Pre Registers
@@ -226,6 +227,23 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::post('/admin/client-addresses/upload-location-image', [App\Http\Controllers\Admin\ClientAddressController::class, 'uploadLocationImage'])->name('admin.client-addresses.upload-image');
         Route::delete('/admin/client-addresses/delete-location-image', [App\Http\Controllers\Admin\ClientAddressController::class, 'deleteLocationImage'])->name('admin.client-addresses.delete-image');
 
+        // Usuario APP Cliente
+        Route::get('/admin/clients/verify-user-email', [ClientsController::class, 'verifyUserEmail'])->name('admin.clients.verify-user-email');
+        Route::get('/admin/clients/{client}/get-user-app', [ClientsController::class, 'getClientUserApp'])->name('admin.clients.get-user-app');
+        Route::post('/admin/clients/{client}/store-user-app', [ClientsController::class, 'storeClientUserApp'])->name('admin.clients.store-user-app');
+        Route::put('/admin/clients/{client}/update-user-app', [ClientsController::class, 'updateClientUserApp'])->name('admin.clients.update-user-app');
+
+        // Imagen de ubicación del cliente
+        Route::post('/admin/clients/{client}/upload-location-image', [ClientsController::class, 'uploadLocationImage'])->name('admin.clients.upload-location-image');
+        Route::delete('/admin/clients/{client}/delete-location-image', [ClientsController::class, 'deleteLocationImage'])->name('admin.clients.delete-location-image');
+
+        // Geolocalización GPS del cliente
+        Route::put('/admin/clients/{client}/update-location', [ClientsController::class, 'updateLocation'])->name('admin.clients.update-location');
+        Route::delete('/admin/clients/{client}/remove-location', [ClientsController::class, 'removeLocation'])->name('admin.clients.remove-location');
+
+        // Rentas del cliente
+        Route::get('/admin/clients/{client}/rents', [ClientsController::class, 'getClientRents'])->name('admin.clients.rents');
+
         // Rutas para recibos de clientes (admin web)
         Route::get('/admin/clients/{client}/receipts', [App\Http\Controllers\Admin\ReceiptsController::class, 'index'])->name('admin.clients.receipts');
         Route::get('/admin/clients/receipts/get', [App\Http\Controllers\Admin\ReceiptsController::class, 'getReceipts'])->name('admin.clients.receipts.get');
@@ -319,14 +337,51 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::post('/admin/equipments/{id}/upload-image', [\App\Http\Controllers\Admin\EquipmentsController::class, 'uploadImage'])->name('admin.equipments.upload-image');
         Route::delete('/admin/equipments/delete-image/{imageId}', [\App\Http\Controllers\Admin\EquipmentsController::class, 'deleteImage'])->name('admin.equipments.delete-image');
 
-        // Reportes
-        Route::get('/admin/reports', [\App\Http\Controllers\Admin\ReportsController::class, 'index'])->name('admin.reports');
-        Route::get('/admin/reports/ventas-resumen', [\App\Http\Controllers\Admin\ReportsController::class, 'ventasResumen']);
-        Route::get('/admin/reports/ventas-utilidad', [\App\Http\Controllers\Admin\ReportsController::class, 'ventasUtilidad']);
-        Route::get('/admin/reports/inventario', [\App\Http\Controllers\Admin\ReportsController::class, 'inventario']);
-        Route::get('/admin/reports/ingresos-egresos', [\App\Http\Controllers\Admin\ReportsController::class, 'ingresosEgresos']);
-        Route::get('/admin/reports/clientes-adeudos', [\App\Http\Controllers\Admin\ReportsController::class, 'clientesAdeudos']);
-        Route::get('/admin/reports/top-productos', [\App\Http\Controllers\Admin\ReportsController::class, 'topProductos']);
-        Route::get('/admin/reports/categorias', [\App\Http\Controllers\Admin\ReportsController::class, 'getCategorias']);
+        // Users (Admins y Colaboradores de la tienda)
+        Route::get('/admin/users', [AdminUsersController::class, 'index'])->name('admin.users');
+        Route::get('/admin/users/shop-slug', [AdminUsersController::class, 'getShopSlug']);
+        Route::get('/admin/users/counters', [AdminUsersController::class, 'getCounters']);
+        Route::get('/admin/users/verify-email', [AdminUsersController::class, 'verifyEmail']);
+        // Administradores
+        Route::get('/admin/users/administrators', [AdminUsersController::class, 'getAdministrators']);
+        Route::post('/admin/users/administrators/store', [AdminUsersController::class, 'storeAdministrator']);
+        Route::put('/admin/users/administrators/update', [AdminUsersController::class, 'updateAdministrator']);
+        Route::put('/admin/users/administrators/{id}/activate', [AdminUsersController::class, 'activateAdministrator']);
+        Route::put('/admin/users/administrators/{id}/deactivate', [AdminUsersController::class, 'deactivateAdministrator']);
+        Route::put('/admin/users/administrators/{id}/toggle-limited', [AdminUsersController::class, 'toggleLimitedAdministrator']);
+        // Colaboradores
+        Route::get('/admin/users/collaborators', [AdminUsersController::class, 'getCollaborators']);
+        Route::post('/admin/users/collaborators/store', [AdminUsersController::class, 'storeCollaborator']);
+        Route::put('/admin/users/collaborators/update', [AdminUsersController::class, 'updateCollaborator']);
+        Route::put('/admin/users/collaborators/{id}/activate', [AdminUsersController::class, 'activateCollaborator']);
+        Route::put('/admin/users/collaborators/{id}/deactivate', [AdminUsersController::class, 'deactivateCollaborator']);
+
+        // Gastos
+        Route::get('/admin/gastos', [\App\Http\Controllers\Admin\GastosController::class, 'index'])->name('admin.gastos');
+        Route::get('/admin/gastos/get', [\App\Http\Controllers\Admin\GastosController::class, 'getExpenses']);
+        Route::get('/admin/gastos/counters', [\App\Http\Controllers\Admin\GastosController::class, 'getCounters']);
+        Route::post('/admin/gastos/store', [\App\Http\Controllers\Admin\GastosController::class, 'store']);
+        Route::put('/admin/gastos/{id}', [\App\Http\Controllers\Admin\GastosController::class, 'update']);
+        Route::patch('/admin/gastos/{id}/status', [\App\Http\Controllers\Admin\GastosController::class, 'updateStatus']);
+        Route::patch('/admin/gastos/{id}/total', [\App\Http\Controllers\Admin\GastosController::class, 'updateTotal']);
+        Route::patch('/admin/gastos/{id}/fecha', [\App\Http\Controllers\Admin\GastosController::class, 'updateFecha']);
+        Route::patch('/admin/gastos/{id}/toggle-active', [\App\Http\Controllers\Admin\GastosController::class, 'toggleActive']);
+        Route::patch('/admin/gastos/{id}/toggle-facturado', [\App\Http\Controllers\Admin\GastosController::class, 'toggleFacturado']);
+        Route::get('/admin/gastos/{id}/logs', [\App\Http\Controllers\Admin\GastosController::class, 'getLogs']);
+        Route::get('/admin/gastos/{id}/attachments', [\App\Http\Controllers\Admin\GastosController::class, 'getAttachments']);
+        Route::post('/admin/gastos/{id}/attachments', [\App\Http\Controllers\Admin\GastosController::class, 'uploadAttachment']);
+        Route::delete('/admin/gastos/attachments/{id}', [\App\Http\Controllers\Admin\GastosController::class, 'deleteAttachment']);
+
+        // Reportes (Solo Admin Full - limited = 0)
+        Route::middleware(['full.admin'])->group(function () {
+            Route::get('/admin/reports', [\App\Http\Controllers\Admin\ReportsController::class, 'index'])->name('admin.reports');
+            Route::get('/admin/reports/ventas-resumen', [\App\Http\Controllers\Admin\ReportsController::class, 'ventasResumen']);
+            Route::get('/admin/reports/ventas-utilidad', [\App\Http\Controllers\Admin\ReportsController::class, 'ventasUtilidad']);
+            Route::get('/admin/reports/inventario', [\App\Http\Controllers\Admin\ReportsController::class, 'inventario']);
+            Route::get('/admin/reports/ingresos-egresos', [\App\Http\Controllers\Admin\ReportsController::class, 'ingresosEgresos']);
+            Route::get('/admin/reports/clientes-adeudos', [\App\Http\Controllers\Admin\ReportsController::class, 'clientesAdeudos']);
+            Route::get('/admin/reports/top-productos', [\App\Http\Controllers\Admin\ReportsController::class, 'topProductos']);
+            Route::get('/admin/reports/categorias', [\App\Http\Controllers\Admin\ReportsController::class, 'getCategorias']);
+        });
     }); //./Routes Middleware admin
 });#./Middlware AUTH

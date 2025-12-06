@@ -83,8 +83,9 @@ class AdminPagesController extends Controller
 
     public function clients(){
         $user = Auth::user();
-        $shop = $user->shop;        
-        return view('admin.clients.index', compact('shop'));
+        $shop = $user->shop;
+        $isLimitedUser = $user->isLimitedAdmin();
+        return view('admin.clients.index', compact('shop', 'isLimitedUser'));
     }
 
     /**

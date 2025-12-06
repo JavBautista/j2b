@@ -22,6 +22,16 @@
                     <i class="fa fa-users"></i> Clientes
                 </a>
             </li>
+            <li class="nav-item">
+                <a href="{{ route('admin.users') }}" class="nav-link">
+                    <i class="fa fa-user-circle"></i> Usuarios App
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ route('admin.gastos') }}" class="nav-link">
+                    <i class="fa fa-money"></i> Gastos
+                </a>
+            </li>
 
             <li class="nav-item nav-dropdown">
                 <a class="nav-link nav-dropdown-toggle" href="#"><i class="fa fa-th-list"></i> Catálogos</a>
@@ -41,6 +51,8 @@
                 </ul>
             </li>
 
+            {{-- Reportes: Solo para Admin Full (limited = 0) --}}
+            @if(Auth::user()->isFullAdmin())
             <li class="nav-item nav-dropdown">
                 <a class="nav-link nav-dropdown-toggle" href="#"><i class="fa fa-bar-chart"></i> Reportes</a>
                 <ul class="nav-dropdown-items">
@@ -61,6 +73,7 @@
                     </li>
                 </ul>
             </li>
+            @endif
 
             <li class="nav-item">
                 <a href="{{ route('admin.contracts') }}" class="nav-link">

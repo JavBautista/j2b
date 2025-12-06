@@ -12,7 +12,11 @@
       "Read(//home/dev/Proyectos/Ionic/j2b-app/**)",
       "Bash(mkdir:*)",
       "Bash(mv:*)",
-      "Bash(dpkg:*)"
+      "Bash(dpkg:*)",
+      "Bash(find:*)",
+      "Bash(sudo -S chmod:*)",
+      "Bash(sudo -S chown:*)",
+      "Bash(grep:*)"
     ],
     "deny": []
   }

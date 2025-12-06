@@ -86,4 +86,22 @@ class User extends Authenticatable
     public function client(){
         return $this->hasOne(Client::class);
     }
+
+    /**
+     * Verifica si el usuario es un admin completo (no limitado)
+     * limited = 0 o null → Admin Full
+     * limited = 1 → Admin Limitado
+     */
+    public function isFullAdmin(): bool
+    {
+        return !$this->limited;
+    }
+
+    /**
+     * Verifica si el usuario es un admin limitado
+     */
+    public function isLimitedAdmin(): bool
+    {
+        return (bool) $this->limited;
+    }
 }

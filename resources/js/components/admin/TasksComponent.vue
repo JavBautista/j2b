@@ -871,7 +871,7 @@ export default {
             guardando: false,
             errorForm: false,
             erroresForm: [],
-            vistaActual: 'cards', // 'cards' o 'tabla'
+            vistaActual: localStorage.getItem('admin_vista') || 'cards', // 'cards' o 'tabla'
 
             // Productos de tarea
             modalProductos: false,
@@ -889,6 +889,11 @@ export default {
                 qty_returned: 0,
                 notes: ''
             }
+        }
+    },
+    watch: {
+        vistaActual(newVal) {
+            localStorage.setItem('admin_vista', newVal);
         }
     },
     computed: {

@@ -511,7 +511,12 @@ export default {
             guardando: false,
             errorForm: false,
             erroresForm: [],
-            vistaActual: 'cards'
+            vistaActual: localStorage.getItem('admin_vista') || 'cards'
+        }
+    },
+    watch: {
+        vistaActual(newVal) {
+            localStorage.setItem('admin_vista', newVal);
         }
     },
     computed: {

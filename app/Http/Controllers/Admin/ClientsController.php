@@ -35,10 +35,14 @@ class ClientsController extends Controller
                 $query->where('name', 'like', '%' . $buscar . '%');
             } elseif ($criterio === 'email') {
                 $query->where('email', 'like', '%' . $buscar . '%');
+            } elseif ($criterio === 'movil') {
+                $query->where('movil', 'like', '%' . $buscar . '%');
+            } elseif ($criterio === 'company') {
+                $query->where('company', 'like', '%' . $buscar . '%');
             }
         }
 
-        $clients = $query->orderBy('id', 'desc')->paginate(10);
+        $clients = $query->orderBy('id', 'desc')->paginate(12);
 
         $response = $clients->toArray();
         $response['pagination'] = [
@@ -63,8 +67,12 @@ class ClientsController extends Controller
             'email' => 'required|email|max:255',
             'company' => 'nullable|string|max:255',
             'movil' => 'nullable|string|max:20',
+            'phone' => 'nullable|string|max:20',
             'address' => 'nullable|string',
-            'level' => 'nullable|integer'
+            'city' => 'nullable|string|max:100',
+            'state' => 'nullable|string|max:100',
+            'level' => 'nullable|integer',
+            'observations' => 'nullable|string'
         ]);
 
         $user = Auth::user();
@@ -77,8 +85,12 @@ class ClientsController extends Controller
         $client->company = $request->company;
         $client->email = $request->email;
         $client->movil = $request->movil;
+        $client->phone = $request->phone;
         $client->address = $request->address;
+        $client->city = $request->city;
+        $client->state = $request->state;
         $client->level = $request->level ?? 1;
+        $client->observations = $request->observations;
         $client->save();
 
         return response()->json([
@@ -90,17 +102,30 @@ class ClientsController extends Controller
 
     public function update(Request $request)
     {
+        $user = Auth::user();
+
+        // Validar permisos: usuario limitado no puede editar
+        if ($user->isLimitedAdmin()) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'No tienes permisos para editar clientes.'
+            ], 403);
+        }
+
         $request->validate([
             'client_id' => 'required|exists:clients,id',
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255',
             'company' => 'nullable|string|max:255',
             'movil' => 'nullable|string|max:20',
+            'phone' => 'nullable|string|max:20',
             'address' => 'nullable|string',
-            'level' => 'nullable|integer'
+            'city' => 'nullable|string|max:100',
+            'state' => 'nullable|string|max:100',
+            'level' => 'nullable|integer',
+            'observations' => 'nullable|string'
         ]);
 
-        $user = Auth::user();
         $shop = $user->shop;
 
         $client = Client::where('id', $request->client_id)
@@ -111,8 +136,12 @@ class ClientsController extends Controller
         $client->company = $request->company;
         $client->email = $request->email;
         $client->movil = $request->movil;
+        $client->phone = $request->phone;
         $client->address = $request->address;
+        $client->city = $request->city;
+        $client->state = $request->state;
         $client->level = $request->level ?? 1;
+        $client->observations = $request->observations;
         $client->save();
 
         return response()->json([
@@ -124,11 +153,20 @@ class ClientsController extends Controller
 
     public function inactive(Request $request)
     {
+        $user = Auth::user();
+
+        // Validar permisos: usuario limitado no puede desactivar
+        if ($user->isLimitedAdmin()) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'No tienes permisos para desactivar clientes.'
+            ], 403);
+        }
+
         $request->validate([
             'id' => 'required|exists:clients,id'
         ]);
 
-        $user = Auth::user();
         $shop = $user->shop;
 
         $client = Client::where('id', $request->id)
@@ -146,11 +184,20 @@ class ClientsController extends Controller
 
     public function active(Request $request)
     {
+        $user = Auth::user();
+
+        // Validar permisos: usuario limitado no puede activar
+        if ($user->isLimitedAdmin()) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'No tienes permisos para activar clientes.'
+            ], 403);
+        }
+
         $request->validate([
             'id' => 'required|exists:clients,id'
         ]);
 
-        $user = Auth::user();
         $shop = $user->shop;
 
         $client = Client::where('id', $request->id)
@@ -528,6 +575,372 @@ class ClientsController extends Controller
             'client' => $client,
             'contract' => $contract,
             'logs' => $logs
+        ]);
+    }
+
+    // =====================================================
+    // USUARIO APP CLIENTE
+    // =====================================================
+
+    /**
+     * Verificar si un email ya existe para usuario APP
+     */
+    public function verifyUserEmail(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email'
+        ]);
+
+        $exists = \App\Models\User::where('email', $request->email)->exists();
+
+        return response()->json([
+            'ok' => true,
+            'exists' => $exists
+        ]);
+    }
+
+    /**
+     * Obtener datos del usuario APP de un cliente
+     */
+    public function getClientUserApp(Client $client)
+    {
+        $user = Auth::user();
+        $shop = $user->shop;
+
+        // Verificar que el cliente pertenece a la tienda
+        if ($client->shop_id !== $shop->id) {
+            return response()->json(['ok' => false, 'message' => 'Cliente no encontrado'], 404);
+        }
+
+        if (!$client->user_id) {
+            return response()->json([
+                'ok' => true,
+                'has_user' => false,
+                'user' => null
+            ]);
+        }
+
+        $clientUser = \App\Models\User::find($client->user_id);
+
+        return response()->json([
+            'ok' => true,
+            'has_user' => true,
+            'user' => $clientUser ? [
+                'id' => $clientUser->id,
+                'name' => $clientUser->name,
+                'email' => $clientUser->email
+            ] : null
+        ]);
+    }
+
+    /**
+     * Crear usuario APP para un cliente
+     */
+    public function storeClientUserApp(Request $request, Client $client)
+    {
+        $user = Auth::user();
+        $shop = $user->shop;
+
+        // Verificar que el cliente pertenece a la tienda
+        if ($client->shop_id !== $shop->id) {
+            return response()->json(['ok' => false, 'message' => 'Cliente no encontrado'], 404);
+        }
+
+        // Verificar que el cliente no tenga ya un usuario
+        if ($client->user_id) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Este cliente ya tiene un usuario APP asignado'
+            ], 400);
+        }
+
+        $request->validate([
+            'username' => 'required|string|max:50',
+            'password' => 'required|string|min:8'
+        ]);
+
+        // Generar email basado en username y shop slug
+        $email = strtolower($request->username) . '@' . $shop->slug . '.app';
+
+        // Verificar que el email no exista
+        if (\App\Models\User::where('email', $email)->exists()) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'El usuario "' . $request->username . '" ya existe. Elige otro nombre.'
+            ], 400);
+        }
+
+        // Crear el usuario
+        $newUser = \App\Models\User::create([
+            'name' => $client->name,
+            'email' => $email,
+            'password' => bcrypt($request->password),
+            'shop_id' => $shop->id,
+            'rol' => 'client'
+        ]);
+
+        // Asignar usuario al cliente
+        $client->user_id = $newUser->id;
+        $client->save();
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Usuario APP creado exitosamente',
+            'user' => [
+                'id' => $newUser->id,
+                'email' => $newUser->email
+            ],
+            'client' => $client
+        ]);
+    }
+
+    /**
+     * Actualizar usuario APP de un cliente (email o password)
+     */
+    public function updateClientUserApp(Request $request, Client $client)
+    {
+        $user = Auth::user();
+        $shop = $user->shop;
+
+        // Verificar que el cliente pertenece a la tienda
+        if ($client->shop_id !== $shop->id) {
+            return response()->json(['ok' => false, 'message' => 'Cliente no encontrado'], 404);
+        }
+
+        // Verificar que el cliente tenga un usuario
+        if (!$client->user_id) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Este cliente no tiene un usuario APP'
+            ], 400);
+        }
+
+        $clientUser = \App\Models\User::find($client->user_id);
+        if (!$clientUser) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Usuario no encontrado'
+            ], 404);
+        }
+
+        $request->validate([
+            'email' => 'nullable|email',
+            'password' => 'nullable|string|min:8'
+        ]);
+
+        $updated = [];
+
+        // Actualizar email si se proporcionó
+        if ($request->filled('email') && $request->email !== $clientUser->email) {
+            // Verificar que el nuevo email no exista
+            if (\App\Models\User::where('email', $request->email)->where('id', '!=', $clientUser->id)->exists()) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'El email ya está en uso por otro usuario'
+                ], 400);
+            }
+            $clientUser->email = $request->email;
+            $updated[] = 'email';
+        }
+
+        // Actualizar password si se proporcionó
+        if ($request->filled('password')) {
+            $clientUser->password = bcrypt($request->password);
+            $updated[] = 'contraseña';
+        }
+
+        if (empty($updated)) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'No se proporcionaron datos para actualizar'
+            ], 400);
+        }
+
+        $clientUser->save();
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Usuario actualizado: ' . implode(' y ', $updated),
+            'user' => [
+                'id' => $clientUser->id,
+                'email' => $clientUser->email
+            ]
+        ]);
+    }
+
+    // =====================================================
+    // IMAGEN DE UBICACIÓN
+    // =====================================================
+
+    /**
+     * Subir imagen de ubicación/referencia del cliente
+     */
+    public function uploadLocationImage(Request $request, Client $client)
+    {
+        $user = Auth::user();
+        $shop = $user->shop;
+
+        // Verificar que el cliente pertenece a la tienda
+        if ($client->shop_id !== $shop->id) {
+            return response()->json(['ok' => false, 'message' => 'Cliente no encontrado'], 404);
+        }
+
+        $request->validate([
+            'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:5120' // 5MB max
+        ]);
+
+        // Eliminar imagen anterior si existe
+        if ($client->location_image) {
+            $oldPath = storage_path('app/public/' . $client->location_image);
+            if (file_exists($oldPath)) {
+                unlink($oldPath);
+            }
+        }
+
+        // Guardar nueva imagen
+        $path = $request->file('image')->store('clients/locations', 'public');
+
+        $client->location_image = $path;
+        $client->save();
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Imagen subida exitosamente',
+            'client' => $client
+        ]);
+    }
+
+    /**
+     * Eliminar imagen de ubicación/referencia del cliente
+     */
+    public function deleteLocationImage(Client $client)
+    {
+        $user = Auth::user();
+        $shop = $user->shop;
+
+        // Validar permisos: usuario limitado no puede eliminar
+        if ($user->isLimitedAdmin()) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'No tienes permisos para eliminar imágenes.'
+            ], 403);
+        }
+
+        // Verificar que el cliente pertenece a la tienda
+        if ($client->shop_id !== $shop->id) {
+            return response()->json(['ok' => false, 'message' => 'Cliente no encontrado'], 404);
+        }
+
+        if ($client->location_image) {
+            $path = storage_path('app/public/' . $client->location_image);
+            if (file_exists($path)) {
+                unlink($path);
+            }
+            $client->location_image = null;
+            $client->save();
+        }
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Imagen eliminada exitosamente',
+            'client' => $client
+        ]);
+    }
+
+    // =====================================================
+    // GEOLOCALIZACIÓN GPS
+    // =====================================================
+
+    /**
+     * Actualizar coordenadas GPS del cliente
+     */
+    public function updateLocation(Request $request, Client $client)
+    {
+        $user = Auth::user();
+        $shop = $user->shop;
+
+        // Verificar que el cliente pertenece a la tienda
+        if ($client->shop_id !== $shop->id) {
+            return response()->json(['ok' => false, 'message' => 'Cliente no encontrado'], 404);
+        }
+
+        $request->validate([
+            'latitude' => 'required|numeric|between:-90,90',
+            'longitude' => 'required|numeric|between:-180,180'
+        ]);
+
+        $client->location_latitude = $request->latitude;
+        $client->location_longitude = $request->longitude;
+        $client->save();
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Ubicación guardada exitosamente',
+            'client' => $client
+        ]);
+    }
+
+    /**
+     * Eliminar coordenadas GPS del cliente
+     */
+    public function removeLocation(Client $client)
+    {
+        $user = Auth::user();
+        $shop = $user->shop;
+
+        // Validar permisos: usuario limitado no puede eliminar ubicación
+        if ($user->isLimitedAdmin()) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'No tienes permisos para eliminar ubicaciones.'
+            ], 403);
+        }
+
+        // Verificar que el cliente pertenece a la tienda
+        if ($client->shop_id !== $shop->id) {
+            return response()->json(['ok' => false, 'message' => 'Cliente no encontrado'], 404);
+        }
+
+        $client->location_latitude = null;
+        $client->location_longitude = null;
+        $client->save();
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Ubicación eliminada exitosamente',
+            'client' => $client
+        ]);
+    }
+
+    // =====================================================
+    // RENTAS DEL CLIENTE
+    // =====================================================
+
+    /**
+     * Obtener rentas de un cliente
+     */
+    public function getClientRents(Client $client)
+    {
+        $user = Auth::user();
+        $shop = $user->shop;
+
+        // Verificar que el cliente pertenece a la tienda
+        if ($client->shop_id !== $shop->id) {
+            return response()->json(['ok' => false, 'message' => 'Cliente no encontrado'], 404);
+        }
+
+        $rents = \App\Models\Rent::where('client_id', $client->id)
+            ->with('rentDetails')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'ok' => true,
+            'client' => [
+                'id' => $client->id,
+                'name' => $client->name
+            ],
+            'rents' => $rents
         ]);
     }
 }

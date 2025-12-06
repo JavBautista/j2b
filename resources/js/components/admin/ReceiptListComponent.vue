@@ -44,11 +44,22 @@
             </div>
         </div>
 
-        <!-- Botón Nueva Venta (solo admin full) -->
-        <div class="mb-3" v-if="!userLimited">
-            <a href="/admin/receipts/create" class="btn btn-success">
-                <i class="fa fa-plus me-1"></i> Nueva Venta
-            </a>
+        <!-- Botón Nueva Venta y Toggle Vista -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div v-if="!userLimited">
+                <a href="/admin/receipts/create" class="btn btn-success">
+                    <i class="fa fa-plus me-1"></i> Nueva Venta
+                </a>
+            </div>
+            <div v-else></div>
+            <div class="btn-group">
+                <button type="button" class="btn btn-sm" :class="vistaActual === 'cards' ? 'btn-secondary' : 'btn-outline-secondary'" @click="vistaActual = 'cards'" title="Vista Cards">
+                    <i class="fa fa-th-large"></i>
+                </button>
+                <button type="button" class="btn btn-sm" :class="vistaActual === 'tabla' ? 'btn-secondary' : 'btn-outline-secondary'" @click="vistaActual = 'tabla'" title="Vista Tabla">
+                    <i class="fa fa-list"></i>
+                </button>
+            </div>
         </div>
 
         <!-- Loading -->
@@ -58,8 +69,72 @@
             </div>
         </div>
 
-        <!-- Tabla de resultados -->
-        <div v-else class="card">
+        <!-- VISTA CARDS -->
+        <div v-if="!loading && vistaActual === 'cards'" class="row">
+            <div v-if="receipts.length === 0" class="col-12 text-center py-5">
+                <i class="fa fa-receipt fa-3x text-muted mb-3"></i>
+                <p class="text-muted">No se encontraron registros</p>
+            </div>
+            <div class="col-md-4 col-lg-3 mb-4" v-for="receipt in receipts" :key="receipt.id">
+                <div class="card receipt-card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>#{{ receipt.folio }}</strong>
+                            <span v-if="receipt.quotation" class="badge bg-info ms-1">Cotización</span>
+                            <span v-else class="badge bg-primary ms-1">Nota</span>
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-dark dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fa fa-ellipsis-v"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="#" @click.prevent="verEnPantalla(receipt)">
+                                    <i class="fa fa-eye text-primary"></i> Ver Detalle
+                                </a></li>
+                                <li v-if="canEdit(receipt) && !userLimited"><a class="dropdown-item" href="#" @click.prevent="editarNota(receipt)">
+                                    <i class="fa fa-edit text-warning"></i> Editar
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" @click.prevent="descargarPDF(receipt)">
+                                    <i class="fa fa-file-pdf-o text-danger"></i> Descargar PDF
+                                </a></li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="card-body" @click="verEnPantalla(receipt)" style="cursor: pointer;">
+                        <div class="receipt-info">
+                            <div class="info-item">
+                                <i class="fa fa-user text-muted"></i>
+                                <span>{{ receipt.client?.name || 'N/A' }}</span>
+                            </div>
+                            <div class="info-item" v-if="receipt.client?.movil">
+                                <i class="fa fa-phone text-muted"></i>
+                                <span>{{ receipt.client.movil }}</span>
+                            </div>
+                            <div class="info-item">
+                                <i class="fa fa-money text-muted"></i>
+                                <span><strong>${{ formatNumber(receipt.total) }}</strong></span>
+                            </div>
+                            <div class="info-item">
+                                <i class="fa fa-check-circle text-muted"></i>
+                                <span :class="receipt.received >= receipt.total ? 'text-success' : 'text-warning'">
+                                    Recibido: ${{ formatNumber(receipt.received) }}
+                                </span>
+                            </div>
+                            <div class="info-item">
+                                <i class="fa fa-calendar text-muted"></i>
+                                <span>{{ formatDate(receipt.created_at) }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <span :class="getStatusClass(receipt.status)">{{ receipt.status }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VISTA TABLA -->
+        <div v-if="!loading && vistaActual === 'tabla'" class="card">
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table table-hover mb-0">
@@ -130,9 +205,11 @@
                     </table>
                 </div>
             </div>
+        </div>
 
-            <!-- Paginación -->
-            <div class="card-footer" v-if="pagination.last_page > 1">
+        <!-- Paginación -->
+        <div class="card mt-3" v-if="!loading && pagination.last_page > 1">
+            <div class="card-footer">
                 <nav>
                     <ul class="pagination mb-0 justify-content-center">
                         <li class="page-item" :class="{ disabled: pagination.current_page === 1 }">
@@ -177,8 +254,14 @@ export default {
                 status: '',
                 fecha_desde: '',
                 fecha_hasta: ''
-            }
+            },
+            vistaActual: localStorage.getItem('admin_vista') || 'cards'
         };
+    },
+    watch: {
+        vistaActual(newVal) {
+            localStorage.setItem('admin_vista', newVal);
+        }
     },
     computed: {
         paginationPages() {
@@ -313,5 +396,51 @@ export default {
 pre {
     font-family: inherit;
     font-size: inherit;
+}
+
+/* Estilos para Cards de Recibos */
+.receipt-card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.receipt-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.receipt-card .card-header {
+    background: linear-gradient(135deg, #00F5A0 0%, #00D9F5 100%);
+    color: #0D1117;
+    border: none;
+    padding: 0.75rem 1rem;
+}
+
+.receipt-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.info-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.info-item i {
+    width: 20px;
+    text-align: center;
+}
+
+.receipt-card .card-footer {
+    background: transparent;
+    border-top: 1px solid #eee;
+    padding: 0.75rem 1rem;
 }
 </style>

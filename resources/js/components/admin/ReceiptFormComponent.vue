@@ -1344,6 +1344,8 @@ export default {
                 }
             }
             item.subtotal = Math.max(0, subtotal);
+            // Recalcular totales generales
+            this.calcularTotales();
         },
 
         // ==================== TOTALES ====================
@@ -1603,12 +1605,7 @@ export default {
         },
         openImageViewer(imagePath) {
             if (imagePath) {
-                Swal.fire({
-                    imageUrl: this.getItemImage(imagePath),
-                    imageAlt: 'Imagen del producto',
-                    showConfirmButton: false,
-                    showCloseButton: true
-                });
+                this.$viewImage(imagePath);
             }
         },
         getLevelBadgeClass(level) {

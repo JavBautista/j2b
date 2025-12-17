@@ -522,6 +522,25 @@ export default {
             return this.client && this.items.length > 0;
         }
     },
+    watch: {
+        items: {
+            handler(newItems) {
+                console.log('🔄 WATCH items disparado', JSON.stringify(newItems.map(i => ({
+                    name: i.name,
+                    price: i.price,
+                    qty: i.qty,
+                    discount: i.discount,
+                    subtotal: i.subtotal
+                }))));
+                // Recalcular subtotales y totales cuando cambie cualquier item
+                this.items.forEach(item => {
+                    this.calcularSubtotalItem(item, false);
+                });
+                this.calcularTotales();
+            },
+            deep: true
+        }
+    },
     mounted() {
         this.loadExtraFields();
     },
@@ -693,10 +712,12 @@ export default {
             }
             return true;
         },
-        calcularSubtotalItem(item) {
+        calcularSubtotalItem(item, recalcularTotal = true) {
             const price = parseFloat(item.price) || 0;
             const qty = parseInt(item.qty) || 1;
             const discount = parseFloat(item.discount) || 0;
+
+            console.log('📦 calcularSubtotalItem:', { price, qty, discount, discount_concept: item.discount_concept });
 
             let subtotal = price * qty;
             if (discount > 0) {
@@ -707,14 +728,26 @@ export default {
                 }
             }
             item.subtotal = Math.max(0, subtotal);
+            console.log('📦 subtotal calculado:', item.subtotal);
+
+            // Recalcular total general
+            if (recalcularTotal) {
+                this.calcularTotales();
+            }
         },
 
         // ==================== TOTALES ====================
         calcularTotales() {
+            console.log('💰 calcularTotales LLAMADO');
+            console.log('💰 items subtotales:', this.items.map(i => i.subtotal));
+
             // Subtotal de items (asegurar que sean números)
             this.subtotal = this.items.reduce((sum, item) => {
                 return sum + (parseFloat(item.subtotal) || 0);
             }, 0);
+
+            console.log('💰 this.subtotal =', this.subtotal);
+            console.log('💰 this.total ANTES =', this.total);
 
             // Descuento general
             if (this.descuentoGeneral > 0) {
@@ -739,6 +772,8 @@ export default {
 
             // Total
             this.total = base + this.ivaMonto;
+
+            console.log('💰 this.total DESPUÉS =', this.total);
 
             // Actualizar receipt
             this.receipt.subtotal = this.subtotal;

@@ -535,7 +535,8 @@ export default {
         },
 
         openImage(url) {
-            window.open(url, '_blank');
+            // Usar el visor de imágenes global
+            this.$viewImage(url);
         },
 
         // Modal Ver

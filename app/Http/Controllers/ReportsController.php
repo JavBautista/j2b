@@ -711,6 +711,8 @@ class ReportsController extends Controller
      *
      * @param Request $request
      * - tipo_periodo: 'semanal', 'mensual', 'trimestral'
+     * - modo: 'generadas' (total de notas) o 'cobradas' (dinero realmente cobrado)
+     * - tipo_venta: 'todas', 'venta', 'renta'
      * - fechaInicio, fechaFin (opcional, por defecto últimos 3 meses)
      *
      * @return JsonResponse
@@ -720,91 +722,49 @@ class ReportsController extends Controller
         $user = $request->user();
         $shop = $user->shop;
 
-        // Validar tipo de período
+        // Parámetros
         $tipoPeriodo = $request->input('tipo_periodo', 'mensual'); // semanal, mensual, trimestral
+        $modo = $request->input('modo', 'generadas'); // 'generadas' o 'cobradas'
+        $tipoVenta = $request->input('tipo_venta', 'todas'); // 'todas', 'venta', 'renta'
 
         // Fechas por defecto: últimos 3 meses si no se especifican
         $fechaInicio = $request->input('fechaInicio', now()->subMonths(3)->format('Y-m-d'));
         $fechaFin = $request->input('fechaFin', now()->format('Y-m-d'));
 
-        // Formato SQL para agrupación según tipo de período
-        $formatoPeriodo = match($tipoPeriodo) {
-            'semanal' => '%Y-W%u',     // Año-Semana (2025-W47)
-            'trimestral' => '%Y-Q',    // Año-Trimestre (se calculará manualmente)
-            default => '%Y-%m',        // Año-Mes (2025-11)
-        };
+        $fechaInicioCarbon = Carbon::parse($fechaInicio)->startOfDay();
+        $fechaFinCarbon = Carbon::parse($fechaFin)->endOfDay();
 
-        // Query base: obtener receipts en el rango de fechas
-        $receiptsQuery = Receipt::where('shop_id', $shop->id)
-            ->whereBetween('created_at', [$fechaInicio . ' 00:00:00', $fechaFin . ' 23:59:59'])
-            ->whereNotIn('status', ['CANCELADA', 'DEVOLUCION'])
-            ->where('quotation', false);
-
-        // Agrupación por período
-        if ($tipoPeriodo === 'trimestral') {
-            // Para trimestral, calculamos manualmente
-            $periodos = $receiptsQuery->get()->groupBy(function($receipt) {
-                $fecha = \Carbon\Carbon::parse($receipt->created_at);
-                $trimestre = ceil($fecha->month / 3);
-                return $fecha->year . '-T' . $trimestre;
-            })->map(function($grupo, $periodo) {
-                return [
-                    'periodo' => $periodo,
-                    'num_tickets' => $grupo->count(),
-                    'total_ventas' => $grupo->sum('total'),
-                    'ticket_promedio' => $grupo->avg('total'),
-                    'ticket_maximo' => $grupo->max('total'),
-                    'ticket_minimo' => $grupo->min('total'),
-                    'mejor_fecha' => $grupo->sortByDesc('total')->first()->created_at ?? null,
-                    'peor_fecha' => $grupo->sortBy('total')->first()->created_at ?? null,
-                ];
-            })->values();
+        // Determinar cómo calcular según el modo
+        if ($modo === 'cobradas') {
+            // MODO COBRADAS: Usar pagos parciales + received (dinero real)
+            $periodos = $this->calcularPeriodosCobradas($shop, $fechaInicioCarbon, $fechaFinCarbon, $tipoPeriodo, $tipoVenta);
         } else {
-            // Para semanal y mensual usamos DATE_FORMAT
-            $periodos = \DB::table('receipts')
-                ->selectRaw("
-                    DATE_FORMAT(created_at, '{$formatoPeriodo}') as periodo,
-                    COUNT(id) as num_tickets,
-                    SUM(total) as total_ventas,
-                    AVG(total) as ticket_promedio,
-                    MAX(total) as ticket_maximo,
-                    MIN(total) as ticket_minimo
-                ")
-                ->where('shop_id', $shop->id)
-                ->whereBetween('created_at', [$fechaInicio . ' 00:00:00', $fechaFin . ' 23:59:59'])
-                ->whereNotIn('status', ['CANCELADA', 'DEVOLUCION'])
-                ->where('quotation', false)
-                ->groupBy('periodo')
-                ->orderBy('periodo', 'ASC')
-                ->get();
-
-            // Formatear números
-            $periodos = $periodos->map(function($item) {
-                return [
-                    'periodo' => $item->periodo,
-                    'num_tickets' => (int)$item->num_tickets,
-                    'total_ventas' => number_format($item->total_ventas, 2, '.', ''),
-                    'ticket_promedio' => number_format($item->ticket_promedio, 2, '.', ''),
-                    'ticket_maximo' => number_format($item->ticket_maximo, 2, '.', ''),
-                    'ticket_minimo' => number_format($item->ticket_minimo, 2, '.', ''),
-                ];
-            });
+            // MODO GENERADAS: Usar total de la nota (comportamiento original)
+            $periodos = $this->calcularPeriodosGeneradas($shop, $fechaInicioCarbon, $fechaFinCarbon, $tipoPeriodo, $tipoVenta);
         }
 
         // Calcular resumen general
         $totalVentas = $periodos->sum(function($p) {
-            return is_numeric($p['total_ventas']) ? $p['total_ventas'] : 0;
+            return is_numeric($p['total_ventas']) ? floatval($p['total_ventas']) : 0;
         });
         $totalTickets = $periodos->sum('num_tickets');
         $ticketPromedio = $totalTickets > 0 ? $totalVentas / $totalTickets : 0;
 
+        // Para modo cobradas, calcular también el pendiente por cobrar
+        $totalPendiente = 0;
+        if ($modo === 'cobradas') {
+            $totalPendiente = $periodos->sum(function($p) {
+                return isset($p['pendiente_cobrar']) ? floatval($p['pendiente_cobrar']) : 0;
+            });
+        }
+
         // Encontrar mejor y peor período
         $mejorPeriodo = $periodos->sortByDesc(function($p) {
-            return is_numeric($p['total_ventas']) ? $p['total_ventas'] : 0;
+            return is_numeric($p['total_ventas']) ? floatval($p['total_ventas']) : 0;
         })->first();
 
         $peorPeriodo = $periodos->sortBy(function($p) {
-            return is_numeric($p['total_ventas']) ? $p['total_ventas'] : 0;
+            return is_numeric($p['total_ventas']) ? floatval($p['total_ventas']) : 0;
         })->first();
 
         // Calcular comparación vs período anterior (si hay al menos 2 períodos)
@@ -840,15 +800,181 @@ class ReportsController extends Controller
             'comparacion_periodo_anterior' => $comparacionPeriodoAnterior,
         ];
 
+        // Agregar info de pendientes si es modo cobradas
+        if ($modo === 'cobradas') {
+            $resumen['total_pendiente'] = number_format($totalPendiente, 2, '.', '');
+            $resumen['total_comprometido'] = number_format($totalVentas + $totalPendiente, 2, '.', '');
+        }
+
         return response()->json([
             'ok' => true,
             'tipo_periodo' => $tipoPeriodo,
+            'modo' => $modo,
+            'tipo_venta' => $tipoVenta,
             'fechaInicio' => $fechaInicio,
             'fechaFin' => $fechaFin,
             'resumen' => $resumen,
             'periodos' => $periodos->values(),
         ]);
     }//.ventasPeriodo
+
+    /**
+     * Calcular períodos en modo GENERADAS (total de notas creadas)
+     */
+    private function calcularPeriodosGeneradas($shop, $fechaInicio, $fechaFin, $tipoPeriodo, $tipoVenta)
+    {
+        // Query base
+        $query = Receipt::where('shop_id', $shop->id)
+            ->whereBetween('created_at', [$fechaInicio, $fechaFin])
+            ->whereNotIn('status', ['CANCELADA', 'DEVOLUCION'])
+            ->where('quotation', false);
+
+        // Filtrar por tipo de venta
+        if ($tipoVenta !== 'todas') {
+            $query->where('type', $tipoVenta);
+        }
+
+        $receipts = $query->get();
+
+        // Agrupar por período
+        $periodos = $receipts->groupBy(function($receipt) use ($tipoPeriodo) {
+            return $this->getPeriodoKey($receipt->created_at, $tipoPeriodo);
+        })->map(function($grupo, $periodo) {
+            return [
+                'periodo' => $periodo,
+                'num_tickets' => $grupo->count(),
+                'total_ventas' => number_format($grupo->sum('total'), 2, '.', ''),
+                'ticket_promedio' => number_format($grupo->avg('total'), 2, '.', ''),
+                'ticket_maximo' => number_format($grupo->max('total'), 2, '.', ''),
+                'ticket_minimo' => number_format($grupo->min('total'), 2, '.', ''),
+            ];
+        })->sortKeys();
+
+        return $periodos;
+    }
+
+    /**
+     * Calcular períodos en modo COBRADAS (dinero realmente recibido)
+     */
+    private function calcularPeriodosCobradas($shop, $fechaInicio, $fechaFin, $tipoPeriodo, $tipoVenta)
+    {
+        // Obtener receipts con sus pagos parciales
+        $query = Receipt::with('partialPayments')
+            ->where('shop_id', $shop->id)
+            ->whereNotIn('status', ['CANCELADA', 'DEVOLUCION'])
+            ->where('quotation', false)
+            ->where(function ($q) use ($fechaInicio, $fechaFin) {
+                // Notas con pagos parciales en el rango
+                $q->whereHas('partialPayments', function ($subquery) use ($fechaInicio, $fechaFin) {
+                    $subquery->whereBetween('created_at', [$fechaInicio, $fechaFin]);
+                })
+                // O notas finalizadas (pagadas al contado) en el rango
+                ->orWhere(function ($q2) use ($fechaInicio, $fechaFin) {
+                    $q2->where('finished', 1)
+                       ->whereBetween('created_at', [$fechaInicio, $fechaFin]);
+                });
+            });
+
+        // Filtrar por tipo de venta
+        if ($tipoVenta !== 'todas') {
+            $query->where('type', $tipoVenta);
+        }
+
+        $receipts = $query->get();
+
+        // Calcular cobros por período
+        $cobrosPorPeriodo = [];
+
+        foreach ($receipts as $receipt) {
+            // Si está finalizada y fue creada en el rango, tomar received
+            if ($receipt->finished && Carbon::parse($receipt->created_at)->between($fechaInicio, $fechaFin)) {
+                $periodo = $this->getPeriodoKey($receipt->created_at, $tipoPeriodo);
+
+                if (!isset($cobrosPorPeriodo[$periodo])) {
+                    $cobrosPorPeriodo[$periodo] = [
+                        'cobrado' => 0,
+                        'pendiente' => 0,
+                        'tickets' => 0,
+                        'montos' => []
+                    ];
+                }
+
+                $cobrosPorPeriodo[$periodo]['cobrado'] += $receipt->received;
+                $cobrosPorPeriodo[$periodo]['tickets']++;
+                $cobrosPorPeriodo[$periodo]['montos'][] = $receipt->received;
+            }
+
+            // Pagos parciales en el rango
+            $pagosFiltrados = $receipt->partialPayments->filter(function ($pp) use ($fechaInicio, $fechaFin) {
+                return Carbon::parse($pp->created_at)->between($fechaInicio, $fechaFin);
+            });
+
+            foreach ($pagosFiltrados as $pago) {
+                $periodo = $this->getPeriodoKey($pago->created_at, $tipoPeriodo);
+
+                if (!isset($cobrosPorPeriodo[$periodo])) {
+                    $cobrosPorPeriodo[$periodo] = [
+                        'cobrado' => 0,
+                        'pendiente' => 0,
+                        'tickets' => 0,
+                        'montos' => []
+                    ];
+                }
+
+                $cobrosPorPeriodo[$periodo]['cobrado'] += $pago->amount;
+                $cobrosPorPeriodo[$periodo]['montos'][] = $pago->amount;
+            }
+
+            // Calcular pendiente (solo para notas no finalizadas)
+            if (!$receipt->finished && $receipt->status === 'POR COBRAR') {
+                $totalPagado = $receipt->partialPayments->sum('amount');
+                $pendiente = $receipt->total - $totalPagado;
+
+                if ($pendiente > 0) {
+                    $periodo = $this->getPeriodoKey($receipt->created_at, $tipoPeriodo);
+                    if (!isset($cobrosPorPeriodo[$periodo])) {
+                        $cobrosPorPeriodo[$periodo] = [
+                            'cobrado' => 0,
+                            'pendiente' => 0,
+                            'tickets' => 0,
+                            'montos' => []
+                        ];
+                    }
+                    $cobrosPorPeriodo[$periodo]['pendiente'] += $pendiente;
+                }
+            }
+        }
+
+        // Convertir a formato estándar
+        $periodos = collect($cobrosPorPeriodo)->map(function($data, $periodo) {
+            $montos = collect($data['montos']);
+            return [
+                'periodo' => $periodo,
+                'num_tickets' => count($data['montos']),
+                'total_ventas' => number_format($data['cobrado'], 2, '.', ''),
+                'pendiente_cobrar' => number_format($data['pendiente'], 2, '.', ''),
+                'ticket_promedio' => $montos->count() > 0 ? number_format($montos->avg(), 2, '.', '') : '0.00',
+                'ticket_maximo' => $montos->count() > 0 ? number_format($montos->max(), 2, '.', '') : '0.00',
+                'ticket_minimo' => $montos->count() > 0 ? number_format($montos->min(), 2, '.', '') : '0.00',
+            ];
+        })->sortKeys();
+
+        return $periodos;
+    }
+
+    /**
+     * Obtener la clave del período según el tipo
+     */
+    private function getPeriodoKey($fecha, $tipoPeriodo)
+    {
+        $carbon = Carbon::parse($fecha);
+
+        return match($tipoPeriodo) {
+            'semanal' => $carbon->format('Y') . '-S' . str_pad($carbon->weekOfYear, 2, '0', STR_PAD_LEFT),
+            'trimestral' => $carbon->format('Y') . '-T' . ceil($carbon->month / 3),
+            default => $carbon->format('Y-m'), // mensual
+        };
+    }
 
 
     /**

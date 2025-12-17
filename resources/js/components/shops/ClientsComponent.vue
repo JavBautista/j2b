@@ -252,29 +252,31 @@
                                 </div>
                                 <div class="card-body">
                                     <table class="table table-sm table-borderless">
-                                        <tr>
-                                            <td><strong>ID:</strong></td>
-                                            <td>#{{ clienteDetalle.id }}</td>
-                                        </tr>
-                                        <tr>
-                                            <td><strong>Nombre:</strong></td>
-                                            <td>{{ clienteDetalle.name }}</td>
-                                        </tr>
-                                        <tr v-if="clienteDetalle.company">
-                                            <td><strong>Empresa:</strong></td>
-                                            <td>{{ clienteDetalle.company }}</td>
-                                        </tr>
-                                        <tr>
-                                            <td><strong>Nivel:</strong></td>
-                                            <td><span class="badge badge-info">Nivel {{ clienteDetalle.level || 1 }}</span></td>
-                                        </tr>
-                                        <tr>
-                                            <td><strong>Estado:</strong></td>
-                                            <td>
-                                                <span v-if="clienteDetalle.active" class="badge badge-success">Activo</span>
-                                                <span v-else class="badge badge-danger">Inactivo</span>
-                                            </td>
-                                        </tr>
+                                        <tbody>
+                                            <tr>
+                                                <td><strong>ID:</strong></td>
+                                                <td>#{{ clienteDetalle.id }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Nombre:</strong></td>
+                                                <td>{{ clienteDetalle.name }}</td>
+                                            </tr>
+                                            <tr v-if="clienteDetalle.company">
+                                                <td><strong>Empresa:</strong></td>
+                                                <td>{{ clienteDetalle.company }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Nivel:</strong></td>
+                                                <td><span class="badge badge-info">Nivel {{ clienteDetalle.level || 1 }}</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Estado:</strong></td>
+                                                <td>
+                                                    <span v-if="clienteDetalle.active" class="badge badge-success">Activo</span>
+                                                    <span v-else class="badge badge-danger">Inactivo</span>
+                                                </td>
+                                            </tr>
+                                        </tbody>
                                     </table>
                                 </div>
                             </div>
@@ -286,18 +288,20 @@
                                 </div>
                                 <div class="card-body">
                                     <table class="table table-sm table-borderless">
-                                        <tr v-if="clienteDetalle.email">
-                                            <td><strong>Email:</strong></td>
-                                            <td><a :href="'mailto:' + clienteDetalle.email">{{ clienteDetalle.email }}</a></td>
-                                        </tr>
-                                        <tr v-if="clienteDetalle.movil">
-                                            <td><strong>Móvil:</strong></td>
-                                            <td><a :href="'tel:' + clienteDetalle.movil">{{ clienteDetalle.movil }}</a></td>
-                                        </tr>
-                                        <tr v-if="clienteDetalle.phone">
-                                            <td><strong>Teléfono:</strong></td>
-                                            <td><a :href="'tel:' + clienteDetalle.phone">{{ clienteDetalle.phone }}</a></td>
-                                        </tr>
+                                        <tbody>
+                                            <tr v-if="clienteDetalle.email">
+                                                <td><strong>Email:</strong></td>
+                                                <td><a :href="'mailto:' + clienteDetalle.email">{{ clienteDetalle.email }}</a></td>
+                                            </tr>
+                                            <tr v-if="clienteDetalle.movil">
+                                                <td><strong>Móvil:</strong></td>
+                                                <td><a :href="'tel:' + clienteDetalle.movil">{{ clienteDetalle.movil }}</a></td>
+                                            </tr>
+                                            <tr v-if="clienteDetalle.phone">
+                                                <td><strong>Teléfono:</strong></td>
+                                                <td><a :href="'tel:' + clienteDetalle.phone">{{ clienteDetalle.phone }}</a></td>
+                                            </tr>
+                                        </tbody>
                                     </table>
                                     <p v-if="!clienteDetalle.email && !clienteDetalle.movil && !clienteDetalle.phone" class="text-muted mb-0">
                                         Sin información de contacto
@@ -1122,7 +1126,8 @@ export default {
                 return `/storage/${imagePath}`;
             },
             abrirImagenCompleta(imagePath) {
-                window.open(this.getImageUrl(imagePath), '_blank');
+                // Usar visor de imágenes global
+                this.$viewImage(imagePath);
             },
             formatDate(dateString) {
                 if (!dateString) return '-';

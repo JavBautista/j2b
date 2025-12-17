@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use App\Models\ProductImage;
+use App\Services\StockAlertService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -126,9 +127,17 @@ class ProductController extends Controller
     public function updateStock(Request $request)
     {
         $product = Product::findOrFail($request->id);
+        $previousStock = $product->stock;
+
         $product->stock   = $request->stock;
         $product->reserve = $request->reserve;
         $product->save();
+
+        // Trigger: notificar clientes si stock pasó de 0 a >0
+        if ($previousStock == 0 && $product->stock > 0) {
+            $stockAlertService = app(StockAlertService::class);
+            $stockAlertService->processStockIncrease($product, $previousStock, $product->stock);
+        }
 
         $product->load('category');
         $product->load('images');

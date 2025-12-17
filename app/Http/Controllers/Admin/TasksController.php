@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Task;
+use App\Models\TaskImage;
 use App\Models\TaskLog;
 use App\Models\TaskProduct;
 use App\Models\Product;
@@ -760,6 +761,109 @@ class TasksController extends Controller
         return response()->json([
             'ok' => true,
             'tasks' => $tasks
+        ]);
+    }
+
+    // ==========================================
+    // MÉTODOS PARA IMÁGENES DE TAREA
+    // ==========================================
+
+    /**
+     * Subir imagen a una tarea
+     * Primera imagen = principal (task.image)
+     * Siguientes = alternativas (task_images)
+     */
+    public function uploadImage(Request $request, $id)
+    {
+        $request->validate([
+            'image' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:2048'
+        ]);
+
+        $user = auth()->user();
+        $shop = $user->shop;
+
+        $task = Task::where('shop_id', $shop->id)->findOrFail($id);
+
+        if ($request->hasFile('image')) {
+            $image = $request->file('image');
+            $imagePath = $image->store('tasks', 'public');
+
+            // Si ya tiene imagen principal, guardar como alternativa
+            if ($task->image) {
+                TaskImage::create([
+                    'task_id' => $task->id,
+                    'image' => $imagePath
+                ]);
+                $this->storeTaskLog($task->id, $user->name, 'Imagen alternativa agregada.');
+            } else {
+                // Si no tiene imagen principal, guardarla ahí
+                $task->image = $imagePath;
+                $task->save();
+                $this->storeTaskLog($task->id, $user->name, 'Imagen principal agregada.');
+            }
+        }
+
+        $task->load(['client.addresses', 'images', 'logs', 'assignedUser', 'trackingHistory']);
+
+        return response()->json([
+            'ok' => true,
+            'task' => $task,
+            'message' => 'Imagen subida correctamente.'
+        ]);
+    }
+
+    /**
+     * Eliminar imagen principal de una tarea
+     */
+    public function deleteMainImage(Request $request, $id)
+    {
+        $user = auth()->user();
+        $shop = $user->shop;
+
+        $task = Task::where('shop_id', $shop->id)->findOrFail($id);
+
+        if ($task->image) {
+            Storage::disk('public')->delete($task->image);
+            $task->image = null;
+            $task->save();
+
+            $this->storeTaskLog($task->id, $user->name, 'Imagen principal eliminada.');
+        }
+
+        $task->load(['client.addresses', 'images', 'logs', 'assignedUser', 'trackingHistory']);
+
+        return response()->json([
+            'ok' => true,
+            'task' => $task,
+            'message' => 'Imagen principal eliminada.'
+        ]);
+    }
+
+    /**
+     * Eliminar imagen alternativa de una tarea
+     */
+    public function deleteAltImage(Request $request, $imageId)
+    {
+        $user = auth()->user();
+        $shop = $user->shop;
+
+        $taskImage = TaskImage::findOrFail($imageId);
+        $task = Task::where('shop_id', $shop->id)->findOrFail($taskImage->task_id);
+
+        // Eliminar archivo
+        Storage::disk('public')->delete($taskImage->image);
+
+        // Eliminar registro
+        $taskImage->delete();
+
+        $this->storeTaskLog($task->id, $user->name, 'Imagen alternativa eliminada.');
+
+        $task->load(['client.addresses', 'images', 'logs', 'assignedUser', 'trackingHistory']);
+
+        return response()->json([
+            'ok' => true,
+            'task' => $task,
+            'message' => 'Imagen alternativa eliminada.'
         ]);
     }
 }

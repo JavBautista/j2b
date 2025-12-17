@@ -31,6 +31,7 @@
     "dependencies": {
         "bootstrap-icons": "^1.11.3",
         "dayjs": "^1.11.13",
-        "quill": "^2.0.3"
+        "quill": "^2.0.3",
+        "vue-easy-lightbox": "^1.19.0"
     }
 }

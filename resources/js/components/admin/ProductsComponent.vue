@@ -411,7 +411,7 @@
                     <div class="mb-4">
                         <h6>Imagen Principal</h6>
                         <div v-if="productoImagenes.image" class="position-relative d-inline-block">
-                            <img :src="getImageUrl(productoImagenes.image)" class="img-thumbnail" style="max-width: 200px; max-height: 200px;">
+                            <img :src="getImageUrl(productoImagenes.image)" class="img-thumbnail" style="max-width: 200px; max-height: 200px; cursor: pointer;" @click="verImagen(productoImagenes.image)">
                             <button class="btn btn-danger btn-sm position-absolute" style="top: 5px; right: 5px;" @click="eliminarImagenPrincipal" :disabled="eliminandoImagen">
                                 <i class="fa fa-trash"></i>
                             </button>
@@ -426,9 +426,9 @@
                     <div>
                         <h6>Imágenes Alternativas ({{ productoImagenes.images ? productoImagenes.images.length : 0 }})</h6>
                         <div class="row" v-if="productoImagenes.images && productoImagenes.images.length > 0">
-                            <div class="col-md-3 mb-3" v-for="img in productoImagenes.images" :key="img.id">
+                            <div class="col-md-3 mb-3" v-for="(img, index) in productoImagenes.images" :key="img.id">
                                 <div class="position-relative">
-                                    <img :src="getImageUrl(img.image)" class="img-thumbnail" style="width: 100%; height: 120px; object-fit: cover;">
+                                    <img :src="getImageUrl(img.image)" class="img-thumbnail" style="width: 100%; height: 120px; object-fit: cover; cursor: pointer;" @click="verGaleriaProducto(index)">
                                     <button class="btn btn-danger btn-sm position-absolute" style="top: 5px; right: 5px;" @click="eliminarImagenAlternativa(img.id)" :disabled="eliminandoImagen">
                                         <i class="fa fa-trash"></i>
                                     </button>
@@ -808,6 +808,32 @@ export default {
                     });
                 }
             });
+        },
+
+        // Visor de imágenes
+        verImagen(imagePath) {
+            if (imagePath) {
+                this.$viewImage(imagePath);
+            }
+        },
+
+        verGaleriaProducto(indexAlternativa) {
+            // Construir array con imagen principal + alternativas
+            let imagenes = [];
+
+            if (this.productoImagenes.image) {
+                imagenes.push(this.productoImagenes.image);
+            }
+
+            if (this.productoImagenes.images && this.productoImagenes.images.length > 0) {
+                this.productoImagenes.images.forEach(img => {
+                    imagenes.push(img.image);
+                });
+            }
+
+            // El índice debe considerar si hay imagen principal
+            let startIndex = this.productoImagenes.image ? indexAlternativa + 1 : indexAlternativa;
+            this.$viewImages(imagenes, startIndex);
         },
 
         confirmarEliminar(product) {

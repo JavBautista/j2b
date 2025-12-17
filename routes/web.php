@@ -21,6 +21,7 @@ use App\Http\Controllers\Superadmin\ShopsController;
 use  App\Http\Controllers\Superadmin\PlansController;
 use App\Http\Controllers\Superadmin\UsersController as SuperadminUsersController;
 use App\Http\Controllers\Admin\ClientsController;
+use App\Http\Controllers\Admin\SuppliersController;
 use App\Http\Controllers\Admin\TasksController;
 use App\Http\Controllers\Admin\UsersController as AdminUsersController;
 
@@ -227,6 +228,9 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::post('/admin/client-addresses/upload-location-image', [App\Http\Controllers\Admin\ClientAddressController::class, 'uploadLocationImage'])->name('admin.client-addresses.upload-image');
         Route::delete('/admin/client-addresses/delete-location-image', [App\Http\Controllers\Admin\ClientAddressController::class, 'deleteLocationImage'])->name('admin.client-addresses.delete-image');
 
+        // Rutas AJAX para proveedores (modal de selección)
+        Route::get('/admin/suppliers/search', [SuppliersController::class, 'search'])->name('admin.suppliers.search');
+
         // Usuario APP Cliente
         Route::get('/admin/clients/verify-user-email', [ClientsController::class, 'verifyUserEmail'])->name('admin.clients.verify-user-email');
         Route::get('/admin/clients/{client}/get-user-app', [ClientsController::class, 'getClientUserApp'])->name('admin.clients.get-user-app');
@@ -264,6 +268,15 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::get('/admin/services/get', [App\Http\Controllers\Admin\ReceiptsController::class, 'getServices'])->name('admin.services.get');
         Route::get('/admin/equipment/get', [App\Http\Controllers\Admin\ReceiptsController::class, 'getEquipment'])->name('admin.equipment.get');
 
+        // Rutas para Órdenes de Compra (admin web)
+        Route::get('/admin/purchase-orders', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'list'])->name('admin.purchase-orders');
+        Route::get('/admin/purchase-orders/list/get', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'getList'])->name('admin.purchase-orders.list.get');
+        Route::get('/admin/purchase-orders/create', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'create'])->name('admin.purchase-orders.create');
+        Route::get('/admin/purchase-orders/{id}/show', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'show'])->name('admin.purchase-orders.show');
+        Route::get('/admin/purchase-orders/{id}/edit', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'edit'])->name('admin.purchase-orders.edit');
+        Route::get('/admin/purchase-orders/{id}/detail', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'getDetail'])->name('admin.purchase-orders.detail');
+        Route::post('/admin/purchase-orders/store', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'store'])->name('admin.purchase-orders.store');
+
         // Rutas para recibos de Tareas(admin web)
         Route::get('/admin/tasks', [TasksController::class, 'index'])->name('admin.tasks');
         Route::get('/admin/tasks/get', [TasksController::class, 'get'])->name('admin.tasks.get');
@@ -283,6 +296,11 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::post('/admin/tasks/{id}/unassign', [TasksController::class, 'unassignUser'])->name('admin.tasks.unassign');
         Route::put('/admin/tasks/{id}/activate', [TasksController::class, 'activate'])->name('admin.tasks.activate');
         Route::put('/admin/tasks/{id}/deactivate', [TasksController::class, 'deactivate'])->name('admin.tasks.deactivate');
+
+        // Rutas para imágenes de tarea
+        Route::post('/admin/tasks/{id}/upload-image', [TasksController::class, 'uploadImage'])->name('admin.tasks.upload-image');
+        Route::delete('/admin/tasks/{id}/delete-main-image', [TasksController::class, 'deleteMainImage'])->name('admin.tasks.delete-main-image');
+        Route::delete('/admin/tasks/delete-alt-image/{imageId}', [TasksController::class, 'deleteAltImage'])->name('admin.tasks.delete-alt-image');
 
         // Rutas para productos de tarea
         Route::get('/admin/tasks/products', [TasksController::class, 'getProducts'])->name('admin.tasks.products');

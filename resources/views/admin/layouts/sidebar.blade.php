@@ -18,6 +18,11 @@
                 </a>
             </li>
             <li class="nav-item">
+                <a href="{{ route('admin.purchase-orders') }}" class="nav-link">
+                    <i class="fa fa-truck"></i> Compras
+                </a>
+            </li>
+            <li class="nav-item">
                 <a href="{{ route('admin.clients') }}" class="nav-link">
                     <i class="fa fa-users"></i> Clientes
                 </a>

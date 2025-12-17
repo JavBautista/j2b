@@ -8,6 +8,9 @@ import { createApp } from 'vue';
 import dayjs from 'dayjs';
 require('./bootstrap');
 
+// Plugin de visor de imágenes global
+import ImageViewerPlugin from './plugins/ImageViewer';
+
 // Components de SuperAdmin
 import PlansComponent from './components/superadmin/PlansComponent.vue'
 import PreRegisterComponent from './components/superadmin/PreRegisterComponent.vue'
@@ -31,9 +34,12 @@ import GastosComponent from './components/admin/GastosComponent.vue';
 import ReceiptCreateComponent from './components/admin/ReceiptCreateComponent.vue';
 import ReceiptListComponent from './components/admin/ReceiptListComponent.vue';
 import ReceiptFormComponent from './components/admin/ReceiptFormComponent.vue';
+import PurchaseOrderListComponent from './components/admin/PurchaseOrderListComponent.vue';
+import PurchaseOrderCreateComponent from './components/admin/PurchaseOrderCreateComponent.vue';
 
 // Componentes Shared (reutilizables)
 import ModalSelectClient from './components/shared/ModalSelectClient.vue';
+import ModalSelectSupplier from './components/shared/ModalSelectSupplier.vue';
 import ModalSelectProduct from './components/shared/ModalSelectProduct.vue';
 import ModalSelectService from './components/shared/ModalSelectService.vue';
 import ModalSelectEquipment from './components/shared/ModalSelectEquipment.vue';
@@ -62,15 +68,21 @@ app.component('gastos-component', GastosComponent);
 app.component('receipt-create-component', ReceiptCreateComponent);
 app.component('receipt-list-component', ReceiptListComponent);
 app.component('receipt-form-component', ReceiptFormComponent);
+app.component('purchase-order-list-component', PurchaseOrderListComponent);
+app.component('purchase-order-create-component', PurchaseOrderCreateComponent);
 
 // Shared (reutilizables en cualquier módulo)
 app.component('modal-select-client', ModalSelectClient);
+app.component('modal-select-supplier', ModalSelectSupplier);
 app.component('modal-select-product', ModalSelectProduct);
 app.component('modal-select-service', ModalSelectService);
 app.component('modal-select-equipment', ModalSelectEquipment);
 
 
 //app.component('example-component', ExampleComponent);
+
+// Plugin de visor de imágenes (disponible como this.$viewImage, this.$viewImages)
+app.use(ImageViewerPlugin);
 
 // Filtros ya no existen en Vue 3, pero puedes usar propiedades globales
 app.config.globalProperties.$filters = {

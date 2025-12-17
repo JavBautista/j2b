@@ -20,6 +20,7 @@ use App\Http\Controllers\SubscriptionController;
 
 use App\Http\Controllers\Clients\PurchaseController as ClientPurchaseController;
 use App\Http\Controllers\Clients\LocationController as ClientLocationController;
+use App\Http\Controllers\Clients\StockAlertController;
 use App\Http\Controllers\ClientServiceController as ClientServiceController;
 use App\Http\Controllers\ReceiptDetailController;
 
@@ -508,6 +509,20 @@ Route::group([
         Route::get('app-client/location/my', [ClientLocationController::class, 'getMyLocation']);
         Route::post('app-client/location/save', [ClientLocationController::class, 'saveMyLocation']);
         Route::get('app-client/location/can-save', [ClientLocationController::class, 'canSaveLocation']);
+
+        // ALERTAS DE STOCK - Notificar cuando producto vuelva a tener stock
+        Route::prefix('app-client/stock-alert')->group(function () {
+            Route::post('subscribe', [StockAlertController::class, 'subscribe']);
+            Route::get('my', [StockAlertController::class, 'myAlerts']);
+            Route::post('unsubscribe', [StockAlertController::class, 'unsubscribe']);
+            Route::get('check/{product_id}', [StockAlertController::class, 'check']);
+        });
+
+        // ALERTAS DE STOCK - Para Admin
+        Route::prefix('stock-alerts')->group(function () {
+            Route::get('grouped', [StockAlertController::class, 'getGroupedAlerts']);
+            Route::get('product/{product_id}', [StockAlertController::class, 'getProductAlertDetails']);
+        });
 
 
 

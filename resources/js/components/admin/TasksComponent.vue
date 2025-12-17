@@ -455,20 +455,36 @@
                                 </div>
                             </div>
 
-                            <!-- Imágenes (Solo visualización) -->
+                            <!-- Imágenes -->
                             <div class="card" v-if="(taskSeleccionada.images && taskSeleccionada.images.length > 0) || taskSeleccionada.image">
-                                <div class="card-header">
-                                    <i class="fa fa-image mr-2"></i>Imágenes
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <span><i class="fa fa-image mr-2"></i>Imágenes</span>
+                                    <button v-if="!userLimited" class="btn btn-sm btn-outline-primary" @click="abrirModalImagenes(taskSeleccionada)">
+                                        <i class="fa fa-cog"></i> Gestionar
+                                    </button>
                                 </div>
                                 <div class="card-body">
                                     <div class="row">
                                         <div class="col-4 col-md-3 mb-3" v-if="taskSeleccionada.image">
-                                            <img :src="getImageUrl(taskSeleccionada.image)" class="img-fluid img-thumbnail rounded" style="max-height: 120px; cursor: pointer; object-fit: cover;">
+                                            <img :src="getImageUrl(taskSeleccionada.image)" class="img-fluid img-thumbnail rounded" style="max-height: 120px; cursor: pointer; object-fit: cover;" @click="verGaleriaTarea(0)">
                                         </div>
-                                        <div class="col-4 col-md-3 mb-3" v-for="img in taskSeleccionada.images" :key="img.id">
-                                            <img :src="getImageUrl(img.image)" class="img-fluid img-thumbnail rounded" style="max-height: 120px; cursor: pointer; object-fit: cover;">
+                                        <div class="col-4 col-md-3 mb-3" v-for="(img, index) in taskSeleccionada.images" :key="img.id">
+                                            <img :src="getImageUrl(img.image)" class="img-fluid img-thumbnail rounded" style="max-height: 120px; cursor: pointer; object-fit: cover;" @click="verGaleriaTarea(taskSeleccionada.image ? index + 1 : index)">
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+
+                            <!-- Botón agregar imágenes si no tiene -->
+                            <div class="card" v-else-if="!userLimited">
+                                <div class="card-header">
+                                    <i class="fa fa-image mr-2"></i>Imágenes
+                                </div>
+                                <div class="card-body text-center">
+                                    <p class="text-muted mb-2">Sin imágenes</p>
+                                    <button class="btn btn-outline-primary btn-sm" @click="abrirModalImagenes(taskSeleccionada)">
+                                        <i class="fa fa-plus"></i> Agregar Imágenes
+                                    </button>
                                 </div>
                             </div>
 
@@ -478,7 +494,7 @@
                                     <i class="fa fa-pencil-square-o mr-2"></i>Firma Digital
                                 </div>
                                 <div class="card-body text-center">
-                                    <img :src="getImageUrl(taskSeleccionada.signature_path)" class="img-fluid rounded" style="max-height: 180px; border: 2px solid #dee2e6; padding: 15px; background: #fff;">
+                                    <img :src="getImageUrl(taskSeleccionada.signature_path)" class="img-fluid rounded" style="max-height: 180px; border: 2px solid #dee2e6; padding: 15px; background: #fff; cursor: pointer;" @click="$viewImage(taskSeleccionada.signature_path)">
                                 </div>
                             </div>
 
@@ -816,6 +832,73 @@
         </div>
     </div>
 
+    <!-- Modal Gestión de Imágenes -->
+    <div class="modal fade" id="modalImagenesTarea" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content" v-if="tareaImagenes">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title">
+                        <i class="fa fa-image mr-2"></i>Gestionar Imágenes - #{{ tareaImagenes.id }}
+                    </h5>
+                    <button type="button" class="close text-white" @click="modalImagenes = false" aria-label="Cerrar">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <!-- Subir imagen -->
+                    <div class="mb-4">
+                        <h6>Subir Nueva Imagen</h6>
+                        <div class="input-group">
+                            <input type="file" class="form-control" @change="seleccionarImagenTarea" accept="image/*" ref="inputImagenTarea">
+                            <button class="btn btn-primary" @click="subirImagenTarea" :disabled="!imagenTareaSeleccionada || subiendoImagenTarea">
+                                <i class="fa fa-spinner fa-spin" v-if="subiendoImagenTarea"></i>
+                                <i class="fa fa-upload" v-else></i>
+                                Subir
+                            </button>
+                        </div>
+                        <small class="text-muted">Formatos: JPG, PNG, GIF, WebP. Máximo 2MB.</small>
+                    </div>
+
+                    <!-- Imagen Principal -->
+                    <div class="mb-4">
+                        <h6>Imagen Principal</h6>
+                        <div v-if="tareaImagenes.image" class="position-relative d-inline-block">
+                            <img :src="getImageUrl(tareaImagenes.image)" class="img-thumbnail" style="max-width: 200px; max-height: 200px; cursor: pointer;" @click="$viewImage(tareaImagenes.image)">
+                            <button class="btn btn-danger btn-sm position-absolute" style="top: 5px; right: 5px;" @click="eliminarImagenPrincipalTarea" :disabled="eliminandoImagenTarea">
+                                <i class="fa fa-trash"></i>
+                            </button>
+                        </div>
+                        <div v-else class="text-muted">
+                            <i class="fa fa-image fa-3x"></i>
+                            <p>Sin imagen principal</p>
+                        </div>
+                    </div>
+
+                    <!-- Imágenes Alternativas -->
+                    <div>
+                        <h6>Imágenes Alternativas ({{ tareaImagenes.images ? tareaImagenes.images.length : 0 }})</h6>
+                        <div class="row" v-if="tareaImagenes.images && tareaImagenes.images.length > 0">
+                            <div class="col-md-3 mb-3" v-for="(img, index) in tareaImagenes.images" :key="img.id">
+                                <div class="position-relative">
+                                    <img :src="getImageUrl(img.image)" class="img-thumbnail" style="width: 100%; height: 120px; object-fit: cover; cursor: pointer;" @click="verGaleriaModalImagenes(index)">
+                                    <button class="btn btn-danger btn-sm position-absolute" style="top: 5px; right: 5px;" @click="eliminarImagenAlternativaTarea(img.id)" :disabled="eliminandoImagenTarea">
+                                        <i class="fa fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div v-else class="text-muted">
+                            <p>Sin imágenes alternativas</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @click="modalImagenes = false">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
 </template>
 
@@ -888,12 +971,24 @@ export default {
                 qty_used: 0,
                 qty_returned: 0,
                 notes: ''
-            }
+            },
+
+            // Imágenes de tarea
+            modalImagenes: false,
+            tareaImagenes: null,
+            imagenTareaSeleccionada: null,
+            subiendoImagenTarea: false,
+            eliminandoImagenTarea: false
         }
     },
     watch: {
         vistaActual(newVal) {
             localStorage.setItem('admin_vista', newVal);
+        },
+        modalImagenes(newVal) {
+            if (!newVal) {
+                $('#modalImagenesTarea').modal('hide');
+            }
         }
     },
     computed: {
@@ -1405,6 +1500,171 @@ export default {
         // Generar nota de venta desde productos de tarea
         generarNotaDesdeProductos() {
             window.location.href = `/admin/receipts/create?from_task=${this.taskSeleccionada.id}`;
+        },
+
+        // ==========================================
+        // MÉTODOS PARA IMÁGENES DE TAREA
+        // ==========================================
+
+        // Abrir modal de gestión de imágenes
+        abrirModalImagenes(task) {
+            this.tareaImagenes = JSON.parse(JSON.stringify(task));
+            this.imagenTareaSeleccionada = null;
+            if (this.$refs.inputImagenTarea) {
+                this.$refs.inputImagenTarea.value = '';
+            }
+            this.modalImagenes = true;
+            this.$nextTick(() => {
+                $('#modalImagenesTarea').modal('show');
+            });
+        },
+
+        // Ver galería de imágenes de tarea (desde modal de detalle)
+        verGaleriaTarea(index) {
+            let imagenes = [];
+
+            if (this.taskSeleccionada.image) {
+                imagenes.push(this.taskSeleccionada.image);
+            }
+
+            if (this.taskSeleccionada.images && this.taskSeleccionada.images.length > 0) {
+                this.taskSeleccionada.images.forEach(img => {
+                    imagenes.push(img.image);
+                });
+            }
+
+            this.$viewImages(imagenes, index);
+        },
+
+        // Ver galería desde modal de gestión de imágenes
+        verGaleriaModalImagenes(indexAlternativa) {
+            let imagenes = [];
+
+            if (this.tareaImagenes.image) {
+                imagenes.push(this.tareaImagenes.image);
+            }
+
+            if (this.tareaImagenes.images && this.tareaImagenes.images.length > 0) {
+                this.tareaImagenes.images.forEach(img => {
+                    imagenes.push(img.image);
+                });
+            }
+
+            let startIndex = this.tareaImagenes.image ? indexAlternativa + 1 : indexAlternativa;
+            this.$viewImages(imagenes, startIndex);
+        },
+
+        // Seleccionar imagen desde input file
+        seleccionarImagenTarea(event) {
+            const file = event.target.files[0];
+            if (file) {
+                this.imagenTareaSeleccionada = file;
+            }
+        },
+
+        // Subir imagen
+        subirImagenTarea() {
+            if (!this.imagenTareaSeleccionada || !this.tareaImagenes) return;
+
+            let me = this;
+            me.subiendoImagenTarea = true;
+
+            const formData = new FormData();
+            formData.append('image', this.imagenTareaSeleccionada);
+
+            axios.post(`/admin/tasks/${this.tareaImagenes.id}/upload-image`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            }).then(function(response) {
+                if (response.data.ok) {
+                    me.tareaImagenes = response.data.task;
+                    me.actualizarTaskEnLista(response.data.task);
+                    // También actualizar taskSeleccionada si es la misma
+                    if (me.taskSeleccionada && me.taskSeleccionada.id === response.data.task.id) {
+                        me.taskSeleccionada = response.data.task;
+                    }
+                    me.imagenTareaSeleccionada = null;
+                    if (me.$refs.inputImagenTarea) {
+                        me.$refs.inputImagenTarea.value = '';
+                    }
+                    Swal.fire('Subida', response.data.message, 'success');
+                }
+            }).catch(function(error) {
+                Swal.fire('Error', 'Error al subir la imagen', 'error');
+            }).finally(function() {
+                me.subiendoImagenTarea = false;
+            });
+        },
+
+        // Eliminar imagen principal
+        eliminarImagenPrincipalTarea() {
+            let me = this;
+            Swal.fire({
+                title: '¿Eliminar imagen principal?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    me.eliminandoImagenTarea = true;
+                    axios.delete(`/admin/tasks/${me.tareaImagenes.id}/delete-main-image`).then(function(response) {
+                        if (response.data.ok) {
+                            me.tareaImagenes = response.data.task;
+                            me.actualizarTaskEnLista(response.data.task);
+                            if (me.taskSeleccionada && me.taskSeleccionada.id === response.data.task.id) {
+                                me.taskSeleccionada = response.data.task;
+                            }
+                            Swal.fire('Eliminada', response.data.message, 'success');
+                        }
+                    }).catch(function(error) {
+                        Swal.fire('Error', 'Error al eliminar imagen', 'error');
+                    }).finally(function() {
+                        me.eliminandoImagenTarea = false;
+                    });
+                }
+            });
+        },
+
+        // Eliminar imagen alternativa
+        eliminarImagenAlternativaTarea(imageId) {
+            let me = this;
+            Swal.fire({
+                title: '¿Eliminar esta imagen?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    me.eliminandoImagenTarea = true;
+                    axios.delete(`/admin/tasks/delete-alt-image/${imageId}`).then(function(response) {
+                        if (response.data.ok) {
+                            me.tareaImagenes = response.data.task;
+                            me.actualizarTaskEnLista(response.data.task);
+                            if (me.taskSeleccionada && me.taskSeleccionada.id === response.data.task.id) {
+                                me.taskSeleccionada = response.data.task;
+                            }
+                            Swal.fire('Eliminada', response.data.message, 'success');
+                        }
+                    }).catch(function(error) {
+                        Swal.fire('Error', 'Error al eliminar imagen', 'error');
+                    }).finally(function() {
+                        me.eliminandoImagenTarea = false;
+                    });
+                }
+            });
+        },
+
+        // Actualizar tarea en la lista sin recargar todo
+        actualizarTaskEnLista(task) {
+            const index = this.arrayTasks.findIndex(t => t.id === task.id);
+            if (index !== -1) {
+                this.arrayTasks.splice(index, 1, task);
+            }
         }
     }
 }

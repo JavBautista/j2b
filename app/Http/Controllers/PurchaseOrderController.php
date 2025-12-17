@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderDetail;
 use App\Models\PurchaseOrderPayments;
+use App\Services\StockAlertService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -184,15 +185,23 @@ class PurchaseOrderController extends Controller
         $purchase_order->expiration = null;
         $purchase_order->save();
 
+        $stockAlertService = app(StockAlertService::class);
+
         //Al pasar la PO a completa, sumamos el stock
         $detail = PurchaseOrderDetail::where('purchase_order_id',$purchase_order->id)->get();
         foreach($detail as $data){
             //solo con los items que sean productos
-            $product   = Product::find($data->product_id);
+            $product = Product::find($data->product_id);
+            $previousStock = $product->stock;
             $new_stock = $product->stock + $data->qty;
             $product->stock = $new_stock;
             $product->cost = $data->price;
             $product->save();
+
+            // Trigger: notificar clientes si stock pasó de 0 a >0
+            if ($previousStock == 0 && $new_stock > 0) {
+                $stockAlertService->processStockIncrease($product, $previousStock, $new_stock);
+            }
         }
 
         return response()->json([

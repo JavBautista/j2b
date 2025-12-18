@@ -36,6 +36,7 @@ import ReceiptListComponent from './components/admin/ReceiptListComponent.vue';
 import ReceiptFormComponent from './components/admin/ReceiptFormComponent.vue';
 import PurchaseOrderListComponent from './components/admin/PurchaseOrderListComponent.vue';
 import PurchaseOrderCreateComponent from './components/admin/PurchaseOrderCreateComponent.vue';
+import PurchaseOrderShowComponent from './components/admin/PurchaseOrderShowComponent.vue';
 
 // Componentes Shared (reutilizables)
 import ModalSelectClient from './components/shared/ModalSelectClient.vue';
@@ -70,6 +71,7 @@ app.component('receipt-list-component', ReceiptListComponent);
 app.component('receipt-form-component', ReceiptFormComponent);
 app.component('purchase-order-list-component', PurchaseOrderListComponent);
 app.component('purchase-order-create-component', PurchaseOrderCreateComponent);
+app.component('purchase-order-show-component', PurchaseOrderShowComponent);
 
 // Shared (reutilizables en cualquier módulo)
 app.component('modal-select-client', ModalSelectClient);

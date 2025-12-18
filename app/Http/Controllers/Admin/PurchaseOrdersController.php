@@ -5,6 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderDetail;
+use App\Models\PurchaseOrderPartialPayments;
+use App\Models\Product;
+use App\Services\StockAlertService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Carbon;
@@ -192,6 +195,149 @@ class PurchaseOrdersController extends Controller
         return response()->json([
             'ok' => true,
             'order' => $order
+        ]);
+    }
+
+    /**
+     * Completar orden de compra (afecta stock)
+     */
+    public function complete($id)
+    {
+        $user = Auth::user();
+        $shop = $user->shop;
+
+        $purchase_order = PurchaseOrder::where('shop_id', $shop->id)
+            ->where('status', 'CREADA')
+            ->findOrFail($id);
+
+        $purchase_order->status = 'COMPLETA';
+        $purchase_order->expiration = null;
+        $purchase_order->save();
+
+        $stockAlertService = app(StockAlertService::class);
+
+        // Al pasar la PO a completa, sumamos el stock y actualizamos costo
+        $detail = PurchaseOrderDetail::where('purchase_order_id', $purchase_order->id)->get();
+        foreach ($detail as $data) {
+            $product = Product::find($data->product_id);
+            if ($product) {
+                $previousStock = $product->stock;
+                $new_stock = $product->stock + $data->qty;
+                $product->stock = $new_stock;
+                $product->cost = $data->price;
+                $product->save();
+
+                // Trigger: notificar clientes si stock pasó de 0 a >0
+                if ($previousStock == 0 && $new_stock > 0) {
+                    $stockAlertService->processStockIncrease($product, $previousStock, $new_stock);
+                }
+            }
+        }
+
+        return response()->json([
+            'ok' => true,
+            'order' => $purchase_order
+        ]);
+    }
+
+    /**
+     * Cancelar orden de compra
+     */
+    public function cancel($id)
+    {
+        $user = Auth::user();
+        $shop = $user->shop;
+
+        $purchase_order = PurchaseOrder::where('shop_id', $shop->id)
+            ->where('status', 'CREADA')
+            ->findOrFail($id);
+
+        $purchase_order->status = 'CANCELADA';
+        $purchase_order->save();
+
+        return response()->json([
+            'ok' => true,
+            'order' => $purchase_order
+        ]);
+    }
+
+    /**
+     * Cambiar estado de pago (Por Pagar / Pagada)
+     */
+    public function togglePayable($id)
+    {
+        $user = Auth::user();
+        $shop = $user->shop;
+
+        $purchase_order = PurchaseOrder::where('shop_id', $shop->id)->findOrFail($id);
+        $purchase_order->payable = $purchase_order->payable ? 0 : 1;
+        $purchase_order->save();
+
+        return response()->json([
+            'ok' => true,
+            'payable' => $purchase_order->payable
+        ]);
+    }
+
+    /**
+     * Cambiar estado de facturado
+     */
+    public function toggleInvoiced($id)
+    {
+        $user = Auth::user();
+        $shop = $user->shop;
+
+        $purchase_order = PurchaseOrder::where('shop_id', $shop->id)->findOrFail($id);
+        $purchase_order->is_invoiced = $purchase_order->is_invoiced ? 0 : 1;
+        $purchase_order->save();
+
+        return response()->json([
+            'ok' => true,
+            'is_invoiced' => $purchase_order->is_invoiced
+        ]);
+    }
+
+    /**
+     * Agregar pago parcial
+     */
+    public function storePartialPayment(Request $request, $id)
+    {
+        $user = Auth::user();
+        $shop = $user->shop;
+
+        $purchase_order = PurchaseOrder::where('shop_id', $shop->id)->findOrFail($id);
+
+        $payment = new PurchaseOrderPartialPayments();
+        $payment->purchase_order_id = $purchase_order->id;
+        $payment->amount = $request->amount;
+        $payment->payment_date = Carbon::now();
+        $payment->save();
+
+        return response()->json([
+            'ok' => true,
+            'payment' => $payment
+        ]);
+    }
+
+    /**
+     * Eliminar pago parcial
+     */
+    public function deletePartialPayment($paymentId)
+    {
+        $user = Auth::user();
+        $shop = $user->shop;
+
+        $payment = PurchaseOrderPartialPayments::findOrFail($paymentId);
+
+        // Verificar que el pago pertenece a una orden de la tienda
+        $purchase_order = PurchaseOrder::where('shop_id', $shop->id)
+            ->where('id', $payment->purchase_order_id)
+            ->firstOrFail();
+
+        $payment->delete();
+
+        return response()->json([
+            'ok' => true
         ]);
     }
 }

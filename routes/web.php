@@ -276,6 +276,12 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::get('/admin/purchase-orders/{id}/edit', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'edit'])->name('admin.purchase-orders.edit');
         Route::get('/admin/purchase-orders/{id}/detail', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'getDetail'])->name('admin.purchase-orders.detail');
         Route::post('/admin/purchase-orders/store', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'store'])->name('admin.purchase-orders.store');
+        Route::post('/admin/purchase-orders/{id}/complete', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'complete'])->name('admin.purchase-orders.complete');
+        Route::post('/admin/purchase-orders/{id}/cancel', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'cancel'])->name('admin.purchase-orders.cancel');
+        Route::post('/admin/purchase-orders/{id}/toggle-payable', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'togglePayable'])->name('admin.purchase-orders.toggle-payable');
+        Route::post('/admin/purchase-orders/{id}/toggle-invoiced', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'toggleInvoiced'])->name('admin.purchase-orders.toggle-invoiced');
+        Route::post('/admin/purchase-orders/{id}/partial-payment', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'storePartialPayment'])->name('admin.purchase-orders.partial-payment');
+        Route::delete('/admin/purchase-orders/partial-payment/{paymentId}', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'deletePartialPayment'])->name('admin.purchase-orders.delete-partial-payment');
 
         // Rutas para recibos de Tareas(admin web)
         Route::get('/admin/tasks', [TasksController::class, 'index'])->name('admin.tasks');

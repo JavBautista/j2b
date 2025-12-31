@@ -10,36 +10,49 @@ use App\Models\PartialPayments;
 
 class PartialPaymentsController extends Controller
 {
+    /**
+     * Agregar pago parcial/abono a una nota
+     * Documentación: j2b-app/xdev/ventas/PLAN_CENTRALIZACION_PAGOS.md
+     */
     public function store(Request $request)
     {
-        $date_today     = Carbon::now();
-        $payment= new PartialPayments();
-        $payment->receipt_id    = $request->receipt_id;
-        $payment->amount        = $request->amount;
-        $payment->payment_date  = $date_today;
+        $date_today = Carbon::now();
+
+        // Obtener receipt y suma actual ANTES del nuevo pago
+        $receipt = Receipt::with('partialPayments')->findOrFail($request->receipt_id);
+        $suma_actual = $receipt->partialPayments->sum('amount');
+
+        // Calcular nueva suma después de este pago
+        $nueva_suma = $suma_actual + $request->amount;
+
+        // Determinar tipo de pago: 'liquidacion' si completa, 'abono' si no
+        $payment_type = ($nueva_suma >= $receipt->total) ? 'liquidacion' : 'abono';
+
+        // Crear el pago
+        $payment = new PartialPayments();
+        $payment->receipt_id = $request->receipt_id;
+        $payment->amount = $request->amount;
+        $payment->payment_type = $payment_type;
+        $payment->payment_date = $date_today;
         $payment->save();
 
-        $pagos = PartialPayments::where('receipt_id',$request->receipt_id)->get();
-
-        $suma_pagos=0;
-        foreach ($pagos as $data) {
-            $suma_pagos+= $data['amount'];
-        }
-
-        $receipt = Receipt::with('partialPayments')->findOrFail($request->receipt_id);
-        $receipt->received = $suma_pagos;
-        if($suma_pagos >= $receipt->total){
-            $receipt->finished=1;
-            $receipt->status='PAGADA';
+        // Actualizar receipt
+        $receipt->received = $nueva_suma;
+        if($nueva_suma >= $receipt->total){
+            $receipt->finished = 1;
+            $receipt->status = 'PAGADA';
             if($receipt->credit){
-                $receipt->credit=0;
-                $receipt->credit_completed=1;
+                $receipt->credit = 0;
+                $receipt->credit_completed = 1;
             }
         }
         $receipt->save();
 
+        // Recargar para devolver con todos los pagos
+        $receipt->load('partialPayments');
+
         return response()->json([
-            'ok'=>true,
+            'ok' => true,
             'receipt' => $receipt
         ]);
     }

@@ -17,7 +17,8 @@
       "Bash(sudo -S chmod:*)",
       "Bash(sudo -S chown:*)",
       "Bash(grep:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(rm:*)"
     ],
     "deny": []
   }

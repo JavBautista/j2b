@@ -9,5 +9,13 @@ class PartialPayments extends Model
 {
     use HasFactory;
 
-    protected $guarded=[];
+    protected $fillable = ['receipt_id', 'amount', 'payment_type', 'payment_date'];
+
+    /**
+     * Relación con Receipt
+     */
+    public function receipt()
+    {
+        return $this->belongsTo(Receipt::class);
+    }
 }

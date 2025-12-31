@@ -290,10 +290,19 @@ class ReceiptsController extends Controller
         $receipt->save();
 
         // Guardar pago parcial si aplica
-        if (!$es_cotizacion && !$finished && $receipt->received > 0) {
+        // NOTA: Ahora SIEMPRE creamos partial_payment para centralizar ingresos
+        //       Documentación: j2b-app/xdev/ventas/PLAN_CENTRALIZACION_PAGOS.md
+        if (!$es_cotizacion && $receipt->received > 0) {
+            // Validar que no exceda el total (protección contra errores de usuario)
+            $monto_a_registrar = min($receipt->received, $receipt->total);
+
+            // Determinar tipo de pago: 'unico' si paga todo, 'inicial' si es parcial
+            $payment_type = ($monto_a_registrar >= $receipt->total) ? 'unico' : 'inicial';
+
             $partial = new PartialPayments();
             $partial->receipt_id = $receipt->id;
-            $partial->amount = $receipt->received;
+            $partial->amount = $monto_a_registrar;
+            $partial->payment_type = $payment_type;
             $partial->payment_date = $date_today;
             $partial->save();
         }

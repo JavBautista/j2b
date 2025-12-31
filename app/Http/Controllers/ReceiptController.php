@@ -284,21 +284,25 @@ class ReceiptController extends Controller
 
         $receipt->save();
 
-        //Guardaremos pagos parciales solo si:
+        //Guardaremos pagos parciales si:
         //1 NO es cotizacion
-        //2 NO este finalizada (que lo recibido se menor que total de la nota)
-        //3 El RECIBIDO sea mayor que 0 (recordar que la nota si se puede guadar con 0, pero 0 no es un pago parcial)
-        if(!$es_cotizacion){
-            if(!$finished){
-                if($receipt->received>0){
-                    $partial= new PartialPayments();
-                    $partial->receipt_id = $receipt->id;
-                    $partial->amount = $receipt->received;
-                    $partial->payment_date = $date_today;
-                    $partial->save();
-                }
-            }
-        }//.ifs(Pagos Parciales)
+        //2 El RECIBIDO sea mayor que 0
+        //NOTA: Ahora SIEMPRE creamos partial_payment para centralizar ingresos
+        //      Documentación: j2b-app/xdev/ventas/PLAN_CENTRALIZACION_PAGOS.md
+        if(!$es_cotizacion && $receipt->received > 0){
+            // Validar que no exceda el total (protección contra errores de usuario)
+            $monto_a_registrar = min($receipt->received, $receipt->total);
+
+            // Determinar tipo de pago: 'unico' si paga todo, 'inicial' si es parcial
+            $payment_type = ($monto_a_registrar >= $receipt->total) ? 'unico' : 'inicial';
+
+            $partial = new PartialPayments();
+            $partial->receipt_id = $receipt->id;
+            $partial->amount = $monto_a_registrar;
+            $partial->payment_type = $payment_type;
+            $partial->payment_date = $date_today;
+            $partial->save();
+        }//.if(Pagos - Centralización de ingresos)
 
         /************************************************
         *NUEVO BLOQUE PARA GUARDAR LA INFO EXTRA DEL RECEIPT
@@ -709,7 +713,7 @@ class ReceiptController extends Controller
         $receipt->save();
         
         //Solo Si es nota de VENTA y ademas que no sea una COTIZACIÓN debemos ver si hay ajuste de stock
-        if($receipt->type == 'VENTA' && !$receipt->quotation){
+        if($receipt->type == 'venta' && !$receipt->quotation){
             $detail = ReceiptDetail::where('receipt_id',$receipt->id)->get();
             foreach($detail as $data){
                 //solo con los items que sean productos
@@ -720,7 +724,7 @@ class ReceiptController extends Controller
                     $product->stock = $new_stock;
                     $product->save();
                 }
-                //solo con los items que sean Equipos se activara 
+                //solo con los items que sean Equipos se activara
                 //de nuevo es el quivalente a regresarlo al inventario
                 if($data->type=='equipment'){
                     $equipo = RentDetail::find($data->product_id);
@@ -728,7 +732,7 @@ class ReceiptController extends Controller
                     $equipo->save();
                 }
             }//foreach
-        }//.if($receipt->type == 'VENTA' && !$receipt->quotation)
+        }//.if($receipt->type == 'venta' && !$receipt->quotation)
 
         return response()->json([
                 'ok'=>true,
@@ -743,7 +747,7 @@ class ReceiptController extends Controller
         $receipt->save();
 
         //Solo Si es nota de VENTA y ademas que no sea una COTIZACIÓN debemos ver si hay ajuste de stock
-        if($receipt->type == 'VENTA' && !$receipt->quotation){
+        if($receipt->type == 'venta' && !$receipt->quotation){
 
             $detail = ReceiptDetail::where('receipt_id',$receipt->id)->get();
             foreach($detail as $data){
@@ -755,7 +759,7 @@ class ReceiptController extends Controller
                     $product->stock = $new_stock;
                     $product->save();
                 }
-                //solo con los items que sean Equipos se activara 
+                //solo con los items que sean Equipos se activara
                 //de nuevo es el quivalente a regresarlo al inventario
                 if($data->type=='equipment'){
                     $equipo = RentDetail::find($data->product_id);
@@ -763,7 +767,7 @@ class ReceiptController extends Controller
                     $equipo->save();
                 }
             }
-        }//.if($receipt->type == 'VENTA' && !$receipt->quotation)
+        }//.if($receipt->type == 'venta' && !$receipt->quotation)
 
         return response()->json([
                 'ok'=>true,

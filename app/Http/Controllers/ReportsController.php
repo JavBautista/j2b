@@ -7,6 +7,8 @@ use App\Models\PurchaseOrder;
 use App\Models\Client;
 use App\Models\Supplier;
 use App\Models\Expense;
+use App\Models\PartialPayments;
+use App\Models\PurchaseOrderPartialPayments;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -229,85 +231,61 @@ class ReportsController extends Controller
 
     }//clientesAdeudos
 
+    /**
+     * Reporte de Ingresos por Fechas
+     * SIMPLIFICADO: Todo ingreso está en partial_payments
+     */
     public function ingresosxFechas(Request $request){
-        // Obtener usuario autenticado y su tienda
         $user = $request->user();
         $shop = $user->shop;
 
-        // Validar que las fechas sean correctas
         $request->validate([
             'fechaInicio' => 'required|date',
             'fechaFin' => 'required|date|after_or_equal:fechaInicio',
         ]);
 
-        // Convertir fechas a formato Carbon para asegurar el formato correcto
         $fechaInicio = Carbon::parse($request->fechaInicio)->startOfDay();
         $fechaFin    = Carbon::parse($request->fechaFin)->endOfDay();
 
-        // Obtener los recibos en el rango de fechas seleccionado
-        $receipts = Receipt::with(['partialPayments', 'shop', 'detail', 'client'])
-            ->where('shop_id', $shop->id)
-            ->where('quotation', 0)
-            ->whereNotIn('status', ['CANCELADA', 'DEVOLUCION'])
-            ->where(function ($query) use ($fechaInicio, $fechaFin) {
-                $query->where(function ($q) use ($fechaInicio, $fechaFin) {
-                    // Recibos con pagos parciales en el rango
-                    $q->whereHas('partialPayments', function ($subquery) use ($fechaInicio, $fechaFin) {
-                        $subquery->whereBetween('created_at', [$fechaInicio, $fechaFin]);
-                    });
-                })->orWhere(function ($q) use ($fechaInicio, $fechaFin) {
-                    // Recibos finalizados con fecha de creación en el rango
-                    $q->where('finished', 1)
-                      ->whereBetween('created_at', [$fechaInicio, $fechaFin]);
-                });
+        // SIMPLIFICADO: Todo ingreso está en partial_payments
+        $pagos = PartialPayments::with(['receipt.client', 'receipt.detail'])
+            ->whereBetween('created_at', [$fechaInicio, $fechaFin])
+            ->whereHas('receipt', function ($q) use ($shop) {
+                $q->where('shop_id', $shop->id)
+                    ->where('quotation', 0)
+                    ->whereNotIn('status', ['CANCELADA', 'DEVOLUCION']);
             })
             ->orderBy('created_at', 'desc')
             ->get();
 
-        // Inicializar variables
-        $totalIngresos = 0;
+        // Agrupar pagos por receipt_id para mostrar por nota
+        $pagosPorReceipt = $pagos->groupBy('receipt_id');
+
+        $totalIngresos = $pagos->sum('amount');
         $ingresos = [];
 
-        foreach ($receipts as $receipt) {
-            $ingresoNota = 0; // Variable para acumular ingresos de cada nota
+        foreach ($pagosPorReceipt as $receiptId => $pagosNota) {
+            $receipt = $pagosNota->first()->receipt;
+            $montoTotal = $pagosNota->sum('amount');
 
-            $pagosFiltrados = collect(); 
-            
-            if ($receipt->finished && $receipt->created_at->between($fechaInicio, $fechaFin))  {
-                // Si la nota está finalizada, el ingreso es el monto recibido al momento de la creación
-                $ingresoNota = $receipt->received;
-            } else {
-                // Filtrar los pagos parciales que estén dentro del rango de fechas
-                $pagosFiltrados = $receipt->partialPayments->filter(function ($pp) use ($fechaInicio, $fechaFin) {
-                    return Carbon::parse($pp->created_at)->between($fechaInicio, $fechaFin);
-                });
-
-                // Sumar solo los pagos parciales dentro del rango de fechas
-                $ingresoNota = $pagosFiltrados->sum('amount');
-            }
-
-            // Acumular ingresos totales
-            $totalIngresos += $ingresoNota;
-
-            // Agregar la entrada al reporte
             $ingresos[] = [
-                'id' => $receipt->id, // ID de la nota
-                'nombre' => $receipt->client->name,
+                'id' => $receipt->id,
+                'nombre' => $receipt->client->name ?? 'Sin cliente',
                 'folio' => $receipt->folio,
-                'fecha' => $receipt->created_at->format('Y-m-d'),
+                'fecha' => $pagosNota->first()->created_at->format('Y-m-d'),
                 'descripcion' => $receipt->type,
-                'monto' => (float) $ingresoNota,
-                'detalle' => $pagosFiltrados->map(function ($pp) {
+                'monto' => (float) $montoTotal,
+                'detalle' => $pagosNota->map(function ($pp) {
                     return [
                         'fecha' => $pp->created_at->format('Y-m-d'),
-                        'monto' => (float) $pp->amount
+                        'monto' => (float) $pp->amount,
+                        'tipo' => $pp->payment_type ?? 'abono'
                     ];
-                }),
+                })->values(),
                 'receipt' => $receipt
             ];
         }
 
-        // Devolver la respuesta en formato JSON
         return response()->json([
             'ok' => true,
             'fechaInicio' => $fechaInicio->format('Y-m-d'),
@@ -445,112 +423,65 @@ class ReportsController extends Controller
     
 
 
+    /**
+     * Reporte de Diferencias Mensual (Ingresos - Egresos)
+     * SIMPLIFICADO: Todo ingreso está en partial_payments
+     */
     public function diferenciasMensual(Request $request)
     {
         $user = $request->user();
         $shop = $user->shop;
 
-        // Validar entrada
         $request->validate([
             'month' => 'required|integer|min:1|max:12',
             'year'  => 'required|integer|min:2000',
         ]);
 
         // Generar fechas de inicio y fin del mes
-        $mm   = ($request->month < 10) ? '0' . $request->month : $request->month;
-        $yyyy = $request->year;
-        $fechaBase = Carbon::parse($yyyy . '-' . $mm . '-01');
+        $mm = str_pad($request->month, 2, '0', STR_PAD_LEFT);
+        $fechaBase = Carbon::parse($request->year . '-' . $mm . '-01');
         $fechaInicio = $fechaBase->copy()->startOfMonth()->startOfDay();
-        $fechaFin    = $fechaBase->copy()->endOfMonth()->endOfDay();
+        $fechaFin = $fechaBase->copy()->endOfMonth()->endOfDay();
 
         // Convertir parámetro 'facturado' a booleano
-        $soloFacturado = $request->has('facturado') ? filter_var($request->facturado, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) : null;
+        $soloFacturado = $request->has('facturado')
+            ? filter_var($request->facturado, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE)
+            : null;
 
-
-
-        // Variables para acumular
-        $totalIngresos = 0;
-        $totalEgresos = 0;
-
-        // (Aquí pondremos la lógica de ingresos y egresos...)
-
-        // Obtener ingresos (receipts + partialPayments + received si está finalizado)
-        $receipts = Receipt::with(['partialPayments'])
-            ->where('shop_id', $shop->id)
-            ->where('quotation', 0)
-            ->whereNotIn('status', ['CANCELADA', 'DEVOLUCION'])
-            ->where(function ($query) use ($fechaInicio, $fechaFin) {
-                $query->where(function ($q) use ($fechaInicio, $fechaFin) {
-                    // Recibos con pagos parciales en el rango
-                    $q->whereHas('partialPayments', function ($subquery) use ($fechaInicio, $fechaFin) {
-                        $subquery->whereBetween('created_at', [$fechaInicio, $fechaFin]);
-                    });
-                })->orWhere(function ($q) use ($fechaInicio, $fechaFin) {
-                    // Recibos finalizados dentro del rango
-                    $q->where('finished', 1)
-                      ->whereBetween('created_at', [$fechaInicio, $fechaFin]);
-                });
-            });
-
-        if (!is_null($soloFacturado)) {
-            $receipts->where('is_tax_invoiced', $soloFacturado);
-        }
-
-        $receipts = $receipts->get();
-
-        foreach ($receipts as $receipt) {
-            $ingresoNota = 0;
-
-            if ($receipt->finished && $receipt->created_at->between($fechaInicio, $fechaFin)) {
-                $ingresoNota = $receipt->received;
-            } else {
-                // Sumar solo los pagos parciales dentro del rango de fechas
-                $pagosFiltrados = $receipt->partialPayments->filter(function ($pp) use ($fechaInicio, $fechaFin) {
-                    return Carbon::parse($pp->created_at)->between($fechaInicio, $fechaFin);
-                });
-                $ingresoNota = $pagosFiltrados->sum('amount');
+        // INGRESOS: Todo está en partial_payments
+        $queryIngresos = PartialPayments::whereHas('receipt', function ($q) use ($shop, $soloFacturado) {
+            $q->where('shop_id', $shop->id)
+                ->where('quotation', 0)
+                ->whereNotIn('status', ['CANCELADA', 'DEVOLUCION']);
+            if (!is_null($soloFacturado)) {
+                $q->where('is_tax_invoiced', $soloFacturado);
             }
+        })->whereBetween('created_at', [$fechaInicio, $fechaFin]);
 
-            $totalIngresos += $ingresoNota;
-        }
+        $totalIngresos = $queryIngresos->sum('amount');
 
-        //-------------------------------------------------------------------------------------------
-        // EGRESOS: PurchaseOrders
-        $purchaseOrders = PurchaseOrder::with('partialPayments')
-            ->where('shop_id', $shop->id)
-            ->whereHas('partialPayments', function ($query) use ($fechaInicio, $fechaFin) {
-                $query->whereBetween('created_at', [$fechaInicio, $fechaFin]);
-            });
+        // EGRESOS: Pagos a proveedores
+        $queryCompras = PurchaseOrderPartialPayments::whereHas('purchaseOrder', function ($q) use ($shop, $soloFacturado) {
+            $q->where('shop_id', $shop->id);
+            if (!is_null($soloFacturado)) {
+                $q->where('is_tax_invoiced', $soloFacturado);
+            }
+        })->whereBetween('created_at', [$fechaInicio, $fechaFin]);
 
-        if (!is_null($soloFacturado)) {
-            $purchaseOrders->where('is_tax_invoiced', $soloFacturado);
-        }
+        $egresosCompras = $queryCompras->sum('amount');
 
-        foreach ($purchaseOrders->get() as $purchase) {
-            $pagosFiltrados = $purchase->partialPayments->filter(function ($pp) use ($fechaInicio, $fechaFin) {
-                return Carbon::parse($pp->created_at)->between($fechaInicio, $fechaFin);
-            });
-
-            $totalEgresos += $pagosFiltrados->sum('amount');
-        }
-
-        // EGRESOS: Expenses
-        $expenses = Expense::where('shop_id', $shop->id)
+        // EGRESOS: Gastos operativos
+        $queryGastos = Expense::where('shop_id', $shop->id)
             ->where('status', 'PAGADO')
             ->where('active', 1)
-            ->whereBetween('date', [$fechaInicio, $fechaFin]);
+            ->whereBetween('date', [$fechaInicio->format('Y-m-d'), $fechaFin->format('Y-m-d')]);
 
         if (!is_null($soloFacturado)) {
-            $expenses->where('is_tax_invoiced', $soloFacturado);
+            $queryGastos->where('is_tax_invoiced', $soloFacturado);
         }
-        
-        foreach ($expenses->get() as $expense) {
-            $totalEgresos += $expense->total;
-        } 
 
-        //-------------------------------------------------------------------------------------------
-
-        // Calcular diferencia
+        $egresosGastos = $queryGastos->sum('total');
+        $totalEgresos = $egresosCompras + $egresosGastos;
         $diferencia = $totalIngresos - $totalEgresos;
 
         return response()->json([
@@ -558,7 +489,7 @@ class ReportsController extends Controller
             'fechaInicio' => $fechaInicio->format('Y-m-d'),
             'fechaFin' => $fechaFin->format('Y-m-d'),
             'ingresos' => number_format($totalIngresos, 2, '.', ''),
-            'egresos'  => number_format($totalEgresos, 2, '.', ''),
+            'egresos' => number_format($totalEgresos, 2, '.', ''),
             'diferencia' => number_format($diferencia, 2, '.', '')
         ]);
     }
@@ -855,93 +786,56 @@ class ReportsController extends Controller
 
     /**
      * Calcular períodos en modo COBRADAS (dinero realmente recibido)
+     * SIMPLIFICADO: Todo pago está en partial_payments
      */
     private function calcularPeriodosCobradas($shop, $fechaInicio, $fechaFin, $tipoPeriodo, $tipoVenta)
     {
-        // Obtener receipts con sus pagos parciales
-        $query = Receipt::with('partialPayments')
-            ->where('shop_id', $shop->id)
-            ->whereNotIn('status', ['CANCELADA', 'DEVOLUCION'])
-            ->where('quotation', false)
-            ->where(function ($q) use ($fechaInicio, $fechaFin) {
-                // Notas con pagos parciales en el rango
-                $q->whereHas('partialPayments', function ($subquery) use ($fechaInicio, $fechaFin) {
-                    $subquery->whereBetween('created_at', [$fechaInicio, $fechaFin]);
-                })
-                // O notas finalizadas (pagadas al contado) en el rango
-                ->orWhere(function ($q2) use ($fechaInicio, $fechaFin) {
-                    $q2->where('finished', 1)
-                       ->whereBetween('created_at', [$fechaInicio, $fechaFin]);
-                });
+        // SIMPLIFICADO: Todos los pagos están en partial_payments
+        $queryPagos = PartialPayments::with('receipt')
+            ->whereBetween('created_at', [$fechaInicio, $fechaFin])
+            ->whereHas('receipt', function ($q) use ($shop, $tipoVenta) {
+                $q->where('shop_id', $shop->id)
+                    ->where('quotation', 0)
+                    ->whereNotIn('status', ['CANCELADA', 'DEVOLUCION']);
+                if ($tipoVenta !== 'todas') {
+                    $q->where('type', $tipoVenta);
+                }
             });
 
-        // Filtrar por tipo de venta
-        if ($tipoVenta !== 'todas') {
-            $query->where('type', $tipoVenta);
+        $pagos = $queryPagos->get();
+
+        // Agrupar por período
+        $cobrosPorPeriodo = [];
+        foreach ($pagos as $pago) {
+            $periodo = $this->getPeriodoKey($pago->created_at, $tipoPeriodo);
+
+            if (!isset($cobrosPorPeriodo[$periodo])) {
+                $cobrosPorPeriodo[$periodo] = ['cobrado' => 0, 'montos' => []];
+            }
+
+            $cobrosPorPeriodo[$periodo]['cobrado'] += $pago->amount;
+            $cobrosPorPeriodo[$periodo]['montos'][] = $pago->amount;
         }
 
-        $receipts = $query->get();
+        // Calcular pendientes (notas POR COBRAR creadas en el rango)
+        $notasPendientes = Receipt::where('shop_id', $shop->id)
+            ->where('quotation', 0)
+            ->where('status', 'POR COBRAR')
+            ->whereNotIn('status', ['CANCELADA', 'DEVOLUCION'])
+            ->whereBetween('created_at', [$fechaInicio, $fechaFin]);
 
-        // Calcular cobros por período
-        $cobrosPorPeriodo = [];
+        if ($tipoVenta !== 'todas') {
+            $notasPendientes->where('type', $tipoVenta);
+        }
 
-        foreach ($receipts as $receipt) {
-            // Si está finalizada y fue creada en el rango, tomar received
-            if ($receipt->finished && Carbon::parse($receipt->created_at)->between($fechaInicio, $fechaFin)) {
-                $periodo = $this->getPeriodoKey($receipt->created_at, $tipoPeriodo);
-
+        foreach ($notasPendientes->get() as $nota) {
+            $pendiente = $nota->total - $nota->received;
+            if ($pendiente > 0) {
+                $periodo = $this->getPeriodoKey($nota->created_at, $tipoPeriodo);
                 if (!isset($cobrosPorPeriodo[$periodo])) {
-                    $cobrosPorPeriodo[$periodo] = [
-                        'cobrado' => 0,
-                        'pendiente' => 0,
-                        'tickets' => 0,
-                        'montos' => []
-                    ];
+                    $cobrosPorPeriodo[$periodo] = ['cobrado' => 0, 'montos' => [], 'pendiente' => 0];
                 }
-
-                $cobrosPorPeriodo[$periodo]['cobrado'] += $receipt->received;
-                $cobrosPorPeriodo[$periodo]['tickets']++;
-                $cobrosPorPeriodo[$periodo]['montos'][] = $receipt->received;
-            }
-
-            // Pagos parciales en el rango
-            $pagosFiltrados = $receipt->partialPayments->filter(function ($pp) use ($fechaInicio, $fechaFin) {
-                return Carbon::parse($pp->created_at)->between($fechaInicio, $fechaFin);
-            });
-
-            foreach ($pagosFiltrados as $pago) {
-                $periodo = $this->getPeriodoKey($pago->created_at, $tipoPeriodo);
-
-                if (!isset($cobrosPorPeriodo[$periodo])) {
-                    $cobrosPorPeriodo[$periodo] = [
-                        'cobrado' => 0,
-                        'pendiente' => 0,
-                        'tickets' => 0,
-                        'montos' => []
-                    ];
-                }
-
-                $cobrosPorPeriodo[$periodo]['cobrado'] += $pago->amount;
-                $cobrosPorPeriodo[$periodo]['montos'][] = $pago->amount;
-            }
-
-            // Calcular pendiente (solo para notas no finalizadas)
-            if (!$receipt->finished && $receipt->status === 'POR COBRAR') {
-                $totalPagado = $receipt->partialPayments->sum('amount');
-                $pendiente = $receipt->total - $totalPagado;
-
-                if ($pendiente > 0) {
-                    $periodo = $this->getPeriodoKey($receipt->created_at, $tipoPeriodo);
-                    if (!isset($cobrosPorPeriodo[$periodo])) {
-                        $cobrosPorPeriodo[$periodo] = [
-                            'cobrado' => 0,
-                            'pendiente' => 0,
-                            'tickets' => 0,
-                            'montos' => []
-                        ];
-                    }
-                    $cobrosPorPeriodo[$periodo]['pendiente'] += $pendiente;
-                }
+                $cobrosPorPeriodo[$periodo]['pendiente'] = ($cobrosPorPeriodo[$periodo]['pendiente'] ?? 0) + $pendiente;
             }
         }
 
@@ -952,7 +846,7 @@ class ReportsController extends Controller
                 'periodo' => $periodo,
                 'num_tickets' => count($data['montos']),
                 'total_ventas' => number_format($data['cobrado'], 2, '.', ''),
-                'pendiente_cobrar' => number_format($data['pendiente'], 2, '.', ''),
+                'pendiente_cobrar' => number_format($data['pendiente'] ?? 0, 2, '.', ''),
                 'ticket_promedio' => $montos->count() > 0 ? number_format($montos->avg(), 2, '.', '') : '0.00',
                 'ticket_maximo' => $montos->count() > 0 ? number_format($montos->max(), 2, '.', '') : '0.00',
                 'ticket_minimo' => $montos->count() > 0 ? number_format($montos->min(), 2, '.', '') : '0.00',

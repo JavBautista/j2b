@@ -406,6 +406,8 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
             Route::get('/admin/reports/clientes-adeudos', [\App\Http\Controllers\Admin\ReportsController::class, 'clientesAdeudos']);
             Route::get('/admin/reports/top-productos', [\App\Http\Controllers\Admin\ReportsController::class, 'topProductos']);
             Route::get('/admin/reports/categorias', [\App\Http\Controllers\Admin\ReportsController::class, 'getCategorias']);
+            Route::get('/admin/reports/diferencias-mensual', [\App\Http\Controllers\Admin\ReportsController::class, 'diferenciasMensual']);
+            Route::get('/admin/reports/ventas-periodo', [\App\Http\Controllers\Admin\ReportsController::class, 'ventasPeriodo']);
         });
     }); //./Routes Middleware admin
 });#./Middlware AUTH

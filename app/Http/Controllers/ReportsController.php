@@ -8,7 +8,6 @@ use App\Models\Client;
 use App\Models\Supplier;
 use App\Models\Expense;
 use App\Models\PartialPayments;
-use App\Models\PurchaseOrderPartialPayments;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -460,15 +459,24 @@ class ReportsController extends Controller
 
         $totalIngresos = $queryIngresos->sum('amount');
 
-        // EGRESOS: Pagos a proveedores
-        $queryCompras = PurchaseOrderPartialPayments::whereHas('purchaseOrder', function ($q) use ($shop, $soloFacturado) {
-            $q->where('shop_id', $shop->id);
-            if (!is_null($soloFacturado)) {
-                $q->where('is_tax_invoiced', $soloFacturado);
-            }
-        })->whereBetween('created_at', [$fechaInicio, $fechaFin]);
+        // EGRESOS: PurchaseOrders (lógica original - ya funcionaba bien)
+        $purchaseOrders = PurchaseOrder::with('partialPayments')
+            ->where('shop_id', $shop->id)
+            ->whereHas('partialPayments', function ($query) use ($fechaInicio, $fechaFin) {
+                $query->whereBetween('created_at', [$fechaInicio, $fechaFin]);
+            });
 
-        $egresosCompras = $queryCompras->sum('amount');
+        if (!is_null($soloFacturado)) {
+            $purchaseOrders->where('is_tax_invoiced', $soloFacturado);
+        }
+
+        $egresosCompras = 0;
+        foreach ($purchaseOrders->get() as $purchase) {
+            $pagosFiltrados = $purchase->partialPayments->filter(function ($pp) use ($fechaInicio, $fechaFin) {
+                return Carbon::parse($pp->created_at)->between($fechaInicio, $fechaFin);
+            });
+            $egresosCompras += $pagosFiltrados->sum('amount');
+        }
 
         // EGRESOS: Gastos operativos
         $queryGastos = Expense::where('shop_id', $shop->id)

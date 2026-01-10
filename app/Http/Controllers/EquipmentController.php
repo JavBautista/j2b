@@ -207,4 +207,14 @@ class EquipmentController extends Controller
             ], 500);
         }
     }//.deleteImage()
+
+    public function updateUrlWebMonitor(Request $request){
+        $equipment = RentDetail::findOrFail($request->id);
+        $equipment->url_web_monitor = $request->url_web_monitor;
+        $equipment->save();
+        return response()->json([
+            'ok'=>true,
+            'equipment' => $equipment,
+        ]);
+    }//.updateUrlWebMonitor
 }

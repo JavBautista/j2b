@@ -220,6 +220,7 @@
             </div>
             
             <div class="pricing-grid">
+                <!--
                 <div class="pricing-card scroll-reveal">
                     <div class="pricing-header">
                         <h3>Prueba Gratuita</h3>
@@ -238,20 +239,21 @@
                     </ul>
                     <a href="#descarga" class="pricing-btn btn-outline">Comenzar Gratis</a>
                 </div>
+                -->
                 
                 <div class="pricing-card scroll-reveal">
                     <div class="pricing-header">
-                        <h3>Básico</h3>
+                        <h3>STANDAR</h3>
                         <div class="price">
                             <span class="currency">MX$</span>
-                            <span class="amount">299</span>
+                            <span class="amount">349</span>
                             <span class="period">/mes</span>
                         </div>
                     </div>
                     <ul class="pricing-features">
                         <li><i class="fas fa-check"></i> Productos ilimitados</li>
                         <li><i class="fas fa-check"></i> 500 clientes</li>
-                        <li><i class="fas fa-check"></i> 2 usuarios</li>
+                        <li><i class="fas fa-check"></i> 2 Usuarios Admin </li>
                         <li><i class="fas fa-check"></i> Reportes básicos</li>
                         <li><i class="fas fa-check"></i> Soporte prioritario</li>
                     </ul>
@@ -261,7 +263,7 @@
                 <div class="pricing-card pricing-card-featured scroll-reveal">
                     <div class="pricing-badge">Más Popular</div>
                     <div class="pricing-header">
-                        <h3>Profesional</h3>
+                        <h3>PRO</h3>
                         <div class="price">
                             <span class="currency">MX$</span>
                             <span class="amount">599</span>
@@ -271,10 +273,11 @@
                     <ul class="pricing-features">
                         <li><i class="fas fa-check"></i> Todo lo del plan Básico</li>
                         <li><i class="fas fa-check"></i> Clientes ilimitados</li>
-                        <li><i class="fas fa-check"></i> 5 usuarios</li>
+                        <li><i class="fas fa-check"></i> 5 usuarios Admin</li>
                         <li><i class="fas fa-check"></i> Reportes avanzados</li>
-                        <li><i class="fas fa-check"></i> Múltiples sucursales</li>
-                        <li><i class="fas fa-check"></i> Integración con contabilidad</li>
+                        <li><i class="fas fa-check"></i> Geolicalización</li>                
+                        <li><i class="fas fa-check"></i> Plataforma WEB</li>
+
                     </ul>
                     <a href="#descarga" class="pricing-btn btn-primary">Elegir Plan</a>
                 </div>

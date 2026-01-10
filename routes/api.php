@@ -418,6 +418,7 @@ Route::group([
          //nuevas para imagenes
          Route::post('equipment/upload-image','App\Http\Controllers\EquipmentController@uploadImage');
          Route::post('equipment/delete-image','App\Http\Controllers\EquipmentController@deleteImage');
+         Route::post('equipment/update-url-web-monitor','App\Http\Controllers\EquipmentController@updateUrlWebMonitor');
 
          /*SERVICES CLIENTS*/
          Route::get('services-clients',[ServicesClientController::class,'index']);

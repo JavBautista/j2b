@@ -331,6 +331,12 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::post('/admin/products/{id}/upload-image', [\App\Http\Controllers\Admin\ProductsController::class, 'uploadImage'])->name('admin.products.upload-image');
         Route::delete('/admin/products/{id}/delete-main-image', [\App\Http\Controllers\Admin\ProductsController::class, 'deleteMainImage'])->name('admin.products.delete-main-image');
         Route::delete('/admin/products/delete-alt-image/{imageId}', [\App\Http\Controllers\Admin\ProductsController::class, 'deleteAltImage'])->name('admin.products.delete-alt-image');
+        // Rutas de importación masiva de productos
+        Route::get('/admin/products/import', [\App\Http\Controllers\Admin\ProductImportController::class, 'index'])->name('admin.products.import');
+        Route::get('/admin/products/import/template', [\App\Http\Controllers\Admin\ProductImportController::class, 'downloadTemplate'])->name('admin.products.import.template');
+        Route::post('/admin/products/import/preview', [\App\Http\Controllers\Admin\ProductImportController::class, 'preview'])->name('admin.products.import.preview');
+        Route::post('/admin/products/import/execute', [\App\Http\Controllers\Admin\ProductImportController::class, 'import'])->name('admin.products.import.execute');
+        Route::get('/admin/products/categories', [\App\Http\Controllers\Admin\ProductImportController::class, 'getCategories'])->name('admin.products.categories');
 
         // Rutas para Categorías (CRUD admin)
         Route::get('/admin/categories', [\App\Http\Controllers\Admin\CategoriesController::class, 'index'])->name('admin.categories');

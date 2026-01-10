@@ -120,8 +120,13 @@ class RentController extends Controller
     {
         $now = now();
 
+        // Obtener shop_id desde la renta -> cliente
+        $rent = Rent::with('client')->findOrFail($request->rent_id);
+        $shop_id = $rent->client->shop_id;
+
         $rent_detail = new RentDetail();
 
+        $rent_detail->shop_id = $shop_id;
         $rent_detail->active = 1;
         $rent_detail->rent_id = $request->rent_id;
 

@@ -18,6 +18,9 @@
                     <button v-if="!userLimited" type="button" @click="abrirModal('crear')" class="btn btn-primary">
                         <i class="fa fa-plus"></i>&nbsp;Nuevo Producto
                     </button>
+                    <a v-if="!userLimited" href="/admin/products/import" class="btn btn-success ml-2">
+                        <i class="fa fa-file-excel"></i>&nbsp;Importar Excel
+                    </a>
                 </div>
             </div>
             <div class="card-body">
@@ -686,13 +689,33 @@ export default {
                     me.cerrarModal();
                     me.loadProducts(me.pagination.current_page || 1);
                     Swal.fire('Éxito', response.data.message, 'success');
+                } else {
+                    // El servidor respondió pero ok=false
+                    me.errorForm = true;
+                    me.erroresForm = [response.data.message || 'Error al procesar la solicitud'];
                 }
             }).catch(function(error) {
                 me.errorForm = true;
-                if (error.response && error.response.data.errors) {
-                    me.erroresForm = Object.values(error.response.data.errors).flat();
+                if (error.response) {
+                    // El servidor respondió con código de error
+                    if (error.response.data.errors) {
+                        // Errores de validación Laravel
+                        me.erroresForm = Object.values(error.response.data.errors).flat();
+                    } else if (error.response.data.message) {
+                        // Mensaje de error del servidor
+                        me.erroresForm = [error.response.data.message];
+                    } else if (error.response.status === 422) {
+                        me.erroresForm = ['Datos inválidos. Verifica los campos obligatorios.'];
+                    } else if (error.response.status === 500) {
+                        me.erroresForm = ['Error interno del servidor. Contacta al administrador.'];
+                    } else {
+                        me.erroresForm = ['Error del servidor (código ' + error.response.status + ')'];
+                    }
+                } else if (error.request) {
+                    // No hubo respuesta del servidor
+                    me.erroresForm = ['No se pudo conectar con el servidor. Verifica tu conexión.'];
                 } else {
-                    me.erroresForm = ['Error al guardar el producto'];
+                    me.erroresForm = ['Error inesperado: ' + error.message];
                 }
             }).finally(function() {
                 me.guardando = false;

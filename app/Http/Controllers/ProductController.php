@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use App\Models\ProductImage;
+use App\Models\Category;
 use App\Services\StockAlertService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -58,38 +59,52 @@ class ProductController extends Controller
 
     public function store(Request $request)
     {
+        try {
             $user = $request->user();
             $shop = $user->shop;
 
-            $product = new Product;
-            $product->shop_id=$shop->id;
-            $product->active        = 1;
-            $product->category_id   = $request->category_id;
-            $product->key           = $request->key;
-            $product->name          = $request->name;
-            $product->description   = $request->description;
+            // Si no viene category_id, usar la primera categoría de la tienda
+            $categoryId = $request->category_id;
+            if (empty($categoryId)) {
+                $defaultCategory = Category::where('shop_id', $shop->id)->first();
+                if (!$defaultCategory) {
+                    // Crear categoría "General" si no existe ninguna
+                    $defaultCategory = Category::create([
+                        'shop_id' => $shop->id,
+                        'name' => 'General',
+                        'active' => 1
+                    ]);
+                }
+                $categoryId = $defaultCategory->id;
+            }
 
-            $product->cost          = $request->cost;
-            $product->retail        = $request->retail;
-            $product->wholesale        = $request->wholesale;
-            $product->wholesale_premium = $request->wholesale_premium;
-            $product->stock         = $request->stock;
-            $product->reserve       = $request->reserve;
-            /*
+            $product = new Product;
+            $product->shop_id = $shop->id;
+            $product->active = 1;
+            $product->category_id = $categoryId;
+            $product->key = $request->key;
+            $product->name = $request->name;
+            $product->description = $request->description;
+            $product->cost = $request->cost;
+            $product->retail = $request->retail;
             $product->wholesale = $request->wholesale;
-            $product->image = $request->image;
-            $product->url_video = $request->url_video;
-            $product->barcode = $request->barcode;
-            */
+            $product->wholesale_premium = $request->wholesale_premium;
+            $product->stock = $request->stock;
+            $product->reserve = $request->reserve;
             $product->save();
 
-            $product->load('category');
-            $product->load('images');
+            $product->load('category', 'images');
 
             return response()->json([
-                'ok'=>true,
+                'ok' => true,
                 'product' => $product,
             ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Error al crear el producto: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     public function update(Request $request)

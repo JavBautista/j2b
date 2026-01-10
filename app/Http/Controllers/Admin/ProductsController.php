@@ -97,32 +97,54 @@ class ProductsController extends Controller
             'retail' => 'required|numeric|min:0',
         ]);
 
-        $user = auth()->user();
-        $shop = $user->shop;
+        try {
+            $user = auth()->user();
+            $shop = $user->shop;
 
-        $product = new Product();
-        $product->shop_id = $shop->id;
-        $product->category_id = $request->category_id;
-        $product->active = 1;
-        $product->key = $request->key;
-        $product->barcode = $request->barcode;
-        $product->name = $request->name;
-        $product->description = $request->description;
-        $product->cost = $request->cost;
-        $product->retail = $request->retail;
-        $product->wholesale = $request->wholesale ?? 0;
-        $product->wholesale_premium = $request->wholesale_premium ?? 0;
-        $product->stock = $request->stock ?? 0;
-        $product->reserve = $request->reserve ?? 0;
-        $product->save();
+            // Si no viene category_id, usar la primera categoría de la tienda
+            $categoryId = $request->category_id;
+            if (empty($categoryId)) {
+                $defaultCategory = Category::where('shop_id', $shop->id)->first();
+                if (!$defaultCategory) {
+                    // Crear categoría "General" si no existe ninguna
+                    $defaultCategory = Category::create([
+                        'shop_id' => $shop->id,
+                        'name' => 'General',
+                        'active' => 1
+                    ]);
+                }
+                $categoryId = $defaultCategory->id;
+            }
 
-        $product->load('category', 'images');
+            $product = new Product();
+            $product->shop_id = $shop->id;
+            $product->category_id = $categoryId;
+            $product->active = 1;
+            $product->key = $request->key;
+            $product->barcode = $request->barcode;
+            $product->name = $request->name;
+            $product->description = $request->description;
+            $product->cost = $request->cost;
+            $product->retail = $request->retail;
+            $product->wholesale = $request->wholesale ?? 0;
+            $product->wholesale_premium = $request->wholesale_premium ?? 0;
+            $product->stock = $request->stock ?? 0;
+            $product->reserve = $request->reserve ?? 0;
+            $product->save();
 
-        return response()->json([
-            'ok' => true,
-            'product' => $product,
-            'message' => 'Producto creado correctamente.'
-        ]);
+            $product->load('category', 'images');
+
+            return response()->json([
+                'ok' => true,
+                'product' => $product,
+                'message' => 'Producto creado correctamente.'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Error al crear el producto: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**

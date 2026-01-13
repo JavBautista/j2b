@@ -22,6 +22,8 @@
     <!-- Styles -->
     <link href="{{ asset('css/app.css') }}" rel="stylesheet">
     <link href="{{ asset('css/dashboard.css') }}" rel="stylesheet">
+    <!-- J2Biznes Design System -->
+    <link href="{{ asset('css/j2b-design-system.css') }}" rel="stylesheet">
 
 </head>
 <body class="app header-fixed sidebar-fixed aside-menu-fixed aside-menu-hidden">

@@ -1,151 +1,228 @@
 <template>
   <div>
 
-  <div class="container-fluid">
+  <div class="container-fluid" style="padding: 1.5rem;">
 
-        <!-- Ejemplo de tabla Listado -->
-        <div class="card">
-            <div class="card-header">
-                <i class="fa fa-align-justify"></i> Planes
-                <button type="button" @click="abrirModal('plan','registrar')" class="btn btn-primary">
-                    <i class="icon-plus"></i>&nbsp;Nuevo
-                </button>
-                <!--<a :href="'/admin/productos/nuevo'" class="btn btn-primary"><i class="icon-plus"></i>&nbsp;Nuevo</a>
-                -->
+        <!-- Header con título y botón -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h4 class="mb-1" style="color: var(--j2b-dark); font-weight: 600;">
+                    <i class="fa fa-list-alt" style="color: var(--j2b-primary);"></i> Gestion de Planes
+                </h4>
+                <p class="mb-0" style="color: var(--j2b-gray-500);">Administra los planes de suscripcion de la plataforma</p>
             </div>
-            <div class="card-body">
-                <div class="form-group row">
-                    <div class="col-md-6">
-                        <div class="input-group">
-                            <select class="form-control col-md-3" v-model="criterio">
+            <button type="button" @click="abrirModal('plan','registrar')" class="j2b-btn j2b-btn-primary">
+                <i class="fa fa-plus"></i> Nuevo Plan
+            </button>
+        </div>
+
+        <!-- Card principal -->
+        <div class="j2b-card">
+            <!-- Filtros de búsqueda -->
+            <div class="j2b-card-header">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <div class="d-flex gap-2 flex-wrap">
+                            <select class="j2b-select" style="width: auto; min-width: 140px;" v-model="criterio">
                               <option value="name">Nombre</option>
-                              <option value="description">Descripción</option>
+                              <option value="description">Descripcion</option>
                             </select>
-                            <input type="text" v-model="buscar" class="form-control" placeholder="Texto a buscar" @keyup.enter="loadPlans(1,buscar,criterio)">
-                            <button type="submit" @click="loadPlans(1,buscar,criterio)" class="btn btn-primary"><i class="fa fa-search"></i> Buscar</button>
+                            <div class="j2b-input-icon" style="flex: 1; min-width: 200px;">
+                                <i class="fa fa-search"></i>
+                                <input type="text" v-model="buscar" class="j2b-input" placeholder="Buscar plan..." @keyup.enter="buscarPlanes()">
+                            </div>
+                            <button type="button" @click="buscarPlanes()" class="j2b-btn j2b-btn-primary">
+                                <i class="fa fa-search"></i> Buscar
+                            </button>
                         </div>
                     </div>
+                    <div class="col-md-4 text-right">
+                        <span class="j2b-badge j2b-badge-info">{{ pagination.total }} planes</span>
+                    </div>
                 </div>
-                <table class="table table-bordered table-striped table-sm">
-                    <thead>
-                        <tr>
-                            <th>No</th>
-                            <th>Nombre</th>
-                            <th>Descripción</th>
-                            <th>Precio</th>
-                            <th>Status</th>
-                            <th>Opciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                          <tr v-for="plan in arrayPlans" :key="plan.id">
-                              <td v-text="plan.id"></td>
-                              <td v-text="plan.name"></td>
-                              <td v-text="plan.description"></td>
-                              <td v-text="plan.price"></td>
-                              <td>
-                                  <span v-if="plan.active" class="badge badge-success">Activo</span>
-                                  <span v-else class="badge badge-danger">Baja</span>
-                              </td>
-                              <td>
-                                    <div class="dropdown">
-                                      <a class="btn btn-secondary dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                        ...
-                                      </a>
+            </div>
 
-                                      <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item" href="#" @click="abrirModal('plan','ver_datos', plan)"><i class="fa fa-eye"></i>Ver</a></li>
-                                      
-                                        <li><a class="dropdown-item" href="#" @click="abrirModal('plan','actualizar_datos', plan)"><i class="fa fa-edit"></i>Editar</a></li>
-                                        <li>
-                                            <a v-if="plan.active" class="dropdown-item" href="#" @click="actualizarAInactivo(plan.id)"><i class="fa fa fa-toggle-on"></i>Deshabilitar</a>
-                                            <a v-else class="dropdown-item" href="#" @click="actualizarAActivo(plan.id)"><i class="fa fa fa-toggle-off"></i>Activar</a>
-                                        </li>
+            <!-- Tabla -->
+            <div class="j2b-card-body p-0">
+                <div class="j2b-table-responsive">
+                    <table class="j2b-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 60px;">ID</th>
+                                <th>Plan</th>
+                                <th style="width: 120px;">Precio</th>
+                                <th style="width: 100px;">Estado</th>
+                                <th style="width: 140px;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                              <tr v-for="plan in arrayPlans" :key="plan.id">
+                                  <td>
+                                      <span class="j2b-badge j2b-badge-dark">{{ plan.id }}</span>
+                                  </td>
+                                  <td>
+                                      <div class="d-flex align-items-center">
+                                          <div class="j2b-icon-circle j2b-icon-circle-sm j2b-icon-primary mr-2" style="font-size: 11px; width: 32px; height: 32px; flex-shrink: 0;">
+                                              {{ plan.name.charAt(0).toUpperCase() }}
+                                          </div>
+                                          <div>
+                                              <strong style="color: var(--j2b-dark);">{{ plan.name }}</strong>
+                                              <small class="d-block" style="color: var(--j2b-gray-500); max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                                  {{ plan.description || 'Sin descripcion' }}
+                                              </small>
+                                          </div>
+                                      </div>
+                                  </td>
+                                  <td>
+                                      <strong style="color: var(--j2b-primary); font-size: 1.1em;">${{ plan.price }}</strong>
+                                      <small class="d-block" style="color: var(--j2b-gray-500);">/mes</small>
+                                  </td>
+                                  <td>
+                                      <span v-if="plan.active" class="j2b-badge j2b-badge-success">
+                                          <i class="fa fa-check-circle"></i> Activo
+                                      </span>
+                                      <span v-else class="j2b-badge j2b-badge-danger">
+                                          <i class="fa fa-times-circle"></i> Inactivo
+                                      </span>
+                                  </td>
+                                  <td>
+                                      <div class="d-flex gap-1">
+                                          <button class="j2b-btn j2b-btn-sm j2b-btn-outline" @click="abrirModal('plan','ver_datos', plan)" title="Ver">
+                                              <i class="fa fa-eye"></i>
+                                          </button>
+                                          <button class="j2b-btn j2b-btn-sm j2b-btn-secondary" @click="abrirModal('plan','actualizar_datos', plan)" title="Editar">
+                                              <i class="fa fa-edit"></i>
+                                          </button>
+                                          <div class="dropdown">
+                                              <button class="j2b-btn j2b-btn-sm j2b-btn-dark dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                                  <i class="fa fa-ellipsis-v"></i>
+                                              </button>
+                                              <ul class="dropdown-menu dropdown-menu-end">
+                                                  <li>
+                                                      <a v-if="plan.active" class="dropdown-item" href="#" @click.prevent="actualizarAInactivo(plan.id)">
+                                                          <i class="fa fa-toggle-on text-danger"></i> Deshabilitar
+                                                      </a>
+                                                      <a v-else class="dropdown-item" href="#" @click.prevent="actualizarAActivo(plan.id)">
+                                                          <i class="fa fa-toggle-off text-success"></i> Activar
+                                                      </a>
+                                                  </li>
+                                              </ul>
+                                          </div>
+                                      </div>
+                                  </td>
+                              </tr>
+                              <tr v-if="arrayPlans.length === 0">
+                                  <td colspan="5" class="text-center py-5">
+                                      <i class="fa fa-list-alt fa-3x mb-3" style="color: var(--j2b-gray-300);"></i>
+                                      <p style="color: var(--j2b-gray-500);">No se encontraron planes</p>
+                                  </td>
+                              </tr>
+                      </tbody>
+                    </table>
+                </div>
 
-                                      </ul>
-                                    </div>
-
-                            </td>
-
-                          </tr>
-
-                  </tbody>
-                </table>
-                <nav>
-                    <ul class="pagination">
-                        <li class="page-item" v-if="pagination.current_page > 1">
-                            <a class="page-link" href="#" @click.prevent="cambiarPagina(pagination.current_page-1,buscar,criterio)">Ant</a>
-                        </li>
-
-                        <li class="page-item" v-for="page in pagesNumber" :key="page" :class="[page==isActived ? 'active':'']">
-                            <a class="page-link" href="#" @click.prevent="cambiarPagina(page,buscar,criterio)" v-text="page"></a>
-                        </li>
-
-                        <li class="page-item" v-if="pagination.current_page < pagination.last_page">
-                            <a class="page-link" href="#" @click.prevent="cambiarPagina(pagination.current_page+1,buscar,criterio)">Sig</a>
-                        </li>
-                    </ul>
-                </nav>
+                <!-- Paginación -->
+                <div class="j2b-card-body" v-if="pagination.last_page > 1">
+                    <nav>
+                        <ul class="pagination mb-0">
+                            <li class="page-item" :class="{ disabled: pagination.current_page <= 1 }">
+                                <a class="page-link" href="#" @click.prevent="cambiarPagina(pagination.current_page-1)">
+                                    <i class="fa fa-chevron-left"></i>
+                                </a>
+                            </li>
+                            <li class="page-item" v-for="page in pagesNumber" :key="page" :class="[page==isActived ? 'active':'']">
+                                <a class="page-link" href="#" @click.prevent="cambiarPagina(page)" v-text="page"></a>
+                            </li>
+                            <li class="page-item" :class="{ disabled: pagination.current_page >= pagination.last_page }">
+                                <a class="page-link" href="#" @click.prevent="cambiarPagina(pagination.current_page+1)">
+                                    <i class="fa fa-chevron-right"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
             </div>
         </div>
-        <!-- Fin ejemplo de tabla Listado -->
     </div>
 
     <!--Inicio del modal agregar/actualizar-->
-    <div class="modal fade" tabindex="-1" :class="{'mostrar':modal}" role="dialog" aria-labelledby="myModalLabel" style="display: none;" aria-hidden="true">
-        <div class="modal-dialog modal-primary modal-lg" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h4 class="modal-title" v-text="tituloModal"></h4>
-                    <button type="button" class="close" @click="cerrarModal()" aria-label="Close">
-                      <span aria-hidden="true">×</span>
+    <div class="modal fade" tabindex="-1" :class="{'mostrar':modal}" role="dialog" style="display: none;" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content j2b-modal-content">
+                <div class="modal-header j2b-modal-header">
+                    <h5 class="modal-title">
+                        <i class="fa fa-list-alt" style="color: var(--j2b-primary);"></i>
+                        {{ tituloModal }}
+                    </h5>
+                    <button type="button" class="j2b-modal-close" @click="cerrarModal()" aria-label="Close">
+                        <i class="fa fa-times"></i>
                     </button>
                 </div>
-                <div class="modal-body">
-                    <form v-on:submit.prevent action="" method="post" enctype="multipart/form-data" class="form-horizontal">
+                <div class="modal-body j2b-modal-body">
+                    <form v-on:submit.prevent action="" method="post" enctype="multipart/form-data">
 
-                        <div v-show="errorPlan" class="form-group row div-error">
-                          <div class="container-fluid">
-                            <div class="alert alert-danger text-center">
-                                <div v-for="error in errorMostrarMsjPlan" :key="error" v-text="error">
+                        <div v-show="errorPlan" class="j2b-banner-alert j2b-banner-danger mb-3">
+                            <i class="fa fa-exclamation-circle"></i>
+                            <div>
+                                <div v-for="error in errorMostrarMsjPlan" :key="error" v-text="error"></div>
+                            </div>
+                        </div>
+
+                        <p class="mb-3" v-if="tipoAccion !== 3"><small style="color: var(--j2b-danger);">* Campos obligatorios</small></p>
+
+                        <div v-if="tipoAccion==1 || tipoAccion==2 || tipoAccion==3">
+                          <!-- Información del Plan -->
+                          <div class="j2b-form-section">
+                            <h6 class="j2b-form-section-title">
+                                <i class="fa fa-info-circle"></i> Informacion del Plan
+                            </h6>
+                            <div class="j2b-form-group">
+                                <label class="j2b-label"><span v-if="tipoAccion !== 3" style="color: var(--j2b-danger);">*</span> Nombre del Plan</label>
+                                <input type="text" class="j2b-input" v-model="name" placeholder="Ej: Plan Basico" :readonly="tipoAccion === 3" required>
+                            </div>
+                            <div class="j2b-form-group">
+                                <label class="j2b-label">Descripcion</label>
+                                <textarea class="j2b-input" v-model="description" rows="3" placeholder="Descripcion del plan..." :readonly="tipoAccion === 3"></textarea>
+                            </div>
+                          </div>
+
+                          <!-- Precio -->
+                          <div class="j2b-form-section">
+                            <h6 class="j2b-form-section-title">
+                                <i class="fa fa-dollar"></i> Precio
+                            </h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="j2b-form-group">
+                                        <label class="j2b-label">Precio Mensual (MXN)</label>
+                                        <input type="number" min="0" step="1" class="j2b-input" v-model="price" placeholder="0" :readonly="tipoAccion === 3">
+                                    </div>
+                                </div>
+                                <div class="col-md-6 d-flex align-items-center" v-if="price">
+                                    <div class="text-center w-100 p-3" style="background: var(--j2b-gray-100); border-radius: var(--j2b-radius-md);">
+                                        <small style="color: var(--j2b-gray-500);">Vista previa</small>
+                                        <div style="font-size: 1.5em; font-weight: 700; color: var(--j2b-primary);">
+                                            ${{ price }} <small style="font-size: 0.5em; color: var(--j2b-gray-500);">/mes</small>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                           </div>
-                        </div>
-
-                        <p><em><strong class="text text-danger">* Campos obligatorios</strong></em></p>
-                        <!--tipoAccion==1 o 2: Agregar o Actualizar-->
-                        <div v-if="tipoAccion==1 || tipoAccion==2 || tipoAccion==3">
-                          <div class="form-group">
-                            <strong class="text text-danger">*</strong><label for="name">Nombre del plan</label>
-                            <input type="text" class="form-control" v-model="name"  placeholder="Enter Name" v-bind:readonly="tipoAccion === 3" required>
-                          </div>
-
-                          <div class="form-group">
-                            <label for="description">Descripción</label>
-                            <textarea class="form-control" v-model="description"  rows="3" v-bind:readonly="tipoAccion === 3"></textarea>
-                          </div>
-                          <div class="form-group">
-                            <label for="price">Precio</label>
-                            <input type="number" min="0" step="1" class="form-control" v-model="price" v-bind:readonly="tipoAccion === 3">
-                          </div>
-
-
 
                         </div>
-                        <!--./tipoAccion==1 o 2: Agregar o Actualizar-->
-
                     </form>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary"  @click="cerrarModal()">Cerrar</button>
-                    <button type="button" v-if="tipoAccion==1" class="btn btn-primary" @click="registrar()">Guardar</button>
-                    <button type="button" v-if="tipoAccion==2" class="btn btn-primary" @click="actualizarDatos()">Actualizar</button>
+                <div class="modal-footer j2b-modal-footer">
+                    <button type="button" class="j2b-btn j2b-btn-secondary" @click="cerrarModal()">Cerrar</button>
+                    <button type="button" v-if="tipoAccion==1" class="j2b-btn j2b-btn-primary" @click="registrar()">
+                        <i class="fa fa-save"></i> Guardar
+                    </button>
+                    <button type="button" v-if="tipoAccion==2" class="j2b-btn j2b-btn-primary" @click="actualizarDatos()">
+                        <i class="fa fa-save"></i> Actualizar
+                    </button>
                 </div>
             </div>
-            <!-- /.modal-content -->
         </div>
-        <!-- /.modal-dialog -->
     </div>
     <!--Fin del modal-->
 
@@ -213,25 +290,24 @@
            }
         },
         methods : {
-            cambiarPagina(page,buscar,criterio){
+            cambiarPagina(page){
                 let me = this;
                 me.pagination.current_page = page;
-                me.loadPlans(page,buscar,criterio);
+                me.loadPlans(page, me.buscar, me.criterio);
             },
-            loadPlans(page,buscar,criterio){
+            buscarPlanes(){
+                this.loadPlans(1, this.buscar, this.criterio);
+            },
+            loadPlans(page, buscar, criterio){
                 let me=this;
                 var url = '/superadmin/plans/get?page='+page+'&buscar='+buscar+'&criterio='+criterio;
                 axios.get(url).then(function (response){
-                    var respuesta  = response.data;
+                    var respuesta = response.data;
                     me.arrayPlans = respuesta.plans.data;
                     me.pagination = respuesta.pagination;
                   })
                   .catch(function (error) {
-                    // handle error
                     console.log(error);
-                  })
-                  .finally(function () {
-                    // always executed
                   });
             },
             actualizarAActivo(id){
@@ -385,7 +461,7 @@
                             case 'registrar':{
                                 this.modal=1;
                                 this.tipoAccion =1;
-                                this.tituloModal='Agregar';
+                                this.tituloModal='Nuevo Plan';
                                 this.name='';
                                 this.description='';
                                 this.price='';
@@ -394,8 +470,7 @@
                             case 'actualizar_datos':{
                                 this.modal=1;
                                 this.tipoAccion =2;
-                                this.tituloModal='Actualizar Datos';
-
+                                this.tituloModal='Editar Plan';
                                 this.plan_id= data['id'];
                                 this.name=data['name'];
                                 this.description=data['description'];
@@ -405,8 +480,7 @@
                             case 'ver_datos':{
                                 this.modal=1;
                                 this.tipoAccion =3;
-                                this.tituloModal='Ver Datos';
-
+                                this.tituloModal='Detalles del Plan';
                                 this.plan_id= data['id'];
                                 this.name=data['name'];
                                 this.description=data['description'];
@@ -423,31 +497,75 @@
             },
         },
         mounted() {
-            this.loadPlans(1,'','nombre');
+            this.loadPlans(1, this.buscar, this.criterio);
         }
     }
 </script>
 
 <style>
-    .modal-content{
-        width: 100% !important;
-        position: absolute !important;
-    }
-    .mostrar{
-        display: list-item !important;
+    /* Modal styles */
+    .mostrar {
+        display: block !important;
         opacity: 1 !important;
         position: fixed !important;
-        background-color: #3c29297a !important;
-        overflow: scroll;
+        background-color: rgba(26, 26, 46, 0.8) !important;
+        overflow-y: auto;
+        z-index: 1050;
     }
 
-    .div-error{
+    .j2b-modal-content {
+        border: none;
+        border-radius: var(--j2b-radius-lg);
+        box-shadow: var(--j2b-shadow-lg);
+    }
+
+    .j2b-modal-header {
+        background: var(--j2b-gradient-dark);
+        color: var(--j2b-white);
+        border-radius: var(--j2b-radius-lg) var(--j2b-radius-lg) 0 0;
+        padding: 1rem 1.5rem;
+        border-bottom: none;
+    }
+
+    .j2b-modal-header .modal-title {
+        font-weight: 600;
         display: flex;
-        justify-content: center;
+        align-items: center;
+        gap: 0.5rem;
+        margin: 0;
     }
 
-    .text-error{
-        color: red !important;
-        font-weight: bold;
+    .j2b-modal-close {
+        background: rgba(255,255,255,0.1);
+        border: none;
+        color: var(--j2b-white);
+        width: 32px;
+        height: 32px;
+        border-radius: var(--j2b-radius-full);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: var(--j2b-transition-fast);
+    }
+
+    .j2b-modal-close:hover {
+        background: rgba(255,255,255,0.2);
+    }
+
+    .j2b-modal-body {
+        padding: 1.5rem;
+        max-height: 70vh;
+        overflow-y: auto;
+    }
+
+    .j2b-modal-footer {
+        padding: 1rem 1.5rem;
+        background: var(--j2b-gray-100);
+        border-top: 1px solid var(--j2b-gray-200);
+        border-radius: 0 0 var(--j2b-radius-lg) var(--j2b-radius-lg);
+        display: flex;
+        gap: 0.5rem;
+        justify-content: flex-end;
     }
 </style>

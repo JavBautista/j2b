@@ -2,12 +2,69 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Shop;
+use App\Models\User;
+use App\Models\Plan;
+use App\Models\Subscription;
 use Illuminate\Http\Request;
+use Carbon\Carbon;
 
 class SuperadminPagesController extends Controller
 {
     public function index(){
-        return view('superadmin.index');
+        // Estadísticas de tiendas
+        $totalShops = Shop::count();
+        $activeShops = Shop::where('active', true)->count();
+        $trialShops = Shop::where('is_trial', true)->where('active', true)->count();
+
+        // Estadísticas de usuarios
+        $totalUsers = User::count();
+        $activeUsers = User::where('active', true)->count();
+
+        // Estadísticas de suscripciones
+        $activeSubscriptions = Shop::where('subscription_status', 'active')->count();
+
+        // Suscripciones por vencer (próximos 7 días)
+        $expiringSubscriptions = Shop::where('active', true)
+            ->where(function($query) {
+                $query->where(function($q) {
+                    // Trial por vencer
+                    $q->where('is_trial', true)
+                      ->whereNotNull('trial_ends_at')
+                      ->whereBetween('trial_ends_at', [now(), now()->addDays(7)]);
+                })->orWhere(function($q) {
+                    // Suscripción por vencer
+                    $q->where('is_trial', false)
+                      ->whereNotNull('subscription_ends_at')
+                      ->whereBetween('subscription_ends_at', [now(), now()->addDays(7)]);
+                });
+            })
+            ->with(['plan', 'owner'])
+            ->get();
+
+        // Ingresos del mes actual
+        $monthlyRevenue = Subscription::whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
+            ->where('status', 'active')
+            ->sum('total_amount');
+
+        // Últimas tiendas registradas
+        $recentShops = Shop::with(['plan', 'owner'])
+            ->orderBy('created_at', 'desc')
+            ->limit(5)
+            ->get();
+
+        return view('superadmin.index', compact(
+            'totalShops',
+            'activeShops',
+            'trialShops',
+            'totalUsers',
+            'activeUsers',
+            'activeSubscriptions',
+            'expiringSubscriptions',
+            'monthlyRevenue',
+            'recentShops'
+        ));
     }
 
     public function shops(){
@@ -20,29 +77,6 @@ class SuperadminPagesController extends Controller
 
     public function users(){
         return view('superadmin.users');
-    }
-
-    public function uploadApk(){
-        return view('superadmin.upload_apk');
-    }
-
-    public function storeApk(Request $request)
-    {
-        // Validar el archivo APK
-        $request->validate([
-            'apkFile' => 'required|mimes:apk|max:25600', // Max 10MB
-        ]);
-
-        // Subir el archivo APK al almacenamiento
-        if ($request->hasFile('apkFile')) {
-            $apkFileName = $request->file('apkFile')->getClientOriginalName();
-            $request->file('apkFile')->storeAs('public/apk', $apkFileName);
-
-            // Alternativamente, puedes almacenar el archivo en una subcarpeta de storage/app
-            // $request->file('apkFile')->storeAs('apk', $apkFileName);
-        }
-
-        return redirect()->back()->with('success', 'Archivo APK subido exitosamente.');
     }
 
     public function preRegisters(){

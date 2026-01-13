@@ -82,7 +82,7 @@
                                         <li><a class="dropdown-item" :href="`/admin/clients/${client.id}/receipts`">
                                             <i class="fa fa-receipt text-info"></i> Ver Recibos
                                         </a></li>
-                                        <li><a class="dropdown-item" href="#" @click.prevent="abrirModalRentas(client)">
+                                        <li><a class="dropdown-item" :href="`/admin/clients/${client.id}/rentas`">
                                             <i class="fa fa-list text-secondary"></i> Ver Rentas
                                         </a></li>
                                         <li><hr class="dropdown-divider"></li>
@@ -125,7 +125,10 @@
                                     </div>
                                 </div>
                                 <!-- Indicadores visuales -->
-                                <div class="client-indicators mt-2" v-if="client.location_latitude || client.user_id || client.location_image">
+                                <div class="client-indicators mt-2" v-if="client.location_latitude || client.user_id || client.location_image || client.rents_count > 0">
+                                    <a v-if="client.rents_count > 0" :href="`/admin/clients/${client.id}/rentas`" class="badge bg-warning text-dark me-1 text-decoration-none" title="Ver rentas">
+                                        <i class="fa fa-list"></i> {{ client.rents_count }}
+                                    </a>
                                     <span v-if="client.location_latitude" class="badge bg-success me-1" title="Tiene ubicación GPS">
                                         <i class="fa fa-map-marker"></i>
                                     </span>
@@ -167,6 +170,7 @@
                                 <td><strong>{{ client.id }}</strong></td>
                                 <td>
                                     {{ client.name }}
+                                    <a v-if="client.rents_count > 0" :href="`/admin/clients/${client.id}/rentas`" class="badge bg-warning text-dark ms-1 text-decoration-none" :title="client.rents_count + ' rentas'"><i class="fa fa-list"></i> {{ client.rents_count }}</a>
                                     <span v-if="client.location_latitude" class="badge bg-success ms-1" title="GPS"><i class="fa fa-map-marker"></i></span>
                                     <span v-if="client.user_id" class="badge bg-primary ms-1" title="Usuario APP"><i class="fa fa-mobile"></i></span>
                                 </td>
@@ -690,17 +694,27 @@
         </div>
     </div>
 
-    <!-- Modal Rentas -->
+    <!-- Modal Rentas del Cliente -->
     <div class="modal fade" tabindex="-1" :class="{'mostrar':modalRentas}" role="dialog" style="display: none;" aria-hidden="true">
-        <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-dialog modal-xl" role="document">
             <div class="modal-content">
                 <div class="modal-header bg-dark text-white">
-                    <h4 class="modal-title"><i class="fa fa-list"></i> Rentas del Cliente</h4>
+                    <h4 class="modal-title">
+                        <i class="fa fa-list"></i> Rentas: {{ clienteRentas ? clienteRentas.name : '' }}
+                    </h4>
                     <button type="button" class="close text-white" @click="cerrarModalRentas()" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
                 <div class="modal-body">
+                    <div class="d-flex justify-content-between mb-3">
+                        <div>
+                            <span class="text-muted">{{ arrayRentas.length }} rentas encontradas</span>
+                        </div>
+                        <button class="btn btn-success btn-sm" @click="abrirModalNuevaRenta()">
+                            <i class="fa fa-plus"></i> Nueva Renta
+                        </button>
+                    </div>
                     <div v-if="cargandoRentas" class="text-center py-4">
                         <i class="fa fa-spinner fa-spin fa-2x"></i>
                         <p class="mt-2">Cargando rentas...</p>
@@ -709,27 +723,53 @@
                         <i class="fa fa-folder-open fa-2x text-muted"></i>
                         <p class="mt-2 text-muted">Este cliente no tiene rentas</p>
                     </div>
-                    <div v-else>
-                        <table class="table table-striped">
-                            <thead>
+                    <div v-else class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-dark">
                                 <tr>
                                     <th>ID</th>
                                     <th>Corte</th>
-                                    <th>Ubicación</th>
+                                    <th>Ubicacion</th>
+                                    <th>Equipos</th>
                                     <th>Estado</th>
                                     <th>Fecha</th>
+                                    <th class="text-center">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr v-for="renta in arrayRentas" :key="renta.id">
-                                    <td>#{{ renta.id }}</td>
-                                    <td>{{ renta.cutoff || '-' }}</td>
-                                    <td>{{ renta.location_address || renta.location_descripcion || '-' }}</td>
+                                <tr v-for="renta in arrayRentas" :key="renta.id" :class="{'table-secondary': !renta.active}">
+                                    <td><strong>#{{ renta.id }}</strong></td>
                                     <td>
-                                        <span v-if="renta.active" class="badge badge-success">Activa</span>
-                                        <span v-else class="badge badge-danger">Inactiva</span>
+                                        <span class="badge bg-info">{{ renta.cutoff || '-' }}</span>
                                     </td>
-                                    <td>{{ formatDate(renta.created_at) }}</td>
+                                    <td>
+                                        <span v-if="renta.location_descripcion" class="d-block fw-bold">{{ renta.location_descripcion }}</span>
+                                        <small class="text-muted">{{ renta.location_address || '-' }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ renta.rent_detail_count || (renta.rent_detail ? renta.rent_detail.length : 0) }}</span>
+                                    </td>
+                                    <td>
+                                        <span v-if="renta.active" class="badge bg-success">Activa</span>
+                                        <span v-else class="badge bg-danger">Inactiva</span>
+                                    </td>
+                                    <td><small>{{ formatDate(renta.created_at) }}</small></td>
+                                    <td class="text-center">
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-info btn-sm" @click="verDetalleRenta(renta)" title="Ver Detalle">
+                                                <i class="fa fa-eye"></i>
+                                            </button>
+                                            <button class="btn btn-warning btn-sm" @click="editarRenta(renta)" title="Editar">
+                                                <i class="fa fa-edit"></i>
+                                            </button>
+                                            <button v-if="renta.active" class="btn btn-danger btn-sm" @click="darDeBajaRenta(renta)" title="Dar de Baja">
+                                                <i class="fa fa-toggle-off"></i>
+                                            </button>
+                                            <button v-else class="btn btn-success btn-sm" @click="reactivarRenta(renta)" title="Reactivar">
+                                                <i class="fa fa-toggle-on"></i>
+                                            </button>
+                                        </div>
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>
@@ -737,6 +777,522 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" @click="cerrarModalRentas()">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Detalle Renta con Equipos -->
+    <div class="modal fade" tabindex="-1" :class="{'mostrar':modalDetalleRenta}" role="dialog" style="display: none;" aria-hidden="true">
+        <div class="modal-dialog modal-xl" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h4 class="modal-title" v-if="rentaSeleccionada">
+                        <i class="fa fa-file-contract"></i> Renta #{{ rentaSeleccionada.id }}
+                    </h4>
+                    <button type="button" class="close text-white" @click="cerrarModalDetalleRenta()" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body" v-if="rentaSeleccionada">
+                    <div v-if="cargandoDetalleRenta" class="text-center py-4">
+                        <i class="fa fa-spinner fa-spin fa-2x"></i>
+                        <p class="mt-2">Cargando detalle...</p>
+                    </div>
+                    <template v-else>
+                        <!-- Info de la Renta -->
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <strong>Dia de Corte:</strong>
+                                        <span class="badge bg-info ms-2">{{ rentaSeleccionada.cutoff }}</span>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <strong>Descripcion:</strong>
+                                        <span class="ms-2">{{ rentaSeleccionada.location_descripcion || '-' }}</span>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <strong>Direccion:</strong>
+                                        <span class="ms-2">{{ rentaSeleccionada.location_address || '-' }}</span>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <strong>Contacto:</strong>
+                                        <span class="ms-2">{{ rentaSeleccionada.location_phone || '-' }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Lista de Equipos -->
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="mb-0">
+                                <i class="fa fa-print"></i> Equipos
+                                <span class="badge bg-primary">{{ rentaSeleccionada.rent_detail ? rentaSeleccionada.rent_detail.length : 0 }}</span>
+                            </h5>
+                            <div class="dropdown">
+                                <button class="btn btn-success btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                    <i class="fa fa-plus"></i> Agregar Equipo
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="#" @click.prevent="abrirModalNuevoEquipo()">
+                                        <i class="fa fa-plus-circle"></i> Crear Nuevo
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="#" @click.prevent="abrirModalSeleccionarEquipo()">
+                                        <i class="fa fa-check-square"></i> Seleccionar del Inventario
+                                    </a></li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div v-if="!rentaSeleccionada.rent_detail || rentaSeleccionada.rent_detail.length === 0" class="text-center py-4 text-muted">
+                            <i class="fa fa-print fa-2x"></i>
+                            <p class="mt-2">No hay equipos asignados a esta renta</p>
+                        </div>
+
+                        <!-- Acordeon de Equipos -->
+                        <div class="accordion" id="acordeonEquipos">
+                            <div class="accordion-item" v-for="(equipo, index) in rentaSeleccionada.rent_detail" :key="equipo.id">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button"
+                                            :data-bs-toggle="'collapse'"
+                                            :data-bs-target="'#equipo' + equipo.id">
+                                        <div class="d-flex justify-content-between w-100 me-3">
+                                            <span>
+                                                <strong>{{ equipo.trademark }}</strong> - {{ equipo.model }}
+                                            </span>
+                                            <span class="badge bg-success">${{ equipo.rent_price }}</span>
+                                        </div>
+                                    </button>
+                                </h2>
+                                <div :id="'equipo' + equipo.id" class="accordion-collapse collapse" data-bs-parent="#acordeonEquipos">
+                                    <div class="accordion-body">
+                                        <div class="row mb-3">
+                                            <div class="col-md-4">
+                                                <strong>No. Serie:</strong> {{ equipo.serial_number || '-' }}
+                                            </div>
+                                            <div class="col-md-4">
+                                                <strong>Descripcion:</strong> {{ equipo.description || '-' }}
+                                            </div>
+                                            <div class="col-md-4" v-if="equipo.url_web_monitor">
+                                                <a :href="equipo.url_web_monitor" target="_blank" class="btn btn-outline-primary btn-sm">
+                                                    <i class="fa fa-external-link"></i> URL Monitor
+                                                </a>
+                                            </div>
+                                        </div>
+
+                                        <!-- Config Blanco y Negro -->
+                                        <div v-if="equipo.monochrome" class="card mb-2">
+                                            <div class="card-header bg-secondary text-white py-1">
+                                                <strong>Blanco y Negro</strong>
+                                            </div>
+                                            <div class="card-body py-2">
+                                                <div class="row">
+                                                    <div class="col-md-4">
+                                                        <small class="text-muted">Pag. Incluidas:</small>
+                                                        <strong>{{ equipo.pages_included_mono }}</strong>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <small class="text-muted">Costo Extra:</small>
+                                                        <strong>${{ equipo.extra_page_cost_mono }}</strong>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <small class="text-muted">Contador:</small>
+                                                        <strong class="text-primary">{{ equipo.counter_mono }}</strong>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Config Color -->
+                                        <div v-if="equipo.color" class="card mb-2">
+                                            <div class="card-header bg-info text-white py-1">
+                                                <strong>Color</strong>
+                                            </div>
+                                            <div class="card-body py-2">
+                                                <div class="row">
+                                                    <div class="col-md-4">
+                                                        <small class="text-muted">Pag. Incluidas:</small>
+                                                        <strong>{{ equipo.pages_included_color }}</strong>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <small class="text-muted">Costo Extra:</small>
+                                                        <strong>${{ equipo.extra_page_cost_color }}</strong>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <small class="text-muted">Contador:</small>
+                                                        <strong class="text-info">{{ equipo.counter_color }}</strong>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Botones de Acciones -->
+                                        <div class="d-flex gap-2 mt-3">
+                                            <button class="btn btn-outline-secondary btn-sm" @click="abrirModalConsumible(equipo)">
+                                                <i class="fa fa-plus-circle"></i> Consumible
+                                            </button>
+                                            <button class="btn btn-outline-info btn-sm" @click="verHistorialConsumibles(equipo)">
+                                                <i class="fa fa-history"></i> Historial
+                                            </button>
+                                            <button class="btn btn-outline-warning btn-sm" @click="editarEquipo(equipo)">
+                                                <i class="fa fa-edit"></i> Editar
+                                            </button>
+                                            <button class="btn btn-outline-danger btn-sm" @click="liberarEquipo(equipo)">
+                                                <i class="fa fa-unlink"></i> Liberar
+                                            </button>
+                                            <button class="btn btn-outline-primary btn-sm" @click="editarUrlMonitor(equipo)">
+                                                <i class="fa fa-link"></i> URL Monitor
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @click="cerrarModalDetalleRenta()">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Crear/Editar Renta -->
+    <div class="modal fade" tabindex="-1" :class="{'mostrar':modalFormRenta}" role="dialog" style="display: none;" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h4 class="modal-title">
+                        <i class="fa fa-file-contract"></i> {{ editandoRenta ? 'Editar Renta' : 'Nueva Renta' }}
+                    </h4>
+                    <button type="button" class="close text-white" @click="cerrarModalFormRenta()" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form @submit.prevent="guardarRenta()">
+                        <div class="mb-3">
+                            <label class="form-label">Dia de Corte *</label>
+                            <select class="form-select" v-model="formRenta.cutoff" required>
+                                <option value="">Seleccione...</option>
+                                <option v-for="dia in 31" :key="dia" :value="dia">{{ dia }}</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Descripcion/Nombre Ubicacion</label>
+                            <input type="text" class="form-control" v-model="formRenta.location_descripcion" placeholder="Ej: Oficina Principal">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Direccion</label>
+                            <input type="text" class="form-control" v-model="formRenta.location_address" placeholder="Direccion de la renta">
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Telefono</label>
+                                <input type="text" class="form-control" v-model="formRenta.location_phone" placeholder="Telefono contacto">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Email</label>
+                                <input type="email" class="form-control" v-model="formRenta.location_email" placeholder="Email contacto">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @click="cerrarModalFormRenta()">Cancelar</button>
+                    <button type="button" class="btn btn-success" @click="guardarRenta()" :disabled="guardandoRenta">
+                        <i v-if="guardandoRenta" class="fa fa-spinner fa-spin"></i>
+                        <i v-else class="fa fa-save"></i>
+                        {{ editandoRenta ? 'Actualizar' : 'Crear' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Crear/Editar Equipo -->
+    <div class="modal fade" tabindex="-1" :class="{'mostrar':modalFormEquipo}" role="dialog" style="display: none;" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h4 class="modal-title">
+                        <i class="fa fa-print"></i> {{ editandoEquipo ? 'Editar Equipo' : 'Nuevo Equipo' }}
+                    </h4>
+                    <button type="button" class="close" @click="cerrarModalFormEquipo()" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form @submit.prevent="guardarEquipo()">
+                        <!-- Info Basica -->
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Marca *</label>
+                                <input type="text" class="form-control" v-model="formEquipo.trademark" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Modelo *</label>
+                                <input type="text" class="form-control" v-model="formEquipo.model" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">No. Serie</label>
+                                <input type="text" class="form-control" v-model="formEquipo.serial_number">
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Precio Renta *</label>
+                                <input type="number" step="0.01" class="form-control" v-model="formEquipo.rent_price" required>
+                            </div>
+                            <div class="col-md-8">
+                                <label class="form-label">Descripcion</label>
+                                <input type="text" class="form-control" v-model="formEquipo.description">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">URL Web Monitor</label>
+                            <input type="url" class="form-control" v-model="formEquipo.url_web_monitor" placeholder="https://...">
+                        </div>
+
+                        <!-- Config Blanco y Negro -->
+                        <div class="card mb-3">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span><strong>Blanco y Negro</strong></span>
+                                <div class="form-check form-switch">
+                                    <input type="checkbox" class="form-check-input" v-model="formEquipo.monochrome">
+                                </div>
+                            </div>
+                            <div class="card-body" v-if="formEquipo.monochrome">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <label class="form-label">Pag. Incluidas</label>
+                                        <input type="number" class="form-control" v-model="formEquipo.pages_included_mono">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Costo Pag. Extra</label>
+                                        <input type="number" step="0.01" class="form-control" v-model="formEquipo.extra_page_cost_mono">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Contador Actual</label>
+                                        <input type="number" class="form-control" v-model="formEquipo.counter_mono">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Config Color -->
+                        <div class="card mb-3">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span><strong>Color</strong></span>
+                                <div class="form-check form-switch">
+                                    <input type="checkbox" class="form-check-input" v-model="formEquipo.color">
+                                </div>
+                            </div>
+                            <div class="card-body" v-if="formEquipo.color">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <label class="form-label">Pag. Incluidas</label>
+                                        <input type="number" class="form-control" v-model="formEquipo.pages_included_color">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Costo Pag. Extra</label>
+                                        <input type="number" step="0.01" class="form-control" v-model="formEquipo.extra_page_cost_color">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Contador Actual</label>
+                                        <input type="number" class="form-control" v-model="formEquipo.counter_color">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @click="cerrarModalFormEquipo()">Cancelar</button>
+                    <button type="button" class="btn btn-warning" @click="guardarEquipo()" :disabled="guardandoEquipo">
+                        <i v-if="guardandoEquipo" class="fa fa-spinner fa-spin"></i>
+                        <i v-else class="fa fa-save"></i>
+                        {{ editandoEquipo ? 'Actualizar' : 'Crear' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Seleccionar Equipo del Inventario -->
+    <div class="modal fade" tabindex="-1" :class="{'mostrar':modalSeleccionarEquipo}" role="dialog" style="display: none;" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h4 class="modal-title"><i class="fa fa-check-square"></i> Seleccionar Equipo del Inventario</h4>
+                    <button type="button" class="close text-white" @click="cerrarModalSeleccionarEquipo()" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div v-if="cargandoEquiposDisponibles" class="text-center py-4">
+                        <i class="fa fa-spinner fa-spin fa-2x"></i>
+                        <p class="mt-2">Cargando equipos disponibles...</p>
+                    </div>
+                    <div v-else-if="equiposDisponibles.length === 0" class="text-center py-4 text-muted">
+                        <i class="fa fa-box-open fa-2x"></i>
+                        <p class="mt-2">No hay equipos disponibles en inventario</p>
+                    </div>
+                    <div v-else class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Marca</th>
+                                    <th>Modelo</th>
+                                    <th>Serie</th>
+                                    <th>Precio</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="eq in equiposDisponibles" :key="eq.id">
+                                    <td>{{ eq.trademark }}</td>
+                                    <td>{{ eq.model }}</td>
+                                    <td>{{ eq.serial_number || '-' }}</td>
+                                    <td>${{ eq.rent_price }}</td>
+                                    <td>
+                                        <button class="btn btn-success btn-sm" @click="asignarEquipo(eq)">
+                                            <i class="fa fa-check"></i> Asignar
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @click="cerrarModalSeleccionarEquipo()">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Agregar Consumible -->
+    <div class="modal fade" tabindex="-1" :class="{'mostrar':modalConsumible}" role="dialog" style="display: none;" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-secondary text-white">
+                    <h4 class="modal-title"><i class="fa fa-plus-circle"></i> Agregar Consumible</h4>
+                    <button type="button" class="close text-white" @click="cerrarModalConsumible()" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form @submit.prevent="guardarConsumible()">
+                        <div class="mb-3">
+                            <label class="form-label">Descripcion *</label>
+                            <input type="text" class="form-control" v-model="formConsumible.description" required placeholder="Ej: Toner Negro">
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Cantidad *</label>
+                                <input type="number" class="form-control" v-model="formConsumible.qty" min="1" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Contador al Momento</label>
+                                <input type="number" class="form-control" v-model="formConsumible.counter">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Observaciones</label>
+                            <textarea class="form-control" v-model="formConsumible.observation" rows="2"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @click="cerrarModalConsumible()">Cancelar</button>
+                    <button type="button" class="btn btn-primary" @click="guardarConsumible()" :disabled="guardandoConsumible">
+                        <i v-if="guardandoConsumible" class="fa fa-spinner fa-spin"></i>
+                        <i v-else class="fa fa-save"></i>
+                        Guardar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Historial Consumibles -->
+    <div class="modal fade" tabindex="-1" :class="{'mostrar':modalHistorialConsumibles}" role="dialog" style="display: none;" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h4 class="modal-title"><i class="fa fa-history"></i> Historial de Consumibles</h4>
+                    <button type="button" class="close text-white" @click="cerrarModalHistorialConsumibles()" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div v-if="cargandoConsumibles" class="text-center py-4">
+                        <i class="fa fa-spinner fa-spin fa-2x"></i>
+                    </div>
+                    <div v-else-if="historialConsumibles.length === 0" class="text-center py-4 text-muted">
+                        <i class="fa fa-inbox fa-2x"></i>
+                        <p class="mt-2">No hay consumibles registrados</p>
+                    </div>
+                    <div v-else class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Descripcion</th>
+                                    <th>Cantidad</th>
+                                    <th>Contador</th>
+                                    <th>Observacion</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="cons in historialConsumibles" :key="cons.id">
+                                    <td><small>{{ formatDate(cons.created_at) }}</small></td>
+                                    <td>{{ cons.description }}</td>
+                                    <td><span class="badge bg-primary">{{ cons.qty }}</span></td>
+                                    <td>{{ cons.counter || '-' }}</td>
+                                    <td><small>{{ cons.observation || '-' }}</small></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @click="cerrarModalHistorialConsumibles()">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal URL Monitor -->
+    <div class="modal fade" tabindex="-1" :class="{'mostrar':modalUrlMonitor}" role="dialog" style="display: none;" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h4 class="modal-title"><i class="fa fa-link"></i> URL Web Monitor</h4>
+                    <button type="button" class="close text-white" @click="cerrarModalUrlMonitor()" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">URL del Monitor Web</label>
+                        <input type="url" class="form-control" v-model="urlMonitorTemp" placeholder="https://ejemplo.com/monitor">
+                    </div>
+                    <div v-if="urlMonitorTemp" class="mt-2">
+                        <a :href="urlMonitorTemp" target="_blank" class="btn btn-outline-primary btn-sm">
+                            <i class="fa fa-external-link"></i> Abrir URL
+                        </a>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @click="cerrarModalUrlMonitor()">Cancelar</button>
+                    <button type="button" class="btn btn-primary" @click="guardarUrlMonitor()" :disabled="guardandoUrlMonitor">
+                        <i v-if="guardandoUrlMonitor" class="fa fa-spinner fa-spin"></i>
+                        <i v-else class="fa fa-save"></i>
+                        Guardar
+                    </button>
                 </div>
             </div>
         </div>
@@ -828,6 +1384,75 @@ export default {
                 clienteRentas: null,
                 arrayRentas: [],
                 cargandoRentas: false,
+
+                // Modal Detalle Renta
+                modalDetalleRenta: 0,
+                rentaSeleccionada: null,
+                cargandoDetalleRenta: false,
+
+                // Modal Form Renta (crear/editar)
+                modalFormRenta: 0,
+                editandoRenta: false,
+                guardandoRenta: false,
+                formRenta: {
+                    id: null,
+                    client_id: null,
+                    cutoff: '',
+                    location_descripcion: '',
+                    location_address: '',
+                    location_phone: '',
+                    location_email: ''
+                },
+
+                // Modal Form Equipo (crear/editar)
+                modalFormEquipo: 0,
+                editandoEquipo: false,
+                guardandoEquipo: false,
+                formEquipo: {
+                    id: null,
+                    rent_id: null,
+                    trademark: '',
+                    model: '',
+                    serial_number: '',
+                    rent_price: 0,
+                    description: '',
+                    url_web_monitor: '',
+                    monochrome: false,
+                    pages_included_mono: 0,
+                    extra_page_cost_mono: 0,
+                    counter_mono: 0,
+                    color: false,
+                    pages_included_color: 0,
+                    extra_page_cost_color: 0,
+                    counter_color: 0
+                },
+
+                // Modal Seleccionar Equipo
+                modalSeleccionarEquipo: 0,
+                equiposDisponibles: [],
+                cargandoEquiposDisponibles: false,
+
+                // Modal Consumible
+                modalConsumible: 0,
+                equipoConsumible: null,
+                guardandoConsumible: false,
+                formConsumible: {
+                    description: '',
+                    qty: 1,
+                    counter: 0,
+                    observation: ''
+                },
+
+                // Modal Historial Consumibles
+                modalHistorialConsumibles: 0,
+                historialConsumibles: [],
+                cargandoConsumibles: false,
+
+                // Modal URL Monitor
+                modalUrlMonitor: 0,
+                equipoUrlMonitor: null,
+                urlMonitorTemp: '',
+                guardandoUrlMonitor: false,
 
                 // UI Vista
                 vistaActual: localStorage.getItem('admin_vista') || 'cards'
@@ -1399,6 +2024,340 @@ export default {
                 this.modalRentas = 0;
                 this.clienteRentas = null;
                 this.arrayRentas = [];
+            },
+            recargarRentas() {
+                if (this.clienteRentas) {
+                    this.cargandoRentas = true;
+                    axios.get(`/admin/clients/${this.clienteRentas.id}/rents`).then(response => {
+                        if (response.data.ok) {
+                            this.arrayRentas = response.data.rents;
+                        }
+                        this.cargandoRentas = false;
+                    }).catch(() => {
+                        this.cargandoRentas = false;
+                    });
+                }
+            },
+
+            // Ver detalle de renta
+            verDetalleRenta(renta) {
+                this.rentaSeleccionada = renta;
+                this.cargandoDetalleRenta = true;
+                this.modalDetalleRenta = 1;
+
+                axios.get(`/admin/rents/${renta.id}/details`).then(response => {
+                    if (response.data.ok) {
+                        this.rentaSeleccionada = response.data.rent;
+                    }
+                    this.cargandoDetalleRenta = false;
+                }).catch(() => {
+                    this.cargandoDetalleRenta = false;
+                });
+            },
+            cerrarModalDetalleRenta() {
+                this.modalDetalleRenta = 0;
+                this.rentaSeleccionada = null;
+            },
+
+            // Crear/Editar Renta
+            abrirModalNuevaRenta() {
+                this.editandoRenta = false;
+                this.formRenta = {
+                    id: null,
+                    client_id: this.clienteRentas.id,
+                    cutoff: '',
+                    location_descripcion: '',
+                    location_address: '',
+                    location_phone: '',
+                    location_email: ''
+                };
+                this.modalFormRenta = 1;
+            },
+            editarRenta(renta) {
+                this.editandoRenta = true;
+                this.formRenta = {
+                    id: renta.id,
+                    client_id: renta.client_id,
+                    cutoff: renta.cutoff,
+                    location_descripcion: renta.location_descripcion || '',
+                    location_address: renta.location_address || '',
+                    location_phone: renta.location_phone || '',
+                    location_email: renta.location_email || ''
+                };
+                this.modalFormRenta = 1;
+            },
+            cerrarModalFormRenta() {
+                this.modalFormRenta = 0;
+                this.editandoRenta = false;
+            },
+            guardarRenta() {
+                this.guardandoRenta = true;
+                let url = this.editandoRenta ? '/admin/rents/update' : '/admin/rents/store';
+                let method = this.editandoRenta ? 'put' : 'post';
+
+                axios[method](url, this.formRenta).then(response => {
+                    if (response.data.ok) {
+                        Swal.fire('Exito', response.data.message, 'success');
+                        this.cerrarModalFormRenta();
+                        this.recargarRentas();
+                    }
+                    this.guardandoRenta = false;
+                }).catch(error => {
+                    Swal.fire('Error', error.response?.data?.message || 'Error al guardar', 'error');
+                    this.guardandoRenta = false;
+                });
+            },
+
+            // Dar de baja / Reactivar renta
+            darDeBajaRenta(renta) {
+                Swal.fire({
+                    title: 'Dar de Baja',
+                    text: '¿Esta seguro de dar de baja esta renta?',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    confirmButtonText: 'Si, dar de baja'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        axios.put(`/admin/rents/${renta.id}/inactive`).then(response => {
+                            if (response.data.ok) {
+                                Swal.fire('Exito', response.data.message, 'success');
+                                this.recargarRentas();
+                            }
+                        }).catch(error => {
+                            Swal.fire('Error', error.response?.data?.message || 'Error', 'error');
+                        });
+                    }
+                });
+            },
+            reactivarRenta(renta) {
+                axios.put(`/admin/rents/${renta.id}/active`).then(response => {
+                    if (response.data.ok) {
+                        Swal.fire('Exito', response.data.message, 'success');
+                        this.recargarRentas();
+                    }
+                }).catch(error => {
+                    Swal.fire('Error', error.response?.data?.message || 'Error', 'error');
+                });
+            },
+
+            // =====================================================
+            // EQUIPOS
+            // =====================================================
+            abrirModalNuevoEquipo() {
+                this.editandoEquipo = false;
+                this.formEquipo = {
+                    id: null,
+                    rent_id: this.rentaSeleccionada.id,
+                    trademark: '',
+                    model: '',
+                    serial_number: '',
+                    rent_price: 0,
+                    description: '',
+                    url_web_monitor: '',
+                    monochrome: false,
+                    pages_included_mono: 0,
+                    extra_page_cost_mono: 0,
+                    counter_mono: 0,
+                    color: false,
+                    pages_included_color: 0,
+                    extra_page_cost_color: 0,
+                    counter_color: 0
+                };
+                this.modalFormEquipo = 1;
+            },
+            editarEquipo(equipo) {
+                this.editandoEquipo = true;
+                this.formEquipo = {
+                    id: equipo.id,
+                    rent_id: equipo.rent_id,
+                    trademark: equipo.trademark || '',
+                    model: equipo.model || '',
+                    serial_number: equipo.serial_number || '',
+                    rent_price: equipo.rent_price || 0,
+                    description: equipo.description || '',
+                    url_web_monitor: equipo.url_web_monitor || '',
+                    monochrome: equipo.monochrome ? true : false,
+                    pages_included_mono: equipo.pages_included_mono || 0,
+                    extra_page_cost_mono: equipo.extra_page_cost_mono || 0,
+                    counter_mono: equipo.counter_mono || 0,
+                    color: equipo.color ? true : false,
+                    pages_included_color: equipo.pages_included_color || 0,
+                    extra_page_cost_color: equipo.extra_page_cost_color || 0,
+                    counter_color: equipo.counter_color || 0
+                };
+                this.modalFormEquipo = 1;
+            },
+            cerrarModalFormEquipo() {
+                this.modalFormEquipo = 0;
+                this.editandoEquipo = false;
+            },
+            guardarEquipo() {
+                this.guardandoEquipo = true;
+                let url = this.editandoEquipo ? '/admin/rents/details/update' : '/admin/rents/details/store';
+                let method = this.editandoEquipo ? 'put' : 'post';
+
+                axios[method](url, this.formEquipo).then(response => {
+                    if (response.data.ok) {
+                        Swal.fire('Exito', response.data.message, 'success');
+                        this.cerrarModalFormEquipo();
+                        // Recargar detalle de renta
+                        this.verDetalleRenta(this.rentaSeleccionada);
+                    }
+                    this.guardandoEquipo = false;
+                }).catch(error => {
+                    Swal.fire('Error', error.response?.data?.message || 'Error al guardar', 'error');
+                    this.guardandoEquipo = false;
+                });
+            },
+
+            // Liberar equipo
+            liberarEquipo(equipo) {
+                Swal.fire({
+                    title: 'Liberar Equipo',
+                    text: '¿Esta seguro de liberar este equipo? Volvera al inventario.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    confirmButtonText: 'Si, liberar'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        axios.put(`/admin/rents/details/${equipo.id}/liberar`).then(response => {
+                            if (response.data.ok) {
+                                Swal.fire('Exito', response.data.message, 'success');
+                                this.verDetalleRenta(this.rentaSeleccionada);
+                                this.recargarRentas();
+                            }
+                        }).catch(error => {
+                            Swal.fire('Error', error.response?.data?.message || 'Error', 'error');
+                        });
+                    }
+                });
+            },
+
+            // Seleccionar equipo del inventario
+            abrirModalSeleccionarEquipo() {
+                this.equiposDisponibles = [];
+                this.cargandoEquiposDisponibles = true;
+                this.modalSeleccionarEquipo = 1;
+
+                axios.get('/admin/rents/equipments/available').then(response => {
+                    if (response.data.ok) {
+                        this.equiposDisponibles = response.data.equipments;
+                    }
+                    this.cargandoEquiposDisponibles = false;
+                }).catch(() => {
+                    this.cargandoEquiposDisponibles = false;
+                });
+            },
+            cerrarModalSeleccionarEquipo() {
+                this.modalSeleccionarEquipo = 0;
+                this.equiposDisponibles = [];
+            },
+            asignarEquipo(equipo) {
+                Swal.fire({
+                    title: 'Asignar Equipo',
+                    text: `¿Asignar ${equipo.trademark} ${equipo.model} a esta renta?`,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Si, asignar'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        axios.post('/admin/rents/details/assign', {
+                            equipment_id: equipo.id,
+                            rent_id: this.rentaSeleccionada.id
+                        }).then(response => {
+                            if (response.data.ok) {
+                                Swal.fire('Exito', response.data.message, 'success');
+                                this.cerrarModalSeleccionarEquipo();
+                                this.verDetalleRenta(this.rentaSeleccionada);
+                                this.recargarRentas();
+                            }
+                        }).catch(error => {
+                            Swal.fire('Error', error.response?.data?.message || 'Error', 'error');
+                        });
+                    }
+                });
+            },
+
+            // URL Monitor
+            editarUrlMonitor(equipo) {
+                this.equipoUrlMonitor = equipo;
+                this.urlMonitorTemp = equipo.url_web_monitor || '';
+                this.modalUrlMonitor = 1;
+            },
+            cerrarModalUrlMonitor() {
+                this.modalUrlMonitor = 0;
+                this.equipoUrlMonitor = null;
+                this.urlMonitorTemp = '';
+            },
+            guardarUrlMonitor() {
+                this.guardandoUrlMonitor = true;
+                axios.put(`/admin/rents/details/${this.equipoUrlMonitor.id}/url-monitor`, {
+                    url_web_monitor: this.urlMonitorTemp
+                }).then(response => {
+                    if (response.data.ok) {
+                        Swal.fire('Exito', response.data.message, 'success');
+                        this.equipoUrlMonitor.url_web_monitor = this.urlMonitorTemp;
+                        this.cerrarModalUrlMonitor();
+                    }
+                    this.guardandoUrlMonitor = false;
+                }).catch(error => {
+                    Swal.fire('Error', error.response?.data?.message || 'Error', 'error');
+                    this.guardandoUrlMonitor = false;
+                });
+            },
+
+            // =====================================================
+            // CONSUMIBLES
+            // =====================================================
+            abrirModalConsumible(equipo) {
+                this.equipoConsumible = equipo;
+                this.formConsumible = {
+                    description: '',
+                    qty: 1,
+                    counter: equipo.counter_mono || equipo.counter_color || 0,
+                    observation: ''
+                };
+                this.modalConsumible = 1;
+            },
+            cerrarModalConsumible() {
+                this.modalConsumible = 0;
+                this.equipoConsumible = null;
+            },
+            guardarConsumible() {
+                this.guardandoConsumible = true;
+                axios.post(`/admin/rents/details/${this.equipoConsumible.id}/consumables/store`, this.formConsumible)
+                    .then(response => {
+                        if (response.data.ok) {
+                            Swal.fire('Exito', response.data.message, 'success');
+                            this.cerrarModalConsumible();
+                        }
+                        this.guardandoConsumible = false;
+                    }).catch(error => {
+                        Swal.fire('Error', error.response?.data?.message || 'Error', 'error');
+                        this.guardandoConsumible = false;
+                    });
+            },
+
+            // Historial de consumibles
+            verHistorialConsumibles(equipo) {
+                this.historialConsumibles = [];
+                this.cargandoConsumibles = true;
+                this.modalHistorialConsumibles = 1;
+
+                axios.get(`/admin/rents/details/${equipo.id}/consumables`).then(response => {
+                    if (response.data.ok) {
+                        this.historialConsumibles = response.data.consumables;
+                    }
+                    this.cargandoConsumibles = false;
+                }).catch(() => {
+                    this.cargandoConsumibles = false;
+                });
+            },
+            cerrarModalHistorialConsumibles() {
+                this.modalHistorialConsumibles = 0;
+                this.historialConsumibles = [];
             }
         },
         mounted() {
@@ -1436,7 +2395,6 @@ export default {
         border-radius: 12px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         transition: all 0.3s ease;
-        overflow: hidden;
     }
 
     .client-card:hover {

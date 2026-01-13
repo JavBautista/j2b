@@ -105,17 +105,6 @@
                         <i class="fas fa-chevron-right quick-arrow"></i>
                     </a>
 
-                    <!-- Descargas -->
-                    <a href="{{ route('admin.download') }}" class="quick-action-card">
-                        <div class="quick-icon bg-gradient-secondary">
-                            <i class="fas fa-download"></i>
-                        </div>
-                        <div class="quick-info">
-                            <h6 class="mb-0">Descargas</h6>
-                            <small>Archivos APK</small>
-                        </div>
-                        <i class="fas fa-chevron-right quick-arrow"></i>
-                    </a>
                 </div>
             </div>
         </div>

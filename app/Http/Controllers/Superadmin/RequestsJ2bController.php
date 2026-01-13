@@ -15,6 +15,13 @@ class RequestsJ2bController extends Controller
                 ->when($request->buscar!='', function ($query) use ($request) {
                         return $query->where($request->criterio, 'like', '%'.$request->buscar.'%');
                     })
+                ->when($request->estatus != '', function ($query) use ($request) {
+                    if ($request->estatus === 'confirmed') {
+                        return $query->where('confirmed', 1);
+                    } elseif ($request->estatus === 'pending') {
+                        return $query->where('confirmed', 0);
+                    }
+                })
                 ->paginate(20);
 
         return [

@@ -97,11 +97,6 @@
                     <i class="fa fa-cogs"></i> Configuraciones
                 </a>
             </li>
-            <li class="nav-item">
-                <a href="{{ route('admin.download') }}" class="nav-link">
-                    <i class="fa fa-download"></i> Descarga
-                </a>
-            </li>
 
             <!--<li class="nav-item nav-dropdown">
                 <a class="nav-link nav-dropdown-toggle" href="#"><i class="icon-bag"></i> Tiendas</a>

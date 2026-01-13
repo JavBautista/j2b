@@ -1,272 +1,194 @@
 @extends('superadmin.layouts.app')
 
 @section('content')
-<div class="container-fluid">
-    <div class="card">
-        <div class="card-header">
-            <i class="fa fa-credit-card"></i> Gestión de Suscripciones
-            <p class="text-muted small mb-0">Administra las suscripciones de todas las tiendas</p>
-        </div>
-        <div class="card-body">
-            @if(session('success'))
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    {{ session('success') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            @endif
+<div class="container-fluid" style="padding: 1.5rem;">
 
-            <div class="table-responsive">
-                <table class="table table-bordered table-striped table-sm">
-                    <thead class="table-dark">
+    <!-- Header con título -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="mb-1" style="color: var(--j2b-dark); font-weight: 600;">
+                <i class="fa fa-credit-card" style="color: var(--j2b-primary);"></i> Gestion de Suscripciones
+            </h4>
+            <p class="mb-0" style="color: var(--j2b-gray-500);">Administra las suscripciones de todas las tiendas</p>
+        </div>
+        <a href="{{ route('superadmin.subscription-settings') }}" class="j2b-btn j2b-btn-secondary">
+            <i class="fa fa-cog"></i> Configuracion
+        </a>
+    </div>
+
+    <!-- Estadísticas -->
+    <div class="j2b-stat-grid mb-4">
+        <div class="j2b-stat j2b-card-hover-glow">
+            <div class="j2b-stat-icon j2b-stat-icon-info">
+                <i class="fa fa-flask"></i>
+            </div>
+            <div class="j2b-stat-content">
+                <div class="j2b-stat-value">{{ $shops->where('subscription_status', 'trial')->count() }}</div>
+                <div class="j2b-stat-label">En Trial</div>
+            </div>
+        </div>
+        <div class="j2b-stat j2b-card-hover-glow">
+            <div class="j2b-stat-icon j2b-stat-icon-success">
+                <i class="fa fa-check-circle"></i>
+            </div>
+            <div class="j2b-stat-content">
+                <div class="j2b-stat-value">{{ $shops->where('subscription_status', 'active')->count() }}</div>
+                <div class="j2b-stat-label">Activos</div>
+            </div>
+        </div>
+        <div class="j2b-stat j2b-card-hover-glow">
+            <div class="j2b-stat-icon j2b-stat-icon-warning">
+                <i class="fa fa-clock-o"></i>
+            </div>
+            <div class="j2b-stat-content">
+                <div class="j2b-stat-value">{{ $shops->where('subscription_status', 'grace_period')->count() }}</div>
+                <div class="j2b-stat-label">En Gracia</div>
+            </div>
+        </div>
+        <div class="j2b-stat j2b-card-hover-glow">
+            <div class="j2b-stat-icon j2b-stat-icon-danger">
+                <i class="fa fa-times-circle"></i>
+            </div>
+            <div class="j2b-stat-content">
+                <div class="j2b-stat-value">{{ $shops->where('subscription_status', 'expired')->count() }}</div>
+                <div class="j2b-stat-label">Vencidos</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mensaje de éxito -->
+    @if(session('success'))
+        <div class="j2b-banner-alert j2b-banner-success mb-4">
+            <i class="fa fa-check-circle"></i>
+            <span>{{ session('success') }}</span>
+        </div>
+    @endif
+
+    <!-- Card principal con tabla -->
+    <div class="j2b-card">
+        <div class="j2b-card-header d-flex justify-content-between align-items-center">
+            <h5 class="j2b-card-title mb-0">
+                <i class="fa fa-list j2b-text-primary"></i> Listado de Suscripciones
+            </h5>
+            <span class="j2b-badge j2b-badge-info">{{ $shops->total() }} tiendas</span>
+        </div>
+        <div class="j2b-card-body p-0">
+            <div class="j2b-table-responsive">
+                <table class="j2b-table">
+                    <thead>
                         <tr>
-                            <th width="5%">ID</th>
-                            <th width="15%">Tienda</th>
-                            <th width="10%">Plan</th>
-                            <th width="10%">Estado</th>
-                            <th width="10%">Días Restantes</th>
-                            <th width="12%">Vencimiento</th>
-                            <th width="10%">Dueño</th>
-                            <th width="8%">Activo</th>
-                            <th width="20%">Acciones</th>
+                            <th style="width: 50px;">ID</th>
+                            <th>Tienda</th>
+                            <th style="width: 120px;">Plan</th>
+                            <th style="width: 100px;">Estado</th>
+                            <th style="width: 100px;">Dias</th>
+                            <th style="width: 100px;">Vence</th>
+                            <th style="width: 120px;">Dueno</th>
+                            <th style="width: 180px;">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($shops as $shop)
                             <tr>
-                                <td>{{ $shop->id }}</td>
                                 <td>
-                                    <strong>{{ $shop->name }}</strong>
-                                    @if($shop->is_trial)
-                                        <br><small class="badge bg-info">EN TRIAL</small>
-                                    @endif
+                                    <span class="j2b-badge j2b-badge-dark">{{ $shop->id }}</span>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="j2b-icon-circle j2b-icon-circle-sm j2b-icon-primary mr-2" style="font-size: 11px; width: 32px; height: 32px; flex-shrink: 0;">
+                                            {{ strtoupper(substr($shop->name, 0, 1)) }}
+                                        </div>
+                                        <div>
+                                            <strong style="color: var(--j2b-dark);">{{ $shop->name }}</strong>
+                                            @if($shop->is_trial)
+                                                <span class="j2b-badge j2b-badge-info ml-1" style="font-size: 9px;">TRIAL</span>
+                                            @endif
+                                            <br>
+                                            <small style="color: var(--j2b-gray-500);">
+                                                @if(!$shop->active)
+                                                    <i class="fa fa-ban text-danger"></i> Desactivada
+                                                @else
+                                                    <i class="fa fa-check text-success"></i> Activa
+                                                @endif
+                                            </small>
+                                        </div>
+                                    </div>
                                 </td>
                                 <td>
                                     @if($shop->plan)
-                                        <span class="badge bg-secondary">{{ $shop->plan->name }}</span>
-                                        <br><small>{{ $shop->plan->currency }} ${{ $shop->plan->price }}</small>
+                                        <span class="j2b-badge j2b-badge-primary">{{ $shop->plan->name }}</span>
+                                        <br><small style="color: var(--j2b-primary); font-weight: 600;">${{ $shop->plan->price }}</small>
                                     @else
-                                        <span class="text-muted">Sin plan</span>
+                                        <span class="j2b-badge j2b-badge-outline">Sin plan</span>
                                     @endif
                                 </td>
                                 <td>
                                     @if($shop->subscription_status === 'trial')
-                                        <span class="badge bg-info">Trial</span>
+                                        <span class="j2b-badge j2b-badge-info"><i class="fa fa-flask"></i> Trial</span>
                                     @elseif($shop->subscription_status === 'active')
-                                        <span class="badge bg-success">Activo</span>
+                                        <span class="j2b-badge j2b-badge-success"><i class="fa fa-check"></i> Activo</span>
                                     @elseif($shop->subscription_status === 'grace_period')
-                                        <span class="badge bg-warning">Gracia</span>
+                                        <span class="j2b-badge j2b-badge-warning"><i class="fa fa-clock-o"></i> Gracia</span>
                                     @elseif($shop->subscription_status === 'expired')
-                                        <span class="badge bg-danger">Vencido</span>
+                                        <span class="j2b-badge j2b-badge-danger"><i class="fa fa-times"></i> Vencido</span>
                                     @else
-                                        <span class="badge bg-secondary">{{ $shop->subscription_status }}</span>
+                                        <span class="j2b-badge j2b-badge-outline">{{ $shop->subscription_status }}</span>
                                     @endif
                                 </td>
                                 <td>
                                     @php
                                         $days = $shop->daysRemaining();
                                     @endphp
-                                    @if($days > 0)
-                                        <span class="text-success">{{ $days }} días</span>
+                                    @if($days > 7)
+                                        <span class="j2b-badge j2b-badge-success">{{ $days }} dias</span>
+                                    @elseif($days > 0)
+                                        <span class="j2b-badge j2b-badge-warning">{{ $days }} dias</span>
                                     @elseif($days === 0)
-                                        <span class="text-warning">Vence hoy</span>
+                                        <span class="j2b-badge j2b-badge-danger">Hoy</span>
                                     @else
-                                        <span class="text-danger">Vencido</span>
+                                        <span class="j2b-badge j2b-badge-danger">Vencido</span>
                                     @endif
                                 </td>
                                 <td>
                                     @if($shop->is_trial && $shop->trial_ends_at)
-                                        <small>{{ $shop->trial_ends_at->format('d/m/Y') }}</small>
+                                        <small style="color: var(--j2b-gray-600);">{{ $shop->trial_ends_at->format('d/m/Y') }}</small>
                                     @elseif($shop->subscription_ends_at)
-                                        <small>{{ $shop->subscription_ends_at->format('d/m/Y') }}</small>
+                                        <small style="color: var(--j2b-gray-600);">{{ $shop->subscription_ends_at->format('d/m/Y') }}</small>
                                     @else
-                                        <span class="text-muted">N/A</span>
+                                        <span class="j2b-text-muted">-</span>
                                     @endif
                                 </td>
                                 <td>
                                     @if($shop->owner)
-                                        <small>{{ $shop->owner->name }}</small>
+                                        <small style="color: var(--j2b-dark);">{{ $shop->owner->name }}</small>
                                     @else
-                                        <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#assignOwnerModal{{ $shop->id }}">
+                                        <button type="button" class="j2b-btn j2b-btn-sm j2b-btn-outline" data-bs-toggle="modal" data-bs-target="#assignOwnerModal{{ $shop->id }}">
                                             <i class="fa fa-user-plus"></i> Asignar
                                         </button>
                                     @endif
                                 </td>
                                 <td>
-                                    @if($shop->active)
-                                        <span class="badge bg-success">Sí</span>
-                                    @else
-                                        <span class="badge bg-danger">No</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    <div class="btn-group-vertical d-grid gap-1" role="group">
-                                        <div class="btn-group" role="group">
-                                            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#extendModal{{ $shop->id }}">
-                                                <i class="fa fa-clock-o"></i> Extender
-                                            </button>
-                                            <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#changePlanModal{{ $shop->id }}">
-                                                <i class="fa fa-exchange"></i> Cambiar Plan
-                                            </button>
-                                        </div>
-                                        <form method="POST" action="{{ route('superadmin.shops.toggle-active', $shop->id) }}" onsubmit="return confirm('¿Estás seguro? Esto también {{ $shop->active ? 'desactivará' : 'reactivará' }} TODOS los usuarios de esta tienda.');">
+                                    <div class="d-flex gap-1 flex-wrap">
+                                        <button type="button" class="j2b-btn j2b-btn-sm j2b-btn-primary" data-bs-toggle="modal" data-bs-target="#extendModal{{ $shop->id }}" title="Extender">
+                                            <i class="fa fa-clock-o"></i>
+                                        </button>
+                                        <button type="button" class="j2b-btn j2b-btn-sm j2b-btn-secondary" data-bs-toggle="modal" data-bs-target="#changePlanModal{{ $shop->id }}" title="Cambiar Plan">
+                                            <i class="fa fa-exchange"></i>
+                                        </button>
+                                        <form method="POST" action="{{ route('superadmin.shops.toggle-active', $shop->id) }}" style="display: inline;" onsubmit="return confirm('¿Estas seguro? Esto tambien {{ $shop->active ? 'desactivara' : 'reactivara' }} TODOS los usuarios de esta tienda.');">
                                             @csrf
-                                            <button type="submit" class="btn btn-sm btn-{{ $shop->active ? 'danger' : 'warning' }} w-100">
-                                                <i class="fa fa-{{ $shop->active ? 'ban' : 'check-circle' }}"></i> {{ $shop->active ? 'Desactivar' : 'Reactivar' }}
+                                            <button type="submit" class="j2b-btn j2b-btn-sm {{ $shop->active ? 'j2b-btn-danger' : 'j2b-btn-outline' }}" title="{{ $shop->active ? 'Desactivar' : 'Reactivar' }}">
+                                                <i class="fa fa-{{ $shop->active ? 'ban' : 'check-circle' }}"></i>
                                             </button>
                                         </form>
                                     </div>
-
-                                    <!-- Modal Extender Trial/Suscripción -->
-                                    <div class="modal fade" id="extendModal{{ $shop->id }}" tabindex="-1">
-                                        <div class="modal-dialog">
-                                            <div class="modal-content">
-                                                <form method="POST" action="{{ route('superadmin.shops.extend-trial', $shop->id) }}">
-                                                    @csrf
-                                                    <div class="modal-header">
-                                                        <h5 class="modal-title">Extender Suscripción: {{ $shop->name }}</h5>
-                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                    </div>
-                                                    <div class="modal-body">
-                                                        <div class="mb-3">
-                                                            <label class="form-label">Días a extender:</label>
-                                                            <input type="number" name="days" class="form-control" min="1" max="365" value="30" required>
-                                                            <small class="text-muted">Máximo 365 días</small>
-                                                        </div>
-                                                        <div class="alert alert-info">
-                                                            <strong>Estado actual:</strong> {{ ucfirst($shop->subscription_status) }}<br>
-                                                            @if($shop->is_trial && $shop->trial_ends_at)
-                                                                <strong>Trial vence:</strong> {{ $shop->trial_ends_at->format('d/m/Y H:i') }}
-                                                            @elseif($shop->subscription_ends_at)
-                                                                <strong>Suscripción vence:</strong> {{ $shop->subscription_ends_at->format('d/m/Y H:i') }}
-                                                            @endif
-                                                        </div>
-                                                    </div>
-                                                    <div class="modal-footer">
-                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                                        <button type="submit" class="btn btn-primary">
-                                                            <i class="fa fa-check"></i> Extender
-                                                        </button>
-                                                    </div>
-                                                </form>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Modal Cambiar Plan -->
-                                    <div class="modal fade" id="changePlanModal{{ $shop->id }}" tabindex="-1">
-                                        <div class="modal-dialog">
-                                            <div class="modal-content">
-                                                <form method="POST" action="{{ route('superadmin.shops.change-plan', $shop->id) }}">
-                                                    @csrf
-                                                    <div class="modal-header">
-                                                        <h5 class="modal-title">Cambiar Plan: {{ $shop->name }}</h5>
-                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                    </div>
-                                                    <div class="modal-body">
-                                                        <div class="mb-3">
-                                                            <label class="form-label">Seleccionar Plan:</label>
-                                                            <select name="plan_id" class="form-control" required>
-                                                                <option value="">-- Selecciona un plan --</option>
-                                                                @foreach($plans as $plan)
-                                                                    <option value="{{ $plan->id }}" {{ $shop->plan_id == $plan->id ? 'selected' : '' }}>
-                                                                        {{ $plan->name }} - {{ $plan->currency }} ${{ $plan->price }}/mes
-                                                                    </option>
-                                                                @endforeach
-                                                            </select>
-                                                        </div>
-                                                        <div class="mb-3">
-                                                            <label class="form-label">Duración (meses):</label>
-                                                            <select name="duration_months" class="form-control" required>
-                                                                <option value="1">1 mes</option>
-                                                                <option value="3">3 meses</option>
-                                                                <option value="6">6 meses</option>
-                                                                <option value="12">12 meses (anual)</option>
-                                                            </select>
-                                                        </div>
-                                                        <hr>
-                                                        <div class="mb-3">
-                                                            <label class="form-label">
-                                                                <i class="fa fa-star text-warning"></i> Precio Personalizado (opcional)
-                                                            </label>
-                                                            <div class="input-group">
-                                                                <span class="input-group-text">$</span>
-                                                                <input type="number" step="0.01" name="custom_price" class="form-control" placeholder="Dejar vacío para usar precio del plan">
-                                                                <span class="input-group-text">MXN/mes (sin IVA)</span>
-                                                            </div>
-                                                            <small class="text-muted">
-                                                                💡 Para respetar precios antiguos. Si se deja vacío, usará el precio actual del plan.
-                                                            </small>
-                                                        </div>
-                                                        <div class="alert alert-info">
-                                                            <strong>💰 Ejemplo:</strong> Si el plan cuesta $999 pero esta tienda paga $300 (precio antiguo), ingresa 258.62 (300 ÷ 1.16 para quitar IVA).
-                                                        </div>
-                                                        <div class="alert alert-warning">
-                                                            <strong>⚠️ Nota:</strong> Esto cambiará el plan actual y creará un registro de pago manual.
-                                                        </div>
-                                                    </div>
-                                                    <div class="modal-footer">
-                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                                        <button type="submit" class="btn btn-success">
-                                                            <i class="fa fa-check"></i> Cambiar Plan
-                                                        </button>
-                                                    </div>
-                                                </form>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Modal Asignar Owner -->
-                                    @if(!$shop->owner)
-                                        <div class="modal fade" id="assignOwnerModal{{ $shop->id }}" tabindex="-1">
-                                            <div class="modal-dialog">
-                                                <div class="modal-content">
-                                                    <form method="POST" action="{{ route('superadmin.shops.assign-owner', $shop->id) }}">
-                                                        @csrf
-                                                        <div class="modal-header">
-                                                            <h5 class="modal-title">Asignar Owner: {{ $shop->name }}</h5>
-                                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                        </div>
-                                                        <div class="modal-body">
-                                                            <div class="mb-3">
-                                                                <label class="form-label">Seleccionar Usuario Admin:</label>
-                                                                <select name="owner_user_id" class="form-control" required>
-                                                                    <option value="">-- Selecciona un usuario --</option>
-                                                                    @php
-                                                                        $shopUsers = \App\Models\User::where('shop_id', $shop->id)
-                                                                            ->whereHas('roles', function($query) {
-                                                                                $query->where('name', 'admin');
-                                                                            })
-                                                                            ->get();
-                                                                    @endphp
-                                                                    @foreach($shopUsers as $user)
-                                                                        <option value="{{ $user->id }}">
-                                                                            {{ $user->name }} ({{ $user->email }})
-                                                                        </option>
-                                                                    @endforeach
-                                                                </select>
-                                                                <small class="text-muted">Solo usuarios con rol Admin de esta tienda</small>
-                                                            </div>
-                                                            <div class="alert alert-info">
-                                                                <strong>ℹ️ Info:</strong> El owner es el usuario principal responsable de la tienda.
-                                                            </div>
-                                                        </div>
-                                                        <div class="modal-footer">
-                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                                            <button type="submit" class="btn btn-warning">
-                                                                <i class="fa fa-user-plus"></i> Asignar Owner
-                                                            </button>
-                                                        </div>
-                                                    </form>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    @endif
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="9" class="text-center text-muted">
-                                    No hay tiendas registradas
+                                <td colspan="8" class="text-center py-5">
+                                    <i class="fa fa-inbox fa-3x mb-3" style="color: var(--j2b-gray-300);"></i>
+                                    <p style="color: var(--j2b-gray-500);">No hay tiendas registradas</p>
                                 </td>
                             </tr>
                         @endforelse
@@ -275,46 +197,80 @@
             </div>
 
             <!-- Paginación -->
-            <div class="mt-3">
-                {{ $shops->links('pagination::bootstrap-5') }}
-            </div>
+            @if($shops->hasPages())
+                <div class="j2b-card-body">
+                    {{ $shops->links('pagination::bootstrap-5') }}
+                </div>
+            @endif
         </div>
     </div>
 
-    <!-- Resumen de estadísticas -->
-    <div class="row mt-4">
-        <div class="col-md-3">
-            <div class="card bg-info text-white">
-                <div class="card-body">
-                    <h5>En Trial</h5>
-                    <h2>{{ $shops->where('subscription_status', 'trial')->count() }}</h2>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-success text-white">
-                <div class="card-body">
-                    <h5>Activos</h5>
-                    <h2>{{ $shops->where('subscription_status', 'active')->count() }}</h2>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-warning text-white">
-                <div class="card-body">
-                    <h5>Gracia</h5>
-                    <h2>{{ $shops->where('subscription_status', 'grace_period')->count() }}</h2>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-danger text-white">
-                <div class="card-body">
-                    <h5>Vencidos</h5>
-                    <h2>{{ $shops->where('subscription_status', 'expired')->count() }}</h2>
-                </div>
-            </div>
-        </div>
-    </div>
+    {{-- Modales fuera de la tabla --}}
+    @foreach($shops as $shop)
+        @include('superadmin.partials.modal_extend', ['shop' => $shop])
+        @include('superadmin.partials.modal_change_plan', ['shop' => $shop, 'plans' => $plans])
+        @if(!$shop->owner)
+            @include('superadmin.partials.modal_assign_owner', ['shop' => $shop])
+        @endif
+    @endforeach
+
 </div>
+
+<style>
+.j2b-banner-alert.j2b-banner-success {
+    background: rgba(0, 245, 160, 0.1);
+    border: 1px solid var(--j2b-primary);
+    border-radius: var(--j2b-radius-md);
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: var(--j2b-dark);
+}
+.j2b-banner-alert.j2b-banner-success i {
+    color: var(--j2b-primary);
+    font-size: 1.2em;
+}
+
+/* Modal J2B styles */
+.j2b-modal .modal-content {
+    border: none;
+    border-radius: var(--j2b-radius-lg);
+    box-shadow: var(--j2b-shadow-lg);
+}
+.j2b-modal .modal-header {
+    background: var(--j2b-gradient-dark);
+    color: var(--j2b-white);
+    border-radius: var(--j2b-radius-lg) var(--j2b-radius-lg) 0 0;
+    padding: 1rem 1.5rem;
+    border-bottom: none;
+}
+.j2b-modal .modal-header .modal-title {
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.j2b-modal .modal-header .btn-close {
+    filter: invert(1);
+}
+.j2b-modal .modal-body {
+    padding: 1.5rem;
+}
+.j2b-modal .modal-footer {
+    padding: 1rem 1.5rem;
+    background: var(--j2b-gray-100);
+    border-top: 1px solid var(--j2b-gray-200);
+    border-radius: 0 0 var(--j2b-radius-lg) var(--j2b-radius-lg);
+}
+
+/* Banner info para modales */
+.j2b-banner-alert.j2b-banner-info {
+    background: rgba(0, 217, 245, 0.1);
+    border: 1px solid var(--j2b-info);
+    border-radius: var(--j2b-radius-md);
+    padding: 1rem;
+    color: var(--j2b-dark);
+}
+</style>
 @endsection

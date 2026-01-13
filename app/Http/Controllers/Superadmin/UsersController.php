@@ -17,19 +17,24 @@ class UsersController extends Controller
         if(!$request->ajax()) return redirect('/');
 
         $shops = Shop::where('active',1)->get();
+        $roles = Role::orderBy('name')->get();
 
         $users = User::with('shop')->with('roles')
-                ->when($request->buscar!='',function ($query) use ($request){
-                    return $query->where($request->criterio,'like','%'.$request->buscar.'%');
+                ->when($request->buscar != '', function ($query) use ($request) {
+                    return $query->where($request->criterio, 'like', '%'.$request->buscar.'%');
                 })
                 ->when($request->estatus != '', function ($query) use ($request) {
-                        // Filtrar por estatus
-                        if ($request->estatus === 'active') {
-                            return $query->where('active', 1);
-                        } elseif ($request->estatus === 'inactive') {
-                            return $query->where('active', 0);
-                        }
-                    })
+                    if ($request->estatus === 'active') {
+                        return $query->where('active', 1);
+                    } elseif ($request->estatus === 'inactive') {
+                        return $query->where('active', 0);
+                    }
+                })
+                ->when($request->rol != '', function ($query) use ($request) {
+                    return $query->whereHas('roles', function ($q) use ($request) {
+                        $q->where('roles.id', $request->rol);
+                    });
+                })
                 ->orderBy('id','desc')
                 ->paginate(20);
 
@@ -44,6 +49,7 @@ class UsersController extends Controller
             ],
             'users'=>$users,
             'shops'=>$shops,
+            'roles'=>$roles,
         ];
     }//.get()
 
@@ -51,29 +57,57 @@ class UsersController extends Controller
     {
         if(!$request->ajax()) return redirect('/');
 
-        $role_user= Role::where('name', 'admin')->first();
+        // Validar
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email',
+            'password' => 'required|min:8',
+            'shop_id' => 'required|exists:shops,id',
+            'role_id' => 'required|exists:roles,id',
+        ]);
+
+        $role = Role::findOrFail($request->role_id);
 
         $user = new User();
         $user->active = 1;
         $user->shop_id = $request->shop_id;
-        $user->name     = $request->name;
+        $user->name = $request->name;
         $user->email = $request->email;
         $user->password = Hash::make($request->password);
         $user->save();
-        $user->roles()->attach($role_user);
+        $user->roles()->attach($role);
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Usuario creado correctamente'
+        ]);
     }//store()
 
     public function updateInfo(Request $request)
     {
         if(!$request->ajax()) return redirect('/');
+
+        // Proteger usuario principal
+        if($request->user_id == 1) {
+            return response()->json(['error' => 'No se puede modificar el usuario principal'], 403);
+        }
+
         $user = User::findOrFail($request->user_id);
         $user->name = $request->name;
         $user->email = $request->email;
         $user->save();
+
+        return response()->json(['ok' => true, 'message' => 'Usuario actualizado']);
     }//./updateInfo()
 
     public function updateToActive(Request $request){
         if(!$request->ajax()) return redirect('/');
+
+        // Proteger usuario principal
+        if($request->id == 1) {
+            return response()->json(['error' => 'No se puede modificar el usuario principal'], 403);
+        }
+
         $user = User::findOrFail($request->id);
         $user->active = 1;
         $user->save();
@@ -81,6 +115,12 @@ class UsersController extends Controller
 
     public function updateToInactive(Request $request){
         if(!$request->ajax()) return redirect('/');
+
+        // Proteger usuario principal
+        if($request->id == 1) {
+            return response()->json(['error' => 'No se puede modificar el usuario principal'], 403);
+        }
+
         $user = User::findOrFail($request->id);
         $user->active = 0;
         $user->save();
@@ -88,6 +128,11 @@ class UsersController extends Controller
 
     public function resetPassword(Request $request){
         if(!$request->ajax()) return redirect('/');
+
+        // Proteger usuario principal
+        if($request->id == 1) {
+            return response()->json(['error' => 'No se puede modificar el usuario principal'], 403);
+        }
 
         // Validar
         $request->validate([

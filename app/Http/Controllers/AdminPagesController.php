@@ -49,10 +49,6 @@ class AdminPagesController extends Controller
         }
     }
 
-    public function download(){
-        return view('admin.download');
-    }
-
     public function configurations(){
         return view('admin.configurations.index');
     }
@@ -86,6 +82,19 @@ class AdminPagesController extends Controller
         $shop = $user->shop;
         $isLimitedUser = $user->isLimitedAdmin();
         return view('admin.clients.index', compact('shop', 'isLimitedUser'));
+    }
+
+    public function clientRentas(\App\Models\Client $client){
+        $user = Auth::user();
+        $shop = $user->shop;
+
+        // Verificar que el cliente pertenece a la tienda
+        if ($client->shop_id !== $shop->id) {
+            abort(404);
+        }
+
+        $isLimitedUser = $user->isLimitedAdmin();
+        return view('admin.clients.rentas', compact('client', 'shop', 'isLimitedUser'));
     }
 
     /**

@@ -24,6 +24,7 @@ use App\Http\Controllers\Admin\ClientsController;
 use App\Http\Controllers\Admin\SuppliersController;
 use App\Http\Controllers\Admin\TasksController;
 use App\Http\Controllers\Admin\UsersController as AdminUsersController;
+use App\Http\Controllers\Admin\RentsController;
 
 
 /*
@@ -107,11 +108,6 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::put('/superadmin/users/inactive', [SuperadminUsersController::class, 'updateToInactive']);
         Route::put('/superadmin/users/reset-password', [SuperadminUsersController::class, 'resetPassword']);
 
-        //UPLOAD APK
-        Route::get('/superadmin/upload', [SuperadminPagesController::class, 'uploadApk'])->name('superadmin.upload_apk');
-        Route::post('/superadmin/upload-apk/store', [SuperadminUsersController::class, 'storeApk'])->name('superadmin.store.apk');
-
-
         //Pre Registers
         Route::get('/superadmin/pre-registers', [SuperadminPagesController::class, 'preRegisters'])->name('superadmin.pre-registers');
         Route::get('/superadmin/pre-registers/get', [App\Http\Controllers\Superadmin\RequestsJ2bController::class, 'getRegisters']);
@@ -150,23 +146,6 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::put('/admin/shop/{shop}/update-signature', [ShopController::class, 'updateSignature'])->name('admin.shop.update-signature');
         Route::delete('/admin/shop/{shop}/delete-signature', [ShopController::class, 'deleteSignature'])->name('admin.shop.delete-signature');
 
-        Route::get('/admin/download', [AdminPagesController::class, 'download'])->name('admin.download');
-
-        Route::get('/admin/download-apk/{filename}', function ($filename) {
-            // Verifica si el archivo existe en la carpeta de almacenamiento público
-            if (Storage::disk('public')->exists('apk/' . $filename)) {
-                // Si el archivo existe, devuelve una respuesta de descarga con los encabezados correctos
-                return response()->download(storage_path('app/public/apk/' . $filename), $filename, [
-                    'Content-Type' => 'application/vnd.android.package-archive',
-                    'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-                ]);
-            } else {
-                // Si el archivo no existe, devuelve una respuesta 404
-                abort(404);
-            }
-        })->name('download.apk');
-
-
         Route::get('/admin/configurations', [AdminPagesController::class, 'configurations'])->name('admin.configurations');
 
         Route::get('/admin/configurations/extra-fields-shop', [ExtraFieldsShopController::class, 'index'])->name('admin.configurations.extra_fields');
@@ -199,6 +178,7 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
 
 
         Route::get('/admin/clients', [AdminPagesController::class, 'clients'])->name('admin.clients');
+        Route::get('/admin/clients/{client}/rentas', [AdminPagesController::class, 'clientRentas'])->name('admin.clients.rentas.page');
 
         // Rutas AJAX para CRUD de clientes (admin web - separadas de Ionic)
         Route::get('/admin/clients/get', [ClientsController::class, 'index'])->name('admin.clients.get');
@@ -246,7 +226,26 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::delete('/admin/clients/{client}/remove-location', [ClientsController::class, 'removeLocation'])->name('admin.clients.remove-location');
 
         // Rentas del cliente
-        Route::get('/admin/clients/{client}/rents', [ClientsController::class, 'getClientRents'])->name('admin.clients.rents');
+        Route::get('/admin/clients/{client}/rents', [RentsController::class, 'getClientRents'])->name('admin.clients.rents');
+
+        // Rutas para gestión de Rentas (admin web)
+        Route::get('/admin/rents/{rent}/details', [RentsController::class, 'getRentDetails'])->name('admin.rents.details');
+        Route::post('/admin/rents/store', [RentsController::class, 'store'])->name('admin.rents.store');
+        Route::put('/admin/rents/update', [RentsController::class, 'update'])->name('admin.rents.update');
+        Route::put('/admin/rents/{id}/inactive', [RentsController::class, 'inactive'])->name('admin.rents.inactive');
+        Route::put('/admin/rents/{id}/active', [RentsController::class, 'active'])->name('admin.rents.active');
+
+        // Rutas para Equipos (RentDetail) - admin web
+        Route::post('/admin/rents/details/store', [RentsController::class, 'storeDetail'])->name('admin.rents.details.store');
+        Route::put('/admin/rents/details/update', [RentsController::class, 'updateDetail'])->name('admin.rents.details.update');
+        Route::put('/admin/rents/details/{id}/liberar', [RentsController::class, 'liberarDetail'])->name('admin.rents.details.liberar');
+        Route::post('/admin/rents/details/assign', [RentsController::class, 'assignEquipment'])->name('admin.rents.details.assign');
+        Route::put('/admin/rents/details/{id}/url-monitor', [RentsController::class, 'updateUrlMonitor'])->name('admin.rents.details.url-monitor');
+        Route::get('/admin/rents/equipments/available', [RentsController::class, 'getAvailableEquipments'])->name('admin.rents.equipments.available');
+
+        // Rutas para Consumibles - admin web
+        Route::get('/admin/rents/details/{detail}/consumables', [RentsController::class, 'getConsumables'])->name('admin.rents.consumables');
+        Route::post('/admin/rents/details/{detail}/consumables/store', [RentsController::class, 'storeConsumable'])->name('admin.rents.consumables.store');
 
         // Rutas para recibos de clientes (admin web)
         Route::get('/admin/clients/{client}/receipts', [App\Http\Controllers\Admin\ReceiptsController::class, 'index'])->name('admin.clients.receipts');

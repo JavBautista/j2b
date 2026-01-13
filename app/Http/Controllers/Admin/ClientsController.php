@@ -42,7 +42,7 @@ class ClientsController extends Controller
             }
         }
 
-        $clients = $query->orderBy('id', 'desc')->paginate(12);
+        $clients = $query->withCount('rents')->orderBy('id', 'desc')->paginate(12);
 
         $response = $clients->toArray();
         $response['pagination'] = [
@@ -916,31 +916,4 @@ class ClientsController extends Controller
     // RENTAS DEL CLIENTE
     // =====================================================
 
-    /**
-     * Obtener rentas de un cliente
-     */
-    public function getClientRents(Client $client)
-    {
-        $user = Auth::user();
-        $shop = $user->shop;
-
-        // Verificar que el cliente pertenece a la tienda
-        if ($client->shop_id !== $shop->id) {
-            return response()->json(['ok' => false, 'message' => 'Cliente no encontrado'], 404);
-        }
-
-        $rents = \App\Models\Rent::where('client_id', $client->id)
-            ->with('rentDetails')
-            ->orderBy('created_at', 'desc')
-            ->get();
-
-        return response()->json([
-            'ok' => true,
-            'client' => [
-                'id' => $client->id,
-                'name' => $client->name
-            ],
-            'rents' => $rents
-        ]);
-    }
 }

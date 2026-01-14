@@ -88,6 +88,23 @@
                                 </div>
                                 <small class="j2b-text-muted">Dejar vacio para usar precio del plan</small>
                             </div>
+
+                            <div class="mb-3">
+                                <label class="d-flex align-items-center gap-2" style="cursor: pointer;">
+                                    <input
+                                        type="checkbox"
+                                        id="include_iva{{ $shop->id }}"
+                                        name="include_iva"
+                                        value="1"
+                                        onchange="calculateTotal{{ $shop->id }}()"
+                                        style="width: 18px; height: 18px;"
+                                    >
+                                    <span class="j2b-label mb-0">
+                                        <i class="fa fa-percent j2b-text-info"></i> Incluir IVA (16%)
+                                    </span>
+                                </label>
+                                <small class="j2b-text-muted">Marcar si el precio debe incluir IVA</small>
+                            </div>
                         </div>
 
                         {{-- Columna derecha: Resumen --}}
@@ -114,7 +131,7 @@
                                             <td class="py-2"><strong>Subtotal:</strong></td>
                                             <td class="py-2 text-right"><strong id="summary_subtotal{{ $shop->id }}">$0.00</strong></td>
                                         </tr>
-                                        <tr>
+                                        <tr id="iva_row{{ $shop->id }}" style="display: none;">
                                             <td class="py-1">IVA (16%):</td>
                                             <td class="py-1 text-right"><span id="summary_iva{{ $shop->id }}">$0.00</span></td>
                                         </tr>
@@ -157,15 +174,18 @@ function calculateTotal{{ $shop->id }}() {
     const planSelect = document.getElementById('plan_id{{ $shop->id }}');
     const durationSelect = document.getElementById('duration_months{{ $shop->id }}');
     const customPriceInput = document.getElementById('custom_price{{ $shop->id }}');
+    const includeIvaCheckbox = document.getElementById('include_iva{{ $shop->id }}');
+    const ivaRow = document.getElementById('iva_row{{ $shop->id }}');
 
     const option = planSelect.options[planSelect.selectedIndex];
     const planPrice = parseFloat(option.dataset.price) || 0;
     const customPrice = parseFloat(customPriceInput.value) || 0;
     const duration = parseInt(durationSelect.value) || 1;
+    const includeIva = includeIvaCheckbox.checked;
 
     const pricePerMonth = customPrice > 0 ? customPrice : planPrice;
     const subtotal = pricePerMonth * duration;
-    const iva = subtotal * 0.16;
+    const iva = includeIva ? subtotal * 0.16 : 0;
     const total = subtotal + iva;
 
     document.getElementById('summary_price{{ $shop->id }}').textContent = '$' + pricePerMonth.toFixed(2);
@@ -173,6 +193,11 @@ function calculateTotal{{ $shop->id }}() {
     document.getElementById('summary_subtotal{{ $shop->id }}').textContent = '$' + subtotal.toFixed(2);
     document.getElementById('summary_iva{{ $shop->id }}').textContent = '$' + iva.toFixed(2);
     document.getElementById('summary_total{{ $shop->id }}').textContent = '$' + total.toFixed(2);
+
+    // Mostrar/ocultar fila de IVA
+    if (ivaRow) {
+        ivaRow.style.display = includeIva ? 'table-row' : 'none';
+    }
 
     // Calcular fecha de vencimiento
     const today = new Date();

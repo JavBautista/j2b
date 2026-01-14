@@ -115,38 +115,53 @@ class SuperAdminController extends Controller
             'plan_id' => 'required|exists:plans,id',
             'duration_months' => 'required|integer|min:1|max:12',
             'custom_price' => 'nullable|numeric|min:0',
+            'include_iva' => 'nullable|boolean',
         ]);
 
         $plan = Plan::findOrFail($request->plan_id);
+        $durationMonths = (int) $request->duration_months;
+        $includeIva = $request->boolean('include_iva');
 
         // Determinar precio a usar
         $useCustomPrice = $request->has('custom_price') && $request->custom_price > 0;
 
         if ($useCustomPrice) {
-            // Usar precio personalizado (sin IVA)
-            $priceWithoutIva = (float) $request->custom_price;
-            $ivaPercentage = $plan->iva_percentage ?? 16;
-            $ivaAmount = round($priceWithoutIva * ($ivaPercentage / 100), 2);
-            $totalAmount = $priceWithoutIva + $ivaAmount;
+            // Usar precio personalizado
+            $priceBase = (float) $request->custom_price;
+            if ($includeIva) {
+                $ivaPercentage = $plan->iva_percentage ?? 16;
+                $ivaAmount = round($priceBase * ($ivaPercentage / 100), 2);
+                $totalAmount = $priceBase + $ivaAmount;
+            } else {
+                $ivaAmount = 0;
+                $totalAmount = $priceBase;
+            }
+            $priceWithoutIva = $priceBase;
         } else {
             // Usar precio del plan
-            $priceWithoutIva = $plan->price_without_iva;
-            $ivaAmount = $plan->price - $plan->price_without_iva;
-            $totalAmount = $plan->price;
+            if ($includeIva) {
+                $priceWithoutIva = $plan->price_without_iva ?? $plan->price;
+                $ivaAmount = $plan->price - ($plan->price_without_iva ?? $plan->price);
+                $totalAmount = $plan->price;
+            } else {
+                $priceWithoutIva = $plan->price;
+                $ivaAmount = 0;
+                $totalAmount = $plan->price;
+            }
         }
 
         // Multiplicar por meses
-        $priceWithoutIvaTotal = $priceWithoutIva * $request->duration_months;
-        $ivaAmountTotal = $ivaAmount * $request->duration_months;
-        $totalAmountFinal = $totalAmount * $request->duration_months;
+        $priceWithoutIvaTotal = $priceWithoutIva * $durationMonths;
+        $ivaAmountTotal = $ivaAmount * $durationMonths;
+        $totalAmountFinal = $totalAmount * $durationMonths;
 
         // Actualizar shop
         $shop->update([
             'plan_id' => $plan->id,
-            'monthly_price' => $totalAmount, // Guardar precio mensual (con IVA) de esta tienda
+            'monthly_price' => $totalAmount, // Guardar precio mensual de esta tienda
             'is_trial' => false,
             'subscription_status' => 'active',
-            'subscription_ends_at' => now()->addMonths($request->duration_months),
+            'subscription_ends_at' => now()->addMonths($durationMonths),
             'last_payment_at' => now(),
             'active' => true,
         ]);
@@ -162,20 +177,20 @@ class SuperAdminController extends Controller
             'currency' => $plan->currency,
             'payment_method' => 'other',
             'transaction_id' => 'MANUAL-' . now()->timestamp,
-            'billing_period' => $request->duration_months == 1 ? 'monthly' : 'yearly',
+            'billing_period' => $durationMonths == 1 ? 'monthly' : 'yearly',
             'starts_at' => now(),
-            'ends_at' => now()->addMonths($request->duration_months),
+            'ends_at' => now()->addMonths($durationMonths),
             'status' => 'active',
             'admin_notes' => $useCustomPrice
-                ? "Cambio manual por superadmin: " . auth()->user()->name . " - Precio personalizado: {$plan->currency} \${$totalAmount}/mes"
-                : "Cambio manual por superadmin: " . auth()->user()->name,
+                ? "Cambio manual por superadmin: " . auth()->user()->name . " - Precio personalizado: {$plan->currency} \${$totalAmount}/mes" . ($includeIva ? ' +IVA' : ' sin IVA')
+                : "Cambio manual por superadmin: " . auth()->user()->name . ($includeIva ? ' +IVA' : ' sin IVA'),
         ]);
 
         // Crear notificación de pago recibido
-        $this->createPaymentNotification($shop, $plan, $request->duration_months, $totalAmountFinal);
+        $this->createPaymentNotification($shop, $plan, $durationMonths, $totalAmountFinal);
 
         $priceInfo = $useCustomPrice ? " (precio personalizado: {$plan->currency} \${$totalAmount}/mes)" : "";
-        return redirect()->back()->with('success', "Plan de {$shop->name} cambiado a {$plan->name} por {$request->duration_months} meses{$priceInfo}");
+        return redirect()->back()->with('success', "Plan de {$shop->name} cambiado a {$plan->name} por {$durationMonths} meses{$priceInfo}");
     }
 
     /**

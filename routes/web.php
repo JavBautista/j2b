@@ -90,6 +90,8 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::put('/superadmin/shops/deactive', [ShopsController::class, 'deactive']);
         Route::post('/superadmin/shops/upload-logo', [ShopsController::class, 'uploadLogo']);
         Route::put('/superadmin/shops/update-cutoff', [ShopsController::class, 'updateCutoff']);
+        Route::get('/superadmin/shops/{id}/info', [ShopsController::class, 'getInfo']);
+        Route::get('/superadmin/shops/{id}/stats', [ShopsController::class, 'getStats']);
 
         //Plans
         Route::get('/superadmin/plans', [SuperadminPagesController::class, 'plans'])->name('superadmin.plans');
@@ -107,6 +109,7 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::put('/superadmin/users/active', [SuperadminUsersController::class, 'updateToActive']);
         Route::put('/superadmin/users/inactive', [SuperadminUsersController::class, 'updateToInactive']);
         Route::put('/superadmin/users/reset-password', [SuperadminUsersController::class, 'resetPassword']);
+        Route::put('/superadmin/users/update-email', [SuperadminUsersController::class, 'updateEmail']);
 
         //Pre Registers
         Route::get('/superadmin/pre-registers', [SuperadminPagesController::class, 'preRegisters'])->name('superadmin.pre-registers');
@@ -123,6 +126,7 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::post('/superadmin/shops/{id}/toggle-active', [SuperAdminController::class, 'toggleShopActive'])->name('superadmin.shops.toggle-active');
         Route::get('/superadmin/shops/{id}/subscription-info', [SuperAdminController::class, 'getSubscriptionInfo'])->name('superadmin.shops.subscription-info');
         Route::post('/superadmin/shops/{id}/assign-owner', [SuperAdminController::class, 'assignOwner'])->name('superadmin.shops.assign-owner');
+        Route::post('/superadmin/shops/{id}/update-config', [SuperAdminController::class, 'updateShopConfig'])->name('superadmin.shops.update-config');
         Route::get('/superadmin/shops/{id}/users', [SuperAdminController::class, 'getShopUsers'])->name('superadmin.shops.users');
         Route::put('/superadmin/pre-registers/delete', [App\Http\Controllers\Superadmin\RequestsJ2bController::class, 'destroy']);
     }); //./Routes Middleware superadmin

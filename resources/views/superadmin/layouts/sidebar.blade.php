@@ -6,6 +6,13 @@
                     <i class="fa fa-home"></i> Home
                 </a>
             </li>
+
+            <li class="nav-item">
+                <a href="{{ route('superadmin.subscription-management') }}" class="nav-link">
+                    <i class="fa fa-credit-card"></i> Gestión Suscripciones
+                </a>
+            </li>
+            
             <li class="nav-item">
                 <a href="{{ route('superadmin.shops') }}" class="nav-link">
                     <i class="fa fa-building"></i> Tiendas
@@ -26,11 +33,7 @@
                     <i class="fa fa-cog"></i> Config. Suscripciones
                 </a>
             </li>
-            <li class="nav-item">
-                <a href="{{ route('superadmin.subscription-management') }}" class="nav-link">
-                    <i class="fa fa-credit-card"></i> Gestión Suscripciones
-                </a>
-            </li>
+            
             <li class="nav-item">
                 <a href="{{ route('superadmin.pre-registers') }}" class="nav-link">
                     <i class="fa fa-clipboard"></i> Pre Registros

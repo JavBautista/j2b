@@ -6,6 +6,9 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Shop;
 use App\Models\User;
+use App\Models\Client;
+use App\Models\Receipt;
+use App\Models\Task;
 use App\Models\SubscriptionSetting;
 use Illuminate\Support\Facades\Storage;
 
@@ -173,4 +176,172 @@ class ShopsController extends Controller
         $shop->save();
 
     }//uploadLogo()
+
+    /**
+     * Obtener info básica de una tienda (para modal reutilizable)
+     */
+    public function getInfo($id)
+    {
+        $shop = Shop::with('plan', 'owner')->findOrFail($id);
+
+        return response()->json([
+            'ok' => true,
+            'shop' => [
+                'id' => $shop->id,
+                'name' => $shop->name,
+                'description' => $shop->description,
+                'owner_name' => $shop->owner_name,
+                'active' => $shop->active,
+                'created_at' => $shop->created_at ? $shop->created_at->format('d/m/Y') : null,
+
+                // Contacto
+                'email' => $shop->email,
+                'phone' => $shop->phone,
+                'whatsapp' => $shop->whatsapp,
+
+                // Dirección
+                'address' => $shop->address,
+                'number_out' => $shop->number_out,
+                'number_int' => $shop->number_int,
+                'district' => $shop->district,
+                'city' => $shop->city,
+                'state' => $shop->state,
+                'zip_code' => $shop->zip_code,
+
+                // Bancario
+                'bank_name' => $shop->bank_name,
+                'bank_number' => $shop->bank_number,
+
+                // Redes
+                'web' => $shop->web,
+                'facebook' => $shop->facebook,
+                'instagram' => $shop->instagram,
+
+                // Suscripción
+                'plan_name' => $shop->plan ? $shop->plan->name : null,
+                'subscription_status' => $shop->subscription_status,
+                'is_trial' => $shop->is_trial,
+                'monthly_price' => $shop->monthly_price,
+
+                // Owner asignado
+                'owner' => $shop->owner ? [
+                    'id' => $shop->owner->id,
+                    'name' => $shop->owner->name,
+                    'email' => $shop->owner->email,
+                ] : null,
+            ]
+        ]);
+    }
+
+    /**
+     * Obtener estadísticas de actividad de una tienda
+     */
+    public function getStats($id)
+    {
+        $shop = Shop::findOrFail($id);
+
+        // Usuarios por rol
+        $users = User::where('shop_id', $id)
+            ->with('roles')
+            ->get();
+
+        $userStats = [
+            'total' => $users->count(),
+            'activos' => $users->where('active', 1)->count(),
+            'inactivos' => $users->where('active', 0)->count(),
+            'admins_full' => 0,
+            'admins_limitados' => 0,
+            'colaboradores' => 0,
+            'clientes' => 0,
+            'otros' => 0,
+        ];
+
+        foreach ($users as $user) {
+            if ($user->roles->isEmpty()) {
+                $userStats['otros']++;
+                continue;
+            }
+
+            $roleName = strtolower($user->roles->first()->name);
+
+            if ($roleName === 'admin') {
+                if ($user->limited) {
+                    $userStats['admins_limitados']++;
+                } else {
+                    $userStats['admins_full']++;
+                }
+            } elseif ($roleName === 'colaborador') {
+                $userStats['colaboradores']++;
+            } elseif ($roleName === 'cliente') {
+                $userStats['clientes']++;
+            } else {
+                $userStats['otros']++;
+            }
+        }
+
+        // Clientes registrados
+        $clientsCount = Client::where('shop_id', $id)->count();
+        $clientsActivos = Client::where('shop_id', $id)->where('active', 1)->count();
+
+        // Notas de venta (receipts)
+        $receiptsTotal = Receipt::where('shop_id', $id)->count();
+        $receiptsUltimos30Dias = Receipt::where('shop_id', $id)
+            ->where('created_at', '>=', now()->subDays(30))
+            ->count();
+        $ultimaVenta = Receipt::where('shop_id', $id)
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+        // Tareas
+        $tasksTotal = Task::where('shop_id', $id)->count();
+        $tasksPendientes = Task::where('shop_id', $id)
+            ->where('status', 'PENDIENTE')
+            ->count();
+        $tasksUltimos30Dias = Task::where('shop_id', $id)
+            ->where('created_at', '>=', now()->subDays(30))
+            ->count();
+
+        // Determinar nivel de actividad
+        $actividadScore = 0;
+        if ($clientsCount > 0) $actividadScore += 1;
+        if ($receiptsTotal > 0) $actividadScore += 1;
+        if ($receiptsUltimos30Dias > 0) $actividadScore += 2;
+        if ($tasksTotal > 0) $actividadScore += 1;
+
+        $nivelActividad = 'sin_actividad';
+        if ($actividadScore >= 4) {
+            $nivelActividad = 'alta';
+        } elseif ($actividadScore >= 2) {
+            $nivelActividad = 'media';
+        } elseif ($actividadScore >= 1) {
+            $nivelActividad = 'baja';
+        }
+
+        return response()->json([
+            'ok' => true,
+            'shop' => [
+                'id' => $shop->id,
+                'name' => $shop->name,
+                'created_at' => $shop->created_at,
+                'subscription_status' => $shop->subscription_status,
+                'plan_id' => $shop->plan_id,
+            ],
+            'usuarios' => $userStats,
+            'clientes' => [
+                'total' => $clientsCount,
+                'activos' => $clientsActivos,
+            ],
+            'ventas' => [
+                'total' => $receiptsTotal,
+                'ultimos_30_dias' => $receiptsUltimos30Dias,
+                'ultima_venta' => $ultimaVenta ? $ultimaVenta->created_at->format('d/m/Y H:i') : null,
+            ],
+            'tareas' => [
+                'total' => $tasksTotal,
+                'pendientes' => $tasksPendientes,
+                'ultimos_30_dias' => $tasksUltimos30Dias,
+            ],
+            'nivel_actividad' => $nivelActividad,
+        ]);
+    }
 }

@@ -37,6 +37,16 @@ class Shop extends Model
         return $this->hasMany(Client::class);
     }
 
+    public function receipts()
+    {
+        return $this->hasMany(Receipt::class);
+    }
+
+    public function tasks()
+    {
+        return $this->hasMany(Task::class);
+    }
+
     // Relaciones de suscripción
     public function owner()
     {
@@ -89,16 +99,16 @@ class Shop extends Model
     }
 
     /**
-     * Días restantes de suscripción
+     * Días restantes de suscripción (entero)
      */
     public function daysRemaining()
     {
         if ($this->is_trial && $this->trial_ends_at) {
-            return now()->diffInDays($this->trial_ends_at, false);
+            return (int) now()->diffInDays($this->trial_ends_at, false);
         }
 
         if ($this->subscription_ends_at) {
-            return now()->diffInDays($this->subscription_ends_at, false);
+            return (int) now()->diffInDays($this->subscription_ends_at, false);
         }
 
         return 0;

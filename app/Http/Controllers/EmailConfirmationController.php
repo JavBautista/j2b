@@ -92,17 +92,22 @@ class EmailConfirmationController extends Controller
             }
 
             try {
-                // 2. Obtener configuración de trial desde BD
+                // 2. Obtener configuración inicial desde BD (se guarda en la tienda para personalización futura)
                 $trialDays = SubscriptionSetting::get('trial_days', 30);
+                $gracePeriodDays = SubscriptionSetting::get('grace_period_days', 7);
+                $plan = \App\Models\Plan::find(2); // Plan BASIC
 
                 // 3. Crear la tienda (Shop) con datos completos de suscripción
                 $shop = Shop::create([
                     'plan_id' => 2, // Plan BASIC para trial
+                    'monthly_price' => $plan ? $plan->price : null, // Precio inicial del plan
                     'active' => 1, // Activada por defecto
                     'name' => $registro->shop,
                     'cutoff' => now()->day, // Corte diario por defecto
                     'is_trial' => true,
+                    'trial_days' => $trialDays, // Guardar días de trial asignados
                     'trial_ends_at' => now()->addDays($trialDays),
+                    'grace_period_days' => $gracePeriodDays, // Guardar días de gracia asignados
                     'subscription_status' => 'trial'
                 ]);
 

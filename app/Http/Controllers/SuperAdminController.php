@@ -41,16 +41,39 @@ class SuperAdminController extends Controller
     /**
      * Página de gestión de suscripciones de shops
      */
-    public function subscriptionManagement()
+    public function subscriptionManagement(Request $request)
     {
-        $shops = Shop::with(['plan', 'owner'])
-            ->orderBy('subscription_status')
+        $query = Shop::with(['plan', 'owner']);
+
+        // Filtro por búsqueda de nombre
+        if ($request->filled('buscar')) {
+            $query->where('name', 'like', '%' . $request->buscar . '%');
+        }
+
+        // Filtro por plan
+        if ($request->filled('plan_id')) {
+            $query->where('plan_id', $request->plan_id);
+        }
+
+        // Filtro por estado de suscripción
+        if ($request->filled('estado')) {
+            $query->where('subscription_status', $request->estado);
+        }
+
+        // Filtro por activo/inactivo
+        if ($request->filled('activo')) {
+            $query->where('active', $request->activo);
+        }
+
+        $shops = $query->orderBy('subscription_status')
             ->orderBy('id', 'desc')
-            ->paginate(20);
+            ->paginate(20)
+            ->withQueryString(); // Mantener filtros en paginación
 
         $plans = Plan::where('active', true)->get();
+        $basicPlan = Plan::find(2); // Plan BASIC para valores por defecto
 
-        return view('superadmin.subscription_management', compact('shops', 'plans'));
+        return view('superadmin.subscription_management', compact('shops', 'plans', 'basicPlan'));
     }
 
     /**
@@ -120,6 +143,7 @@ class SuperAdminController extends Controller
         // Actualizar shop
         $shop->update([
             'plan_id' => $plan->id,
+            'monthly_price' => $totalAmount, // Guardar precio mensual (con IVA) de esta tienda
             'is_trial' => false,
             'subscription_status' => 'active',
             'subscription_ends_at' => now()->addMonths($request->duration_months),
@@ -200,7 +224,7 @@ class SuperAdminController extends Controller
     }
 
     /**
-     * Asignar owner a un shop
+     * Asignar admin principal a un shop
      */
     public function assignOwner(Request $request, $id)
     {
@@ -221,20 +245,26 @@ class SuperAdminController extends Controller
             return redirect()->back()->with('error', 'El usuario seleccionado debe tener rol Admin');
         }
 
+        // Verificar que el usuario no es limitado (debe ser admin full)
+        if ($user->limited) {
+            return redirect()->back()->with('error', 'El usuario seleccionado es limitado. Solo usuarios Admin full pueden ser asignados.');
+        }
+
         $shop->update([
             'owner_user_id' => $request->owner_user_id,
         ]);
 
-        return redirect()->back()->with('success', "Owner asignado correctamente a {$shop->name}");
+        return redirect()->back()->with('success', "Admin principal asignado correctamente a {$shop->name}");
     }
 
     /**
-     * Obtener usuarios admin de un shop (AJAX)
+     * Obtener usuarios admin full (no limitados) de un shop (AJAX)
      */
     public function getShopUsers($id)
     {
         $shop = Shop::findOrFail($id);
         $users = \App\Models\User::where('shop_id', $shop->id)
+            ->where('limited', 0) // Solo usuarios full, no limitados
             ->whereHas('roles', function($query) {
                 $query->where('name', 'admin');
             })
@@ -244,7 +274,9 @@ class SuperAdminController extends Controller
     }
 
     /**
-     * Desactivar/Reactivar shop (y todos sus usuarios)
+     * Desactivar/Reactivar shop
+     * - Desactivar: desactiva tienda + TODOS los usuarios
+     * - Reactivar: activa tienda + SOLO el owner
      */
     public function toggleShopActive($id)
     {
@@ -258,13 +290,46 @@ class SuperAdminController extends Controller
             'subscription_status' => $newStatus ? 'active' : 'cancelled',
         ]);
 
-        // Desactivar/Reactivar TODOS los usuarios de esta tienda
-        \App\Models\User::where('shop_id', $shop->id)
-            ->update(['active' => $newStatus]);
+        if ($newStatus) {
+            // REACTIVAR: Solo activar el owner de la tienda
+            if ($shop->owner_user_id) {
+                \App\Models\User::where('id', $shop->owner_user_id)
+                    ->update(['active' => true]);
 
-        $action = $newStatus ? 'reactivada' : 'desactivada';
-        $userCount = \App\Models\User::where('shop_id', $shop->id)->count();
+                $ownerName = $shop->owner ? $shop->owner->name : 'Owner';
+                return redirect()->back()->with('success', "Tienda {$shop->name} reactivada. Usuario owner ({$ownerName}) reactivado. Los demás usuarios deben reactivarse manualmente.");
+            } else {
+                return redirect()->back()->with('success', "Tienda {$shop->name} reactivada. No tiene owner asignado, debes reactivar usuarios manualmente.");
+            }
+        } else {
+            // DESACTIVAR: Desactivar TODOS los usuarios de esta tienda
+            $userCount = \App\Models\User::where('shop_id', $shop->id)->count();
+            \App\Models\User::where('shop_id', $shop->id)
+                ->update(['active' => false]);
 
-        return redirect()->back()->with('success', "Tienda {$shop->name} {$action}. {$userCount} usuarios también fueron {$action}s.");
+            return redirect()->back()->with('success', "Tienda {$shop->name} desactivada. {$userCount} usuarios fueron desactivados.");
+        }
+    }
+
+    /**
+     * Actualizar configuración personalizada de una tienda
+     */
+    public function updateShopConfig(Request $request, $id)
+    {
+        $shop = Shop::findOrFail($id);
+
+        $request->validate([
+            'monthly_price' => 'required|numeric|min:0',
+            'trial_days' => 'required|integer|min:0|max:365',
+            'grace_period_days' => 'required|integer|min:0|max:30',
+        ]);
+
+        $shop->update([
+            'monthly_price' => $request->monthly_price,
+            'trial_days' => $request->trial_days,
+            'grace_period_days' => $request->grace_period_days,
+        ]);
+
+        return redirect()->back()->with('success', "Configuración de {$shop->name} actualizada correctamente.");
     }
 }

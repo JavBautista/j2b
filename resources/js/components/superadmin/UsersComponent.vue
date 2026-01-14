@@ -36,6 +36,10 @@
                                 <option value="active">Activos</option>
                                 <option value="inactive">Inactivos</option>
                             </select>
+                            <select class="j2b-select" style="width: auto; min-width: 140px;" v-model="shop">
+                                <option value="">Todas las tiendas</option>
+                                <option v-for="s in arrayShops" :key="s.id" :value="s.id">{{ s.name }}</option>
+                            </select>
                             <select class="j2b-select" style="width: auto; min-width: 120px;" v-model="rol">
                                 <option value="">Todos los roles</option>
                                 <option v-for="r in arrayRoles" :key="r.id" :value="r.id">{{ r.name }}</option>
@@ -61,6 +65,7 @@
                                 <th>Usuario</th>
                                 <th>Tienda</th>
                                 <th style="width: 120px;">Rol</th>
+                                <th style="width: 100px;">Acceso</th>
                                 <th style="width: 100px;">Estado</th>
                                 <th style="width: 160px;">Acciones</th>
                             </tr>
@@ -96,6 +101,17 @@
                                       <span v-else class="j2b-badge j2b-badge-outline">Sin rol</span>
                                   </td>
                                   <td>
+                                      <template v-if="user.roles && user.roles.length && user.roles[0].name.toLowerCase() === 'admin'">
+                                          <span v-if="!user.limited" class="j2b-badge j2b-badge-success">
+                                              <i class="fa fa-crown"></i> Full
+                                          </span>
+                                          <span v-else class="j2b-badge j2b-badge-warning">
+                                              <i class="fa fa-lock"></i> Limitado
+                                          </span>
+                                      </template>
+                                      <span v-else class="j2b-text-muted">-</span>
+                                  </td>
+                                  <td>
                                       <span v-if="user.active" class="j2b-badge j2b-badge-success">
                                           <i class="fa fa-check-circle"></i> Activo
                                       </span>
@@ -114,6 +130,9 @@
                                       <div v-else class="d-flex gap-1">
                                           <button class="j2b-btn j2b-btn-sm j2b-btn-secondary" @click="abrirModal('user','actualizar_datos', user)" title="Editar">
                                               <i class="fa fa-edit"></i>
+                                          </button>
+                                          <button class="j2b-btn j2b-btn-sm j2b-btn-info" @click="abrirModalEmail(user)" title="Cambiar Email">
+                                              <i class="fa fa-envelope"></i>
                                           </button>
                                           <button class="j2b-btn j2b-btn-sm j2b-btn-outline" @click="resetearPassword(user.id)" title="Resetear Contraseña">
                                               <i class="fa fa-key"></i>
@@ -137,7 +156,7 @@
                                   </td>
                               </tr>
                               <tr v-if="arrayUsers.length === 0">
-                                  <td colspan="6" class="text-center py-5">
+                                  <td colspan="7" class="text-center py-5">
                                       <i class="fa fa-users fa-3x mb-3" style="color: var(--j2b-gray-300);"></i>
                                       <p style="color: var(--j2b-gray-500);">No se encontraron usuarios</p>
                                   </td>
@@ -276,6 +295,58 @@
     </div>
     <!--Fin del modal-->
 
+    <!--Modal Cambiar Email-->
+    <div class="modal fade" tabindex="-1" :class="{'mostrar':modalEmail}" role="dialog" style="display: none;" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content j2b-modal-content">
+                <div class="modal-header j2b-modal-header">
+                    <h5 class="modal-title">
+                        <i class="fa fa-envelope" style="color: var(--j2b-primary);"></i>
+                        Cambiar Email
+                    </h5>
+                    <button type="button" class="j2b-modal-close" @click="cerrarModalEmail()" aria-label="Close">
+                        <i class="fa fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body j2b-modal-body">
+                    <div class="j2b-banner-alert j2b-banner-info mb-3">
+                        <i class="fa fa-user"></i>
+                        <div>
+                            <strong>Usuario:</strong> {{ emailUserName }}
+                        </div>
+                    </div>
+
+                    <div class="j2b-form-group mb-3">
+                        <label class="j2b-label">Email Actual</label>
+                        <input type="email" class="j2b-input" :value="emailActual" disabled style="background-color: var(--j2b-gray-100);">
+                    </div>
+
+                    <div class="j2b-form-group mb-3">
+                        <label class="j2b-label"><span style="color: var(--j2b-danger);">*</span> Nuevo Email</label>
+                        <input type="email" class="j2b-input" v-model="emailNuevo" placeholder="nuevo@email.com" required>
+                    </div>
+
+                    <div class="j2b-form-group">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="checkVerificado" v-model="emailMarcarVerificado">
+                            <label class="form-check-label" for="checkVerificado">
+                                <i class="fa fa-check-circle text-success"></i> Marcar como verificado
+                            </label>
+                        </div>
+                        <small class="text-muted">Si no se marca, el usuario deberá confirmar su email.</small>
+                    </div>
+                </div>
+                <div class="modal-footer j2b-modal-footer">
+                    <button type="button" class="j2b-btn j2b-btn-secondary" @click="cerrarModalEmail()">Cancelar</button>
+                    <button type="button" class="j2b-btn j2b-btn-primary" @click="actualizarEmail()">
+                        <i class="fa fa-save"></i> Guardar Email
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!--Fin Modal Email-->
+
 </div>
 </template>
 
@@ -298,6 +369,7 @@
               criterio:'name',
               buscar:'',
               estatus:'active',
+              shop:'',
               rol:'',
 
               shop_id:null,
@@ -315,6 +387,14 @@
               tipoAccion:0,
               errorUser:0,
               errorMostrarMsjUser:[],
+
+              // Modal Email
+              modalEmail: 0,
+              emailUserId: 0,
+              emailUserName: '',
+              emailActual: '',
+              emailNuevo: '',
+              emailMarcarVerificado: true,
             }
         },
         computed:{
@@ -346,9 +426,9 @@
            }
         },
         methods : {
-            loadUsers(page, buscar, criterio, estatus, rol){
+            loadUsers(page, buscar, criterio, estatus, shop, rol){
                 let me=this;
-                var url = '/superadmin/users/get?page='+page+'&buscar='+buscar+'&criterio='+criterio+'&estatus='+estatus+'&rol='+rol;
+                var url = '/superadmin/users/get?page='+page+'&buscar='+buscar+'&criterio='+criterio+'&estatus='+estatus+'&shop='+shop+'&rol='+rol;
                 axios.get(url).then(function (response){
                     var respuesta  = response.data;
                     me.arrayUsers = respuesta.users.data;
@@ -361,12 +441,12 @@
                   });
             },
             buscarUsuarios(){
-                this.loadUsers(1, this.buscar, this.criterio, this.estatus, this.rol);
+                this.loadUsers(1, this.buscar, this.criterio, this.estatus, this.shop, this.rol);
             },
             cambiarPagina(page){
                 let me = this;
                 me.pagination.current_page = page;
-                me.loadUsers(page, me.buscar, me.criterio, me.estatus, me.rol);
+                me.loadUsers(page, me.buscar, me.criterio, me.estatus, me.shop, me.rol);
             },
             actualizarAActivo(id){
                 const swalWithBootstrapButtons = Swal.mixin({
@@ -391,7 +471,7 @@
                     axios.put('/superadmin/users/active',{
                         'id': id
                     }).then(function (response){
-                        me.loadUsers(me.pagination.current_page, me.buscar, me.criterio, me.estatus, me.rol);
+                        me.loadUsers(me.pagination.current_page, me.buscar, me.criterio, me.estatus, me.shop, me.rol);
                         swalWithBootstrapButtons.fire(
                           '¡Activo!',
                           'Actualizacion exitosa.',
@@ -427,7 +507,7 @@
                     axios.put('/superadmin/users/inactive',{
                         'id': id
                     }).then(function (response){
-                        me.loadUsers(me.pagination.current_page, me.buscar, me.criterio, me.estatus, me.rol);
+                        me.loadUsers(me.pagination.current_page, me.buscar, me.criterio, me.estatus, me.shop, me.rol);
                         swalWithBootstrapButtons.fire(
                           '¡Inactivo!',
                           'Actualizacion exitosa.',
@@ -624,7 +704,7 @@
                   'role_id':me.role_id,
                 }).then(function (response){
                   me.cerrarModal();
-                  me.loadUsers(me.pagination.current_page, me.buscar, me.criterio, me.estatus, me.rol)
+                  me.loadUsers(me.pagination.current_page, me.buscar, me.criterio, me.estatus, me.shop, me.rol)
                   Swal.fire(
                     'Exito!',
                     'Usuario creado correctamente.',
@@ -632,11 +712,7 @@
                   );
                 }).catch(function (error){
                     console.log(error);
-                    Swal.fire(
-                        'Error!',
-                        'Ocurrio un error al guardar, consulte al administrador del sistema.',
-                        'error'
-                  );
+                    me.mostrarError(error);
                 });
             },
             actualizarDatos(){
@@ -653,7 +729,7 @@
                 }).then(function (response){
                   console.log(response)
                   me.cerrarModal();
-                  me.loadUsers(me.pagination.current_page, me.buscar, me.criterio, me.estatus, me.rol)
+                  me.loadUsers(me.pagination.current_page, me.buscar, me.criterio, me.estatus, me.shop, me.rol)
                   Swal.fire(
                     'Exito!',
                     'Actualización correcta.',
@@ -661,11 +737,7 @@
                   );
                 }).catch(function (error){
                     console.log(error);
-                    Swal.fire(
-                        'Error!',
-                        'Ocurrio un error al guardar, consulte al amdinistrador del sistema.',
-                        'error'
-                    );
+                    me.mostrarError(error);
                 });
             },
             validarDatos(accion){
@@ -732,9 +804,146 @@
                 this.modal=0;
                 this.tituloModal='';
             },
+            abrirModalEmail(user){
+                this.modalEmail = 1;
+                this.emailUserId = user.id;
+                this.emailUserName = user.name;
+                this.emailActual = user.email;
+                this.emailNuevo = user.email;
+                this.emailMarcarVerificado = true;
+            },
+            cerrarModalEmail(){
+                this.modalEmail = 0;
+                this.emailUserId = 0;
+                this.emailUserName = '';
+                this.emailActual = '';
+                this.emailNuevo = '';
+            },
+            actualizarEmail(){
+                if (!this.emailNuevo || !this.emailNuevo.trim()) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Campo Requerido',
+                        text: 'El email no puede estar vacío.',
+                    });
+                    return;
+                }
+
+                // Validar formato de email básico
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(this.emailNuevo)) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Formato Inválido',
+                        text: 'Por favor ingresa un email válido.',
+                    });
+                    return;
+                }
+
+                let me = this;
+                axios.put('/superadmin/users/update-email', {
+                    user_id: me.emailUserId,
+                    email: me.emailNuevo,
+                    mark_verified: me.emailMarcarVerificado
+                }).then(function(response){
+                    me.cerrarModalEmail();
+                    me.loadUsers(me.pagination.current_page, me.buscar, me.criterio, me.estatus, me.shop, me.rol);
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Email Actualizado',
+                        html: `El email ha sido cambiado a:<br><strong>${me.emailNuevo}</strong>`,
+                    });
+                }).catch(function(error){
+                    console.log(error);
+                    me.mostrarError(error);
+                });
+            },
+            mostrarError(error){
+                let titulo = 'Error';
+                let mensaje = '';
+                let icono = 'error';
+
+                // Sin respuesta del servidor (error de red/conexión)
+                if (!error.response) {
+                    titulo = 'Error de Conexión';
+                    mensaje = 'No se pudo conectar con el servidor. Verifica tu conexión a internet.';
+                    Swal.fire(titulo, mensaje, icono);
+                    return;
+                }
+
+                const status = error.response.status;
+                const data = error.response.data;
+
+                switch (status) {
+                    case 422: // Errores de validación
+                        titulo = 'Datos Inválidos';
+                        icono = 'warning';
+                        if (data.errors) {
+                            // Extraer todos los mensajes de error de validación
+                            const errores = Object.values(data.errors).flat();
+                            mensaje = errores.map(err => this.traducirErrorValidacion(err)).join('<br>');
+                        } else if (data.message) {
+                            mensaje = this.traducirErrorValidacion(data.message);
+                        } else {
+                            mensaje = 'Por favor verifica los datos ingresados.';
+                        }
+                        break;
+
+                    case 403: // Forbidden
+                        titulo = 'Acceso Denegado';
+                        icono = 'warning';
+                        mensaje = data.error || data.message || 'No tienes permiso para realizar esta acción.';
+                        break;
+
+                    case 404: // Not Found
+                        titulo = 'No Encontrado';
+                        icono = 'warning';
+                        mensaje = data.message || 'El recurso solicitado no existe.';
+                        break;
+
+                    case 401: // Unauthorized
+                        titulo = 'Sesión Expirada';
+                        icono = 'warning';
+                        mensaje = 'Tu sesión ha expirado. Por favor inicia sesión nuevamente.';
+                        break;
+
+                    case 500: // Error de servidor
+                        titulo = 'Error del Servidor';
+                        mensaje = 'Ocurrió un error interno en el servidor. Contacta al administrador del sistema.';
+                        break;
+
+                    default:
+                        titulo = 'Error';
+                        mensaje = data.message || 'Ocurrió un error inesperado. Intenta nuevamente.';
+                }
+
+                Swal.fire({
+                    icon: icono,
+                    title: titulo,
+                    html: mensaje,
+                    confirmButtonText: 'Entendido'
+                });
+            },
+            traducirErrorValidacion(mensaje){
+                // Traducciones de mensajes comunes de Laravel
+                const traducciones = {
+                    'The email has already been taken.': 'El correo electrónico ya está registrado.',
+                    'The email field is required.': 'El correo electrónico es obligatorio.',
+                    'The email must be a valid email address.': 'El correo electrónico no es válido.',
+                    'The name field is required.': 'El nombre es obligatorio.',
+                    'The password field is required.': 'La contraseña es obligatoria.',
+                    'The password must be at least 8 characters.': 'La contraseña debe tener al menos 8 caracteres.',
+                    'The shop_id field is required.': 'Debe seleccionar una tienda.',
+                    'The role_id field is required.': 'Debe seleccionar un rol.',
+                    'The selected shop_id is invalid.': 'La tienda seleccionada no es válida.',
+                    'The selected role_id is invalid.': 'El rol seleccionado no es válido.',
+                    'The selected user_id is invalid.': 'El usuario seleccionado no es válido.',
+                };
+                return traducciones[mensaje] || mensaje;
+            },
         },
         mounted() {
-            this.loadUsers(1, this.buscar, this.criterio, this.estatus, this.rol);
+            this.loadUsers(1, this.buscar, this.criterio, this.estatus, this.shop, this.rol);
         }
     }
 </script>

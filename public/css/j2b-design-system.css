@@ -254,6 +254,19 @@
   text-decoration: none;
 }
 
+/* Info (Cyan) */
+.j2b-btn-info {
+  background: var(--j2b-info);
+  color: var(--j2b-dark);
+}
+
+.j2b-btn-info:hover {
+  background: #00c4e0;
+  box-shadow: 0 0 15px rgba(0, 217, 245, 0.4);
+  color: var(--j2b-dark);
+  text-decoration: none;
+}
+
 /* Tamaños */
 .j2b-btn-sm {
   padding: var(--j2b-space-2) var(--j2b-space-4);

@@ -1,4 +1,13 @@
-{{-- Modal Asignar Owner --}}
+{{-- Modal Asignar Admin Principal --}}
+@php
+    // Precargar usuarios admin full de esta tienda
+    $adminUsers = \App\Models\User::where('shop_id', $shop->id)
+        ->where('limited', 0)
+        ->whereHas('roles', function($query) {
+            $query->where('name', 'admin');
+        })
+        ->get(['id', 'name', 'email']);
+@endphp
 <div class="modal fade j2b-modal" id="assignOwnerModal{{ $shop->id }}" tabindex="-1" aria-labelledby="assignOwnerModalLabel{{ $shop->id }}" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -6,7 +15,7 @@
                 @csrf
                 <div class="modal-header">
                     <h5 class="modal-title" id="assignOwnerModalLabel{{ $shop->id }}">
-                        <i class="fa fa-user-plus"></i> Asignar Dueno
+                        <i class="fa fa-user-plus"></i> Asignar Admin Principal
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                 </div>
@@ -21,7 +30,7 @@
                                 <strong>{{ $shop->name }}</strong>
                                 <br>
                                 <small class="j2b-text-muted">
-                                    Esta tienda no tiene un dueno asignado
+                                    Esta tienda no tiene un admin principal asignado
                                 </small>
                             </div>
                         </div>
@@ -33,9 +42,16 @@
                             <i class="fa fa-user j2b-text-primary"></i> Seleccionar Usuario Admin
                         </label>
                         <select class="j2b-select" id="owner_user_id{{ $shop->id }}" name="owner_user_id" required>
-                            <option value="">Cargando usuarios...</option>
+                            @if($adminUsers->isEmpty())
+                                <option value="">No hay usuarios admin disponibles</option>
+                            @else
+                                <option value="">Seleccionar usuario...</option>
+                                @foreach($adminUsers as $user)
+                                    <option value="{{ $user->id }}">{{ $user->name }} ({{ $user->email }})</option>
+                                @endforeach
+                            @endif
                         </select>
-                        <small class="j2b-text-muted">Solo se muestran usuarios con rol Admin de esta tienda</small>
+                        <small class="j2b-text-muted">Solo usuarios Admin full (no limitados) de esta tienda</small>
                     </div>
 
                     {{-- Info adicional --}}
@@ -43,11 +59,11 @@
                         <div class="j2b-card-body py-3">
                             <small style="color: var(--j2b-gray-600);">
                                 <i class="fa fa-info-circle j2b-text-primary"></i>
-                                El <strong>Dueno</strong> es el usuario principal de la tienda que recibira:
+                                El <strong>Admin Principal</strong> es el usuario responsable de la cuenta:
                                 <ul class="mb-0 mt-2">
-                                    <li>Notificaciones de vencimiento</li>
+                                    <li>Recibe notificaciones de vencimiento</li>
                                     <li>Emails de recordatorio de pago</li>
-                                    <li>Acceso a la facturacion</li>
+                                    <li>Se reactiva automaticamente al reactivar la tienda</li>
                                 </ul>
                             </small>
                         </div>
@@ -57,48 +73,11 @@
                     <button type="button" class="j2b-btn j2b-btn-secondary" data-bs-dismiss="modal">
                         <i class="fa fa-times"></i> Cancelar
                     </button>
-                    <button type="submit" class="j2b-btn j2b-btn-primary" id="assignOwnerBtn{{ $shop->id }}" disabled>
-                        <i class="fa fa-user-plus"></i> Asignar Dueno
+                    <button type="submit" class="j2b-btn j2b-btn-primary" {{ $adminUsers->isEmpty() ? 'disabled' : '' }}>
+                        <i class="fa fa-user-plus"></i> Asignar
                     </button>
                 </div>
             </form>
         </div>
     </div>
 </div>
-
-<script>
-// Cargar usuarios cuando se abre el modal
-document.getElementById('assignOwnerModal{{ $shop->id }}').addEventListener('shown.bs.modal', function () {
-    const select = document.getElementById('owner_user_id{{ $shop->id }}');
-    const btn = document.getElementById('assignOwnerBtn{{ $shop->id }}');
-
-    select.innerHTML = '<option value="">Cargando usuarios...</option>';
-    btn.disabled = true;
-
-    fetch('{{ route("superadmin.shops.users", $shop->id) }}')
-        .then(response => response.json())
-        .then(users => {
-            if (users.length === 0) {
-                select.innerHTML = '<option value="">No hay usuarios admin disponibles</option>';
-            } else {
-                select.innerHTML = '<option value="">Seleccionar usuario...</option>';
-                users.forEach(user => {
-                    const option = document.createElement('option');
-                    option.value = user.id;
-                    option.textContent = user.name + ' (' + user.email + ')';
-                    select.appendChild(option);
-                });
-                btn.disabled = false;
-            }
-        })
-        .catch(error => {
-            console.error('Error cargando usuarios:', error);
-            select.innerHTML = '<option value="">Error al cargar usuarios</option>';
-        });
-});
-
-// Habilitar/deshabilitar boton segun seleccion
-document.getElementById('owner_user_id{{ $shop->id }}').addEventListener('change', function() {
-    document.getElementById('assignOwnerBtn{{ $shop->id }}').disabled = !this.value;
-});
-</script>

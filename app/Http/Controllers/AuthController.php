@@ -163,6 +163,22 @@ class AuthController extends Controller
             $user->shop->load('plan.features');
         }
 
+        // 🔥 NUEVO: Validar que la tienda esté activa (por si fue desactivada después del login)
+        if ($user->shop && !$user->shop->active) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Tu tienda ha sido desactivada. Contacta al soporte para más información.'
+            ], 403);
+        }
+
+        // 🔥 NUEVO: Validar que el usuario esté activo (por si fue desactivado después del login)
+        if (!$user->active) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Tu usuario ha sido desactivado. Contacta al administrador de tu tienda.'
+            ], 403);
+        }
+
         return response()->json([
             'ok'=>true,
             'usuario'=>$user,

@@ -107,8 +107,11 @@
                                   </td>
                                   <td>
                                     <div class="d-flex gap-1">
-                                        <button class="j2b-btn j2b-btn-sm j2b-btn-outline" @click="abrirModal('shop','ver_datos', shop)" title="Ver">
+                                        <button class="j2b-btn j2b-btn-sm j2b-btn-outline" @click="abrirModal('shop','ver_datos', shop)" title="Ver Info">
                                             <i class="fa fa-eye"></i>
+                                        </button>
+                                        <button class="j2b-btn j2b-btn-sm j2b-btn-info" @click="verEstadisticas(shop)" title="Ver Actividad">
+                                            <i class="fa fa-bar-chart"></i>
                                         </button>
                                         <button class="j2b-btn j2b-btn-sm j2b-btn-secondary" @click="abrirModal('shop','actualizar_datos', shop)" title="Editar">
                                             <i class="fa fa-edit"></i>
@@ -477,6 +480,170 @@
     </div>
     <!--Fin del modal-->
 
+    <!--Modal Estadísticas/Actividad-->
+    <div class="modal fade" tabindex="-1" :class="{'mostrar':modalStats}" role="dialog" style="display: none;" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content j2b-modal-content">
+                <div class="modal-header j2b-modal-header">
+                    <h5 class="modal-title">
+                        <i class="fa fa-bar-chart" style="color: var(--j2b-primary);"></i>
+                        Actividad de la Tienda
+                    </h5>
+                    <button type="button" class="j2b-modal-close" @click="cerrarModalStats()" aria-label="Close">
+                        <i class="fa fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body j2b-modal-body">
+
+                    <!-- Loading -->
+                    <div v-if="statsLoading" class="text-center py-5">
+                        <i class="fa fa-spinner fa-spin fa-3x" style="color: var(--j2b-primary);"></i>
+                        <p class="mt-3" style="color: var(--j2b-gray-500);">Cargando estadísticas...</p>
+                    </div>
+
+                    <!-- Contenido -->
+                    <div v-if="statsData && !statsLoading">
+
+                        <!-- Header con nombre y nivel de actividad -->
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <div>
+                                <h5 class="mb-1" style="color: var(--j2b-dark);">{{ statsData.shop.name }}</h5>
+                                <small style="color: var(--j2b-gray-500);">ID: {{ statsData.shop.id }}</small>
+                            </div>
+                            <div class="text-right">
+                                <span class="j2b-badge" :class="getNivelActividadClass(statsData.nivel_actividad)" style="font-size: 14px; padding: 8px 16px;">
+                                    <i class="fa fa-signal"></i> Actividad {{ getNivelActividadTexto(statsData.nivel_actividad) }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Usuarios -->
+                        <div class="j2b-form-section">
+                            <h6 class="j2b-form-section-title">
+                                <i class="fa fa-users"></i> Usuarios ({{ statsData.usuarios.total }})
+                            </h6>
+                            <div class="row">
+                                <div class="col-md-3 col-6 mb-2">
+                                    <div class="stat-card stat-card-primary">
+                                        <div class="stat-number">{{ statsData.usuarios.admins_full }}</div>
+                                        <div class="stat-label">Admin Full</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 col-6 mb-2">
+                                    <div class="stat-card stat-card-warning">
+                                        <div class="stat-number">{{ statsData.usuarios.admins_limitados }}</div>
+                                        <div class="stat-label">Admin Limitado</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 col-6 mb-2">
+                                    <div class="stat-card stat-card-info">
+                                        <div class="stat-number">{{ statsData.usuarios.colaboradores }}</div>
+                                        <div class="stat-label">Colaboradores</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 col-6 mb-2">
+                                    <div class="stat-card stat-card-success">
+                                        <div class="stat-number">{{ statsData.usuarios.clientes }}</div>
+                                        <div class="stat-label">Clientes (user)</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <small style="color: var(--j2b-gray-500);">
+                                    <i class="fa fa-check-circle text-success"></i> {{ statsData.usuarios.activos }} activos
+                                    &nbsp;|&nbsp;
+                                    <i class="fa fa-times-circle text-danger"></i> {{ statsData.usuarios.inactivos }} inactivos
+                                </small>
+                            </div>
+                        </div>
+
+                        <!-- Clientes Registrados -->
+                        <div class="j2b-form-section">
+                            <h6 class="j2b-form-section-title">
+                                <i class="fa fa-address-book"></i> Clientes Registrados
+                            </h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="stat-card stat-card-primary">
+                                        <div class="stat-number">{{ statsData.clientes.total }}</div>
+                                        <div class="stat-label">Total Clientes</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="stat-card stat-card-success">
+                                        <div class="stat-number">{{ statsData.clientes.activos }}</div>
+                                        <div class="stat-label">Clientes Activos</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Ventas -->
+                        <div class="j2b-form-section">
+                            <h6 class="j2b-form-section-title">
+                                <i class="fa fa-shopping-cart"></i> Notas de Venta
+                            </h6>
+                            <div class="row">
+                                <div class="col-md-4 mb-2">
+                                    <div class="stat-card stat-card-primary">
+                                        <div class="stat-number">{{ statsData.ventas.total }}</div>
+                                        <div class="stat-label">Total Ventas</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <div class="stat-card stat-card-success">
+                                        <div class="stat-number">{{ statsData.ventas.ultimos_30_dias }}</div>
+                                        <div class="stat-label">Últimos 30 días</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <div class="stat-card stat-card-info">
+                                        <div class="stat-number" style="font-size: 14px;">{{ statsData.ventas.ultima_venta || 'Nunca' }}</div>
+                                        <div class="stat-label">Última Venta</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tareas -->
+                        <div class="j2b-form-section">
+                            <h6 class="j2b-form-section-title">
+                                <i class="fa fa-tasks"></i> Tareas
+                            </h6>
+                            <div class="row">
+                                <div class="col-md-4 mb-2">
+                                    <div class="stat-card stat-card-primary">
+                                        <div class="stat-number">{{ statsData.tareas.total }}</div>
+                                        <div class="stat-label">Total Tareas</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <div class="stat-card stat-card-warning">
+                                        <div class="stat-number">{{ statsData.tareas.pendientes }}</div>
+                                        <div class="stat-label">Pendientes</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <div class="stat-card stat-card-success">
+                                        <div class="stat-number">{{ statsData.tareas.ultimos_30_dias }}</div>
+                                        <div class="stat-label">Últimos 30 días</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+                <div class="modal-footer j2b-modal-footer">
+                    <button type="button" class="j2b-btn j2b-btn-secondary" @click="cerrarModalStats()">
+                        <i class="fa fa-times"></i> Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!--Fin Modal Estadísticas-->
+
 </div>
 </template>
 
@@ -537,6 +704,11 @@
               tipoAccion:0,
               errorShop:0,
               errorMostrarMsjShop:[],
+
+              // Modal Estadísticas
+              modalStats: 0,
+              statsLoading: false,
+              statsData: null,
             }
         },
         computed:{
@@ -995,6 +1167,46 @@
                 this.modal=0;
                 this.tituloModal='';
             },
+            verEstadisticas(shop){
+                this.modalStats = 1;
+                this.statsLoading = true;
+                this.statsData = null;
+
+                let me = this;
+                axios.get('/superadmin/shops/' + shop.id + '/stats')
+                .then(function(response){
+                    me.statsLoading = false;
+                    me.statsData = response.data;
+                })
+                .catch(function(error){
+                    me.statsLoading = false;
+                    console.log(error);
+                    Swal.fire('Error', 'No se pudieron cargar las estadísticas', 'error');
+                    me.cerrarModalStats();
+                });
+            },
+            cerrarModalStats(){
+                this.modalStats = 0;
+                this.statsData = null;
+            },
+            getNivelActividadClass(nivel){
+                const clases = {
+                    'alta': 'j2b-badge-success',
+                    'media': 'j2b-badge-warning',
+                    'baja': 'j2b-badge-danger',
+                    'sin_actividad': 'j2b-badge-dark'
+                };
+                return clases[nivel] || 'j2b-badge-outline';
+            },
+            getNivelActividadTexto(nivel){
+                const textos = {
+                    'alta': 'Alta',
+                    'media': 'Media',
+                    'baja': 'Baja',
+                    'sin_actividad': 'Sin Actividad'
+                };
+                return textos[nivel] || nivel;
+            },
         },
         mounted() {
             this.loadShops(1, this.buscar, this.criterio, this.estatus);
@@ -1125,4 +1337,58 @@
     /* Gap utility for older browsers */
     .gap-1 { gap: 0.25rem; }
     .gap-2 { gap: 0.5rem; }
+
+    /* Stat cards */
+    .stat-card {
+        background: var(--j2b-white);
+        border-radius: var(--j2b-radius-md);
+        padding: 1rem;
+        text-align: center;
+        border: 1px solid var(--j2b-gray-200);
+        transition: var(--j2b-transition-fast);
+    }
+
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--j2b-shadow-sm);
+    }
+
+    .stat-number {
+        font-size: 28px;
+        font-weight: 700;
+        line-height: 1.2;
+    }
+
+    .stat-label {
+        font-size: 12px;
+        color: var(--j2b-gray-500);
+        margin-top: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .stat-card-primary {
+        border-left: 4px solid var(--j2b-primary);
+    }
+    .stat-card-primary .stat-number { color: var(--j2b-primary); }
+
+    .stat-card-success {
+        border-left: 4px solid var(--j2b-success);
+    }
+    .stat-card-success .stat-number { color: var(--j2b-success); }
+
+    .stat-card-warning {
+        border-left: 4px solid var(--j2b-warning);
+    }
+    .stat-card-warning .stat-number { color: var(--j2b-warning); }
+
+    .stat-card-info {
+        border-left: 4px solid var(--j2b-info);
+    }
+    .stat-card-info .stat-number { color: var(--j2b-info); }
+
+    .stat-card-danger {
+        border-left: 4px solid var(--j2b-danger);
+    }
+    .stat-card-danger .stat-number { color: var(--j2b-danger); }
 </style>

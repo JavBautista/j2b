@@ -33,16 +33,20 @@ class CheckExpiredSubscriptions extends Command
     {
         $this->info('🔍 Verificando suscripciones vencidas...');
 
-        $gracePeriodDays = SubscriptionSetting::get('grace_period_days', 7);
+        // Días de gracia global (se usa como fallback si la tienda no tiene valor propio)
+        $globalGracePeriodDays = SubscriptionSetting::get('grace_period_days', 7);
 
         // 0. Verificar trials que están por vencer (alertas tempranas)
         $this->checkTrialsEnding();
 
+        // 0.5 Verificar suscripciones activas que están por vencer (alertas tempranas)
+        $this->checkSubscriptionsEnding();
+
         // 1. Verificar trials vencidos
-        $this->checkExpiredTrials($gracePeriodDays);
+        $this->checkExpiredTrials($globalGracePeriodDays);
 
         // 2. Verificar suscripciones vencidas (pasar a grace period)
-        $this->checkExpiredSubscriptions($gracePeriodDays);
+        $this->checkExpiredSubscriptions($globalGracePeriodDays);
 
         // 3. Verificar grace periods vencidos (bloquear shop)
         $this->checkExpiredGracePeriods();
@@ -51,7 +55,7 @@ class CheckExpiredSubscriptions extends Command
         return 0;
     }
 
-    private function checkExpiredTrials($gracePeriodDays)
+    private function checkExpiredTrials($globalGracePeriodDays)
     {
         $expiredTrials = Shop::where('is_trial', true)
             ->where('trial_ends_at', '<=', now())
@@ -59,6 +63,9 @@ class CheckExpiredSubscriptions extends Command
             ->get();
 
         foreach ($expiredTrials as $shop) {
+            // Usar días de gracia de la tienda si existe, sino el global
+            $gracePeriodDays = $shop->grace_period_days ?? $globalGracePeriodDays;
+
             $shop->update([
                 'is_trial' => false,
                 'subscription_status' => 'grace_period',
@@ -80,7 +87,7 @@ class CheckExpiredSubscriptions extends Command
         $this->info("Trials vencidos: {$expiredTrials->count()}");
     }
 
-    private function checkExpiredSubscriptions($gracePeriodDays)
+    private function checkExpiredSubscriptions($globalGracePeriodDays)
     {
         $expiredSubscriptions = Shop::where('is_trial', false)
             ->where('subscription_status', 'active')
@@ -88,6 +95,9 @@ class CheckExpiredSubscriptions extends Command
             ->get();
 
         foreach ($expiredSubscriptions as $shop) {
+            // Usar días de gracia de la tienda si existe, sino el global
+            $gracePeriodDays = $shop->grace_period_days ?? $globalGracePeriodDays;
+
             $shop->update([
                 'subscription_status' => 'grace_period',
                 'grace_period_ends_at' => now()->addDays($gracePeriodDays),
@@ -174,6 +184,44 @@ class CheckExpiredSubscriptions extends Command
         }
 
         $this->info("Alertas de trial: {$trialsEnding7Days->count()} (7 días) + {$trialsEnding3Days->count()} (3 días)");
+    }
+
+    /**
+     * Verificar suscripciones activas que están por vencer (7 y 3 días antes)
+     */
+    private function checkSubscriptionsEnding()
+    {
+        // Suscripciones activas que vencen en 7 días
+        $subsEnding7Days = Shop::where('is_trial', false)
+            ->where('subscription_status', 'active')
+            ->whereDate('subscription_ends_at', '=', now()->addDays(7)->startOfDay())
+            ->get();
+
+        foreach ($subsEnding7Days as $shop) {
+            $this->createNotification($shop, 'subscription_ending_7days',
+                '¡Tu suscripción vence en 7 días!',
+                'Tu suscripción está por vencer. Renueva tu plan para continuar usando J2B sin interrupciones.',
+                'subscription'
+            );
+            $this->info("📧 Shop {$shop->id} ({$shop->name}) - Suscripción vence en 7 días, notificación creada");
+        }
+
+        // Suscripciones activas que vencen en 3 días
+        $subsEnding3Days = Shop::where('is_trial', false)
+            ->where('subscription_status', 'active')
+            ->whereDate('subscription_ends_at', '=', now()->addDays(3)->startOfDay())
+            ->get();
+
+        foreach ($subsEnding3Days as $shop) {
+            $this->createNotification($shop, 'subscription_ending_3days',
+                '¡Tu suscripción vence en 3 días!',
+                'Solo te quedan 3 días de suscripción. ¡Renueva ahora para no perder acceso a tu tienda!',
+                'subscription'
+            );
+            $this->warn("📧 Shop {$shop->id} ({$shop->name}) - Suscripción vence en 3 días, notificación creada");
+        }
+
+        $this->info("Alertas de suscripción: {$subsEnding7Days->count()} (7 días) + {$subsEnding3Days->count()} (3 días)");
     }
 
     /**

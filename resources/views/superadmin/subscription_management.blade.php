@@ -56,6 +56,67 @@
         </div>
     </div>
 
+    <!-- Filtros -->
+    <div class="j2b-card mb-4">
+        <div class="j2b-card-body py-3">
+            <form method="GET" action="{{ route('superadmin.subscription-management') }}" class="row g-2 align-items-end">
+                <!-- Buscar por nombre -->
+                <div class="col-md-3">
+                    <label class="j2b-label mb-1"><i class="fa fa-search"></i> Buscar tienda</label>
+                    <input type="text" name="buscar" class="j2b-input" placeholder="Nombre de tienda..." value="{{ request('buscar') }}">
+                </div>
+
+                <!-- Filtro por Plan -->
+                <div class="col-md-2">
+                    <label class="j2b-label mb-1"><i class="fa fa-cube"></i> Plan</label>
+                    <select name="plan_id" class="j2b-select">
+                        <option value="">Todos</option>
+                        @foreach($plans as $plan)
+                            <option value="{{ $plan->id }}" {{ request('plan_id') == $plan->id ? 'selected' : '' }}>
+                                {{ $plan->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <!-- Filtro por Estado -->
+                <div class="col-md-2">
+                    <label class="j2b-label mb-1"><i class="fa fa-tag"></i> Estado</label>
+                    <select name="estado" class="j2b-select">
+                        <option value="">Todos</option>
+                        <option value="trial" {{ request('estado') == 'trial' ? 'selected' : '' }}>Trial</option>
+                        <option value="active" {{ request('estado') == 'active' ? 'selected' : '' }}>Activo</option>
+                        <option value="grace_period" {{ request('estado') == 'grace_period' ? 'selected' : '' }}>Gracia</option>
+                        <option value="expired" {{ request('estado') == 'expired' ? 'selected' : '' }}>Vencido</option>
+                        <option value="cancelled" {{ request('estado') == 'cancelled' ? 'selected' : '' }}>Cancelado</option>
+                    </select>
+                </div>
+
+                <!-- Filtro por Activo/Inactivo -->
+                <div class="col-md-2">
+                    <label class="j2b-label mb-1"><i class="fa fa-power-off"></i> Tienda</label>
+                    <select name="activo" class="j2b-select">
+                        <option value="">Todas</option>
+                        <option value="1" {{ request('activo') === '1' ? 'selected' : '' }}>Activas</option>
+                        <option value="0" {{ request('activo') === '0' ? 'selected' : '' }}>Inactivas</option>
+                    </select>
+                </div>
+
+                <!-- Botones -->
+                <div class="col-md-3">
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="j2b-btn j2b-btn-primary">
+                            <i class="fa fa-filter"></i> Filtrar
+                        </button>
+                        <a href="{{ route('superadmin.subscription-management') }}" class="j2b-btn j2b-btn-outline">
+                            <i class="fa fa-times"></i> Limpiar
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Mensaje de éxito -->
     @if(session('success'))
         <div class="j2b-banner-alert j2b-banner-success mb-4">
@@ -79,11 +140,13 @@
                         <tr>
                             <th style="width: 50px;">ID</th>
                             <th>Tienda</th>
+                            <th style="width: 80px;">Logo</th>
                             <th style="width: 120px;">Plan</th>
                             <th style="width: 100px;">Estado</th>
                             <th style="width: 100px;">Dias</th>
                             <th style="width: 100px;">Vence</th>
-                            <th style="width: 120px;">Dueno</th>
+                            <th style="width: 90px;">Creacion</th>
+                            <th style="width: 120px;">Admin</th>
                             <th style="width: 180px;">Acciones</th>
                         </tr>
                     </thead>
@@ -115,9 +178,29 @@
                                     </div>
                                 </td>
                                 <td>
+                                    @if($shop->logo)
+                                        <img src="{{ asset('storage/' . $shop->logo) }}" alt="{{ $shop->name }}"
+                                             style="max-width: 60px; max-height: 40px; border-radius: 4px; object-fit: contain;">
+                                    @else
+                                        <div style="width: 60px; height: 40px; background: var(--j2b-gray-100); border-radius: 4px; display: flex; align-items: center; justify-content: center;">
+                                            <i class="fa fa-image" style="color: var(--j2b-gray-400);"></i>
+                                        </div>
+                                    @endif
+                                </td>
+                                <td>
                                     @if($shop->plan)
                                         <span class="j2b-badge j2b-badge-primary">{{ $shop->plan->name }}</span>
-                                        <br><small style="color: var(--j2b-primary); font-weight: 600;">${{ $shop->plan->price }}</small>
+                                        <br>
+                                        @if($shop->monthly_price)
+                                            <small style="color: var(--j2b-primary); font-weight: 600;">${{ number_format($shop->monthly_price, 2) }}</small>
+                                            <button type="button" class="btn btn-link p-0 ml-1" data-bs-toggle="modal" data-bs-target="#shopConfigModal{{ $shop->id }}" title="Editar config" style="font-size: 10px;">
+                                                <i class="fa fa-pencil"></i>
+                                            </button>
+                                        @else
+                                            <button type="button" class="j2b-btn j2b-btn-sm j2b-btn-warning" data-bs-toggle="modal" data-bs-target="#shopConfigModal{{ $shop->id }}" title="Configurar precios" style="font-size: 10px; padding: 2px 6px;">
+                                                <i class="fa fa-exclamation-triangle"></i> Configurar
+                                            </button>
+                                        @endif
                                     @else
                                         <span class="j2b-badge j2b-badge-outline">Sin plan</span>
                                     @endif
@@ -159,25 +242,38 @@
                                     @endif
                                 </td>
                                 <td>
+                                    @if($shop->created_at)
+                                        <small style="color: var(--j2b-gray-600);">{{ $shop->created_at->format('d/m/Y') }}</small>
+                                    @else
+                                        <span class="j2b-text-muted">-</span>
+                                    @endif
+                                </td>
+                                <td>
                                     @if($shop->owner)
                                         <small style="color: var(--j2b-dark);">{{ $shop->owner->name }}</small>
                                     @else
-                                        <button type="button" class="j2b-btn j2b-btn-sm j2b-btn-outline" data-bs-toggle="modal" data-bs-target="#assignOwnerModal{{ $shop->id }}">
-                                            <i class="fa fa-user-plus"></i> Asignar
+                                        <button type="button" class="j2b-btn j2b-btn-sm j2b-btn-outline" data-bs-toggle="modal" data-bs-target="#assignOwnerModal{{ $shop->id }}" title="Asignar Admin">
+                                            <i class="fa fa-user-plus"></i>
                                         </button>
                                     @endif
                                 </td>
                                 <td>
                                     <div class="d-flex gap-1 flex-wrap">
+                                        <button type="button" class="j2b-btn j2b-btn-sm j2b-btn-outline" data-bs-toggle="modal" data-bs-target="#shopInfoModal{{ $shop->id }}" title="Ver Info">
+                                            <i class="fa fa-eye"></i>
+                                        </button>
+                                        <button type="button" class="j2b-btn j2b-btn-sm j2b-btn-info" data-bs-toggle="modal" data-bs-target="#statsModal{{ $shop->id }}" title="Actividad">
+                                            <i class="fa fa-bar-chart"></i>
+                                        </button>
                                         <button type="button" class="j2b-btn j2b-btn-sm j2b-btn-primary" data-bs-toggle="modal" data-bs-target="#extendModal{{ $shop->id }}" title="Extender">
                                             <i class="fa fa-clock-o"></i>
                                         </button>
                                         <button type="button" class="j2b-btn j2b-btn-sm j2b-btn-secondary" data-bs-toggle="modal" data-bs-target="#changePlanModal{{ $shop->id }}" title="Cambiar Plan">
                                             <i class="fa fa-exchange"></i>
                                         </button>
-                                        <form method="POST" action="{{ route('superadmin.shops.toggle-active', $shop->id) }}" style="display: inline;" onsubmit="return confirm('¿Estas seguro? Esto tambien {{ $shop->active ? 'desactivara' : 'reactivara' }} TODOS los usuarios de esta tienda.');">
+                                        <form id="toggleForm{{ $shop->id }}" method="POST" action="{{ route('superadmin.shops.toggle-active', $shop->id) }}" style="display: inline;">
                                             @csrf
-                                            <button type="submit" class="j2b-btn j2b-btn-sm {{ $shop->active ? 'j2b-btn-danger' : 'j2b-btn-outline' }}" title="{{ $shop->active ? 'Desactivar' : 'Reactivar' }}">
+                                            <button type="button" class="j2b-btn j2b-btn-sm {{ $shop->active ? 'j2b-btn-danger' : 'j2b-btn-success' }}" title="{{ $shop->active ? 'Desactivar' : 'Reactivar' }}" onclick="confirmToggle({{ $shop->id }}, {{ $shop->active ? 'true' : 'false' }}, '{{ $shop->name }}', '{{ $shop->owner ? $shop->owner->name : 'Sin owner' }}')">
                                                 <i class="fa fa-{{ $shop->active ? 'ban' : 'check-circle' }}"></i>
                                             </button>
                                         </form>
@@ -186,7 +282,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="8" class="text-center py-5">
+                                <td colspan="10" class="text-center py-5">
                                     <i class="fa fa-inbox fa-3x mb-3" style="color: var(--j2b-gray-300);"></i>
                                     <p style="color: var(--j2b-gray-500);">No hay tiendas registradas</p>
                                 </td>
@@ -209,6 +305,9 @@
     @foreach($shops as $shop)
         @include('superadmin.partials.modal_extend', ['shop' => $shop])
         @include('superadmin.partials.modal_change_plan', ['shop' => $shop, 'plans' => $plans])
+        @include('superadmin.partials.modal_shop_config', ['shop' => $shop, 'basicPlan' => $basicPlan])
+        @include('superadmin.partials.modal_shop_info', ['shop' => $shop])
+        @include('superadmin.partials.modal_shop_stats', ['shop' => $shop])
         @if(!$shop->owner)
             @include('superadmin.partials.modal_assign_owner', ['shop' => $shop])
         @endif
@@ -272,5 +371,99 @@
     padding: 1rem;
     color: var(--j2b-dark);
 }
+
+/* Stat cards para modal estadísticas */
+.stat-card {
+    background: var(--j2b-white);
+    border-radius: var(--j2b-radius-md);
+    padding: 1rem;
+    text-align: center;
+    border: 1px solid var(--j2b-gray-200);
+    transition: 150ms ease;
+}
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--j2b-shadow-sm);
+}
+.stat-number {
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.2;
+}
+.stat-label {
+    font-size: 12px;
+    color: var(--j2b-gray-500);
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.stat-card-primary { border-left: 4px solid var(--j2b-primary); }
+.stat-card-primary .stat-number { color: var(--j2b-primary); }
+.stat-card-success { border-left: 4px solid var(--j2b-success); }
+.stat-card-success .stat-number { color: var(--j2b-success); }
+.stat-card-warning { border-left: 4px solid var(--j2b-warning); }
+.stat-card-warning .stat-number { color: var(--j2b-warning); }
+.stat-card-info { border-left: 4px solid var(--j2b-info); }
+.stat-card-info .stat-number { color: var(--j2b-info); }
+.stat-card-danger { border-left: 4px solid var(--j2b-danger); }
+.stat-card-danger .stat-number { color: var(--j2b-danger); }
 </style>
+
+<script>
+function confirmToggle(shopId, isActive, shopName, ownerName) {
+    if (isActive) {
+        // Desactivar tienda
+        Swal.fire({
+            title: '¿Desactivar tienda?',
+            html: `
+                <div style="text-align: left;">
+                    <p><strong>Tienda:</strong> ${shopName}</p>
+                    <p class="text-danger"><i class="fa fa-exclamation-triangle"></i> Esta accion desactivara:</p>
+                    <ul>
+                        <li>La tienda completa</li>
+                        <li><strong>TODOS</strong> los usuarios de esta tienda</li>
+                    </ul>
+                    <p class="text-muted">Los usuarios no podran iniciar sesion hasta que reactives la tienda.</p>
+                </div>
+            `,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: '<i class="fa fa-ban"></i> Si, desactivar',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                document.getElementById('toggleForm' + shopId).submit();
+            }
+        });
+    } else {
+        // Reactivar tienda
+        Swal.fire({
+            title: '¿Reactivar tienda?',
+            html: `
+                <div style="text-align: left;">
+                    <p><strong>Tienda:</strong> ${shopName}</p>
+                    <p class="text-success"><i class="fa fa-check-circle"></i> Esta accion reactivara:</p>
+                    <ul>
+                        <li>La tienda</li>
+                        <li>Solo el usuario <strong>owner</strong>: ${ownerName}</li>
+                    </ul>
+                    <p class="text-muted">Los demas usuarios deberan ser reactivados manualmente si es necesario.</p>
+                </div>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#00f5a0',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: '<i class="fa fa-check-circle"></i> Si, reactivar',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                document.getElementById('toggleForm' + shopId).submit();
+            }
+        });
+    }
+}
+</script>
 @endsection

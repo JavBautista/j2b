@@ -50,7 +50,7 @@
                             <tr>
                                 <th style="width: 60px;">ID</th>
                                 <th>Plan</th>
-                                <th style="width: 120px;">Precio</th>
+                                <th style="width: 140px;">Precios</th>
                                 <th style="width: 100px;">Estado</th>
                                 <th style="width: 140px;">Acciones</th>
                             </tr>
@@ -74,8 +74,17 @@
                                       </div>
                                   </td>
                                   <td>
-                                      <strong style="color: var(--j2b-primary); font-size: 1.1em;">${{ plan.price }}</strong>
-                                      <small class="d-block" style="color: var(--j2b-gray-500);">/mes</small>
+                                      <div class="d-flex flex-column">
+                                          <div>
+                                              <strong style="color: var(--j2b-info);">${{ plan.price }}</strong>
+                                              <small style="color: var(--j2b-gray-500);">/mes</small>
+                                          </div>
+                                          <div v-if="plan.yearly_price">
+                                              <strong style="color: var(--j2b-warning); font-size: 0.9em;">${{ plan.yearly_price }}</strong>
+                                              <small style="color: var(--j2b-gray-500);">/año</small>
+                                          </div>
+                                          <small v-else style="color: var(--j2b-gray-400);">Sin precio anual</small>
+                                      </div>
                                   </td>
                                   <td>
                                       <span v-if="plan.active" class="j2b-badge j2b-badge-success">
@@ -186,27 +195,61 @@
                             </div>
                           </div>
 
-                          <!-- Precio -->
+                          <!-- Precios -->
                           <div class="j2b-form-section">
                             <h6 class="j2b-form-section-title">
-                                <i class="fa fa-dollar"></i> Precio
+                                <i class="fa fa-dollar"></i> Precios de Referencia
                             </h6>
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="j2b-form-group">
-                                        <label class="j2b-label">Precio Mensual (MXN)</label>
-                                        <input type="number" min="0" step="1" class="j2b-input" v-model="price" placeholder="0" :readonly="tipoAccion === 3">
+                                        <label class="j2b-label"><i class="fa fa-calendar-o text-info"></i> Precio Mensual (MXN)</label>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="j2b-badge j2b-badge-dark">$</span>
+                                            <input type="number" min="0" step="1" class="j2b-input" v-model="price" placeholder="350" :readonly="tipoAccion === 3">
+                                            <span class="j2b-badge j2b-badge-outline">/mes</span>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="col-md-6 d-flex align-items-center" v-if="price">
-                                    <div class="text-center w-100 p-3" style="background: var(--j2b-gray-100); border-radius: var(--j2b-radius-md);">
-                                        <small style="color: var(--j2b-gray-500);">Vista previa</small>
-                                        <div style="font-size: 1.5em; font-weight: 700; color: var(--j2b-primary);">
-                                            ${{ price }} <small style="font-size: 0.5em; color: var(--j2b-gray-500);">/mes</small>
+                                <div class="col-md-6">
+                                    <div class="j2b-form-group">
+                                        <label class="j2b-label"><i class="fa fa-calendar text-warning"></i> Precio Anual (MXN)</label>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="j2b-badge j2b-badge-dark">$</span>
+                                            <input type="number" min="0" step="1" class="j2b-input" v-model="yearly_price" placeholder="3500" :readonly="tipoAccion === 3">
+                                            <span class="j2b-badge j2b-badge-outline">/año</span>
                                         </div>
                                     </div>
                                 </div>
                             </div>
+                            <!-- Vista previa -->
+                            <div class="row mt-3" v-if="price || yearly_price">
+                                <div class="col-12">
+                                    <div class="p-3" style="background: var(--j2b-gray-100); border-radius: var(--j2b-radius-md);">
+                                        <small style="color: var(--j2b-gray-500);">Vista previa de precios:</small>
+                                        <div class="d-flex gap-4 mt-2">
+                                            <div v-if="price">
+                                                <span style="font-size: 1.3em; font-weight: 700; color: var(--j2b-info);">
+                                                    ${{ price }}
+                                                </span>
+                                                <small style="color: var(--j2b-gray-500);">/mes</small>
+                                            </div>
+                                            <div v-if="yearly_price">
+                                                <span style="font-size: 1.3em; font-weight: 700; color: var(--j2b-warning);">
+                                                    ${{ yearly_price }}
+                                                </span>
+                                                <small style="color: var(--j2b-gray-500);">/año</small>
+                                                <span v-if="price && yearly_price < price * 12" class="j2b-badge j2b-badge-success ml-2" style="font-size: 10px;">
+                                                    {{ Math.round((1 - yearly_price / (price * 12)) * 100) }}% desc.
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <small class="j2b-text-muted mt-2 d-block">
+                                <i class="fa fa-info-circle"></i> Estos precios se asignan a tiendas nuevas como referencia. Luego pueden personalizarse por tienda.
+                            </small>
                           </div>
 
                         </div>
@@ -250,6 +293,7 @@
               name:'',
               description:'',
               price:'',
+              yearly_price:'',
 
 
               errors:[],
@@ -391,6 +435,7 @@
                     'name':me.name,
                     'description':me.description,
                     'price':me.price,
+                    'yearly_price':me.yearly_price,
                 }).then(function (response){
                   console.log(response)
                   me.cerrarModal();
@@ -419,6 +464,7 @@
                     'name':me.name,
                     'description':me.description,
                     'price':me.price,
+                    'yearly_price':me.yearly_price,
                 }).then(function (response){
                   console.log(response)
                   me.cerrarModal();
@@ -465,6 +511,7 @@
                                 this.name='';
                                 this.description='';
                                 this.price='';
+                                this.yearly_price='';
                                 break;
                             }
                             case 'actualizar_datos':{
@@ -475,6 +522,7 @@
                                 this.name=data['name'];
                                 this.description=data['description'];
                                 this.price=data['price'];
+                                this.yearly_price=data['yearly_price'] || '';
                                 break;
                             }
                             case 'ver_datos':{
@@ -485,6 +533,7 @@
                                 this.name=data['name'];
                                 this.description=data['description'];
                                 this.price=data['price'];
+                                this.yearly_price=data['yearly_price'] || '';
                                 break;
                             }
                         }

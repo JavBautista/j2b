@@ -115,6 +115,33 @@ class Shop extends Model
     }
 
     /**
+     * Obtener precio efectivo segun ciclo de facturacion
+     * Prioridad: precio de la tienda > precio del plan
+     */
+    public function getEffectivePrice($cycle = null)
+    {
+        $cycle = $cycle ?? $this->billing_cycle ?? 'monthly';
+
+        if ($cycle === 'yearly') {
+            // Precio anual: tienda > plan > mensual * 12
+            return $this->yearly_price
+                ?? $this->plan?->yearly_price
+                ?? ($this->getEffectivePrice('monthly') * 12);
+        }
+
+        // Precio mensual: tienda > plan
+        return $this->monthly_price ?? $this->plan?->price ?? 0;
+    }
+
+    /**
+     * Verificar si la tienda paga anualmente
+     */
+    public function isYearlyBilling()
+    {
+        return $this->billing_cycle === 'yearly';
+    }
+
+    /**
      * Accessor para obtener la URL pública de la firma del representante legal
      */
     public function getLegalRepresentativeSignatureUrlAttribute()

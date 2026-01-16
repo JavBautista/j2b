@@ -129,6 +129,19 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::post('/superadmin/shops/{id}/update-config', [SuperAdminController::class, 'updateShopConfig'])->name('superadmin.shops.update-config');
         Route::get('/superadmin/shops/{id}/users', [SuperAdminController::class, 'getShopUsers'])->name('superadmin.shops.users');
         Route::put('/superadmin/pre-registers/delete', [App\Http\Controllers\Superadmin\RequestsJ2bController::class, 'destroy']);
+
+        //Subscription Management Vue.js
+        Route::get('/superadmin/subscription-management/get', [SuperAdminController::class, 'get']);
+        Route::get('/superadmin/subscription-management/num-status', [SuperAdminController::class, 'getNumStatus']);
+        Route::get('/superadmin/subscription-management/plans', [SuperAdminController::class, 'getPlans']);
+        Route::get('/superadmin/subscription-management/{id}/stats', [SuperAdminController::class, 'getShopStats']);
+        Route::put('/superadmin/subscription-management/{id}/extend', [SuperAdminController::class, 'extendTrialJson']);
+        Route::put('/superadmin/subscription-management/{id}/change-plan', [SuperAdminController::class, 'changePlanJson']);
+        Route::put('/superadmin/subscription-management/{id}/toggle-active', [SuperAdminController::class, 'toggleShopActiveJson']);
+        Route::put('/superadmin/subscription-management/{id}/update-config', [SuperAdminController::class, 'updateShopConfigJson']);
+        Route::put('/superadmin/subscription-management/{id}/assign-owner', [SuperAdminController::class, 'assignOwnerJson']);
+        Route::post('/superadmin/subscription-management/{id}/register-payment', [SuperAdminController::class, 'registerPaymentJson']);
+        Route::get('/superadmin/subscription-management/{id}/payment-history', [SuperAdminController::class, 'getPaymentHistoryJson']);
     }); //./Routes Middleware superadmin
 
     //====================RUTAS AUTH/ADMIN DE TIENDAS====================

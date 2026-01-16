@@ -347,4 +347,499 @@ class SuperAdminController extends Controller
 
         return redirect()->back()->with('success', "Configuración de {$shop->name} actualizada correctamente.");
     }
+
+    // ============================================
+    // MÉTODOS JSON PARA VUE.JS
+    // ============================================
+
+    /**
+     * Obtener lista de tiendas paginada (JSON para Vue)
+     */
+    public function get(Request $request)
+    {
+        $query = Shop::with(['plan', 'owner']);
+
+        if ($request->filled('buscar')) {
+            $query->where('name', 'like', '%' . $request->buscar . '%');
+        }
+
+        if ($request->filled('plan_id')) {
+            $query->where('plan_id', $request->plan_id);
+        }
+
+        if ($request->filled('estado')) {
+            $query->where('subscription_status', $request->estado);
+        }
+
+        if ($request->filled('activo')) {
+            $query->where('active', $request->activo);
+        }
+
+        $shops = $query->orderBy('subscription_status')
+            ->orderBy('id', 'desc')
+            ->paginate(20);
+
+        return response()->json([
+            'shops' => $shops->items(),
+            'pagination' => [
+                'total' => $shops->total(),
+                'current_page' => $shops->currentPage(),
+                'per_page' => $shops->perPage(),
+                'last_page' => $shops->lastPage(),
+                'from' => $shops->firstItem(),
+                'to' => $shops->lastItem(),
+            ]
+        ]);
+    }
+
+    /**
+     * Obtener contadores de estado (JSON para Vue)
+     */
+    public function getNumStatus()
+    {
+        return response()->json([
+            'trial' => Shop::where('subscription_status', 'trial')->count(),
+            'active' => Shop::where('subscription_status', 'active')->count(),
+            'grace_period' => Shop::where('subscription_status', 'grace_period')->count(),
+            'expired' => Shop::where('subscription_status', 'expired')->count(),
+        ]);
+    }
+
+    /**
+     * Obtener lista de planes activos (JSON para Vue)
+     */
+    public function getPlans()
+    {
+        return response()->json(Plan::where('active', true)->get());
+    }
+
+    /**
+     * Obtener estadísticas de una tienda (JSON para Vue)
+     */
+    public function getShopStats($id)
+    {
+        $shop = Shop::findOrFail($id);
+
+        // Usuarios por rol
+        $users = User::where('shop_id', $shop->id)->with('roles')->get();
+        $admins_full = $users->filter(fn($u) => strtolower($u->roles->first()?->name ?? '') === 'admin' && !$u->limited)->count();
+        $admins_limitados = $users->filter(fn($u) => strtolower($u->roles->first()?->name ?? '') === 'admin' && $u->limited)->count();
+        $colaboradores = $users->filter(fn($u) => strtolower($u->roles->first()?->name ?? '') === 'colaborador')->count();
+        $clientes_user = $users->filter(fn($u) => strtolower($u->roles->first()?->name ?? '') === 'cliente')->count();
+        $users_activos = $users->where('active', 1)->count();
+        $users_inactivos = $users->where('active', 0)->count();
+
+        // Clientes registrados
+        $clientes_total = $shop->clients()->count();
+        $clientes_activos = $shop->clients()->where('active', 1)->count();
+
+        // Ventas
+        $ventas_total = $shop->receipts()->count();
+        $ventas_30dias = $shop->receipts()->where('created_at', '>=', now()->subDays(30))->count();
+        $ultima_venta = $shop->receipts()->orderBy('created_at', 'desc')->first();
+
+        // Tareas
+        $tareas_total = $shop->tasks()->count();
+        $tareas_pendientes = $shop->tasks()->where('status', 'PENDIENTE')->count();
+        $tareas_30dias = $shop->tasks()->where('created_at', '>=', now()->subDays(30))->count();
+
+        // Nivel de actividad
+        $score = 0;
+        if ($clientes_total > 0) $score++;
+        if ($ventas_total > 0) $score++;
+        if ($ventas_30dias > 0) $score += 2;
+        if ($tareas_total > 0) $score++;
+
+        $nivel = 'sin_actividad';
+        if ($score >= 4) $nivel = 'alta';
+        elseif ($score >= 2) $nivel = 'media';
+        elseif ($score >= 1) $nivel = 'baja';
+
+        return response()->json([
+            'usuarios' => [
+                'total' => $users->count(),
+                'admins_full' => $admins_full,
+                'admins_limitados' => $admins_limitados,
+                'colaboradores' => $colaboradores,
+                'clientes' => $clientes_user,
+                'activos' => $users_activos,
+                'inactivos' => $users_inactivos,
+            ],
+            'clientes' => [
+                'total' => $clientes_total,
+                'activos' => $clientes_activos,
+            ],
+            'ventas' => [
+                'total' => $ventas_total,
+                'ultimos_30_dias' => $ventas_30dias,
+                'ultima_venta' => $ultima_venta ? $ultima_venta->created_at->format('d/m/Y H:i') : null,
+            ],
+            'tareas' => [
+                'total' => $tareas_total,
+                'pendientes' => $tareas_pendientes,
+                'ultimos_30_dias' => $tareas_30dias,
+            ],
+            'nivel_actividad' => $nivel,
+        ]);
+    }
+
+    /**
+     * Extender suscripción (JSON para Vue)
+     */
+    public function extendTrialJson(Request $request, $id)
+    {
+        $shop = Shop::findOrFail($id);
+
+        $request->validate([
+            'days' => 'required|integer|min:1|max:365',
+        ]);
+
+        if ($shop->is_trial) {
+            $shop->update([
+                'trial_ends_at' => $shop->trial_ends_at
+                    ? $shop->trial_ends_at->addDays($request->days)
+                    : now()->addDays($request->days),
+            ]);
+        } else {
+            $shop->update([
+                'subscription_ends_at' => $shop->subscription_ends_at
+                    ? $shop->subscription_ends_at->addDays($request->days)
+                    : now()->addDays($request->days),
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Suscripción de {$shop->name} extendida por {$request->days} días"
+        ]);
+    }
+
+    /**
+     * Cambiar plan (JSON para Vue)
+     */
+    public function changePlanJson(Request $request, $id)
+    {
+        $shop = Shop::findOrFail($id);
+
+        $request->validate([
+            'plan_id' => 'required|exists:plans,id',
+            'duration_months' => 'required|integer|min:1|max:12',
+            'custom_price' => 'nullable|numeric|min:0',
+            'include_iva' => 'nullable|boolean',
+        ]);
+
+        $plan = Plan::findOrFail($request->plan_id);
+        $durationMonths = (int) $request->duration_months;
+        $includeIva = $request->boolean('include_iva');
+
+        $useCustomPrice = $request->filled('custom_price') && $request->custom_price > 0;
+
+        if ($useCustomPrice) {
+            $priceBase = (float) $request->custom_price;
+            if ($includeIva) {
+                $ivaPercentage = $plan->iva_percentage ?? 16;
+                $ivaAmount = round($priceBase * ($ivaPercentage / 100), 2);
+                $totalAmount = $priceBase + $ivaAmount;
+            } else {
+                $ivaAmount = 0;
+                $totalAmount = $priceBase;
+            }
+            $priceWithoutIva = $priceBase;
+        } else {
+            if ($includeIva) {
+                $priceWithoutIva = $plan->price_without_iva ?? $plan->price;
+                $ivaAmount = $plan->price - ($plan->price_without_iva ?? $plan->price);
+                $totalAmount = $plan->price;
+            } else {
+                $priceWithoutIva = $plan->price;
+                $ivaAmount = 0;
+                $totalAmount = $plan->price;
+            }
+        }
+
+        $priceWithoutIvaTotal = $priceWithoutIva * $durationMonths;
+        $ivaAmountTotal = $ivaAmount * $durationMonths;
+        $totalAmountFinal = $totalAmount * $durationMonths;
+
+        $shop->update([
+            'plan_id' => $plan->id,
+            'monthly_price' => $totalAmount,
+            'is_trial' => false,
+            'subscription_status' => 'active',
+            'subscription_ends_at' => now()->addMonths($durationMonths),
+            'last_payment_at' => now(),
+            'active' => true,
+        ]);
+
+        Subscription::create([
+            'shop_id' => $shop->id,
+            'plan_id' => $plan->id,
+            'user_id' => auth()->id(),
+            'price_without_iva' => $priceWithoutIvaTotal,
+            'iva_amount' => $ivaAmountTotal,
+            'total_amount' => $totalAmountFinal,
+            'currency' => $plan->currency,
+            'payment_method' => 'other',
+            'transaction_id' => 'MANUAL-' . now()->timestamp,
+            'billing_period' => $durationMonths == 1 ? 'monthly' : 'yearly',
+            'starts_at' => now(),
+            'ends_at' => now()->addMonths($durationMonths),
+            'status' => 'active',
+            'admin_notes' => $useCustomPrice
+                ? "Cambio manual por superadmin: " . auth()->user()->name . " - Precio personalizado: {$plan->currency} \${$totalAmount}/mes" . ($includeIva ? ' +IVA' : ' sin IVA')
+                : "Cambio manual por superadmin: " . auth()->user()->name . ($includeIva ? ' +IVA' : ' sin IVA'),
+        ]);
+
+        $this->createPaymentNotification($shop, $plan, $durationMonths, $totalAmountFinal);
+
+        $priceInfo = $useCustomPrice ? " (precio personalizado: {$plan->currency} \${$totalAmount}/mes)" : "";
+        return response()->json([
+            'success' => true,
+            'message' => "Plan de {$shop->name} cambiado a {$plan->name} por {$durationMonths} meses{$priceInfo}"
+        ]);
+    }
+
+    /**
+     * Toggle activar/desactivar tienda (JSON para Vue)
+     */
+    public function toggleShopActiveJson($id)
+    {
+        $shop = Shop::findOrFail($id);
+
+        $newStatus = !$shop->active;
+
+        $shop->update([
+            'active' => $newStatus,
+            'subscription_status' => $newStatus ? 'active' : 'cancelled',
+        ]);
+
+        if ($newStatus) {
+            if ($shop->owner_user_id) {
+                User::where('id', $shop->owner_user_id)->update(['active' => true]);
+                $ownerName = $shop->owner ? $shop->owner->name : 'Owner';
+                return response()->json([
+                    'success' => true,
+                    'message' => "Tienda {$shop->name} reactivada. Usuario owner ({$ownerName}) reactivado."
+                ]);
+            } else {
+                return response()->json([
+                    'success' => true,
+                    'message' => "Tienda {$shop->name} reactivada. No tiene owner, reactiva usuarios manualmente."
+                ]);
+            }
+        } else {
+            $userCount = User::where('shop_id', $shop->id)->count();
+            User::where('shop_id', $shop->id)->update(['active' => false]);
+
+            return response()->json([
+                'success' => true,
+                'message' => "Tienda {$shop->name} desactivada. {$userCount} usuarios desactivados."
+            ]);
+        }
+    }
+
+    /**
+     * Actualizar configuración de tienda (JSON para Vue)
+     */
+    public function updateShopConfigJson(Request $request, $id)
+    {
+        $shop = Shop::findOrFail($id);
+
+        $request->validate([
+            'monthly_price' => 'required|numeric|min:0',
+            'yearly_price' => 'nullable|numeric|min:0',
+            'trial_days' => 'required|integer|min:0|max:365',
+            'grace_period_days' => 'required|integer|min:0|max:30',
+        ]);
+
+        $shop->update([
+            'monthly_price' => $request->monthly_price,
+            'yearly_price' => $request->yearly_price,
+            'trial_days' => $request->trial_days,
+            'grace_period_days' => $request->grace_period_days,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Configuración de {$shop->name} actualizada correctamente."
+        ]);
+    }
+
+    /**
+     * Asignar admin principal (JSON para Vue)
+     */
+    public function assignOwnerJson(Request $request, $id)
+    {
+        $shop = Shop::findOrFail($id);
+
+        $request->validate([
+            'owner_user_id' => 'required|exists:users,id',
+        ]);
+
+        $user = User::findOrFail($request->owner_user_id);
+
+        if ($user->shop_id != $shop->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El usuario seleccionado no pertenece a esta tienda'
+            ], 422);
+        }
+
+        if (!$user->roles()->where('name', 'admin')->exists()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El usuario seleccionado debe tener rol Admin'
+            ], 422);
+        }
+
+        if ($user->limited) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El usuario seleccionado es limitado. Solo usuarios Admin full pueden ser asignados.'
+            ], 422);
+        }
+
+        $shop->update([
+            'owner_user_id' => $request->owner_user_id,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Admin principal ({$user->name}) asignado correctamente a {$shop->name}"
+        ]);
+    }
+
+    /**
+     * Registrar pago de suscripcion (JSON para Vue)
+     * Accion principal: cuando un cliente paga su mensualidad/anualidad
+     */
+    public function registerPaymentJson(Request $request, $id)
+    {
+        $shop = Shop::with('plan')->findOrFail($id);
+
+        $request->validate([
+            'billing_cycle' => 'required|in:monthly,yearly',
+            'amount' => 'required|numeric|min:0',
+            'include_iva' => 'nullable|boolean',
+            'payment_method' => 'required|in:transfer,cash,card,other',
+            'reference' => 'nullable|string|max:100',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        $billingCycle = $request->billing_cycle;
+        $amount = (float) $request->amount;
+        $includeIva = $request->boolean('include_iva');
+        $paymentMethod = $request->payment_method;
+
+        // Calcular IVA si aplica
+        $ivaRate = SubscriptionSetting::get('iva_rate', 16);
+        if ($includeIva) {
+            $priceWithoutIva = round($amount / (1 + ($ivaRate / 100)), 2);
+            $ivaAmount = round($amount - $priceWithoutIva, 2);
+            $totalAmount = $amount;
+        } else {
+            $priceWithoutIva = $amount;
+            $ivaAmount = 0;
+            $totalAmount = $amount;
+        }
+
+        // Calcular fecha de vencimiento segun ciclo
+        // Si tiene fecha de corte, sumar desde ella (mantiene fecha fija)
+        // Esto aplica aunque esté en gracia (pagó tarde pero su fecha no cambia)
+        // Solo si NO tiene fecha de corte (primer pago) → sumar desde HOY
+        $baseDate = $shop->subscription_ends_at
+            ? $shop->subscription_ends_at
+            : now();
+
+        $startsAt = now();
+        if ($billingCycle === 'yearly') {
+            $endsAt = $baseDate->copy()->addYear();
+            $periodLabel = '12 meses';
+        } else {
+            $endsAt = $baseDate->copy()->addDays(30);
+            $periodLabel = '1 mes';
+        }
+
+        // Crear registro de pago en subscriptions
+        $subscription = Subscription::create([
+            'shop_id' => $shop->id,
+            'plan_id' => $shop->plan_id,
+            'user_id' => auth()->id(),
+            'price_without_iva' => $priceWithoutIva,
+            'iva_amount' => $ivaAmount,
+            'total_amount' => $totalAmount,
+            'currency' => $shop->plan->currency ?? 'MXN',
+            'payment_method' => $paymentMethod,
+            'transaction_id' => $request->reference ?: 'MANUAL-' . now()->timestamp,
+            'billing_period' => $billingCycle,
+            'starts_at' => $startsAt,
+            'ends_at' => $endsAt,
+            'status' => 'active',
+            'admin_notes' => $request->notes ?: "Pago registrado por: " . auth()->user()->name,
+        ]);
+
+        // Actualizar tienda
+        $shop->update([
+            'subscription_status' => 'active',
+            'subscription_ends_at' => $endsAt,
+            'billing_cycle' => $billingCycle,
+            'is_trial' => false,
+            'last_payment_at' => now(),
+            'active' => true,
+        ]);
+
+        // Reactivar owner si la tienda estaba desactivada
+        if ($shop->owner_user_id) {
+            User::where('id', $shop->owner_user_id)->update(['active' => true]);
+        }
+
+        // Crear notificacion de pago recibido
+        $this->createPaymentNotification($shop, $shop->plan, $billingCycle === 'yearly' ? 12 : 1, $totalAmount);
+
+        $currency = $shop->plan->currency ?? 'MXN';
+        return response()->json([
+            'success' => true,
+            'message' => "Pago de {$currency} \${$totalAmount} registrado para {$shop->name}. Suscripcion activa por {$periodLabel} hasta " . $endsAt->format('d/m/Y')
+        ]);
+    }
+
+    /**
+     * Obtener historial de pagos de una tienda (JSON para Vue)
+     */
+    public function getPaymentHistoryJson($id)
+    {
+        $shop = Shop::findOrFail($id);
+
+        $payments = Subscription::where('shop_id', $id)
+            ->with('user:id,name')
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($payment) {
+                return [
+                    'id' => $payment->id,
+                    'date' => $payment->created_at->format('d/m/Y H:i'),
+                    'billing_period' => $payment->billing_period,
+                    'total_amount' => $payment->total_amount,
+                    'currency' => $payment->currency,
+                    'payment_method' => $payment->payment_method,
+                    'status' => $payment->status,
+                    'registered_by' => $payment->user?->name ?? 'Sistema',
+                    'notes' => $payment->admin_notes,
+                    'starts_at' => $payment->starts_at?->format('d/m/Y'),
+                    'ends_at' => $payment->ends_at?->format('d/m/Y'),
+                ];
+            });
+
+        $totalPaid = Subscription::where('shop_id', $id)
+            ->where('status', 'active')
+            ->sum('total_amount');
+
+        return response()->json([
+            'success' => true,
+            'shop_name' => $shop->name,
+            'payments' => $payments,
+            'total_payments' => $payments->count(),
+            'total_paid' => $totalPaid,
+        ]);
+    }
 }

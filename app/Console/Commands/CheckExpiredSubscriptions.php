@@ -63,28 +63,29 @@ class CheckExpiredSubscriptions extends Command
             ->get();
 
         foreach ($expiredTrials as $shop) {
-            // Usar días de gracia de la tienda si existe, sino el global
-            $gracePeriodDays = $shop->grace_period_days ?? $globalGracePeriodDays;
-
+            // TRIALS SIEMPRE SE BLOQUEAN INMEDIATAMENTE (sin gracia)
+            // El grace_period_days solo aplica para clientes que ya pagaron
             $shop->update([
                 'is_trial' => false,
-                'subscription_status' => 'grace_period',
-                'grace_period_ends_at' => now()->addDays($gracePeriodDays),
+                'subscription_status' => 'expired',
+                'active' => false,
             ]);
 
-            $this->warn("⚠️  Shop {$shop->id} ({$shop->name}) - Trial vencido, entrando en periodo de gracia ({$gracePeriodDays} días)");
+            $this->error("🔒 Shop {$shop->id} ({$shop->name}) - Trial vencido, SHOP BLOQUEADO");
 
-            Log::info("Trial vencido: Shop {$shop->id}, periodo de gracia hasta: {$shop->grace_period_ends_at}");
+            Log::warning("Trial vencido y bloqueado: Shop {$shop->id}");
 
-            // Crear notificación
-            $this->createNotification($shop, 'trial_ended',
-                'Tu periodo de prueba ha terminado',
-                "Tu trial ha vencido. Tienes {$gracePeriodDays} días de gracia para activar tu plan y continuar usando J2B.",
+            $this->createNotification($shop, 'shop_blocked',
+                '🔒 Tu periodo de prueba ha terminado',
+                'Tu trial ha vencido. Tu tienda ha sido bloqueada. Contacta con nosotros para activar tu suscripción.',
                 'subscription'
             );
+
+            // Desactivar TODOS los usuarios del shop
+            User::where('shop_id', $shop->id)->update(['active' => false]);
         }
 
-        $this->info("Trials vencidos: {$expiredTrials->count()}");
+        $this->info("Trials vencidos (bloqueados): {$expiredTrials->count()}");
     }
 
     private function checkExpiredSubscriptions($globalGracePeriodDays)

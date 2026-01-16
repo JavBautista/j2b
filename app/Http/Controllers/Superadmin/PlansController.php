@@ -34,23 +34,31 @@ class PlansController extends Controller
     {
         if(!$request->ajax()) return redirect('/');
         $request->validate([
-            'name' => 'required|string|max:255'
+            'name' => 'required|string|max:255',
+            'price' => 'nullable|numeric|min:0',
+            'yearly_price' => 'nullable|numeric|min:0',
         ]);
         $plan= new Plan();
         $plan->active = 1;
         $plan->name = $request->name;
         $plan->description = $request->description;
         $plan->price = $request->price;
+        $plan->yearly_price = $request->yearly_price;
         $plan->save();
     }//store()
 
     public function update(Request $request)
     {
         if(!$request->ajax()) return redirect('/');
+        $request->validate([
+            'price' => 'nullable|numeric|min:0',
+            'yearly_price' => 'nullable|numeric|min:0',
+        ]);
         $plan= Plan::findOrFail($request->id);
         $plan->name = $request->name;
         $plan->description = $request->description;
         $plan->price = $request->price;
+        $plan->yearly_price = $request->yearly_price;
         $plan->save();
     }//update()
 

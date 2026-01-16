@@ -58,13 +58,21 @@ class ShopsController extends Controller
         // Obtener configuración de trial desde BD
         $trialDays = SubscriptionSetting::get('trial_days', 30);
 
+        // Obtener plan BASIC y sus precios de referencia
+        $defaultPlanId = 2; // Plan BASIC
+        $plan = \App\Models\Plan::find($defaultPlanId);
+
         $shop= new Shop();
-        $shop->plan_id = 2; // Plan BASIC para trial
+        $shop->plan_id = $defaultPlanId;
         $shop->active = 1;
         $shop->name = $request->name; // Solo name es obligatorio
         $shop->is_trial = true;
         $shop->trial_ends_at = now()->addDays($trialDays);
         $shop->subscription_status = 'trial';
+        // Tomar precios del plan como referencia (quedan fijos para esta tienda)
+        $shop->monthly_price = $plan?->price;
+        $shop->yearly_price = $plan?->yearly_price;
+        $shop->billing_cycle = 'monthly'; // Por defecto mensual
         $shop->description = $request->description;
         $shop->zip_code = $request->zip_code;
         $shop->address = $request->address;

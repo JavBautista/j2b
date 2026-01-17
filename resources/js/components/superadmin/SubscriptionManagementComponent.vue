@@ -386,19 +386,39 @@
                                             <input type="radio" v-model="newBillingCycle" value="monthly" class="d-none">
                                             <div class="text-center py-2">
                                                 <strong>Mensual</strong>
-                                                <br>
-                                                <small style="color: var(--j2b-success);">${{ formatNumber(getPlanPrice('monthly')) }}/mes</small>
                                             </div>
                                         </label>
                                         <label class="j2b-radio-card flex-fill" :class="{ active: newBillingCycle === 'yearly' }">
                                             <input type="radio" v-model="newBillingCycle" value="yearly" class="d-none">
                                             <div class="text-center py-2">
                                                 <strong>Anual</strong>
-                                                <br>
-                                                <small style="color: var(--j2b-success);">${{ formatNumber(getPlanPrice('yearly')) }}/año</small>
                                             </div>
                                         </label>
                                     </div>
+                                </div>
+
+                                <!-- Precios personalizados -->
+                                <div class="mb-3">
+                                    <label class="j2b-label"><i class="fa fa-dollar j2b-text-success"></i> Precio de esta Tienda</label>
+                                    <div class="d-flex gap-3">
+                                        <div class="flex-fill">
+                                            <div class="input-group">
+                                                <span class="input-group-text">$</span>
+                                                <input type="number" class="form-control" v-model.number="customMonthlyPrice" step="0.01" min="0" placeholder="0.00">
+                                                <span class="input-group-text">/mes</span>
+                                            </div>
+                                        </div>
+                                        <div class="flex-fill">
+                                            <div class="input-group">
+                                                <span class="input-group-text">$</span>
+                                                <input type="number" class="form-control" v-model.number="customYearlyPrice" step="0.01" min="0" placeholder="0.00">
+                                                <span class="input-group-text">/año</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <small class="j2b-text-muted">
+                                        Precio del plan: ${{ formatNumber(getPlanPrice('monthly')) }}/mes - ${{ formatNumber(getPlanPrice('yearly')) }}/año
+                                    </small>
                                 </div>
 
                                 <!-- Dia de Corte -->
@@ -1110,6 +1130,8 @@ export default {
             newBillingCycle: 'monthly',
             newCutoff: '',
             recalcularFecha: false,
+            customMonthlyPrice: 0,
+            customYearlyPrice: 0,
 
             // Modal Config (tipoAccion = 3)
             monthlyPrice: 0,
@@ -1307,10 +1329,15 @@ export default {
                 case 'cambiar_plan':
                     this.tipoAccion = 2;
                     this.tituloModal = 'Ajustar Plan';
-                    this.newPlanId = shop?.plan_id || '';
+                    // Si no tiene plan, usar el primero (Basic)
+                    this.newPlanId = shop?.plan_id || (this.arrayPlans.length > 0 ? this.arrayPlans[0].id : '');
                     this.newBillingCycle = shop?.billing_cycle || 'monthly';
                     this.newCutoff = shop?.cutoff || '';
                     this.recalcularFecha = false;
+                    // Cargar precios de la tienda (o del plan si no tiene)
+                    const planData = this.arrayPlans.find(p => p.id == this.newPlanId);
+                    this.customMonthlyPrice = (shop?.monthly_price > 0) ? shop.monthly_price : (planData?.price || 0);
+                    this.customYearlyPrice = (shop?.yearly_price > 0) ? shop.yearly_price : (planData?.yearly_price || 0);
                     break;
 
                 case 'config':
@@ -1439,7 +1466,9 @@ export default {
                 plan_id: this.newPlanId,
                 billing_cycle: this.newBillingCycle,
                 cutoff: this.newCutoff || null,
-                recalcular_fecha: this.recalcularFecha
+                recalcular_fecha: this.recalcularFecha,
+                monthly_price: this.customMonthlyPrice,
+                yearly_price: this.customYearlyPrice
             })
             .then(response => {
                 this.loading = false;

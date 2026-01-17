@@ -526,6 +526,8 @@ class SuperAdminController extends Controller
             'billing_cycle' => 'nullable|in:monthly,yearly',
             'cutoff' => 'nullable|integer|min:1|max:31',
             'recalcular_fecha' => 'nullable|boolean',
+            'monthly_price' => 'nullable|numeric|min:0',
+            'yearly_price' => 'nullable|numeric|min:0',
         ]);
 
         $plan = Plan::findOrFail($request->plan_id);
@@ -534,17 +536,20 @@ class SuperAdminController extends Controller
         // Actualizar plan si cambió
         if ($shop->plan_id != $plan->id) {
             $shop->plan_id = $plan->id;
-            // Copiar precios del plan a la tienda
-            $shop->monthly_price = $plan->price;
-            $shop->yearly_price = $plan->yearly_price;
-            $cambios[] = "Plan cambiado a {$plan->name} ($" . number_format($plan->price, 2) . "/mes)";
+            $cambios[] = "Plan: {$plan->name}";
         }
 
-        // Si no tiene precios configurados, asignarlos del plan
-        if (empty($shop->monthly_price)) {
-            $shop->monthly_price = $plan->price;
-            $shop->yearly_price = $plan->yearly_price;
-            $cambios[] = "Precios asignados del plan";
+        // Actualizar precios (usar los del request, o mantener los actuales)
+        $newMonthlyPrice = $request->monthly_price ?? $shop->monthly_price ?? $plan->price;
+        $newYearlyPrice = $request->yearly_price ?? $shop->yearly_price ?? $plan->yearly_price;
+
+        if ($shop->monthly_price != $newMonthlyPrice) {
+            $shop->monthly_price = $newMonthlyPrice;
+            $cambios[] = "Precio mensual: $" . number_format($newMonthlyPrice, 2);
+        }
+        if ($shop->yearly_price != $newYearlyPrice) {
+            $shop->yearly_price = $newYearlyPrice;
+            $cambios[] = "Precio anual: $" . number_format($newYearlyPrice, 2);
         }
 
         // Actualizar ciclo de facturación si cambió

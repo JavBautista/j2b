@@ -523,79 +523,76 @@ class SuperAdminController extends Controller
 
         $request->validate([
             'plan_id' => 'required|exists:plans,id',
-            'duration_months' => 'required|integer|min:1|max:12',
-            'custom_price' => 'nullable|numeric|min:0',
-            'include_iva' => 'nullable|boolean',
+            'billing_cycle' => 'nullable|in:monthly,yearly',
+            'cutoff' => 'nullable|integer|min:1|max:31',
+            'recalcular_fecha' => 'nullable|boolean',
         ]);
 
         $plan = Plan::findOrFail($request->plan_id);
-        $durationMonths = (int) $request->duration_months;
-        $includeIva = $request->boolean('include_iva');
+        $cambios = [];
 
-        $useCustomPrice = $request->filled('custom_price') && $request->custom_price > 0;
-
-        if ($useCustomPrice) {
-            $priceBase = (float) $request->custom_price;
-            if ($includeIva) {
-                $ivaPercentage = $plan->iva_percentage ?? 16;
-                $ivaAmount = round($priceBase * ($ivaPercentage / 100), 2);
-                $totalAmount = $priceBase + $ivaAmount;
-            } else {
-                $ivaAmount = 0;
-                $totalAmount = $priceBase;
-            }
-            $priceWithoutIva = $priceBase;
-        } else {
-            if ($includeIva) {
-                $priceWithoutIva = $plan->price_without_iva ?? $plan->price;
-                $ivaAmount = $plan->price - ($plan->price_without_iva ?? $plan->price);
-                $totalAmount = $plan->price;
-            } else {
-                $priceWithoutIva = $plan->price;
-                $ivaAmount = 0;
-                $totalAmount = $plan->price;
-            }
+        // Actualizar plan si cambió
+        if ($shop->plan_id != $plan->id) {
+            $shop->plan_id = $plan->id;
+            // Copiar precios del plan a la tienda
+            $shop->monthly_price = $plan->price;
+            $shop->yearly_price = $plan->yearly_price;
+            $cambios[] = "Plan cambiado a {$plan->name} ($" . number_format($plan->price, 2) . "/mes)";
         }
 
-        $priceWithoutIvaTotal = $priceWithoutIva * $durationMonths;
-        $ivaAmountTotal = $ivaAmount * $durationMonths;
-        $totalAmountFinal = $totalAmount * $durationMonths;
+        // Si no tiene precios configurados, asignarlos del plan
+        if (empty($shop->monthly_price)) {
+            $shop->monthly_price = $plan->price;
+            $shop->yearly_price = $plan->yearly_price;
+            $cambios[] = "Precios asignados del plan";
+        }
 
-        $shop->update([
-            'plan_id' => $plan->id,
-            'monthly_price' => $totalAmount,
-            'is_trial' => false,
-            'subscription_status' => 'active',
-            'subscription_ends_at' => now()->addMonths($durationMonths),
-            'last_payment_at' => now(),
-            'active' => true,
-        ]);
+        // Actualizar ciclo de facturación si cambió
+        $billingCycle = $request->billing_cycle ?? $shop->billing_cycle ?? 'monthly';
+        if ($shop->billing_cycle != $billingCycle) {
+            $shop->billing_cycle = $billingCycle;
+            $cicloLabel = $billingCycle === 'yearly' ? 'Anual' : 'Mensual';
+            $cambios[] = "Ciclo: {$cicloLabel}";
+        }
 
-        Subscription::create([
-            'shop_id' => $shop->id,
-            'plan_id' => $plan->id,
-            'user_id' => auth()->id(),
-            'price_without_iva' => $priceWithoutIvaTotal,
-            'iva_amount' => $ivaAmountTotal,
-            'total_amount' => $totalAmountFinal,
-            'currency' => $plan->currency,
-            'payment_method' => 'other',
-            'transaction_id' => 'MANUAL-' . now()->timestamp,
-            'billing_period' => $durationMonths == 1 ? 'monthly' : 'yearly',
-            'starts_at' => now(),
-            'ends_at' => now()->addMonths($durationMonths),
-            'status' => 'active',
-            'admin_notes' => $useCustomPrice
-                ? "Cambio manual por superadmin: " . auth()->user()->name . " - Precio personalizado: {$plan->currency} \${$totalAmount}/mes" . ($includeIva ? ' +IVA' : ' sin IVA')
-                : "Cambio manual por superadmin: " . auth()->user()->name . ($includeIva ? ' +IVA' : ' sin IVA'),
-        ]);
+        // Actualizar día de corte si se proporcionó
+        $cutoff = $request->cutoff ?? $shop->cutoff;
+        if ($request->filled('cutoff') && $shop->cutoff != $request->cutoff) {
+            $shop->cutoff = $request->cutoff;
+            $cutoff = $request->cutoff;
+            $cambios[] = "Día de corte: {$request->cutoff}";
+        }
 
-        $this->createPaymentNotification($shop, $plan, $durationMonths, $totalAmountFinal);
+        // Recalcular fecha de vencimiento si se solicitó
+        if ($request->boolean('recalcular_fecha') && $cutoff) {
+            // Calcular próxima fecha de vencimiento basada en el cutoff
+            if ($billingCycle === 'yearly') {
+                $nuevaFecha = now()->addYear()->day($cutoff);
+            } else {
+                $nuevaFecha = now()->addMonth()->day($cutoff);
+            }
 
-        $priceInfo = $useCustomPrice ? " (precio personalizado: {$plan->currency} \${$totalAmount}/mes)" : "";
+            // Ajustar si el día no existe en el mes (ej: 31 en febrero)
+            if ($nuevaFecha->day != $cutoff) {
+                $nuevaFecha = $nuevaFecha->endOfMonth();
+            }
+
+            $shop->subscription_ends_at = $nuevaFecha;
+            $shop->subscription_status = 'active';
+            $shop->is_trial = false;
+            $cambios[] = "Fecha recalculada: " . $nuevaFecha->format('d/m/Y');
+        }
+
+        // Guardar cambios
+        $shop->save();
+
+        $mensaje = count($cambios) > 0
+            ? "Tienda {$shop->name} actualizada: " . implode(', ', $cambios)
+            : "No se realizaron cambios";
+
         return response()->json([
             'success' => true,
-            'message' => "Plan de {$shop->name} cambiado a {$plan->name} por {$durationMonths} meses{$priceInfo}"
+            'message' => $mensaje
         ]);
     }
 
@@ -724,12 +721,18 @@ class SuperAdminController extends Controller
             'payment_method' => 'required|in:transfer,cash,card,other',
             'reference' => 'nullable|string|max:100',
             'notes' => 'nullable|string|max:500',
+            'payment_date' => 'nullable|date',
         ]);
 
         $billingCycle = $request->billing_cycle;
         $amount = (float) $request->amount;
         $includeIva = $request->boolean('include_iva');
         $paymentMethod = $request->payment_method;
+
+        // Fecha del pago (puede ser distinta a hoy si el cliente pagó antes)
+        $paymentDate = $request->filled('payment_date')
+            ? \Carbon\Carbon::parse($request->payment_date)
+            : now();
 
         // Calcular IVA si aplica
         $ivaRate = SubscriptionSetting::get('iva_rate', 16);
@@ -743,21 +746,26 @@ class SuperAdminController extends Controller
             $totalAmount = $amount;
         }
 
-        // Calcular fecha de vencimiento segun ciclo
-        // Si tiene fecha de corte, sumar desde ella (mantiene fecha fija)
-        // Esto aplica aunque esté en gracia (pagó tarde pero su fecha no cambia)
-        // Solo si NO tiene fecha de corte (primer pago) → sumar desde HOY
-        $baseDate = $shop->subscription_ends_at
-            ? $shop->subscription_ends_at
-            : now();
+        // Determinar día de corte (cutoff)
+        // Si la tienda no tiene cutoff, el día del pago se vuelve su cutoff
+        $cutoff = $shop->cutoff ?: $paymentDate->day;
 
-        $startsAt = now();
+        // Calcular próximo vencimiento usando el cutoff fijo
+        $startsAt = $paymentDate->copy();
+
         if ($billingCycle === 'yearly') {
-            $endsAt = $baseDate->copy()->addYear();
+            // Anual: mismo día de corte, próximo año
+            $endsAt = $paymentDate->copy()->addYear()->day($cutoff);
             $periodLabel = '12 meses';
         } else {
-            $endsAt = $baseDate->copy()->addDays(30);
+            // Mensual: mismo día de corte, próximo mes
+            $endsAt = $paymentDate->copy()->addMonth()->day($cutoff);
             $periodLabel = '1 mes';
+        }
+
+        // Ajustar si el día de corte no existe en el mes (ej: día 31 en febrero)
+        if ($endsAt->day != $cutoff) {
+            $endsAt = $endsAt->endOfMonth();
         }
 
         // Crear registro de pago en subscriptions
@@ -783,8 +791,9 @@ class SuperAdminController extends Controller
             'subscription_status' => 'active',
             'subscription_ends_at' => $endsAt,
             'billing_cycle' => $billingCycle,
+            'cutoff' => $cutoff, // Guardar el día de corte
             'is_trial' => false,
-            'last_payment_at' => now(),
+            'last_payment_at' => $paymentDate,
             'active' => true,
         ]);
 
@@ -817,7 +826,7 @@ class SuperAdminController extends Controller
             ->map(function ($payment) {
                 return [
                     'id' => $payment->id,
-                    'date' => $payment->created_at->format('d/m/Y H:i'),
+                    'date' => $payment->starts_at?->format('d/m/Y') ?? $payment->created_at->format('d/m/Y'),
                     'billing_period' => $payment->billing_period,
                     'total_amount' => $payment->total_amount,
                     'currency' => $payment->currency,

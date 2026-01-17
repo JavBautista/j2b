@@ -349,7 +349,6 @@
                                         Plan actual:
                                         <span v-if="selectedShop?.plan" class="j2b-badge j2b-badge-primary">{{ selectedShop.plan.name }}</span>
                                         <span v-else class="j2b-badge j2b-badge-outline">Sin plan</span>
-                                        <span v-if="selectedShop?.plan" class="j2b-text-primary">${{ selectedShop.plan.price }}/mes</span>
                                     </small>
                                 </div>
                             </div>
@@ -357,85 +356,108 @@
 
                         <div class="row">
                             <div class="col-md-6">
+                                <!-- Cambiar Plan -->
                                 <div class="mb-3">
-                                    <label class="j2b-label"><i class="fa fa-cube j2b-text-primary"></i> Nuevo Plan</label>
-                                    <select class="j2b-select" v-model="newPlanId" required>
-                                        <option value="">Seleccionar plan...</option>
+                                    <label class="j2b-label"><i class="fa fa-cube j2b-text-primary"></i> Plan</label>
+                                    <select class="j2b-select" v-model="newPlanId">
                                         <option v-for="plan in arrayPlans" :key="plan.id" :value="plan.id">
-                                            {{ plan.name }} - ${{ plan.price }}/mes
+                                            {{ plan.name }}
                                         </option>
                                     </select>
                                 </div>
 
+                                <!-- Ciclo de Facturacion -->
                                 <div class="mb-3">
-                                    <label class="j2b-label"><i class="fa fa-calendar j2b-text-primary"></i> Duracion</label>
-                                    <select class="j2b-select" v-model.number="durationMonths" required>
-                                        <option :value="1">1 mes</option>
-                                        <option :value="3">3 meses</option>
-                                        <option :value="6">6 meses</option>
-                                        <option :value="12">12 meses (1 anio)</option>
-                                    </select>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="j2b-label"><i class="fa fa-dollar j2b-text-warning"></i> Precio Personalizado (opcional)</label>
-                                    <div class="d-flex align-items-center gap-2">
-                                        <span class="j2b-badge j2b-badge-dark">$</span>
-                                        <input type="number" class="j2b-input" v-model.number="customPrice" placeholder="0.00" step="0.01" min="0">
-                                        <span class="j2b-badge j2b-badge-outline">/mes</span>
+                                    <label class="j2b-label"><i class="fa fa-refresh j2b-text-info"></i> Ciclo de Facturacion</label>
+                                    <div class="d-flex gap-2">
+                                        <label class="j2b-radio-card flex-fill" :class="{ active: newBillingCycle === 'monthly' }">
+                                            <input type="radio" v-model="newBillingCycle" value="monthly" class="d-none">
+                                            <div class="text-center py-2">
+                                                <strong>Mensual</strong>
+                                                <br>
+                                                <small style="color: var(--j2b-success);">${{ formatNumber(getPlanPrice('monthly')) }}/mes</small>
+                                            </div>
+                                        </label>
+                                        <label class="j2b-radio-card flex-fill" :class="{ active: newBillingCycle === 'yearly' }">
+                                            <input type="radio" v-model="newBillingCycle" value="yearly" class="d-none">
+                                            <div class="text-center py-2">
+                                                <strong>Anual</strong>
+                                                <br>
+                                                <small style="color: var(--j2b-success);">${{ formatNumber(getPlanPrice('yearly')) }}/año</small>
+                                            </div>
+                                        </label>
                                     </div>
-                                    <small class="j2b-text-muted">Dejar vacio para usar precio del plan</small>
                                 </div>
 
+                                <!-- Dia de Corte -->
                                 <div class="mb-3">
-                                    <label class="d-flex align-items-center gap-2" style="cursor: pointer;">
-                                        <input type="checkbox" v-model="includeIva" style="width: 18px; height: 18px;">
-                                        <span class="j2b-label mb-0"><i class="fa fa-percent j2b-text-info"></i> Incluir IVA (16%)</span>
+                                    <label class="j2b-label"><i class="fa fa-calendar j2b-text-warning"></i> Dia de Corte (del mes)</label>
+                                    <select class="j2b-select" v-model.number="newCutoff">
+                                        <option value="">Sin definir</option>
+                                        <option v-for="dia in 31" :key="dia" :value="dia">
+                                            Dia {{ dia }}
+                                        </option>
+                                    </select>
+                                    <small class="j2b-text-muted">Dia del mes en que se cobra/vence la suscripcion</small>
+                                </div>
+
+                                <!-- Recalcular fecha -->
+                                <div class="mb-3">
+                                    <label class="d-flex align-items-center gap-2 p-2 rounded"
+                                           :style="recalcularFecha ? 'background: rgba(0,245,160,0.1); border: 1px solid var(--j2b-primary);' : 'background: var(--j2b-gray-100);'"
+                                           style="cursor: pointer;">
+                                        <input type="checkbox" v-model="recalcularFecha" style="width: 18px; height: 18px;">
+                                        <div>
+                                            <strong><i class="fa fa-refresh"></i> Recalcular fecha de vencimiento</strong>
+                                            <br>
+                                            <small class="j2b-text-muted">Establece el proximo vencimiento desde hoy</small>
+                                        </div>
                                     </label>
-                                    <small class="j2b-text-muted">Marcar si el precio debe incluir IVA</small>
+                                    <div v-if="recalcularFecha && newCutoff" class="mt-2 p-2 rounded" style="background: rgba(0,245,160,0.1);">
+                                        <small>
+                                            <i class="fa fa-arrow-right j2b-text-primary"></i>
+                                            Nueva fecha: <strong>{{ calcularNuevaFechaVencimiento() }}</strong>
+                                        </small>
+                                    </div>
                                 </div>
                             </div>
 
                             <div class="col-md-6">
-                                <div class="j2b-card" style="background: var(--j2b-gray-100);">
-                                    <div class="j2b-card-header" style="background: var(--j2b-gradient-dark); color: white;">
-                                        <h6 class="mb-0"><i class="fa fa-calculator"></i> Resumen</h6>
-                                    </div>
-                                    <div class="j2b-card-body">
-                                        <table class="w-100" style="font-size: 0.9em;">
-                                            <tbody>
-                                                <tr>
-                                                    <td class="py-1">Plan:</td>
-                                                    <td class="py-1 text-right"><strong>{{ resumenCambio.planName }}</strong></td>
-                                                </tr>
-                                                <tr>
-                                                    <td class="py-1">Precio/mes:</td>
-                                                    <td class="py-1 text-right">${{ formatNumber(resumenCambio.price) }}</td>
-                                                </tr>
-                                                <tr>
-                                                    <td class="py-1">Duracion:</td>
-                                                    <td class="py-1 text-right">{{ durationMonths }} {{ durationMonths === 1 ? 'mes' : 'meses' }}</td>
-                                                </tr>
-                                                <tr style="border-top: 1px solid var(--j2b-gray-300);">
-                                                    <td class="py-2"><strong>Subtotal:</strong></td>
-                                                    <td class="py-2 text-right"><strong>${{ formatNumber(resumenCambio.subtotal) }}</strong></td>
-                                                </tr>
-                                                <tr v-if="includeIva">
-                                                    <td class="py-1">IVA (16%):</td>
-                                                    <td class="py-1 text-right">${{ formatNumber(resumenCambio.iva) }}</td>
-                                                </tr>
-                                                <tr style="border-top: 2px solid var(--j2b-primary); background: rgba(0,245,160,0.1);">
-                                                    <td class="py-2"><strong style="color: var(--j2b-primary);">TOTAL:</strong></td>
-                                                    <td class="py-2 text-right"><strong style="color: var(--j2b-primary); font-size: 1.2em;">${{ formatNumber(resumenCambio.total) }}</strong></td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                        <div class="mt-3">
-                                            <small class="j2b-text-muted">
-                                                <i class="fa fa-info-circle"></i> Vencera el: <strong>{{ resumenCambio.expiresDate }}</strong>
-                                            </small>
+                                <!-- Info actual -->
+                                <div class="j2b-card mb-3" style="background: var(--j2b-gray-100);">
+                                    <div class="j2b-card-body" style="font-size: 0.85em;">
+                                        <div class="mb-2">
+                                            <i class="fa fa-info-circle j2b-text-info"></i> <strong>Estado actual:</strong>
+                                        </div>
+                                        <div class="d-flex justify-content-between py-1">
+                                            <span>Ciclo:</span>
+                                            <span class="j2b-badge" :class="selectedShop?.billing_cycle === 'yearly' ? 'j2b-badge-info' : 'j2b-badge-outline'">
+                                                {{ selectedShop?.billing_cycle === 'yearly' ? 'ANUAL' : 'MENSUAL' }}
+                                            </span>
+                                        </div>
+                                        <div class="d-flex justify-content-between py-1">
+                                            <span>Dia de corte actual:</span>
+                                            <strong>{{ selectedShop?.cutoff ? 'Dia ' + selectedShop.cutoff : 'Sin definir' }}</strong>
+                                        </div>
+                                        <div class="d-flex justify-content-between py-1">
+                                            <span>Proximo vencimiento:</span>
+                                            <strong :class="recalcularFecha ? 'text-decoration-line-through text-muted' : ''">
+                                                {{ selectedShop?.subscription_ends_at ? formatDate(selectedShop.subscription_ends_at) : 'Sin fecha' }}
+                                            </strong>
+                                        </div>
+                                        <div class="d-flex justify-content-between py-1">
+                                            <span>Dias restantes:</span>
+                                            <span :class="getDaysRemaining(selectedShop) > 7 ? 'text-success' : getDaysRemaining(selectedShop) > 0 ? 'text-warning' : 'text-danger'">
+                                                <strong>{{ getDaysRemaining(selectedShop) >= 0 ? getDaysRemaining(selectedShop) + ' dias' : 'Vencido' }}</strong>
+                                            </span>
                                         </div>
                                     </div>
+                                </div>
+
+                                <!-- Nota explicativa -->
+                                <div class="j2b-banner-alert j2b-banner-info">
+                                    <i class="fa fa-lightbulb-o"></i>
+                                    <strong>Nota:</strong> Este modal es para ajustar el plan y corregir configuracion. Para registrar un pago usa el boton "Registrar Pago".
                                 </div>
                             </div>
                         </div>
@@ -856,51 +878,28 @@
                             </div>
                         </div>
 
+                        <!-- Fila principal: Monto, Fecha, Metodo -->
                         <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="j2b-label"><i class="fa fa-calendar j2b-text-primary"></i> Periodo de Pago</label>
-                                    <div class="d-flex gap-2">
-                                        <label class="j2b-radio-card" :class="{ active: paymentCycle === 'monthly' }">
-                                            <input type="radio" v-model="paymentCycle" value="monthly" class="d-none">
-                                            <div class="text-center">
-                                                <i class="fa fa-calendar-o fa-2x mb-2" style="color: var(--j2b-info);"></i>
-                                                <div><strong>Mensual</strong></div>
-                                                <small>30 dias</small>
-                                            </div>
-                                        </label>
-                                        <label class="j2b-radio-card" :class="{ active: paymentCycle === 'yearly' }">
-                                            <input type="radio" v-model="paymentCycle" value="yearly" class="d-none">
-                                            <div class="text-center">
-                                                <i class="fa fa-calendar fa-2x mb-2" style="color: var(--j2b-warning);"></i>
-                                                <div><strong>Anual</strong></div>
-                                                <small>12 meses</small>
-                                            </div>
-                                        </label>
-                                    </div>
-                                </div>
-
+                            <div class="col-md-4">
                                 <div class="mb-3">
                                     <label class="j2b-label"><i class="fa fa-dollar j2b-text-success"></i> Monto del Pago</label>
                                     <div class="d-flex align-items-center gap-2">
                                         <span class="j2b-badge j2b-badge-dark">$</span>
                                         <input type="number" class="j2b-input" v-model.number="paymentAmount" step="0.01" min="0" required>
-                                        <span class="j2b-badge j2b-badge-outline">MXN</span>
                                     </div>
                                     <small class="j2b-text-muted">
-                                        Sugerido: ${{ paymentCycle === 'yearly' ? formatNumber(selectedShop?.yearly_price || (selectedShop?.monthly_price * 12)) : formatNumber(selectedShop?.monthly_price) }}
+                                        Sugerido: ${{ getMontoSugerido() }}
                                     </small>
                                 </div>
-
+                            </div>
+                            <div class="col-md-4">
                                 <div class="mb-3">
-                                    <label class="d-flex align-items-center gap-2" style="cursor: pointer;">
-                                        <input type="checkbox" v-model="paymentIncludeIva" style="width: 18px; height: 18px;">
-                                        <span class="j2b-label mb-0"><i class="fa fa-percent j2b-text-info"></i> El monto incluye IVA (16%)</span>
-                                    </label>
+                                    <label class="j2b-label"><i class="fa fa-calendar-check-o j2b-text-success"></i> Fecha del Pago</label>
+                                    <input type="date" class="j2b-input" v-model="paymentDate" required>
+                                    <small class="j2b-text-muted">Cuando el cliente pago</small>
                                 </div>
                             </div>
-
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <div class="mb-3">
                                     <label class="j2b-label"><i class="fa fa-credit-card j2b-text-primary"></i> Metodo de Pago</label>
                                     <select class="j2b-select" v-model="paymentMethod" required>
@@ -910,15 +909,29 @@
                                         <option value="other">Otro</option>
                                     </select>
                                 </div>
+                            </div>
+                        </div>
 
+                        <!-- Fila secundaria: IVA, Referencia -->
+                        <div class="row">
+                            <div class="col-md-4">
                                 <div class="mb-3">
-                                    <label class="j2b-label"><i class="fa fa-hashtag j2b-text-secondary"></i> Referencia (opcional)</label>
-                                    <input type="text" class="j2b-input" v-model="paymentReference" placeholder="Ej: Folio de transferencia">
+                                    <label class="d-flex align-items-center gap-2" style="cursor: pointer;">
+                                        <input type="checkbox" v-model="paymentIncludeIva" style="width: 18px; height: 18px;">
+                                        <span class="j2b-label mb-0"><i class="fa fa-percent j2b-text-info"></i> Incluye IVA (16%)</span>
+                                    </label>
                                 </div>
-
+                            </div>
+                            <div class="col-md-4">
                                 <div class="mb-3">
-                                    <label class="j2b-label"><i class="fa fa-sticky-note j2b-text-warning"></i> Notas (opcional)</label>
-                                    <textarea class="j2b-input" v-model="paymentNotes" rows="2" placeholder="Observaciones del pago..."></textarea>
+                                    <label class="j2b-label"><i class="fa fa-hashtag j2b-text-secondary"></i> Referencia</label>
+                                    <input type="text" class="j2b-input" v-model="paymentReference" placeholder="Folio transferencia">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="j2b-label"><i class="fa fa-sticky-note j2b-text-warning"></i> Notas</label>
+                                    <input type="text" class="j2b-input" v-model="paymentNotes" placeholder="Observaciones...">
                                 </div>
                             </div>
                         </div>
@@ -930,7 +943,7 @@
                                         <strong style="color: var(--j2b-dark);">Resumen del Pago</strong>
                                         <br>
                                         <small class="j2b-text-muted">
-                                            {{ paymentCycle === 'yearly' ? 'Pago anual (12 meses)' : 'Pago mensual (30 dias)' }}
+                                            {{ selectedShop?.billing_cycle === 'yearly' ? 'Pago anual (12 meses)' : 'Pago mensual (30 dias)' }}
                                             <span v-if="paymentIncludeIva"> - IVA incluido</span>
                                         </small>
                                     </div>
@@ -1012,8 +1025,8 @@
                     <button v-if="tipoAccion === 1" type="button" class="j2b-btn j2b-btn-primary" @click="extenderSuscripcion()" :disabled="loading">
                         <i class="fa fa-clock-o"></i> Extender
                     </button>
-                    <button v-if="tipoAccion === 2" type="button" class="j2b-btn j2b-btn-primary" @click="cambiarPlan()" :disabled="loading || !newPlanId">
-                        <i class="fa fa-check"></i> Cambiar Plan
+                    <button v-if="tipoAccion === 2" type="button" class="j2b-btn j2b-btn-primary" @click="cambiarPlan()" :disabled="loading">
+                        <i class="fa fa-save"></i> Guardar Cambios
                     </button>
                     <button v-if="tipoAccion === 3" type="button" class="j2b-btn j2b-btn-primary" @click="actualizarConfig()" :disabled="loading">
                         <i class="fa fa-save"></i> Guardar
@@ -1082,9 +1095,9 @@ export default {
 
             // Modal Cambiar Plan (tipoAccion = 2)
             newPlanId: '',
-            durationMonths: 12,
-            customPrice: '',
-            includeIva: false,
+            newBillingCycle: 'monthly',
+            newCutoff: '',
+            recalcularFecha: false,
 
             // Modal Config (tipoAccion = 3)
             monthlyPrice: 0,
@@ -1105,12 +1118,12 @@ export default {
             infoTab: 'basica',
 
             // Modal Registrar Pago (tipoAccion = 7)
-            paymentCycle: 'monthly',
             paymentAmount: 0,
             paymentIncludeIva: false,
             paymentMethod: 'transfer',
             paymentReference: '',
             paymentNotes: '',
+            paymentDate: '',
 
             // Modal Historial Pagos (tipoAccion = 8)
             historialLoading: false,
@@ -1144,6 +1157,7 @@ export default {
         modalSize() {
             if (this.tipoAccion === 2) return 'modal-lg';
             if (this.tipoAccion === 4 || this.tipoAccion === 5) return 'modal-lg';
+            if (this.tipoAccion === 7 || this.tipoAccion === 8) return 'modal-lg'; // Registrar Pago / Historial
             return '';
         },
         modalIcon() {
@@ -1280,11 +1294,11 @@ export default {
 
                 case 'cambiar_plan':
                     this.tipoAccion = 2;
-                    this.tituloModal = 'Cambiar Plan';
+                    this.tituloModal = 'Ajustar Plan';
                     this.newPlanId = shop?.plan_id || '';
-                    this.durationMonths = 12;
-                    this.customPrice = '';
-                    this.includeIva = false;
+                    this.newBillingCycle = shop?.billing_cycle || 'monthly';
+                    this.newCutoff = shop?.cutoff || '';
+                    this.recalcularFecha = false;
                     break;
 
                 case 'config':
@@ -1322,14 +1336,18 @@ export default {
                 case 'registrar_pago':
                     this.tipoAccion = 7;
                     this.tituloModal = 'Registrar Pago';
-                    this.paymentCycle = shop?.billing_cycle || 'monthly';
-                    this.paymentAmount = this.paymentCycle === 'yearly'
-                        ? (shop?.yearly_price || shop?.monthly_price * 12 || 0)
-                        : (shop?.monthly_price || 0);
+                    // Monto sugerido: precio de tienda, o del plan si no tiene
+                    if (shop?.billing_cycle === 'yearly') {
+                        this.paymentAmount = shop?.yearly_price || shop?.plan?.yearly_price || (shop?.monthly_price * 12) || (shop?.plan?.price * 12) || 0;
+                    } else {
+                        this.paymentAmount = shop?.monthly_price || shop?.plan?.price || 0;
+                    }
                     this.paymentIncludeIva = false;
                     this.paymentMethod = 'transfer';
                     this.paymentReference = '';
                     this.paymentNotes = '';
+                    // Fecha de hoy por default (formato YYYY-MM-DD)
+                    this.paymentDate = new Date().toISOString().split('T')[0];
                     break;
 
                 case 'historial_pagos':
@@ -1407,9 +1425,9 @@ export default {
             this.loading = true;
             axios.put('/superadmin/subscription-management/' + this.selectedShop.id + '/change-plan', {
                 plan_id: this.newPlanId,
-                duration_months: this.durationMonths,
-                custom_price: this.customPrice || null,
-                include_iva: this.includeIva
+                billing_cycle: this.newBillingCycle,
+                cutoff: this.newCutoff || null,
+                recalcular_fecha: this.recalcularFecha
             })
             .then(response => {
                 this.loading = false;
@@ -1421,7 +1439,7 @@ export default {
             .catch(error => {
                 this.loading = false;
                 console.log(error);
-                Swal.fire('Error', 'No se pudo cambiar el plan', 'error');
+                Swal.fire('Error', error.response?.data?.message || 'No se pudo actualizar', 'error');
             });
         },
 
@@ -1478,12 +1496,13 @@ export default {
 
             this.loading = true;
             axios.post('/superadmin/subscription-management/' + this.selectedShop.id + '/register-payment', {
-                billing_cycle: this.paymentCycle,
+                billing_cycle: this.selectedShop?.billing_cycle || 'monthly',
                 amount: this.paymentAmount,
                 include_iva: this.paymentIncludeIva,
                 payment_method: this.paymentMethod,
                 reference: this.paymentReference,
-                notes: this.paymentNotes
+                notes: this.paymentNotes,
+                payment_date: this.paymentDate
             })
             .then(response => {
                 this.loading = false;
@@ -1515,12 +1534,51 @@ export default {
 
         calcularFechaVencimiento() {
             const hoy = new Date();
-            if (this.paymentCycle === 'yearly') {
+            if (this.selectedShop?.billing_cycle === 'yearly') {
                 hoy.setFullYear(hoy.getFullYear() + 1);
             } else {
                 hoy.setDate(hoy.getDate() + 30);
             }
             return hoy.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        },
+
+        getMontoSugerido() {
+            const shop = this.selectedShop;
+            if (!shop) return '0.00';
+
+            // Obtener precio de la tienda, o del plan si no tiene configurado
+            let precio = 0;
+            if (shop.billing_cycle === 'yearly') {
+                precio = shop.yearly_price || shop.plan?.yearly_price || (shop.monthly_price * 12) || (shop.plan?.price * 12) || 0;
+            } else {
+                precio = shop.monthly_price || shop.plan?.price || 0;
+            }
+            return this.formatNumber(precio);
+        },
+
+        calcularNuevaFechaVencimiento() {
+            if (!this.newCutoff) return 'Selecciona un dia de corte';
+
+            const hoy = new Date();
+            let fecha = new Date();
+
+            if (this.newBillingCycle === 'yearly') {
+                // Proximo año, mismo mes, dia de corte
+                fecha.setFullYear(hoy.getFullYear() + 1);
+            } else {
+                // Proximo mes, dia de corte
+                fecha.setMonth(hoy.getMonth() + 1);
+            }
+
+            // Establecer el dia de corte
+            fecha.setDate(this.newCutoff);
+
+            // Si el dia no existe en ese mes (ej: 31 en febrero), ajustar
+            if (fecha.getDate() != this.newCutoff) {
+                fecha = new Date(fecha.getFullYear(), fecha.getMonth() + 1, 0); // Ultimo dia del mes
+            }
+
+            return fecha.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
         },
 
         getPaymentMethodLabel(method) {
@@ -1565,6 +1623,15 @@ export default {
         },
 
         // === HELPERS ===
+        getPlanPrice(cycle) {
+            const plan = this.arrayPlans.find(p => p.id == this.newPlanId);
+            if (!plan) return 0;
+            if (cycle === 'yearly') {
+                return plan.yearly_price || (plan.price * 12);
+            }
+            return plan.price || 0;
+        },
+
         formatNumber(num) {
             return parseFloat(num || 0).toFixed(2);
         },
@@ -1576,6 +1643,7 @@ export default {
         },
 
         getDaysRemaining(shop) {
+            if (!shop) return -1;
             let endDate = null;
             if (shop.is_trial && shop.trial_ends_at) {
                 endDate = new Date(shop.trial_ends_at);

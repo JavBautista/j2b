@@ -149,7 +149,8 @@
                                         </div>
                                         <div>
                                             <strong style="color: var(--j2b-dark);">{{ shop.name }}</strong>
-                                            <span v-if="shop.is_trial && shop.subscription_status === 'trial'" class="j2b-badge j2b-badge-info ml-1" style="font-size: 9px;">TRIAL</span>
+                                            <span v-if="shop.is_exempt" class="j2b-badge j2b-badge-dark ml-1" style="font-size: 9px;">EXENTA</span>
+                                            <span v-else-if="shop.is_trial && shop.subscription_status === 'trial'" class="j2b-badge j2b-badge-info ml-1" style="font-size: 9px;">TRIAL</span>
                                             <br>
                                             <small style="color: var(--j2b-gray-500);">
                                                 <i v-if="!shop.active" class="fa fa-ban text-danger"></i>
@@ -162,23 +163,27 @@
                                 <td>
                                     <template v-if="shop.plan">
                                         <span class="j2b-badge j2b-badge-primary">{{ shop.plan.name }}</span>
-                                        <span v-if="shop.billing_cycle === 'yearly'" class="j2b-badge j2b-badge-info ml-1" style="font-size: 9px;">ANUAL</span>
-                                        <span v-else-if="shop.billing_cycle === 'monthly'" class="j2b-badge j2b-badge-outline ml-1" style="font-size: 9px;">MENSUAL</span>
-                                        <br>
-                                        <small v-if="shop.monthly_price" style="color: var(--j2b-primary); font-weight: 600;">
-                                            ${{ formatNumber(shop.billing_cycle === 'yearly' ? shop.yearly_price : shop.monthly_price) }}/{{ shop.billing_cycle === 'yearly' ? 'año' : 'mes' }}
-                                            <button type="button" class="btn btn-link p-0 ml-1" @click="abrirModal('config', shop)" title="Editar config" style="font-size: 10px;">
-                                                <i class="fa fa-pencil"></i>
+                                        <!-- Ocultar ciclo y precio si es exenta -->
+                                        <template v-if="!shop.is_exempt">
+                                            <span v-if="shop.billing_cycle === 'yearly'" class="j2b-badge j2b-badge-info ml-1" style="font-size: 9px;">ANUAL</span>
+                                            <span v-else-if="shop.billing_cycle === 'monthly'" class="j2b-badge j2b-badge-outline ml-1" style="font-size: 9px;">MENSUAL</span>
+                                            <br>
+                                            <small v-if="shop.monthly_price" style="color: var(--j2b-primary); font-weight: 600;">
+                                                ${{ formatNumber(shop.billing_cycle === 'yearly' ? shop.yearly_price : shop.monthly_price) }}/{{ shop.billing_cycle === 'yearly' ? 'año' : 'mes' }}
+                                                <button type="button" class="btn btn-link p-0 ml-1" @click="abrirModal('config', shop)" title="Editar config" style="font-size: 10px;">
+                                                    <i class="fa fa-pencil"></i>
+                                                </button>
+                                            </small>
+                                            <button v-else type="button" class="j2b-btn j2b-btn-sm j2b-btn-warning" @click="abrirModal('config', shop)" title="Configurar precios" style="font-size: 10px; padding: 2px 6px;">
+                                                <i class="fa fa-exclamation-triangle"></i> Configurar
                                             </button>
-                                        </small>
-                                        <button v-else type="button" class="j2b-btn j2b-btn-sm j2b-btn-warning" @click="abrirModal('config', shop)" title="Configurar precios" style="font-size: 10px; padding: 2px 6px;">
-                                            <i class="fa fa-exclamation-triangle"></i> Configurar
-                                        </button>
+                                        </template>
                                     </template>
                                     <span v-else class="j2b-badge j2b-badge-outline">Sin plan</span>
                                 </td>
                                 <td>
-                                    <span v-if="shop.subscription_status === 'trial'" class="j2b-badge j2b-badge-info"><i class="fa fa-flask"></i> Trial</span>
+                                    <span v-if="shop.is_exempt" class="j2b-badge j2b-badge-dark"><i class="fa fa-shield"></i> Exenta</span>
+                                    <span v-else-if="shop.subscription_status === 'trial'" class="j2b-badge j2b-badge-info"><i class="fa fa-flask"></i> Trial</span>
                                     <span v-else-if="shop.subscription_status === 'active'" class="j2b-badge j2b-badge-success"><i class="fa fa-check"></i> Activo</span>
                                     <span v-else-if="shop.subscription_status === 'grace_period'" class="j2b-badge j2b-badge-warning"><i class="fa fa-clock-o"></i> Gracia</span>
                                     <span v-else-if="shop.subscription_status === 'expired'" class="j2b-badge j2b-badge-danger"><i class="fa fa-times"></i> Vencido</span>
@@ -219,16 +224,19 @@
                                                 <i class="fa fa-ellipsis-v"></i>
                                             </button>
                                             <div class="action-dropdown-menu" :class="{ 'show': openDropdown === shop.id }">
-                                                <button type="button" class="action-dropdown-item text-success" @click="abrirModal('registrar_pago', shop); closeDropdown()">
-                                                    <i class="fa fa-money text-success"></i> Registrar Pago
-                                                </button>
-                                                <button type="button" class="action-dropdown-item" @click="abrirModal('historial_pagos', shop); closeDropdown()">
-                                                    <i class="fa fa-history text-info"></i> Historial Pagos
-                                                </button>
-                                                <div class="action-dropdown-divider"></div>
-                                                <button type="button" class="action-dropdown-item" @click="abrirModal('extender', shop); closeDropdown()">
-                                                    <i class="fa fa-clock-o text-primary"></i> Extender
-                                                </button>
+                                                <!-- Solo mostrar acciones de pago si NO es exenta -->
+                                                <template v-if="!shop.is_exempt">
+                                                    <button type="button" class="action-dropdown-item text-success" @click="abrirModal('registrar_pago', shop); closeDropdown()">
+                                                        <i class="fa fa-money text-success"></i> Registrar Pago
+                                                    </button>
+                                                    <button type="button" class="action-dropdown-item" @click="abrirModal('historial_pagos', shop); closeDropdown()">
+                                                        <i class="fa fa-history text-info"></i> Historial Pagos
+                                                    </button>
+                                                    <div class="action-dropdown-divider"></div>
+                                                    <button type="button" class="action-dropdown-item" @click="abrirModal('extender', shop); closeDropdown()">
+                                                        <i class="fa fa-clock-o text-primary"></i> Extender
+                                                    </button>
+                                                </template>
                                                 <button type="button" class="action-dropdown-item" @click="abrirModal('cambiar_plan', shop); closeDropdown()">
                                                     <i class="fa fa-exchange text-warning"></i> Cambiar Plan
                                                 </button>
@@ -236,6 +244,10 @@
                                                     <i class="fa fa-cog text-secondary"></i> Configurar
                                                 </button>
                                                 <div class="action-dropdown-divider"></div>
+                                                <button type="button" class="action-dropdown-item" :class="shop.is_exempt ? 'text-warning' : 'text-dark'" @click="toggleExempt(shop); closeDropdown()">
+                                                    <i :class="shop.is_exempt ? 'fa fa-unlock' : 'fa fa-shield'"></i>
+                                                    {{ shop.is_exempt ? 'Quitar exencion' : 'Marcar exenta' }}
+                                                </button>
                                                 <button type="button" class="action-dropdown-item" :class="shop.active ? 'text-danger' : 'text-success'" @click="toggleActivo(shop); closeDropdown()">
                                                     <i :class="shop.active ? 'fa fa-ban' : 'fa fa-check-circle'"></i>
                                                     {{ shop.active ? 'Desactivar' : 'Reactivar' }}
@@ -1589,6 +1601,37 @@ export default {
                 'other': 'Otro'
             };
             return labels[method] || method;
+        },
+
+        toggleExempt(shop) {
+            const accion = shop.is_exempt ? 'quitar exencion' : 'marcar como exenta';
+            const mensaje = shop.is_exempt
+                ? '<p class="text-warning"><i class="fa fa-unlock"></i> Quitar exencion:</p><ul><li>La tienda volvera al flujo normal de suscripciones</li><li>Se le aplicaran vencimientos y bloqueos</li></ul>'
+                : '<p class="text-dark"><i class="fa fa-shield"></i> Marcar como exenta:</p><ul><li>La tienda <strong>NO pagara</strong> suscripcion</li><li>El cron la ignorara completamente</li><li>Nunca se bloqueara por vencimiento</li></ul><p class="text-muted">Usar solo para tiendas internas, de pruebas o del dueño.</p>';
+
+            Swal.fire({
+                title: '¿' + accion.charAt(0).toUpperCase() + accion.slice(1) + '?',
+                html: '<p><strong>Tienda:</strong> ' + shop.name + '</p>' + mensaje,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: shop.is_exempt ? '#ffc107' : '#343a40',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: '<i class="fa fa-' + (shop.is_exempt ? 'unlock' : 'shield') + '"></i> Si, ' + accion,
+                cancelButtonText: 'Cancelar'
+            }).then(result => {
+                if (result.isConfirmed) {
+                    axios.put('/superadmin/subscription-management/' + shop.id + '/toggle-exempt')
+                        .then(response => {
+                            this.loadShops(this.pagination.current_page);
+                            this.loadNumStatus();
+                            Swal.fire('Exito', response.data.message, 'success');
+                        })
+                        .catch(error => {
+                            console.log(error);
+                            Swal.fire('Error', 'No se pudo actualizar la tienda', 'error');
+                        });
+                }
+            });
         },
 
         toggleActivo(shop) {

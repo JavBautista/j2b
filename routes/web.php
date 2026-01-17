@@ -138,6 +138,7 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::put('/superadmin/subscription-management/{id}/extend', [SuperAdminController::class, 'extendTrialJson']);
         Route::put('/superadmin/subscription-management/{id}/change-plan', [SuperAdminController::class, 'changePlanJson']);
         Route::put('/superadmin/subscription-management/{id}/toggle-active', [SuperAdminController::class, 'toggleShopActiveJson']);
+        Route::put('/superadmin/subscription-management/{id}/toggle-exempt', [SuperAdminController::class, 'toggleExemptJson']);
         Route::put('/superadmin/subscription-management/{id}/update-config', [SuperAdminController::class, 'updateShopConfigJson']);
         Route::put('/superadmin/subscription-management/{id}/assign-owner', [SuperAdminController::class, 'assignOwnerJson']);
         Route::post('/superadmin/subscription-management/{id}/register-payment', [SuperAdminController::class, 'registerPaymentJson']);

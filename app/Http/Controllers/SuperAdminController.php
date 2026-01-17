@@ -636,6 +636,28 @@ class SuperAdminController extends Controller
     }
 
     /**
+     * Toggle tienda exenta (no paga suscripción)
+     * Las tiendas exentas son ignoradas por el cron de vencimientos
+     */
+    public function toggleExemptJson($id)
+    {
+        $shop = Shop::findOrFail($id);
+
+        $newStatus = !$shop->is_exempt;
+
+        $shop->update([
+            'is_exempt' => $newStatus,
+        ]);
+
+        $accion = $newStatus ? 'marcada como exenta' : 'removida de exentas';
+
+        return response()->json([
+            'success' => true,
+            'message' => "Tienda {$shop->name} {$accion}."
+        ]);
+    }
+
+    /**
      * Actualizar configuración de tienda (JSON para Vue)
      */
     public function updateShopConfigJson(Request $request, $id)

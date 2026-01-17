@@ -58,6 +58,7 @@ class CheckExpiredSubscriptions extends Command
     private function checkExpiredTrials($globalGracePeriodDays)
     {
         $expiredTrials = Shop::where('is_trial', true)
+            ->where('is_exempt', false) // Excluir tiendas exentas
             ->where('trial_ends_at', '<=', now())
             ->where('subscription_status', 'trial')
             ->get();
@@ -91,6 +92,7 @@ class CheckExpiredSubscriptions extends Command
     private function checkExpiredSubscriptions($globalGracePeriodDays)
     {
         $expiredSubscriptions = Shop::where('is_trial', false)
+            ->where('is_exempt', false) // Excluir tiendas exentas
             ->where('subscription_status', 'active')
             ->where('subscription_ends_at', '<=', now())
             ->get();
@@ -122,6 +124,7 @@ class CheckExpiredSubscriptions extends Command
     private function checkExpiredGracePeriods()
     {
         $expiredGracePeriods = Shop::where('subscription_status', 'grace_period')
+            ->where('is_exempt', false) // Excluir tiendas exentas
             ->where('grace_period_ends_at', '<=', now())
             ->get();
 
@@ -156,6 +159,7 @@ class CheckExpiredSubscriptions extends Command
     {
         // Trials que vencen en 7 días
         $trialsEnding7Days = Shop::where('is_trial', true)
+            ->where('is_exempt', false) // Excluir tiendas exentas
             ->where('subscription_status', 'trial')
             ->whereDate('trial_ends_at', '=', now()->addDays(7)->startOfDay())
             ->get();
@@ -171,6 +175,7 @@ class CheckExpiredSubscriptions extends Command
 
         // Trials que vencen en 3 días
         $trialsEnding3Days = Shop::where('is_trial', true)
+            ->where('is_exempt', false) // Excluir tiendas exentas
             ->where('subscription_status', 'trial')
             ->whereDate('trial_ends_at', '=', now()->addDays(3)->startOfDay())
             ->get();
@@ -194,6 +199,7 @@ class CheckExpiredSubscriptions extends Command
     {
         // Suscripciones activas que vencen en 7 días
         $subsEnding7Days = Shop::where('is_trial', false)
+            ->where('is_exempt', false) // Excluir tiendas exentas
             ->where('subscription_status', 'active')
             ->whereDate('subscription_ends_at', '=', now()->addDays(7)->startOfDay())
             ->get();
@@ -209,6 +215,7 @@ class CheckExpiredSubscriptions extends Command
 
         // Suscripciones activas que vencen en 3 días
         $subsEnding3Days = Shop::where('is_trial', false)
+            ->where('is_exempt', false) // Excluir tiendas exentas
             ->where('subscription_status', 'active')
             ->whereDate('subscription_ends_at', '=', now()->addDays(3)->startOfDay())
             ->get();

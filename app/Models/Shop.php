@@ -20,6 +20,7 @@ class Shop extends Model
         'last_payment_at' => 'datetime',
         'is_trial' => 'boolean',
         'active' => 'boolean',
+        'is_exempt' => 'boolean',
     ];
 
     public function extraFields()

@@ -9,6 +9,7 @@ use App\Models\Subscription;
 use App\Models\User;
 use App\Models\Notification;
 use Illuminate\Http\Request;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class SuperAdminController extends Controller
 {
@@ -774,26 +775,79 @@ class SuperAdminController extends Controller
         }
 
         // Determinar día de corte (cutoff)
-        // Si la tienda no tiene cutoff, el día del pago se vuelve su cutoff
-        $cutoff = $shop->cutoff ?: $paymentDate->day;
+        // REGLA: El cutoff se RECALCULA solo en estos casos:
+        //   1. Primer pago (tienda no tiene cutoff)
+        //   2. Reactivación (tienda estaba bloqueada/expired)
+        // En pagos normales (antes, el día, o en gracia), el cutoff NO cambia
+        $isReactivation = $shop->subscription_status === 'expired';
+        $isFirstPayment = !$shop->cutoff;
 
-        // Calcular próximo vencimiento usando el cutoff fijo
-        $startsAt = $paymentDate->copy();
+        if ($isReactivation || $isFirstPayment) {
+            // Reactivación o primer pago: el día del pago se vuelve el nuevo cutoff
+            $cutoff = $paymentDate->day;
+        } else {
+            // Pago normal: mantener cutoff existente
+            $cutoff = $shop->cutoff;
+        }
 
+        // =====================================================
+        // CALCULAR EL PERÍODO QUE CORRESPONDE A ESTE PAGO
+        // =====================================================
+        // El período se calcula basándose en:
+        // - Primer pago/Reactivación: desde la fecha del pago
+        // - Pago normal: desde el subscription_ends_at actual (la fecha de corte)
+
+        if ($isReactivation || $isFirstPayment) {
+            // Primer pago o reactivación: período empieza desde el día del pago
+            $periodStart = $paymentDate->copy()->startOfDay();
+        } else {
+            // Pago normal: el período empieza desde el subscription_ends_at
+            // (que es la fecha de corte del período actual)
+            $periodStart = $shop->subscription_ends_at
+                ? $shop->subscription_ends_at->copy()->startOfDay()
+                : $paymentDate->copy()->startOfDay();
+        }
+
+        // Calcular fin del período (period_end = ends_at)
         if ($billingCycle === 'yearly') {
-            // Anual: mismo día de corte, próximo año
-            $endsAt = $paymentDate->copy()->addYear()->day($cutoff);
+            $periodEnd = $periodStart->copy()->addYear();
             $periodLabel = '12 meses';
         } else {
-            // Mensual: mismo día de corte, próximo mes
-            $endsAt = $paymentDate->copy()->addMonth()->day($cutoff);
+            $periodEnd = $periodStart->copy()->addMonth();
             $periodLabel = '1 mes';
         }
 
-        // Ajustar si el día de corte no existe en el mes (ej: día 31 en febrero)
-        if ($endsAt->day != $cutoff) {
-            $endsAt = $endsAt->endOfMonth();
+        // Ajustar al día de corte
+        if ($periodEnd->day != $cutoff) {
+            try {
+                $periodEnd->day($cutoff);
+            } catch (\Exception $e) {
+                // Si el día no existe en el mes (ej: 31 en febrero), usar fin de mes
+                $periodEnd = $periodEnd->endOfMonth();
+            }
         }
+
+        // =====================================================
+        // VALIDAR QUE NO EXISTA PAGO DUPLICADO PARA ESTE PERÍODO
+        // =====================================================
+        $existingPayment = Subscription::where('shop_id', $shop->id)
+            ->where('status', 'active')
+            ->where('ends_at', '>=', $periodEnd)
+            ->first();
+
+        if ($existingPayment && !$isReactivation && !$isFirstPayment) {
+            // Ya existe un pago que cubre este período o más allá
+            return response()->json([
+                'success' => false,
+                'message' => "Ya existe un pago vigente hasta {$existingPayment->ends_at->format('d/m/Y')}. " .
+                    "El período {$periodStart->format('d/m/Y')} - {$periodEnd->format('d/m/Y')} ya está cubierto. " .
+                    "Si necesitas registrar un pago adelantado, primero debe vencer el período actual."
+            ], 422);
+        }
+
+        // Variables para guardar en el registro
+        $startsAt = $paymentDate->copy(); // Fecha real del pago (informativo)
+        $endsAt = $periodEnd;              // Fin del período (vencimiento)
 
         // Crear registro de pago en subscriptions
         $subscription = Subscription::create([
@@ -835,7 +889,79 @@ class SuperAdminController extends Controller
         $currency = $shop->plan->currency ?? 'MXN';
         return response()->json([
             'success' => true,
-            'message' => "Pago de {$currency} \${$totalAmount} registrado para {$shop->name}. Suscripcion activa por {$periodLabel} hasta " . $endsAt->format('d/m/Y')
+            'message' => "Pago de {$currency} \${$totalAmount} registrado para {$shop->name}. " .
+                "Período: {$periodStart->format('d/m/Y')} - {$endsAt->format('d/m/Y')} ({$periodLabel})",
+            'period' => [
+                'start' => $periodStart->format('d/m/Y'),
+                'end' => $endsAt->format('d/m/Y'),
+                'label' => $periodLabel
+            ]
+        ]);
+    }
+
+    /**
+     * Obtener información del próximo período a pagar
+     * Útil para mostrar en el modal antes de registrar el pago
+     */
+    public function getNextPeriodInfo(Request $request, $id)
+    {
+        $shop = Shop::findOrFail($id);
+        $billingCycle = $request->get('billing_cycle', $shop->billing_cycle ?? 'monthly');
+
+        $isReactivation = $shop->subscription_status === 'expired';
+        $isFirstPayment = !$shop->cutoff;
+
+        // Calcular período
+        if ($isReactivation || $isFirstPayment) {
+            $periodStart = now()->startOfDay();
+            $cutoff = now()->day;
+            $periodType = $isFirstPayment ? 'primer_pago' : 'reactivacion';
+        } else {
+            $periodStart = $shop->subscription_ends_at
+                ? $shop->subscription_ends_at->copy()->startOfDay()
+                : now()->startOfDay();
+            $cutoff = $shop->cutoff;
+            $periodType = 'renovacion';
+        }
+
+        if ($billingCycle === 'yearly') {
+            $periodEnd = $periodStart->copy()->addYear();
+            $periodLabel = '12 meses';
+        } else {
+            $periodEnd = $periodStart->copy()->addMonth();
+            $periodLabel = '1 mes';
+        }
+
+        // Ajustar al día de corte
+        if ($periodEnd->day != $cutoff) {
+            try {
+                $periodEnd->day($cutoff);
+            } catch (\Exception $e) {
+                $periodEnd = $periodEnd->endOfMonth();
+            }
+        }
+
+        // Verificar si ya existe pago para este período
+        $existingPayment = Subscription::where('shop_id', $shop->id)
+            ->where('status', 'active')
+            ->where('ends_at', '>=', $periodEnd)
+            ->first();
+
+        return response()->json([
+            'success' => true,
+            'period' => [
+                'type' => $periodType,
+                'start' => $periodStart->format('d/m/Y'),
+                'end' => $periodEnd->format('d/m/Y'),
+                'label' => $periodLabel,
+                'cutoff' => $cutoff,
+            ],
+            'already_paid' => $existingPayment !== null,
+            'existing_payment' => $existingPayment ? [
+                'id' => $existingPayment->id,
+                'ends_at' => $existingPayment->ends_at->format('d/m/Y'),
+            ] : null,
+            'shop_status' => $shop->subscription_status,
         ]);
     }
 
@@ -876,6 +1002,308 @@ class SuperAdminController extends Controller
             'payments' => $payments,
             'total_payments' => $payments->count(),
             'total_paid' => $totalPaid,
+        ]);
+    }
+
+    /**
+     * =============================================
+     * PÁGINA DEDICADA DE PAGOS POR TIENDA
+     * =============================================
+     */
+
+    /**
+     * Vista principal de pagos de una tienda
+     */
+    public function shopPaymentsPage($id)
+    {
+        $shop = Shop::with('plan')->findOrFail($id);
+
+        return view('superadmin.shop_payments', [
+            'shopId' => $shop->id,
+            'shopName' => $shop->name,
+        ]);
+    }
+
+    /**
+     * Obtener lista de pagos paginada (para Vue)
+     */
+    public function getShopPayments(Request $request, $id)
+    {
+        $shop = Shop::findOrFail($id);
+
+        $query = Subscription::where('shop_id', $id)
+            ->with(['user:id,name', 'plan:id,name']);
+
+        // Filtros
+        if ($request->filled('billing_period')) {
+            $query->where('billing_period', $request->billing_period);
+        }
+
+        if ($request->filled('payment_method')) {
+            $query->where('payment_method', $request->payment_method);
+        }
+
+        if ($request->filled('date_from')) {
+            $query->whereDate('starts_at', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('starts_at', '<=', $request->date_to);
+        }
+
+        // Ordenamiento
+        $sortBy = $request->get('sort_by', 'created_at');
+        $sortDir = $request->get('sort_dir', 'desc');
+        $query->orderBy($sortBy, $sortDir);
+
+        $payments = $query->paginate(15);
+
+        // Estadísticas
+        $stats = [
+            'total_payments' => Subscription::where('shop_id', $id)->count(),
+            'total_paid' => Subscription::where('shop_id', $id)->sum('total_amount'),
+            'last_payment' => Subscription::where('shop_id', $id)->latest()->first()?->created_at?->format('d/m/Y'),
+        ];
+
+        return response()->json([
+            'success' => true,
+            'shop' => [
+                'id' => $shop->id,
+                'name' => $shop->name,
+                'subscription_status' => $shop->subscription_status,
+                'subscription_ends_at' => $shop->subscription_ends_at?->format('d/m/Y'),
+                'billing_cycle' => $shop->billing_cycle,
+                'cutoff' => $shop->cutoff,
+                'monthly_price' => $shop->monthly_price,
+                'yearly_price' => $shop->yearly_price,
+                'plan_name' => $shop->plan?->name,
+            ],
+            'payments' => $payments->map(function ($p) {
+                return [
+                    'id' => $p->id,
+                    'date' => $p->starts_at?->format('d/m/Y'),
+                    'created_at' => $p->created_at->format('d/m/Y H:i'),
+                    'billing_period' => $p->billing_period,
+                    'price_without_iva' => $p->price_without_iva,
+                    'iva_amount' => $p->iva_amount,
+                    'total_amount' => $p->total_amount,
+                    'currency' => $p->currency,
+                    'payment_method' => $p->payment_method,
+                    'transaction_id' => $p->transaction_id,
+                    'status' => $p->status,
+                    'starts_at' => $p->starts_at?->format('d/m/Y'),
+                    'ends_at' => $p->ends_at?->format('d/m/Y'),
+                    'registered_by' => $p->user?->name ?? 'Sistema',
+                    'notes' => $p->admin_notes,
+                    'plan_name' => $p->plan?->name,
+                ];
+            }),
+            'pagination' => [
+                'total' => $payments->total(),
+                'current_page' => $payments->currentPage(),
+                'last_page' => $payments->lastPage(),
+                'per_page' => $payments->perPage(),
+            ],
+            'stats' => $stats,
+        ]);
+    }
+
+    /**
+     * Obtener detalle de un pago específico
+     */
+    public function getPaymentDetail($shopId, $paymentId)
+    {
+        $payment = Subscription::where('shop_id', $shopId)
+            ->with(['user:id,name', 'plan:id,name', 'shop:id,name'])
+            ->findOrFail($paymentId);
+
+        return response()->json([
+            'success' => true,
+            'payment' => [
+                'id' => $payment->id,
+                'shop_name' => $payment->shop?->name,
+                'plan_name' => $payment->plan?->name,
+                'date' => $payment->starts_at?->format('d/m/Y'),
+                'created_at' => $payment->created_at->format('d/m/Y H:i'),
+                'updated_at' => $payment->updated_at->format('d/m/Y H:i'),
+                'billing_period' => $payment->billing_period,
+                'price_without_iva' => $payment->price_without_iva,
+                'iva_amount' => $payment->iva_amount,
+                'total_amount' => $payment->total_amount,
+                'currency' => $payment->currency,
+                'payment_method' => $payment->payment_method,
+                'transaction_id' => $payment->transaction_id,
+                'status' => $payment->status,
+                'starts_at' => $payment->starts_at?->format('d/m/Y'),
+                'ends_at' => $payment->ends_at?->format('d/m/Y'),
+                'registered_by' => $payment->user?->name ?? 'Sistema',
+                'user_id' => $payment->user_id,
+                'notes' => $payment->admin_notes,
+            ],
+        ]);
+    }
+
+    /**
+     * Actualizar un pago existente
+     */
+    public function updatePayment(Request $request, $shopId, $paymentId)
+    {
+        $payment = Subscription::where('shop_id', $shopId)->findOrFail($paymentId);
+
+        $request->validate([
+            'total_amount' => 'required|numeric|min:0',
+            'payment_method' => 'required|in:transfer,cash,card,other',
+            'transaction_id' => 'nullable|string|max:100',
+            'admin_notes' => 'nullable|string|max:500',
+            'starts_at' => 'nullable|date',
+        ]);
+
+        // Guardar valores anteriores para el log
+        $oldValues = [
+            'total_amount' => $payment->total_amount,
+            'payment_method' => $payment->payment_method,
+            'transaction_id' => $payment->transaction_id,
+            'admin_notes' => $payment->admin_notes,
+        ];
+
+        // Recalcular IVA si cambió el monto
+        $amount = (float) $request->total_amount;
+        $ivaRate = SubscriptionSetting::get('iva_rate', 16);
+
+        // Asumimos que el monto incluye IVA si el original lo tenía
+        if ($payment->iva_amount > 0) {
+            $priceWithoutIva = round($amount / (1 + ($ivaRate / 100)), 2);
+            $ivaAmount = round($amount - $priceWithoutIva, 2);
+        } else {
+            $priceWithoutIva = $amount;
+            $ivaAmount = 0;
+        }
+
+        $payment->update([
+            'price_without_iva' => $priceWithoutIva,
+            'iva_amount' => $ivaAmount,
+            'total_amount' => $amount,
+            'payment_method' => $request->payment_method,
+            'transaction_id' => $request->transaction_id ?: $payment->transaction_id,
+            'admin_notes' => $request->admin_notes,
+            'starts_at' => $request->filled('starts_at') ? \Carbon\Carbon::parse($request->starts_at) : $payment->starts_at,
+        ]);
+
+        // Log de cambio (en admin_notes agregamos historial)
+        $logEntry = "\n[Editado " . now()->format('d/m/Y H:i') . " por " . auth()->user()->name . "]";
+        if ($oldValues['total_amount'] != $amount) {
+            $logEntry .= " Monto: {$oldValues['total_amount']} → {$amount}";
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Pago actualizado correctamente',
+        ]);
+    }
+
+    /**
+     * Eliminar un pago (soft delete conceptual - marcamos como cancelled)
+     */
+    public function deletePayment(Request $request, $shopId, $paymentId)
+    {
+        $payment = Subscription::where('shop_id', $shopId)->findOrFail($paymentId);
+
+        // No eliminamos físicamente, marcamos como cancelado
+        $payment->update([
+            'status' => 'cancelled',
+            'admin_notes' => $payment->admin_notes . "\n[Cancelado " . now()->format('d/m/Y H:i') . " por " . auth()->user()->name . "]",
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Pago cancelado correctamente',
+        ]);
+    }
+
+    /**
+     * Generar PDF de recibo de pago
+     */
+    public function generatePaymentPdf($shopId, $paymentId)
+    {
+        $payment = Subscription::where('shop_id', $shopId)
+            ->with(['shop', 'plan'])
+            ->findOrFail($paymentId);
+
+        $shop = $payment->shop;
+
+        // Mapeo de métodos de pago
+        $metodosLabels = [
+            'transfer' => 'Transferencia Bancaria',
+            'cash' => 'Efectivo',
+            'card' => 'Tarjeta de Crédito/Débito',
+            'other' => 'Otro',
+        ];
+
+        // Preparar datos para la vista
+        $data = [
+            'recibo_numero' => '#REC-' . str_pad($payment->id, 6, '0', STR_PAD_LEFT),
+            'fecha_emision' => now()->format('d/m/Y'),
+            'fecha_pago' => $payment->starts_at?->format('d/m/Y') ?? $payment->created_at->format('d/m/Y'),
+
+            // Cliente (tienda)
+            'cliente_nombre' => $shop->name,
+            'cliente_email' => $shop->email,
+            'cliente_telefono' => $shop->phone,
+
+            // Concepto
+            'concepto' => $payment->billing_period === 'yearly'
+                ? 'Suscripcion Anual - J2Biznes'
+                : 'Suscripcion Mensual - J2Biznes',
+            'plan_nombre' => $payment->plan?->name ?? 'Plan Estándar',
+            'periodo' => ($payment->starts_at?->format('d/m/Y') ?? '-') . ' al ' . ($payment->ends_at?->format('d/m/Y') ?? '-'),
+            'ciclo' => $payment->billing_period,
+
+            // Montos
+            'subtotal' => $payment->price_without_iva ?? $payment->total_amount,
+            'iva' => $payment->iva_amount ?? 0,
+            'total' => $payment->total_amount,
+            'moneda' => $payment->currency ?? 'MXN',
+
+            // Pago
+            'metodo_pago' => $metodosLabels[$payment->payment_method] ?? $payment->payment_method,
+            'referencia' => $payment->transaction_id,
+            'notas' => $payment->admin_notes,
+        ];
+
+        // Generar PDF
+        $pdf = Pdf::loadView('superadmin.subscription_payment_pdf', $data);
+
+        // Configurar opciones del PDF
+        $pdf->setPaper('letter', 'portrait');
+
+        // Nombre del archivo
+        $filename = 'Recibo_' . str_pad($payment->id, 6, '0', STR_PAD_LEFT) . '_' . $shop->name . '.pdf';
+        $filename = preg_replace('/[^A-Za-z0-9_\-\.]/', '_', $filename); // Limpiar caracteres especiales
+
+        // Mostrar PDF en navegador (evita warning de Brave/Chrome en HTTP)
+        return $pdf->stream($filename);
+    }
+
+    /**
+     * Verificar si ya existe pago para el periodo actual
+     */
+    public function checkExistingPayment($shopId)
+    {
+        // Verificar que la tienda exista
+        Shop::findOrFail($shopId);
+
+        // Buscar si hay un pago activo que cubra el periodo actual
+        $existingPayment = Subscription::where('shop_id', $shopId)
+            ->where('status', 'active')
+            ->where('ends_at', '>=', now())
+            ->first();
+
+        return response()->json([
+            'exists' => $existingPayment !== null,
+            'payment' => $existingPayment ? [
+                'id' => $existingPayment->id,
+                'ends_at' => $existingPayment->ends_at?->format('d/m/Y'),
+            ] : null,
         ]);
     }
 }

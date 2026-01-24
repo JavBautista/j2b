@@ -74,6 +74,7 @@
                 <li><a href="#precios" class="nav-link">Precios</a></li>
                 <li><a href="#testimonios" class="nav-link">Testimonios</a></li>
                 <li><a href="#faq" class="nav-link">FAQ</a></li>
+                <li><a href="#contacto" class="nav-link">Contacto</a></li>
             </ul>
             
             <div class="header-actions">
@@ -181,11 +182,11 @@
                 <div class="contact-info">
                     <div class="contact-item">
                         <i class="fas fa-envelope"></i>
-                        <a href="mailto:contcato@j2biznes.com">contcato@j2biznes.com</a>
+                        <a href="mailto:contacto@j2biznes.com">contacto@j2biznes.com</a>
                     </div>
                     <div class="contact-item">
                         <i class="fas fa-phone"></i>
-                        <a href="tel:+525646281026">+52 56 4628 1026</a>
+                        <a href="tel:+524425592717">+52 442 559 2717</a>
                     </div>
                     <div class="contact-item">
                         <i class="fas fa-map-marker-alt"></i>
@@ -193,7 +194,7 @@
                     </div>
                     <div class="contact-item">
                         <i class="fas fa-clock"></i>
-                        <span>Lun - Vie: 9:00 - 18:00 CST</span>
+                        <span>Lun–Sáb | 9:00–18:00 h (MX)</span>
                     </div>
                 </div>
             </div>

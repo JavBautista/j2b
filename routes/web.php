@@ -25,6 +25,9 @@ use App\Http\Controllers\Admin\SuppliersController;
 use App\Http\Controllers\Admin\TasksController;
 use App\Http\Controllers\Admin\UsersController as AdminUsersController;
 use App\Http\Controllers\Admin\RentsController;
+use App\Http\Controllers\ContactController;
+use App\Http\Controllers\DownloadController;
+use App\Http\Controllers\Superadmin\ContactMessagesController;
 
 
 /*
@@ -45,6 +48,14 @@ Route::get('reset-password/{token}', [\App\Http\Controllers\AuthController::clas
 Route::post('reset-password', [\App\Http\Controllers\AuthController::class, 'processResetPassword'])->name('password.reset.process');
 
 Route::get('/', [HomeController::class, 'index']);
+
+// Formulario de Contacto (público)
+Route::post('/contact', [ContactController::class, 'store'])->name('contact.store');
+
+// Descarga directa APK (público)
+Route::get('/descargar', [DownloadController::class, 'showForm'])->name('download.form');
+Route::post('/descargar', [DownloadController::class, 'processDownload'])->name('download.process');
+
 Route::get('/pre-registro', [RequestsJ2bController::class, 'j2bSolicitar'])->name('solicitud');
 Route::post('/pre-registro/create', [RequestsJ2bController::class, 'store'])->name('solicitud.store');
 Route::get('/pre-registro/confirm/{xtoken}', [RequestsJ2bController::class, 'confirm'])->name('solicitud.confirm');
@@ -143,6 +154,26 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::put('/superadmin/subscription-management/{id}/assign-owner', [SuperAdminController::class, 'assignOwnerJson']);
         Route::post('/superadmin/subscription-management/{id}/register-payment', [SuperAdminController::class, 'registerPaymentJson']);
         Route::get('/superadmin/subscription-management/{id}/payment-history', [SuperAdminController::class, 'getPaymentHistoryJson']);
+        Route::get('/superadmin/subscription-management/{id}/next-period', [SuperAdminController::class, 'getNextPeriodInfo']);
+
+        // Shop Payments Page (Página dedicada de pagos)
+        Route::get('/superadmin/subscription-management/{id}/payments', [SuperAdminController::class, 'shopPaymentsPage'])->name('superadmin.shop-payments');
+        Route::get('/superadmin/subscription-management/{id}/payments/get', [SuperAdminController::class, 'getShopPayments']);
+        Route::get('/superadmin/subscription-management/{id}/payments/{paymentId}', [SuperAdminController::class, 'getPaymentDetail']);
+        Route::put('/superadmin/subscription-management/{id}/payments/{paymentId}', [SuperAdminController::class, 'updatePayment']);
+        Route::delete('/superadmin/subscription-management/{id}/payments/{paymentId}', [SuperAdminController::class, 'deletePayment']);
+        Route::get('/superadmin/subscription-management/{id}/payments/{paymentId}/pdf', [SuperAdminController::class, 'generatePaymentPdf']);
+
+        // Contact Messages (Mensajes de contacto del landing)
+        Route::get('/superadmin/contact-messages', [ContactMessagesController::class, 'index'])->name('superadmin.contact-messages');
+        Route::get('/superadmin/contact-messages/get', [ContactMessagesController::class, 'get']);
+        Route::get('/superadmin/contact-messages/unread-count', [ContactMessagesController::class, 'getUnreadCount']);
+        Route::get('/superadmin/contact-messages/{id}', [ContactMessagesController::class, 'show']);
+        Route::put('/superadmin/contact-messages/{id}/read', [ContactMessagesController::class, 'markAsRead']);
+        Route::put('/superadmin/contact-messages/{id}/unread', [ContactMessagesController::class, 'markAsUnread']);
+        Route::put('/superadmin/contact-messages/mark-multiple-read', [ContactMessagesController::class, 'markMultipleAsRead']);
+        Route::delete('/superadmin/contact-messages/{id}', [ContactMessagesController::class, 'destroy']);
+        Route::post('/superadmin/contact-messages/delete-multiple', [ContactMessagesController::class, 'destroyMultiple']);
     }); //./Routes Middleware superadmin
 
     //====================RUTAS AUTH/ADMIN DE TIENDAS====================

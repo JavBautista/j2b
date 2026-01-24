@@ -40,6 +40,12 @@
                 </a>
             </li>
 
+            <li class="nav-item">
+                <a href="{{ route('superadmin.contact-messages') }}" class="nav-link">
+                    <i class="fa fa-envelope"></i> Mensajes Contacto
+                </a>
+            </li>
+
             <!--<li class="nav-item nav-dropdown">
                 <a class="nav-link nav-dropdown-toggle" href="#"><i class="icon-bag"></i> Tiendas</a>
                 <ul class="nav-dropdown-items">

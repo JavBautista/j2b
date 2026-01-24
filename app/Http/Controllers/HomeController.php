@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
+use App\Models\SubscriptionSetting;
 
 class HomeController extends Controller
 {
@@ -30,7 +31,8 @@ class HomeController extends Controller
     {
         // Si el usuario no está autenticado, mostrar landing público
         if (!auth()->check()) {
-            return view('web.index');
+            $trialDays = SubscriptionSetting::get('trial_days', 30);
+            return view('web.index', compact('trialDays'));
         }
         
         // Redirecciones por rol para usuarios autenticados

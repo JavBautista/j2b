@@ -35,7 +35,8 @@ mix.js('resources/js/app.js', 'public/js')
     .scripts([
             'resources/js/web/components/stats-counter.js',
             'resources/js/web/lazy-loading.js',
-            'resources/js/web/landing.js'
+            'resources/js/web/landing.js',
+            'resources/js/web/contact-form.js'
             ], 'public/js/web.js')
     
     // Development test script (only in development)

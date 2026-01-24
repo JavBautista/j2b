@@ -226,12 +226,14 @@
                                             <div class="action-dropdown-menu" :class="{ 'show': openDropdown === shop.id }">
                                                 <!-- Solo mostrar acciones de pago si NO es exenta -->
                                                 <template v-if="!shop.is_exempt">
+                                                    <a :href="'/superadmin/subscription-management/' + shop.id + '/payments'" class="action-dropdown-item text-primary">
+                                                        <i class="fa fa-credit-card text-primary"></i> Gestionar Pagos
+                                                    </a>
+                                                    <!-- Registrar Pago Rápido comentado temporalmente - usar página dedicada
                                                     <button type="button" class="action-dropdown-item text-success" @click="abrirModal('registrar_pago', shop); closeDropdown()">
-                                                        <i class="fa fa-money text-success"></i> Registrar Pago
+                                                        <i class="fa fa-money text-success"></i> Registrar Pago Rapido
                                                     </button>
-                                                    <button type="button" class="action-dropdown-item" @click="abrirModal('historial_pagos', shop); closeDropdown()">
-                                                        <i class="fa fa-history text-info"></i> Historial Pagos
-                                                    </button>
+                                                    -->
                                                     <div class="action-dropdown-divider"></div>
                                                     <button type="button" class="action-dropdown-item" @click="abrirModal('extender', shop); closeDropdown()">
                                                         <i class="fa fa-clock-o text-primary"></i> Extender

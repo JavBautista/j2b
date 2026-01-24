@@ -18,7 +18,7 @@
             
             <div class="hero-buttons">
                 <a href="#descarga" class="btn-primary btn-large">
-                    <i class="fas fa-rocket"></i> Prueba Gratis 30 días
+                    <i class="fas fa-rocket"></i> Prueba Gratis {{ $trialDays }} días
                 </a>
                 <a href="#demo" class="btn-secondary">
                     <i class="fas fa-play"></i> Ver Demo
@@ -227,7 +227,7 @@
                         <div class="price">
                             <span class="currency">MX$</span>
                             <span class="amount">0</span>
-                            <span class="period">/30 días</span>
+                            <span class="period">/{{ $trialDays }} días</span>
                         </div>
                     </div>
                     <ul class="pricing-features">
@@ -417,6 +417,124 @@
         </div>
     </section>
 
+    <!-- Contact Section -->
+    <section id="contacto" class="contact-section">
+        <div class="container">
+            <div class="contact-wrapper">
+                <div class="contact-info-side scroll-reveal">
+                    <div class="contact-header">
+                        <h2>¿Tienes preguntas?</h2>
+                        <p>Estamos aquí para ayudarte. Escríbenos y te contactaremos lo antes posible.</p>
+                    </div>
+
+                    <div class="contact-features">
+                        <div class="contact-feature">
+                            <div class="contact-feature-icon">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <div class="contact-feature-content">
+                                <h4>Respuesta rápida</h4>
+                                <p>Te respondemos en menos de 24 horas</p>
+                            </div>
+                        </div>
+
+                        <div class="contact-feature">
+                            <div class="contact-feature-icon">
+                                <i class="fas fa-comments"></i>
+                            </div>
+                            <div class="contact-feature-content">
+                                <h4>Atención personalizada</h4>
+                                <p>Un asesor real te ayudará con tus dudas</p>
+                            </div>
+                        </div>
+
+                        <div class="contact-feature">
+                            <div class="contact-feature-icon">
+                                <i class="fas fa-shield-alt"></i>
+                            </div>
+                            <div class="contact-feature-content">
+                                <h4>Sin compromiso</h4>
+                                <p>Solo información, sin presión de venta</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="contact-direct">
+                        <p class="contact-direct-label">¿Prefieres contacto directo?</p>
+                        <a href="https://wa.me/5214425592717" target="_blank" class="whatsapp-btn">
+                            <i class="fab fa-whatsapp"></i> WhatsApp
+                        </a>
+                    </div>
+                </div>
+
+                <div class="contact-form-side scroll-reveal">
+                    <form id="contactForm" class="contact-form">
+                        @csrf
+                        <div class="form-group">
+                            <label for="contact_name">Nombre completo <span class="required">*</span></label>
+                            <input type="text" id="contact_name" name="name" placeholder="Ej: Juan Pérez" required maxlength="100" minlength="3">
+                            <span class="field-error" id="error_name"></span>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="contact_email">Email <span class="required">*</span></label>
+                                <input type="email" id="contact_email" name="email" placeholder="tu@email.com" required maxlength="100">
+                                <span class="field-error" id="error_email"></span>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="contact_phone">Teléfono <span class="required">*</span></label>
+                                <input type="tel" id="contact_phone" name="phone" placeholder="10 dígitos" required maxlength="10" pattern="[0-9]{10}">
+                                <span class="field-error" id="error_phone"></span>
+                            </div>
+                        </div>
+
+                        <div class="form-group-inline">
+                            <label class="checkbox-container">
+                                <input type="checkbox" id="contact_is_whatsapp" name="is_whatsapp" value="1">
+                                <span class="checkmark"></span>
+                                <span class="checkbox-label"><i class="fab fa-whatsapp"></i> Este número tiene WhatsApp</span>
+                            </label>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="contact_company">Empresa/Negocio <span class="optional">(opcional)</span></label>
+                            <input type="text" id="contact_company" name="company" placeholder="Nombre de tu negocio" maxlength="100">
+                            <span class="field-error" id="error_company"></span>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="contact_message">Mensaje <span class="required">*</span></label>
+                            <textarea id="contact_message" name="message" rows="4" placeholder="¿En qué podemos ayudarte?" required minlength="10" maxlength="1000"></textarea>
+                            <span class="field-error" id="error_message"></span>
+                        </div>
+
+                        <div class="form-alert form-alert-error" id="form_error" style="display: none;">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <span id="form_error_text">Por favor corrige los errores antes de enviar.</span>
+                        </div>
+
+                        <div class="form-alert form-alert-success" id="form_success" style="display: none;">
+                            <i class="fas fa-check-circle"></i>
+                            <span>¡Mensaje enviado! Te contactaremos pronto.</span>
+                        </div>
+
+                        <button type="submit" class="contact-submit-btn" id="contact_submit_btn">
+                            <span class="btn-text">Enviar mensaje</span>
+                            <span class="btn-icon"><i class="fas fa-paper-plane"></i></span>
+                            <span class="btn-loading" style="display: none;"><i class="fas fa-spinner fa-spin"></i> Enviando...</span>
+                        </button>
+
+                        <p class="form-disclaimer">
+                            <i class="fas fa-lock"></i> Tu información está segura y no será compartida con terceros.
+                        </p>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- CTA Section -->
     <section id="descarga" class="cta-section">
         <div class="container">
@@ -424,14 +542,19 @@
                 <h2>¿Listo para transformar tu negocio?</h2>
                 <p>Únete a los emprendedores mexicanos que ya están optimizando sus negocios con J2Biznes. Descarga la app y comienza tu prueba gratuita hoy mismo.</p>
                 <div class="hero-buttons">
+                    {{-- Botones de descarga temporalmente ocultos hasta publicación en stores
                     <a href="#" class="btn-primary btn-large">
                         <i class="fab fa-apple"></i> Descargar para iOS
                     </a>
                     <a href="#" class="btn-primary btn-large">
                         <i class="fab fa-google-play"></i> Descargar para Android
                     </a>
+                    --}}
+                    <a href="{{ route('download.form') }}" class="btn-primary btn-large">
+                        <i class="fas fa-download"></i> Descargar App Gratis
+                    </a>
                 </div>
-                <p class="cta-note">💡 <strong>Prueba gratuita por 30 días</strong> - No se requiere tarjeta de crédito</p>
+                <p class="cta-note"><i class="fas fa-gift"></i> <strong>Prueba gratuita por {{ $trialDays }} días</strong> - Descarga la app y comienza ahora</p>
             </div>
         </div>
     </section>

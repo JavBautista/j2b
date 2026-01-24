@@ -17,6 +17,8 @@ import PreRegisterComponent from './components/superadmin/PreRegisterComponent.v
 import ShopsComponent from './components/superadmin/ShopsComponent.vue'
 import UsersComponent from './components/superadmin/UsersComponent.vue'
 import SubscriptionManagementComponent from './components/superadmin/SubscriptionManagementComponent.vue'
+import ShopPaymentsComponent from './components/superadmin/ShopPaymentsComponent.vue'
+import ContactMessagesComponent from './components/superadmin/ContactMessagesComponent.vue'
 import ExampleComponent from './components/ExampleComponent.vue';
 //Componenetes de tiendas
 import ClientsComponent from './components/shops/ClientsComponent.vue';
@@ -56,6 +58,8 @@ app.component('superadmin-pre-register-component', PreRegisterComponent);
 app.component('superadmin-shops-component', ShopsComponent);
 app.component('superadmin-users-component', UsersComponent);
 app.component('subscription-management-component', SubscriptionManagementComponent);
+app.component('shop-payments-component', ShopPaymentsComponent);
+app.component('contact-messages-component', ContactMessagesComponent);
 //Tiendas
 app.component('shop-template-creator-component', TemplateCreatorComponent);
 app.component('shop-clients-component', ClientsComponent);

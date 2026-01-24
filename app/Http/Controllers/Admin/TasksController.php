@@ -12,6 +12,7 @@ use App\Models\Product;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
+use App\Services\ImageService;
 
 class TasksController extends Controller
 {
@@ -786,7 +787,10 @@ class TasksController extends Controller
 
         if ($request->hasFile('image')) {
             $image = $request->file('image');
-            $imagePath = $image->store('tasks', 'public');
+
+            // Procesar y optimizar la imagen (redimensiona y comprime)
+            $imageService = new ImageService();
+            $imagePath = $imageService->processAndStore($image, 'tasks');
 
             // Si ya tiene imagen principal, guardar como alternativa
             if ($task->image) {

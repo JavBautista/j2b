@@ -35,7 +35,7 @@
 
                     <div class="download-requirements">
                         <h4><i class="fas fa-mobile-alt"></i> Requisitos</h4>
-                        <p>Android 5.0 o superior</p>
+                        <p>Android 5.1 o superior</p>
                     </div>
                 </div>
 

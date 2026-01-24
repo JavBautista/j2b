@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Shop;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use App\Services\ImageService;
 
 class ShopController extends Controller
 {
@@ -164,9 +165,10 @@ class ShopController extends Controller
                 }
             }
 
-            // Guardar la nueva imagen en la ubicación 'public'
-            $imagePath = $image->store('shop_logos', 'public');
-            
+            // Procesar y optimizar la imagen
+            $imageService = new ImageService();
+            $imagePath = $imageService->processAndStore($image, 'shop_logos');
+
             // Actualizar el logo en el modelo shop
             $shop->logo = $imagePath;
             $shop->save();

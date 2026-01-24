@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\RentDetail;
 use App\Models\RentDetailImage;
 use Illuminate\Support\Facades\Storage;
+use App\Services\ImageService;
 
 class EquipmentsController extends Controller
 {
@@ -255,7 +256,9 @@ class EquipmentsController extends Controller
 
         if ($request->hasFile('image')) {
             $image = $request->file('image');
-            $imagePath = $image->store('equipments', 'public');
+            // Procesar y optimizar la imagen
+            $imageService = new ImageService();
+            $imagePath = $imageService->processAndStore($image, 'equipments');
 
             $rentDetailImage = new RentDetailImage();
             $rentDetailImage->rent_detail_id = $equipment->id;

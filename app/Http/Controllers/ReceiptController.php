@@ -86,9 +86,10 @@ class ReceiptController extends Controller
 
         $filtro_origin_receipt = $request->filtro_origin_receipt;
 
-        // ✅ NUEVO: Dos búsquedas independientes
+        // Búsquedas independientes
         $buscar_cliente = isset($request->buscar_cliente) ? trim($request->buscar_cliente) : '';
         $buscar_articulo = isset($request->buscar_articulo) ? trim($request->buscar_articulo) : '';
+        $buscar_folio = isset($request->buscar_folio) ? trim($request->buscar_folio) : '';
 
         $quotation = (isset($request->type_cotizacion) && $request->type_cotizacion == 'true') ? 1 : 0;
 
@@ -107,14 +108,19 @@ class ReceiptController extends Controller
                             });
                         })
 
-                        // ✅ NUEVO: Filtro por ARTÍCULO (si existe)
+                        // Filtro por ARTÍCULO (si existe)
                         ->when(!empty($buscar_articulo), function ($query) use($buscar_articulo) {
                             return $query->whereHas('detail', function (Builder $subquery) use($buscar_articulo) {
                                 $subquery->where('descripcion', 'like', '%'.$buscar_articulo.'%');
                             });
                         })
 
-                        // Filtros existentes (sin cambios)
+                        // Filtro por FOLIO (si existe)
+                        ->when(!empty($buscar_folio), function ($query) use($buscar_folio) {
+                            return $query->where('folio', $buscar_folio);
+                        })
+
+                        // Filtros existentes
                         ->where('shop_id', $shop->id)
                         ->where('quotation', $quotation)
                         ->when($request->status != 'TODOS', function ($query) use($request) {

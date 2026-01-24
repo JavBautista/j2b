@@ -11,6 +11,7 @@ use App\Models\Receipt;
 use App\Models\Task;
 use App\Models\SubscriptionSetting;
 use Illuminate\Support\Facades\Storage;
+use App\Services\ImageService;
 
 class ShopsController extends Controller
 {
@@ -180,7 +181,9 @@ class ShopsController extends Controller
                 Storage::disk('public')->delete($file);
             }
         }
-        $shop->logo = $request->file('logo')->store('shop_logos', 'public');
+        // Procesar y optimizar la imagen
+        $imageService = new ImageService();
+        $shop->logo = $imageService->processAndStore($request->file('logo'), 'shop_logos');
         $shop->save();
 
     }//uploadLogo()

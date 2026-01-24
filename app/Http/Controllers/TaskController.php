@@ -12,6 +12,7 @@ use App\Models\Notification;
 use App\Models\User;
 use App\Services\NotificationFcmService;
 use App\Services\FirebaseService;
+use App\Services\ImageService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 
@@ -106,7 +107,9 @@ class TaskController extends Controller
         $task->expiration = $date_expiration;
 
         if ($request->hasFile('image')) {
-            $task->image = $request->file('image')->store('tasks', 'public');
+            // Procesar y optimizar la imagen
+            $imageService = new ImageService();
+            $task->image = $imageService->processAndStore($request->file('image'), 'tasks');
         }
 
         $task->save();
@@ -334,8 +337,9 @@ class TaskController extends Controller
         if ($request->hasFile('image')) {
             $image = $request->file('image');
 
-            // Guardar la imagen en la ubicación 'public'
-            $imagePath = $image->store('tasks', 'public');
+            // Procesar y optimizar la imagen (redimensiona y comprime)
+            $imageService = new ImageService();
+            $imagePath = $imageService->processAndStore($image, 'tasks');
 
             // Si ya existe una imagen principal, guardar en la relación TaskImage
             if ($task->image) {
@@ -791,7 +795,9 @@ class TaskController extends Controller
             $task->description = $request->description;
 
             if ($request->hasFile('image')) {
-                $task->image = $request->file('image')->store('tasks', 'public');
+                // Procesar y optimizar la imagen
+                $imageService = new ImageService();
+                $task->image = $imageService->processAndStore($request->file('image'), 'tasks');
             }
 
             $task->save();
@@ -960,7 +966,10 @@ class TaskController extends Controller
 
         if ($request->hasFile('image')) {
             $image = $request->file('image');
-            $imagePath = $image->store('tasks', 'public');
+
+            // Procesar y optimizar la imagen (redimensiona y comprime)
+            $imageService = new ImageService();
+            $imagePath = $imageService->processAndStore($image, 'tasks');
 
             if ($task->image) {
                 $taskImage = new TaskImage();

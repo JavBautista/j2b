@@ -8,6 +8,7 @@ use App\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Hash;
+use App\Services\ImageService;
 use Illuminate\Support\Facades\Session;
 
 class ClientController extends Controller
@@ -247,9 +248,9 @@ class ClientController extends Controller
         // Validar la existencia del archivo de imagen
         if ($request->hasFile('image')) {
             $image = $request->file('image');
-
-            // Guardar la imagen en la ubicación 'public'
-            $imagePath = $image->store('clients_locations', 'public');
+            // Procesar y optimizar la imagen
+            $imageService = new ImageService();
+            $imagePath = $imageService->processAndStore($image, 'clients_locations');
             // guadamos  el registro del client
             $client->location_image = $imagePath;
             $client->save();

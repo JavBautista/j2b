@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\Category;
 use App\Services\StockAlertService;
+use App\Services\ImageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -182,8 +183,9 @@ class ProductController extends Controller
         // Validar la existencia del archivo de imagen
         if ($request->hasFile('image')) {
             $image = $request->file('image');
-            // Guardar la imagen en la ubicación 'public'
-            $imagePath = $image->store('products', 'public');
+            // Procesar y optimizar la imagen
+            $imageService = new ImageService();
+            $imagePath = $imageService->processAndStore($image, 'products');
 
             // Si ya existe una imagen principal, guardar en la relación ProductImage
             if ($product->image) {

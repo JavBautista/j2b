@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\Category;
 use Illuminate\Support\Facades\Storage;
+use App\Services\ImageService;
 
 class ProductsController extends Controller
 {
@@ -294,7 +295,9 @@ class ProductsController extends Controller
 
         if ($request->hasFile('image')) {
             $image = $request->file('image');
-            $imagePath = $image->store('products', 'public');
+            // Procesar y optimizar la imagen
+            $imageService = new ImageService();
+            $imagePath = $imageService->processAndStore($image, 'products');
 
             // Si ya existe imagen principal, guardar como alternativa
             if ($product->image) {

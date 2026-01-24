@@ -267,6 +267,10 @@ Route::group([
         Route::post('notifications/delete-for-all',[NotificationController::class,'deleteForAll']);
         Route::get('notifications/group-stats',[NotificationController::class,'getGroupStats']);
 
+        /*IA - ASISTENTE INTELIGENTE*/
+        Route::post('ia/chat', 'App\Http\Controllers\ApiAIChatController@chat');
+        Route::get('ia/test', 'App\Http\Controllers\ApiAIChatController@test');
+
         /*FCM PUSH NOTIFICATIONS*/
         Route::post('fcm/register-token', function (Request $request) {
             \Log::info('📱 FCM Register Token - Request received', [

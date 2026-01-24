@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Database\Eloquent\Builder;
 use App\Events\ClientServiceNotification;
 use App\Services\FirebaseService;
+use App\Services\ImageService;
 
 class ClientServiceController extends Controller
 {
@@ -157,7 +158,9 @@ class ClientServiceController extends Controller
         $client_service->description = $request->description;
 
         if ($request->hasFile('image')) {
-            $client_service->image = $request->file('image')->store('clients_services', 'public');
+            // Procesar y optimizar la imagen
+            $imageService = new ImageService();
+            $client_service->image = $imageService->processAndStore($request->file('image'), 'clients_services');
         }
 
         $client_service->save();
@@ -214,9 +217,9 @@ class ClientServiceController extends Controller
         // Validar la existencia del archivo de imagen
         if ($request->hasFile('image')) {
             $image = $request->file('image');
-
-            // Guardar la imagen en la ubicación 'public'
-            $imagePath = $image->store('clients_services', 'public');
+            // Procesar y optimizar la imagen
+            $imageService = new ImageService();
+            $imagePath = $imageService->processAndStore($image, 'clients_services');
 
             // Si ya existe una imagen principal, guardar en la relación ClientServiceImage
             if ($client_service->image) {

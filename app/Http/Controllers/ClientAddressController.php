@@ -6,6 +6,7 @@ use App\Models\Client;
 use App\Models\ClientAddress;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use App\Services\ImageService;
 
 class ClientAddressController extends Controller
 {
@@ -164,7 +165,9 @@ class ClientAddressController extends Controller
 
         if ($request->hasFile('image')) {
             $image = $request->file('image');
-            $imagePath = $image->store('client_addresses', 'public');
+            // Procesar y optimizar la imagen
+            $imageService = new ImageService();
+            $imagePath = $imageService->processAndStore($image, 'client_addresses');
             $address->location_image = $imagePath;
             $address->save();
         }

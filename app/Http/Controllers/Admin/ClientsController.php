@@ -8,6 +8,7 @@ use App\Models\ContractTemplate;
 use App\Models\Contract;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Services\ImageService;
 
 class ClientsController extends Controller
 {
@@ -797,8 +798,9 @@ class ClientsController extends Controller
             }
         }
 
-        // Guardar nueva imagen
-        $path = $request->file('image')->store('clients/locations', 'public');
+        // Procesar y optimizar la imagen
+        $imageService = new ImageService();
+        $path = $imageService->processAndStore($request->file('image'), 'clients/locations');
 
         $client->location_image = $path;
         $client->save();

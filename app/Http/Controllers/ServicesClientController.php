@@ -10,6 +10,7 @@ use App\Models\Notification;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
+use App\Services\ImageService;
 
 class ServicesClientController extends Controller
 {
@@ -223,9 +224,9 @@ class ServicesClientController extends Controller
         // Validar la existencia del archivo de imagen
         if ($request->hasFile('image')) {
             $image = $request->file('image');
-
-            // Guardar la imagen en la ubicación 'public'
-            $imagePath = $image->store('clients_services', 'public');
+            // Procesar y optimizar la imagen
+            $imageService = new ImageService();
+            $imagePath = $imageService->processAndStore($image, 'clients_services');
 
             // Si ya existe una imagen principal, guardar en la relación client_serviceImage
             if ($client_service->image) {

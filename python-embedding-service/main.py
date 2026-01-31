@@ -241,7 +241,8 @@ def index_products(request: IndexRequest):
     {"shop_id": 26}
     """
     try:
-        import mysql.connector
+        import pymysql
+        import pymysql.cursors
         from models import embedding_model
         from qdrant_client_wrapper import delete_products_by_shop, insert_product
 
@@ -249,14 +250,15 @@ def index_products(request: IndexRequest):
         print(f"\n📦 Indexando productos de shop_id={shop_id}...")
 
         # Conectar a MySQL
-        conn = mysql.connector.connect(
+        conn = pymysql.connect(
             host=os.getenv("MYSQL_HOST", "127.0.0.1"),
             port=int(os.getenv("MYSQL_PORT", 3306)),
             user=os.getenv("MYSQL_USER", "root"),
             password=os.getenv("MYSQL_PASSWORD", ""),
-            database=os.getenv("MYSQL_DATABASE", "j2b")
+            database=os.getenv("MYSQL_DATABASE", "j2b"),
+            cursorclass=pymysql.cursors.DictCursor
         )
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor()
 
         # Obtener productos activos
         cursor.execute("""
@@ -322,7 +324,8 @@ def index_services(request: IndexRequest):
     {"shop_id": 26}
     """
     try:
-        import mysql.connector
+        import pymysql
+        import pymysql.cursors
         from models import embedding_model
         from qdrant_client_wrapper import delete_services_by_shop, insert_service
 
@@ -330,14 +333,15 @@ def index_services(request: IndexRequest):
         print(f"\n🔧 Indexando servicios de shop_id={shop_id}...")
 
         # Conectar a MySQL
-        conn = mysql.connector.connect(
+        conn = pymysql.connect(
             host=os.getenv("MYSQL_HOST", "127.0.0.1"),
             port=int(os.getenv("MYSQL_PORT", 3306)),
             user=os.getenv("MYSQL_USER", "root"),
             password=os.getenv("MYSQL_PASSWORD", ""),
-            database=os.getenv("MYSQL_DATABASE", "j2b")
+            database=os.getenv("MYSQL_DATABASE", "j2b"),
+            cursorclass=pymysql.cursors.DictCursor
         )
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor()
 
         # Obtener servicios activos
         cursor.execute("""

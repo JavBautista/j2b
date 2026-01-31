@@ -19,7 +19,13 @@
       "Bash(grep:*)",
       "Bash(chmod:*)",
       "Bash(rm:*)",
-      "Bash(php -l:*)"
+      "Bash(php -l:*)",
+      "Bash(python3:*)",
+      "Bash(docker ps:*)",
+      "Bash(sudo -S cp:*)",
+      "Bash(sudo -S systemctl daemon-reload:*)",
+      "Bash(pkill:*)",
+      "Bash(sudo -S systemctl enable:*)"
     ],
     "deny": []
   }

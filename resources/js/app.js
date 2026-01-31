@@ -42,6 +42,8 @@ import ReceiptFormComponent from './components/admin/ReceiptFormComponent.vue';
 import PurchaseOrderListComponent from './components/admin/PurchaseOrderListComponent.vue';
 import PurchaseOrderCreateComponent from './components/admin/PurchaseOrderCreateComponent.vue';
 import PurchaseOrderShowComponent from './components/admin/PurchaseOrderShowComponent.vue';
+import AiSettingsComponent from './components/admin/AiSettingsComponent.vue';
+import AiIndexingComponent from './components/admin/AiIndexingComponent.vue';
 
 // Componentes Shared (reutilizables)
 import ModalSelectClient from './components/shared/ModalSelectClient.vue';
@@ -73,6 +75,8 @@ app.component('product-import-component', ProductImportComponent);
 app.component('categories-component', CategoriesComponent);
 app.component('services-component', ServicesComponent);
 app.component('equipments-component', EquipmentsComponent);
+app.component('ai-settings-component', AiSettingsComponent);
+app.component('ai-indexing-component', AiIndexingComponent);
 app.component('users-component', AdminUsersComponent);
 app.component('reports-component', ReportsComponent);
 app.component('gastos-component', GastosComponent);

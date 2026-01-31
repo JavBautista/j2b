@@ -24,3 +24,11 @@ pendientes.txt
 
 /xdev
 firebase-credentials.json
+
+# Python embedding service (solo código, no dependencias)
+python-embedding-service/venv/
+python-embedding-service/__pycache__/
+python-embedding-service/*.pyc
+python-embedding-service/.env
+python-embedding-service/logs.txt
+*.log

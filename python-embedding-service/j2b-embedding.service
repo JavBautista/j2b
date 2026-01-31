@@ -1,0 +1,16 @@
+[Unit]
+Description=J2Biznes Embedding Service (FastAPI)
+After=network.target docker.service
+Wants=docker.service
+
+[Service]
+Type=simple
+User=dev
+WorkingDirectory=/var/www/j2b/python-embedding-service
+Environment="PATH=/var/www/j2b/python-embedding-service/venv/bin:/usr/local/bin:/usr/bin"
+ExecStart=/var/www/j2b/python-embedding-service/venv/bin/python main.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

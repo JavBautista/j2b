@@ -21,6 +21,29 @@
             <h5 class="text-muted mb-3"><i class="fas fa-sliders-h me-2"></i>Configuraciones Disponibles</h5>
         </div>
 
+        <!-- Configuraciones IA (solo si el usuario tiene acceso) -->
+        @if(auth()->user()->can_use_ai)
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card shadow-sm border-0 hover-config-card h-100">
+                <div class="card-body text-center p-4">
+                    <div class="config-icon mb-3">
+                        <i class="fas fa-bolt fa-3x text-warning"></i>
+                    </div>
+                    <h5 class="card-title mb-2">Asistente IA</h5>
+                    <p class="card-text text-muted mb-3">Configura el asistente de inteligencia artificial de tu tienda</p>
+                    <div class="d-flex justify-content-center">
+                        <a href="{{ route('admin.configurations.ai_settings') }}" class="btn btn-outline-warning">
+                            <i class="fas fa-arrow-right me-1"></i>Configurar
+                        </a>
+                    </div>
+                </div>
+                <div class="card-footer bg-light text-center border-0">
+                    <small class="text-muted"><i class="fas fa-check-circle text-success me-1"></i>Disponible</small>
+                </div>
+            </div>
+        </div>
+        @endif
+
         <!-- Campos Extra -->
         <div class="col-md-6 col-lg-4 mb-4">
             <div class="card shadow-sm border-0 hover-config-card h-100">

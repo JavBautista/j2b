@@ -30,4 +30,18 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Embedding Service (Python FastAPI)
+    |--------------------------------------------------------------------------
+    |
+    | Configuración para el microservicio de embeddings vectoriales.
+    | Usado para búsqueda semántica de productos en el chat IA.
+    |
+    */
+    'embedding' => [
+        'url' => env('EMBEDDING_SERVICE_URL', 'http://localhost:8001'),
+        'timeout' => env('EMBEDDING_SERVICE_TIMEOUT', 5),
+    ],
+
 ];

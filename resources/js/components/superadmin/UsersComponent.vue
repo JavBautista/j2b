@@ -66,6 +66,7 @@
                                 <th>Tienda</th>
                                 <th style="width: 120px;">Rol</th>
                                 <th style="width: 100px;">Acceso</th>
+                                <th style="width: 60px;">IA</th>
                                 <th style="width: 100px;">Estado</th>
                                 <th style="width: 160px;">Acciones</th>
                             </tr>
@@ -109,6 +110,12 @@
                                               <i class="fa fa-lock"></i> Limitado
                                           </span>
                                       </template>
+                                      <span v-else class="j2b-text-muted">-</span>
+                                  </td>
+                                  <td>
+                                      <button v-if="user.id !== 1" class="j2b-btn j2b-btn-sm" :style="user.can_use_ai ? 'background-color: #10b981; border-color: #10b981; color: #fff;' : 'background-color: #e5e7eb; border-color: #e5e7eb; color: #9ca3af;'" @click="toggleAI(user)" :title="user.can_use_ai ? 'IA Habilitada - Click para deshabilitar' : 'IA Deshabilitada - Click para habilitar'">
+                                          <i class="fa fa-bolt"></i>
+                                      </button>
                                       <span v-else class="j2b-text-muted">-</span>
                                   </td>
                                   <td>
@@ -156,7 +163,7 @@
                                   </td>
                               </tr>
                               <tr v-if="arrayUsers.length === 0">
-                                  <td colspan="7" class="text-center py-5">
+                                  <td colspan="8" class="text-center py-5">
                                       <i class="fa fa-users fa-3x mb-3" style="color: var(--j2b-gray-300);"></i>
                                       <p style="color: var(--j2b-gray-500);">No se encontraron usuarios</p>
                                   </td>
@@ -519,6 +526,26 @@
 
                   }
                 })
+            },
+            toggleAI(user){
+                let me = this;
+                axios.put('/superadmin/users/toggle-ai', {
+                    'id': user.id
+                }).then(function (response){
+                    // Actualizar localmente sin recargar toda la lista
+                    user.can_use_ai = response.data.can_use_ai;
+                    Swal.fire({
+                        icon: 'success',
+                        title: response.data.message,
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 2000
+                    });
+                }).catch(function (error){
+                    console.log(error);
+                    me.mostrarError(error);
+                });
             },
             generarPasswordAleatorio(){
                 // Generar contraseña aleatoria de 12 caracteres

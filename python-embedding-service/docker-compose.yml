@@ -1,0 +1,38 @@
+# docker-compose.yml
+# Configuración de Qdrant (base de datos vectorial)
+# J2Biznes - Embedding Service
+
+version: '3.8'
+
+services:
+  qdrant:
+    image: qdrant/qdrant:v1.7.4
+    container_name: j2b_qdrant
+    ports:
+      - "6333:6333"  # Puerto API REST
+      - "6334:6334"  # Puerto gRPC (opcional)
+    volumes:
+      - ./qdrant_storage:/qdrant/storage  # Persistencia de datos
+    environment:
+      - QDRANT_ALLOW_RECOVERY_MODE=true
+    restart: unless-stopped
+    networks:
+      - j2b_network
+
+networks:
+  j2b_network:
+    driver: bridge
+
+# ============================================
+# Notas de uso:
+# ============================================
+# - Puerto 6333: API REST que usará Python
+# - qdrant_storage/: Carpeta donde se guardan los vectores
+# - restart: unless-stopped = se reinicia automáticamente si falla
+# - Dashboard: http://localhost:6333/dashboard
+#
+# Comandos:
+# - Iniciar:  docker-compose up -d
+# - Detener:  docker-compose down
+# - Ver logs: docker logs j2b_qdrant
+# - Estado:   docker ps | grep j2b_qdrant

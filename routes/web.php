@@ -121,6 +121,7 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::put('/superadmin/users/inactive', [SuperadminUsersController::class, 'updateToInactive']);
         Route::put('/superadmin/users/reset-password', [SuperadminUsersController::class, 'resetPassword']);
         Route::put('/superadmin/users/update-email', [SuperadminUsersController::class, 'updateEmail']);
+        Route::put('/superadmin/users/toggle-ai', [SuperadminUsersController::class, 'toggleAI']);
 
         //Pre Registers
         Route::get('/superadmin/pre-registers', [SuperadminPagesController::class, 'preRegisters'])->name('superadmin.pre-registers');
@@ -210,6 +211,20 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::delete('/admin/configurations/extra-fields/{id}', [ExtraFieldsShopController::class, 'destroy'])->name('admin.configurations.extra_fields.destroy');
 
         Route::put('/admin/configurations/extra-fields-shop/update/{id}', [ExtraFieldsShopController::class, 'update'])->name('admin.configurations.extra-fields.update');
+
+        // Configuraciones IA
+        Route::get('/admin/configurations/ai-settings', [App\Http\Controllers\Admin\AiSettingsController::class, 'index'])->name('admin.configurations.ai_settings');
+        // Prompt / Contexto de tienda
+        Route::get('/admin/configurations/ai-settings/prompt', [App\Http\Controllers\Admin\AiSettingsController::class, 'prompt'])->name('admin.configurations.ai_settings.prompt');
+        Route::get('/admin/configurations/ai-settings/prompt/get', [App\Http\Controllers\Admin\AiSettingsController::class, 'get']);
+        Route::post('/admin/configurations/ai-settings/prompt/save', [App\Http\Controllers\Admin\AiSettingsController::class, 'save']);
+        Route::post('/admin/configurations/ai-settings/prompt/reset', [App\Http\Controllers\Admin\AiSettingsController::class, 'resetPrompt']);
+        // Indexación de productos
+        Route::get('/admin/configurations/ai-settings/indexing', [App\Http\Controllers\Admin\AiSettingsController::class, 'indexing'])->name('admin.configurations.ai_settings.indexing');
+        Route::get('/admin/configurations/ai-settings/indexing/status', [App\Http\Controllers\Admin\AiSettingsController::class, 'getIndexStatus']);
+        Route::post('/admin/configurations/ai-settings/indexing/products', [App\Http\Controllers\Admin\AiSettingsController::class, 'indexProducts']);
+        Route::post('/admin/configurations/ai-settings/indexing/services', [App\Http\Controllers\Admin\AiSettingsController::class, 'indexServices']);
+        Route::post('/admin/configurations/ai-settings/indexing/all', [App\Http\Controllers\Admin\AiSettingsController::class, 'indexAll']);
 
         Route::get('/admin/contracts', [AdminPagesController::class, 'contracts'])->name('admin.contracts');
 

@@ -24,6 +24,7 @@ class User extends Authenticatable
         'email',
         'password',
         'accepted_terms',
+        'can_use_ai',
     ];
 
     /**
@@ -43,6 +44,7 @@ class User extends Authenticatable
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'can_use_ai' => 'boolean',
     ];
 
     public function roles()

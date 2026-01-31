@@ -77,6 +77,7 @@ class UsersController extends Controller
         $user->name = $request->name;
         $user->email = $request->email;
         $user->password = Hash::make($request->password);
+        $user->can_use_ai = $request->can_use_ai ?? false;
         $user->save();
         $user->roles()->attach($role);
 
@@ -128,6 +129,25 @@ class UsersController extends Controller
         $user->active = 0;
         $user->save();
     }//updateToInactive
+
+    public function toggleAI(Request $request){
+        if(!$request->ajax()) return redirect('/');
+
+        // Proteger usuario principal
+        if($request->id == 1) {
+            return response()->json(['error' => 'No se puede modificar el usuario principal'], 403);
+        }
+
+        $user = User::findOrFail($request->id);
+        $user->can_use_ai = !$user->can_use_ai;
+        $user->save();
+
+        return response()->json([
+            'ok' => true,
+            'can_use_ai' => $user->can_use_ai,
+            'message' => $user->can_use_ai ? 'Acceso IA habilitado' : 'Acceso IA deshabilitado'
+        ]);
+    }//toggleAI
 
     public function updateEmail(Request $request)
     {

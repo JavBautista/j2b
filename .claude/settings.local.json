@@ -25,7 +25,8 @@
       "Bash(sudo -S cp:*)",
       "Bash(sudo -S systemctl daemon-reload:*)",
       "Bash(pkill:*)",
-      "Bash(sudo -S systemctl enable:*)"
+      "Bash(sudo -S systemctl enable:*)",
+      "WebFetch(domain:levcore.app)"
     ],
     "deny": []
   }

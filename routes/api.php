@@ -38,6 +38,22 @@ use App\Http\Controllers\ReceiptDetailController;
 Route::post('/api-pre-registro', [EmailConfirmationController::class, 'store']);
 Route::post('/api-reenviar-confirmacion', [EmailConfirmationController::class, 'resendConfirmation']);
 
+/*DOCUMENTOS LEGALES (Públicos - sin autenticación)*/
+Route::get('legal/terms', function () {
+    $doc = \App\Models\LegalDocument::where('type', 'terms')->where('is_active', true)->first();
+    if (!$doc) {
+        return response()->json(['ok' => false, 'message' => 'Documento no encontrado'], 404);
+    }
+    return response()->json(['ok' => true, 'document' => $doc]);
+});
+Route::get('legal/privacy', function () {
+    $doc = \App\Models\LegalDocument::where('type', 'privacy')->where('is_active', true)->first();
+    if (!$doc) {
+        return response()->json(['ok' => false, 'message' => 'Documento no encontrado'], 404);
+    }
+    return response()->json(['ok' => true, 'document' => $doc]);
+});
+
 
 Route::get('notifications/test',[NotificationController::class,'test']);
 

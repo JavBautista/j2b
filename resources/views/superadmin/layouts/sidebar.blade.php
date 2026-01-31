@@ -46,6 +46,20 @@
                 </a>
             </li>
 
+            <!-- Menú Configuraciones -->
+            <li class="nav-item nav-dropdown">
+                <a class="nav-link nav-dropdown-toggle" href="#">
+                    <i class="fa fa-cogs"></i> Configuraciones
+                </a>
+                <ul class="nav-dropdown-items">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ route('superadmin.legal-documents') }}">
+                            <i class="fa fa-file-text"></i> Documentos Legales
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
             <!--<li class="nav-item nav-dropdown">
                 <a class="nav-link nav-dropdown-toggle" href="#"><i class="icon-bag"></i> Tiendas</a>
                 <ul class="nav-dropdown-items">

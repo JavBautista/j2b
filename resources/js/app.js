@@ -19,6 +19,7 @@ import UsersComponent from './components/superadmin/UsersComponent.vue'
 import SubscriptionManagementComponent from './components/superadmin/SubscriptionManagementComponent.vue'
 import ShopPaymentsComponent from './components/superadmin/ShopPaymentsComponent.vue'
 import ContactMessagesComponent from './components/superadmin/ContactMessagesComponent.vue'
+import LegalDocumentsComponent from './components/superadmin/LegalDocumentsComponent.vue'
 import ExampleComponent from './components/ExampleComponent.vue';
 //Componenetes de tiendas
 import ClientsComponent from './components/shops/ClientsComponent.vue';
@@ -62,6 +63,7 @@ app.component('superadmin-users-component', UsersComponent);
 app.component('subscription-management-component', SubscriptionManagementComponent);
 app.component('shop-payments-component', ShopPaymentsComponent);
 app.component('contact-messages-component', ContactMessagesComponent);
+app.component('legal-documents-component', LegalDocumentsComponent);
 //Tiendas
 app.component('shop-template-creator-component', TemplateCreatorComponent);
 app.component('shop-clients-component', ClientsComponent);

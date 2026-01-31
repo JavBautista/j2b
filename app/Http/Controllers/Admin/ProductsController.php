@@ -9,6 +9,7 @@ use App\Models\ProductImage;
 use App\Models\Category;
 use Illuminate\Support\Facades\Storage;
 use App\Services\ImageService;
+use App\Services\StockAlertService;
 
 class ProductsController extends Controller
 {
@@ -165,6 +166,9 @@ class ProductsController extends Controller
 
         $product = Product::where('shop_id', $shop->id)->findOrFail($request->id);
 
+        // Guardar stock anterior para verificar si pasó de 0 a >0
+        $previousStock = $product->stock;
+
         $product->category_id = $request->category_id;
         $product->key = $request->key;
         $product->barcode = $request->barcode;
@@ -177,6 +181,12 @@ class ProductsController extends Controller
         $product->stock = $request->stock ?? $product->stock;
         $product->reserve = $request->reserve ?? $product->reserve;
         $product->save();
+
+        // Notificar clientes en espera si stock pasó de 0 a >0
+        if ($previousStock == 0 && $product->stock > 0) {
+            $stockAlertService = app(StockAlertService::class);
+            $stockAlertService->processStockIncrease($product, $previousStock, $product->stock);
+        }
 
         $product->load('category', 'images');
 
@@ -266,9 +276,19 @@ class ProductsController extends Controller
         $shop = $user->shop;
 
         $product = Product::where('shop_id', $shop->id)->findOrFail($id);
+
+        // Guardar stock anterior para verificar si pasó de 0 a >0
+        $previousStock = $product->stock;
+
         $product->stock = $request->stock;
         $product->reserve = $request->reserve ?? $product->reserve;
         $product->save();
+
+        // Notificar clientes en espera si stock pasó de 0 a >0
+        if ($previousStock == 0 && $product->stock > 0) {
+            $stockAlertService = app(StockAlertService::class);
+            $stockAlertService->processStockIncrease($product, $previousStock, $product->stock);
+        }
 
         $product->load('category', 'images');
 

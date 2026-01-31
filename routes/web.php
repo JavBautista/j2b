@@ -28,6 +28,7 @@ use App\Http\Controllers\Admin\RentsController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\DownloadController;
 use App\Http\Controllers\Superadmin\ContactMessagesController;
+use App\Http\Controllers\Superadmin\LegalDocumentsController;
 
 
 /*
@@ -175,6 +176,13 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::put('/superadmin/contact-messages/mark-multiple-read', [ContactMessagesController::class, 'markMultipleAsRead']);
         Route::delete('/superadmin/contact-messages/{id}', [ContactMessagesController::class, 'destroy']);
         Route::post('/superadmin/contact-messages/delete-multiple', [ContactMessagesController::class, 'destroyMultiple']);
+
+        // Legal Documents (Términos y Condiciones, Aviso de Privacidad)
+        Route::get('/superadmin/legal-documents', [LegalDocumentsController::class, 'index'])->name('superadmin.legal-documents');
+        Route::get('/superadmin/legal-documents/get', [LegalDocumentsController::class, 'get']);
+        Route::post('/superadmin/legal-documents/store', [LegalDocumentsController::class, 'store']);
+        Route::put('/superadmin/legal-documents/update', [LegalDocumentsController::class, 'update']);
+        Route::delete('/superadmin/legal-documents/{id}', [LegalDocumentsController::class, 'destroy']);
     }); //./Routes Middleware superadmin
 
     //====================RUTAS AUTH/ADMIN DE TIENDAS====================

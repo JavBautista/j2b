@@ -29,7 +29,14 @@
       "WebFetch(domain:levcore.app)",
       "WebSearch",
       "WebFetch(domain:www.termsfeed.com)",
-      "Bash(mysql:*)"
+      "Bash(mysql:*)",
+      "Bash(source:*)",
+      "Bash(python -c:*)",
+      "Bash(sudo systemctl restart:*)",
+      "Bash(sudo -S systemctl restart:*)",
+      "Bash(printf:*)",
+      "Bash(php /var/www/j2b/artisan:*)",
+      "Bash(pgrep:*)"
     ],
     "deny": []
   }

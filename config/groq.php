@@ -8,6 +8,14 @@ return [
     'max_tokens' => env('GROQ_MAX_TOKENS', 2000),
     'temperature' => env('GROQ_TEMPERATURE', 0.7),
 
+    // Clasificador LLM (fallback para IntentClassifier)
+    'classifier' => [
+        'enabled' => env('GROQ_CLASSIFIER_ENABLED', false),
+        'model' => env('GROQ_CLASSIFIER_MODEL', 'llama-3.1-8b-instant'),
+        'max_tokens' => 50,
+        'temperature' => 0.0,
+    ],
+
     // Configuración de retry
     'retry' => [
         'times' => 3,

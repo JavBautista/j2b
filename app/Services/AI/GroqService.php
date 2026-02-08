@@ -240,6 +240,67 @@ class GroqService
     }
 
     /**
+     * Clasificar intención del usuario usando LLM
+     *
+     * Usa un modelo rápido (8B) para clasificar prompts ambiguos.
+     * Solo se usa como fallback cuando las keywords no matchean.
+     *
+     * @param string $prompt Texto del usuario
+     * @return string|null Intención clasificada o null si falla
+     */
+    public function classifyIntent(string $prompt): ?string
+    {
+        $validIntents = [
+            'sales_query', 'debt_query', 'expense_query',
+            'purchase_query', 'client_history', 'client_search',
+            'product_search', 'general'
+        ];
+
+        $systemPrompt = "Eres un clasificador de intenciones para un sistema de gestión empresarial. "
+            . "Clasifica el mensaje del usuario en UNA de estas categorías:\n"
+            . "- sales_query: ventas, ingresos, notas de venta, cuánto vendimos, producto más vendido\n"
+            . "- debt_query: quién me debe, adeudos, cobros pendientes, rentas pendientes\n"
+            . "- expense_query: gastos, egresos, cuánto gastamos, en qué gastamos\n"
+            . "- purchase_query: compras a proveedores, órdenes de compra, a quién le debo\n"
+            . "- client_history: historial de compras de un cliente específico, qué ha comprado [nombre]\n"
+            . "- client_search: buscar información/contacto de un cliente, datos del cliente\n"
+            . "- product_search: buscar productos, precios, disponibilidad, stock\n"
+            . "- general: saludos, preguntas generales, ayuda\n\n"
+            . "Responde SOLO con el nombre de la categoría, sin explicación.";
+
+        try {
+            $result = $this->chat([
+                ['role' => 'system', 'content' => $systemPrompt],
+                ['role' => 'user', 'content' => $prompt],
+            ], [
+                'model' => config('groq.classifier.model', 'llama-3.1-8b-instant'),
+                'max_tokens' => config('groq.classifier.max_tokens', 50),
+                'temperature' => config('groq.classifier.temperature', 0.0),
+            ]);
+
+            if ($result['success']) {
+                $intent = trim(mb_strtolower($result['content']));
+                if (in_array($intent, $validIntents)) {
+                    Log::info('GroqService::classifyIntent', [
+                        'prompt' => mb_substr($prompt, 0, 100),
+                        'intent' => $intent,
+                    ]);
+                    return $intent;
+                }
+                Log::warning('GroqService::classifyIntent invalid response', [
+                    'response' => $intent,
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::warning('GroqService::classifyIntent failed', [
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return null;
+    }
+
+    /**
      * Generar descripción de producto optimizada para e-commerce
      *
      * @param array $productoData Datos del producto (nombre, categoría, características)

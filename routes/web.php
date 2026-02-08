@@ -242,6 +242,7 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::post('/admin/configurations/ai-settings/indexing/products', [App\Http\Controllers\Admin\AiSettingsController::class, 'indexProducts']);
         Route::post('/admin/configurations/ai-settings/indexing/services', [App\Http\Controllers\Admin\AiSettingsController::class, 'indexServices']);
         Route::post('/admin/configurations/ai-settings/indexing/all', [App\Http\Controllers\Admin\AiSettingsController::class, 'indexAll']);
+        Route::post('/admin/configurations/ai-settings/indexing/clients', [App\Http\Controllers\Admin\AiSettingsController::class, 'indexClients']);
 
         Route::get('/admin/contracts', [AdminPagesController::class, 'contracts'])->name('admin.contracts');
 

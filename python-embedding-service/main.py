@@ -209,6 +209,87 @@ async def search_semantic(request: SearchSemanticRequest):
         print(f"❌ Error en búsqueda: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+class SearchClientsRequest(BaseModel):
+    """Request para búsqueda semántica de clientes - MULTI-TENANT"""
+    query: str
+    limit: int = 5
+    shop_id: int  # REQUERIDO
+
+class ClientResult(BaseModel):
+    """Resultado de búsqueda de cliente"""
+    id: int
+    type: str = "client"
+    name: str
+    company: str = ""
+    email: str = ""
+    phone: str = ""
+    city: str = ""
+    state: str = ""
+    plan_name: str = ""
+    observations: str = ""
+    score: float
+
+@app.post("/search/clients")
+async def search_clients_endpoint(request: SearchClientsRequest):
+    """
+    Búsqueda semántica de clientes MULTI-TENANT
+
+    POST /search/clients
+    {"query": "Juan Perez", "limit": 5, "shop_id": 26}
+    """
+    try:
+        from models import embedding_model
+        from qdrant_client_wrapper import search_clients
+        from search_optimizer import SearchOptimizer
+        import time
+
+        start_time = time.time()
+        optimizer = SearchOptimizer()
+
+        # Preprocesar query
+        query_processed = optimizer.preprocess_query(request.query)
+        print(f"\n👥 Buscando clientes: '{request.query}' (shop_id: {request.shop_id})")
+
+        # Generar embedding
+        query_vector = embedding_model.encode(query_processed).tolist()
+
+        # Buscar en Qdrant
+        results = search_clients(
+            query_vector=query_vector,
+            limit=request.limit * 2,
+            shop_id=request.shop_id
+        )
+
+        # Aplicar boost para coincidencias exactas en nombre
+        for client in results:
+            boost = optimizer.should_boost_result(
+                request.query,
+                client.get('name', ''),
+                client.get('company', '')
+            )
+            client['score'] = min(client['score'] * boost, 1.0)
+
+        # Filtrar por threshold mínimo y ordenar
+        threshold = 0.35  # Más permisivo para clientes (nombres cortos)
+        results = [c for c in results if c['score'] >= threshold]
+        results.sort(key=lambda x: x['score'], reverse=True)
+        final_results = results[:request.limit]
+
+        elapsed = (time.time() - start_time) * 1000
+
+        print(f"   Encontrados: {len(final_results)}")
+
+        return {
+            "found": len(final_results) > 0,
+            "clients": final_results,
+            "query_time_ms": round(elapsed, 2),
+            "shop_id": request.shop_id
+        }
+
+    except Exception as e:
+        print(f"❌ Error buscando clientes: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ============================================
 # ENDPOINTS DE INDEXACIÓN Y ESTADÍSTICAS
 # ============================================
@@ -389,6 +470,97 @@ def index_services(request: IndexRequest):
 
     except Exception as e:
         print(f"❌ Error indexando servicios: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/index/clients")
+def index_clients(request: IndexRequest):
+    """
+    Indexar todos los clientes activos de una tienda
+
+    POST /index/clients
+    {"shop_id": 26}
+    """
+    try:
+        import pymysql
+        import pymysql.cursors
+        from models import embedding_model
+        from qdrant_client_wrapper import delete_clients_by_shop, insert_client
+
+        shop_id = request.shop_id
+        print(f"\n👥 Indexando clientes de shop_id={shop_id}...")
+
+        # Conectar a MySQL
+        conn = pymysql.connect(
+            host=os.getenv("MYSQL_HOST", "127.0.0.1"),
+            port=int(os.getenv("MYSQL_PORT", 3306)),
+            user=os.getenv("MYSQL_USER", "root"),
+            password=os.getenv("MYSQL_PASSWORD", ""),
+            database=os.getenv("MYSQL_DATABASE", "j2b"),
+            cursorclass=pymysql.cursors.DictCursor
+        )
+        cursor = conn.cursor()
+
+        # Obtener clientes activos
+        cursor.execute("""
+            SELECT id, shop_id, name, company, email, phone, movil,
+                   address, city, state, observations, plan_name
+            FROM clients
+            WHERE shop_id = %s AND active = 1
+        """, (shop_id,))
+        clients = cursor.fetchall()
+
+        # Eliminar clientes anteriores de esta tienda
+        delete_clients_by_shop(shop_id)
+
+        # Indexar cada cliente
+        indexed = 0
+        errors = 0
+        for client in clients:
+            try:
+                # Crear texto para embedding (concatenar campos relevantes)
+                parts = [
+                    client['name'] or '',
+                    client['company'] or '',
+                    client['email'] or '',
+                    client['phone'] or client['movil'] or '',
+                    client['city'] or '',
+                    client['state'] or '',
+                    client['observations'] or ''
+                ]
+                text = ' '.join(p for p in parts if p)
+
+                # Generar embedding
+                vector = embedding_model.encode(text).tolist()
+
+                # Preparar payload
+                payload = {
+                    "client_id": client['id'],
+                    "shop_id": client['shop_id'],
+                    "name": client['name'] or '',
+                    "company": client['company'] or '',
+                    "email": client['email'] or '',
+                    "phone": client['phone'] or client['movil'] or '',
+                    "city": client['city'] or '',
+                    "state": client['state'] or '',
+                    "plan_name": client['plan_name'] or '',
+                    "observations": client['observations'] or ''
+                }
+
+                # Insertar en Qdrant
+                insert_client(client['id'], vector, payload)
+                indexed += 1
+            except Exception as e:
+                print(f"   ❌ Error con cliente {client['id']}: {e}")
+                errors += 1
+
+        cursor.close()
+        conn.close()
+
+        print(f"✅ Clientes indexados: {indexed}, errores: {errors}")
+        return {"indexed": indexed, "errors": errors}
+
+    except Exception as e:
+        print(f"❌ Error indexando clientes: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/index/catalog")

@@ -54,7 +54,7 @@
                 <!-- Alert de estado -->
                 <div class="alert mb-4" :class="indexStatus.is_synced ? 'alert-success' : 'alert-warning'">
                     <div class="row align-items-center">
-                        <div class="col-md-4 mb-2 mb-md-0">
+                        <div class="col-md-3 mb-2 mb-md-0">
                             <div class="d-flex align-items-center">
                                 <i class="fa fa-cube fa-lg me-2"></i>
                                 <div>
@@ -68,7 +68,7 @@
                                 <i class="fa fa-exclamation-triangle"></i> {{ indexStatus.products.pending }} pendientes
                             </span>
                         </div>
-                        <div class="col-md-4 mb-2 mb-md-0">
+                        <div class="col-md-3 mb-2 mb-md-0">
                             <div class="d-flex align-items-center">
                                 <i class="fa fa-wrench fa-lg me-2"></i>
                                 <div>
@@ -82,7 +82,21 @@
                                 <i class="fa fa-exclamation-triangle"></i> {{ indexStatus.services.pending }} pendientes
                             </span>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3 mb-2 mb-md-0">
+                            <div class="d-flex align-items-center">
+                                <i class="fa fa-users fa-lg me-2"></i>
+                                <div>
+                                    <strong>Clientes</strong>
+                                    <div class="small">
+                                        {{ indexStatus.clients?.indexed || 0 }} indexados de {{ indexStatus.clients?.active || 0 }} activos
+                                    </div>
+                                </div>
+                            </div>
+                            <span v-if="indexStatus.clients?.pending > 0" class="badge bg-warning text-dark mt-1">
+                                <i class="fa fa-exclamation-triangle"></i> {{ indexStatus.clients.pending }} pendientes
+                            </span>
+                        </div>
+                        <div class="col-md-3">
                             <div class="d-flex align-items-center">
                                 <i class="fa fa-clock-o fa-lg me-2"></i>
                                 <div>
@@ -124,6 +138,16 @@
                         <span v-if="indexing === 'services'" class="spinner-border spinner-border-sm me-1"></span>
                         <i v-else class="fa fa-wrench me-1"></i>
                         {{ indexing === 'services' ? 'Indexando...' : 'Indexar Servicios' }}
+                    </button>
+
+                    <button
+                        class="btn btn-outline-primary"
+                        @click="indexClients"
+                        :disabled="indexing"
+                    >
+                        <span v-if="indexing === 'clients'" class="spinner-border spinner-border-sm me-1"></span>
+                        <i v-else class="fa fa-users me-1"></i>
+                        {{ indexing === 'clients' ? 'Indexando...' : 'Indexar Clientes' }}
                     </button>
 
                     <button
@@ -254,6 +278,26 @@ export default {
             } catch (error) {
                 console.error(error);
                 this.showToast('error', error.response?.data?.message || 'Error al indexar servicios');
+            } finally {
+                this.indexing = false;
+            }
+        },
+
+        async indexClients() {
+            if (this.indexing) return;
+            this.indexing = 'clients';
+
+            try {
+                const response = await axios.post('/admin/configurations/ai-settings/indexing/clients');
+                if (response.data.ok) {
+                    this.showToast('success', response.data.message);
+                    await this.loadIndexStatus();
+                } else {
+                    this.showToast('error', response.data.message || 'Error al indexar');
+                }
+            } catch (error) {
+                console.error(error);
+                this.showToast('error', error.response?.data?.message || 'Error al indexar clientes');
             } finally {
                 this.indexing = false;
             }

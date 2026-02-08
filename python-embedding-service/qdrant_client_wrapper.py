@@ -6,6 +6,7 @@ J2Biznes - Sistema Multi-Tenant (filtro por shop_id)
 Soporta:
 - Productos (type="product", IDs: 1-999999)
 - Servicios (type="service", IDs: 1000000+)
+- Clientes (type="client", IDs: 2000000+)
 """
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct, Filter, FieldCondition, MatchValue
@@ -19,8 +20,9 @@ qdrant = QdrantClient(
 
 COLLECTION_NAME = "j2b_productos_embeddings"  # Colección para productos y servicios
 
-# Offset para IDs de servicios (evita colisión con productos)
+# Offsets para IDs (evita colisión entre tipos)
 SERVICE_ID_OFFSET = 1000000
+CLIENT_ID_OFFSET = 2000000
 
 def create_collection():
     """
@@ -221,6 +223,102 @@ def delete_services_by_shop(shop_id: int):
     )
     print(f"🗑️  Servicios de shop_id={shop_id} eliminados")
 
+def insert_client(client_id: int, vector: list, payload: dict):
+    """
+    Insertar un cliente en Qdrant
+
+    Args:
+        client_id: ID del cliente (de MySQL)
+        vector: Vector embedding (384 dimensiones)
+        payload: Datos del cliente (name, company, phone, shop_id, etc.)
+    """
+    payload["type"] = "client"
+    payload["item_id"] = client_id
+
+    qdrant_id = CLIENT_ID_OFFSET + client_id
+
+    qdrant.upsert(
+        collection_name=COLLECTION_NAME,
+        points=[
+            PointStruct(
+                id=qdrant_id,
+                vector=vector,
+                payload=payload
+            )
+        ]
+    )
+
+def delete_clients_by_shop(shop_id: int):
+    """
+    Eliminar todos los clientes de una tienda específica
+
+    Args:
+        shop_id: ID de la tienda
+    """
+    qdrant.delete(
+        collection_name=COLLECTION_NAME,
+        points_selector=Filter(
+            must=[
+                FieldCondition(
+                    key="shop_id",
+                    match=MatchValue(value=shop_id)
+                ),
+                FieldCondition(
+                    key="type",
+                    match=MatchValue(value="client")
+                )
+            ]
+        )
+    )
+    print(f"🗑️  Clientes de shop_id={shop_id} eliminados")
+
+def search_clients(query_vector: list, limit: int = 5, shop_id: int = None):
+    """
+    Buscar clientes similares por vector CON FILTRO MULTI-TENANT
+
+    Args:
+        query_vector: Vector de la consulta del usuario
+        limit: Número máximo de resultados
+        shop_id: ID de la tienda (REQUERIDO)
+
+    Returns:
+        Lista de clientes encontrados con score de similitud
+    """
+    must_conditions = [
+        FieldCondition(key="type", match=MatchValue(value="client"))
+    ]
+
+    if shop_id is not None:
+        must_conditions.append(
+            FieldCondition(key="shop_id", match=MatchValue(value=shop_id))
+        )
+
+    results = qdrant.search(
+        collection_name=COLLECTION_NAME,
+        query_vector=query_vector,
+        query_filter=Filter(must=must_conditions),
+        limit=limit
+    )
+
+    clients = []
+    for result in results:
+        payload = result.payload
+        clients.append({
+            "id": payload.get("client_id"),
+            "type": "client",
+            "name": payload.get("name", ""),
+            "company": payload.get("company", ""),
+            "email": payload.get("email", ""),
+            "phone": payload.get("phone", ""),
+            "city": payload.get("city", ""),
+            "state": payload.get("state", ""),
+            "plan_name": payload.get("plan_name", ""),
+            "observations": payload.get("observations", ""),
+            "score": round(result.score, 4)
+        })
+
+    return clients
+
 def delete_all_by_shop(shop_id: int):
     """
     Eliminar todos los items (productos y servicios) de una tienda
@@ -291,9 +389,21 @@ def count_by_shop(shop_id: int):
             )
         ).count
 
+        # Contar clientes
+        clients_count = qdrant.count(
+            collection_name=COLLECTION_NAME,
+            count_filter=Filter(
+                must=[
+                    FieldCondition(key="shop_id", match=MatchValue(value=shop_id)),
+                    FieldCondition(key="type", match=MatchValue(value="client"))
+                ]
+            )
+        ).count
+
         return {
             "products": products_count,
-            "services": services_count
+            "services": services_count,
+            "clients": clients_count
         }
     except Exception as e:
         print(f"❌ Error contando items para shop_id={shop_id}: {e}")

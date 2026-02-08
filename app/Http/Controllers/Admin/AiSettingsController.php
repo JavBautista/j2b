@@ -8,6 +8,7 @@ use App\Models\ShopAiSettings;
 use App\Models\Shop;
 use App\Models\Product;
 use App\Models\Service;
+use App\Models\Client;
 use App\Services\AI\EmbeddingService;
 
 class AiSettingsController extends Controller
@@ -140,6 +141,11 @@ class AiSettingsController extends Controller
             ->where('active', true)
             ->count();
 
+        // Contar clientes activos
+        $clientsActive = Client::where('shop_id', $shopId)
+            ->where('active', true)
+            ->count();
+
         // Obtener conteo de Qdrant (vía Python service)
         $embeddingService = new EmbeddingService();
         $indexedCounts = $embeddingService->getIndexedCounts($shopId);
@@ -161,9 +167,15 @@ class AiSettingsController extends Controller
                     'active' => $servicesActive,
                     'pending' => max(0, $servicesActive - ($indexedCounts['services'] ?? 0))
                 ],
+                'clients' => [
+                    'indexed' => $indexedCounts['clients'] ?? 0,
+                    'active' => $clientsActive,
+                    'pending' => max(0, $clientsActive - ($indexedCounts['clients'] ?? 0))
+                ],
                 'last_sync' => $lastSync?->format('Y-m-d H:i'),
                 'is_synced' => ($indexedCounts['products'] ?? 0) >= $productsActive
                             && ($indexedCounts['services'] ?? 0) >= $servicesActive
+                            && ($indexedCounts['clients'] ?? 0) >= $clientsActive
             ]
         ]);
     }
@@ -242,6 +254,45 @@ class AiSettingsController extends Controller
             return response()->json([
                 'ok' => false,
                 'message' => 'Error al indexar servicios: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Indexar clientes en Qdrant
+     */
+    public function indexClients(Request $request)
+    {
+        if (!$request->ajax()) return redirect('/');
+
+        $user = auth()->user();
+
+        if (!$user->can_use_ai) {
+            return response()->json(['ok' => false, 'message' => 'Sin acceso a IA'], 403);
+        }
+
+        $shopId = $user->shop_id;
+
+        try {
+            $embeddingService = new EmbeddingService();
+            $result = $embeddingService->indexClients($shopId);
+
+            // Actualizar timestamp
+            ShopAiSettings::updateOrCreate(
+                ['shop_id' => $shopId],
+                ['last_embedding_sync' => now()]
+            );
+
+            return response()->json([
+                'ok' => true,
+                'message' => "{$result['indexed']} clientes indexados correctamente",
+                'indexed' => $result['indexed'],
+                'errors' => $result['errors'] ?? 0
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Error al indexar clientes: ' . $e->getMessage()
             ], 500);
         }
     }

@@ -248,6 +248,130 @@ class EmbeddingService
         return $shouldSearch;
     }
 
+    // =========================================================================
+    // BUSQUEDA DE CLIENTES
+    // =========================================================================
+
+    /**
+     * Búsqueda semántica de clientes (MULTI-TENANT)
+     *
+     * @param string $query Consulta del usuario (ej: "Juan Perez")
+     * @param int $shopId ID de la tienda (REQUERIDO)
+     * @param int $limit Número máximo de resultados
+     * @return array|null Array con clientes encontrados o null si hay error
+     */
+    public function searchClients(string $query, int $shopId, int $limit = 5): ?array
+    {
+        try {
+            $response = Http::timeout($this->timeout)
+                ->post("{$this->baseUrl}/search/clients", [
+                    'query' => $query,
+                    'limit' => $limit,
+                    'shop_id' => $shopId,
+                ]);
+
+            if ($response->successful()) {
+                $data = $response->json();
+
+                Log::info('EmbeddingService: Búsqueda de clientes exitosa', [
+                    'query' => $query,
+                    'shop_id' => $shopId,
+                    'found' => $data['found'] ?? false,
+                    'clients_count' => count($data['clients'] ?? []),
+                ]);
+
+                return $data;
+            }
+
+            Log::error('EmbeddingService: Error en búsqueda de clientes', [
+                'query' => $query,
+                'shop_id' => $shopId,
+                'status' => $response->status(),
+            ]);
+
+            return null;
+
+        } catch (\Exception $e) {
+            Log::error('EmbeddingService: Excepción buscando clientes', [
+                'query' => $query,
+                'shop_id' => $shopId,
+                'error' => $e->getMessage(),
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Formatear clientes encontrados como texto para contexto del LLM
+     *
+     * @param array|null $searchResult Resultado de searchClients()
+     * @return string Texto formateado para inyectar al LLM
+     */
+    public function formatClientsForChat(?array $searchResult): string
+    {
+        if (!$searchResult || !($searchResult['found'] ?? false)) {
+            return '';
+        }
+
+        $clients = $searchResult['clients'] ?? [];
+        if (empty($clients)) {
+            return '';
+        }
+
+        $context = "[CLIENTES ENCONTRADOS]\n";
+        foreach ($clients as $client) {
+            $parts = ["- {$client['name']}"];
+
+            if (!empty($client['company'])) {
+                $parts[] = "Empresa: {$client['company']}";
+            }
+            if (!empty($client['phone'])) {
+                $parts[] = "Tel: {$client['phone']}";
+            }
+            if (!empty($client['email'])) {
+                $parts[] = "Email: {$client['email']}";
+            }
+            if (!empty($client['city'])) {
+                $location = $client['city'];
+                if (!empty($client['state'])) {
+                    $location .= ", {$client['state']}";
+                }
+                $parts[] = "Ciudad: {$location}";
+            }
+            if (!empty($client['plan_name'])) {
+                $parts[] = "Plan: {$client['plan_name']}";
+            }
+            if (!empty($client['observations'])) {
+                $parts[] = "Obs: {$client['observations']}";
+            }
+
+            $context .= implode(' | ', $parts) . "\n";
+        }
+        $context .= "[FIN CLIENTES]";
+
+        return $context;
+    }
+
+    /**
+     * Indexar clientes de una tienda en Qdrant
+     *
+     * @param int $shopId ID de la tienda
+     * @return array Resultado con indexed y errors
+     */
+    public function indexClients(int $shopId): array
+    {
+        $response = Http::timeout(120)
+            ->post("{$this->baseUrl}/index/clients", [
+                'shop_id' => $shopId
+            ]);
+
+        if ($response->failed()) {
+            throw new \Exception('Error al indexar clientes: ' . $response->body());
+        }
+
+        return $response->json();
+    }
+
     /**
      * Obtener conteo de items indexados por tipo para una tienda
      *

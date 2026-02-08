@@ -104,9 +104,11 @@ class IntentClassifier
         'correo del cliente', 'email del cliente',
         'contacto del cliente', 'contactar al cliente',
         // Sin la palabra "cliente" (patrones comunes para buscar personas)
-        'info de ', 'información de ', 'datos de ',
+        'info de ', 'información de ', 'informacion de ', 'datos de ',
         'busca a ', 'contacto de ', 'contactar a ',
         'quien es ', 'quién es ',
+        'dame la informacion de', 'dame la información de',
+        'dame los datos de', 'dame el contacto de',
     ];
 
     /**
@@ -270,13 +272,31 @@ class IntentClassifier
                 ->toArray();
         }
 
+        // Comparar con y sin acentos para ser tolerante
+        $normalizedClean = $this->removeAccents($normalized);
+
         foreach ($this->clientNames as $clientName) {
             if (mb_strpos($normalized, $clientName) !== false) {
+                return true;
+            }
+            // También comparar sin acentos
+            $clientNameClean = $this->removeAccents($clientName);
+            if (mb_strpos($normalizedClean, $clientNameClean) !== false) {
                 return true;
             }
         }
 
         return false;
+    }
+
+    /**
+     * Quitar acentos de un texto para comparación tolerante
+     */
+    private function removeAccents(string $text): string
+    {
+        $search  = ['á','é','í','ó','ú','ñ','ü','Á','É','Í','Ó','Ú','Ñ','Ü'];
+        $replace = ['a','e','i','o','u','n','u','a','e','i','o','u','n','u'];
+        return str_replace($search, $replace, $text);
     }
 
     /**

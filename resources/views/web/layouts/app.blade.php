@@ -206,9 +206,8 @@
                     <p>&copy; {{ date('Y') }} J2Biznes. Todos los derechos reservados.</p>
                 </div>
                 <div class="footer-links">
-                    <a href="#privacidad">Política de Privacidad</a>
-                    <a href="#terminos">Términos de Servicio</a>
-                    <a href="#cookies">Cookies</a>
+                    <a href="{{ route('legal.privacy') }}">Política de Privacidad</a>
+                    <a href="{{ route('legal.terms') }}">Términos de Servicio</a>
                 </div>
             </div>
         </div>

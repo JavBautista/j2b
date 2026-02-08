@@ -27,6 +27,7 @@ use App\Http\Controllers\Admin\UsersController as AdminUsersController;
 use App\Http\Controllers\Admin\RentsController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\DownloadController;
+use App\Http\Controllers\LegalPageController;
 use App\Http\Controllers\Superadmin\ContactMessagesController;
 use App\Http\Controllers\Superadmin\LegalDocumentsController;
 
@@ -56,6 +57,10 @@ Route::post('/contact', [ContactController::class, 'store'])->name('contact.stor
 // Descarga directa APK (público)
 Route::get('/descargar', [DownloadController::class, 'showForm'])->name('download.form');
 Route::post('/descargar', [DownloadController::class, 'processDownload'])->name('download.process');
+
+// Documentos legales (público)
+Route::get('/terminos', [LegalPageController::class, 'terms'])->name('legal.terms');
+Route::get('/privacidad', [LegalPageController::class, 'privacy'])->name('legal.privacy');
 
 Route::get('/pre-registro', [RequestsJ2bController::class, 'j2bSolicitar'])->name('solicitud');
 Route::post('/pre-registro/create', [RequestsJ2bController::class, 'store'])->name('solicitud.store');
@@ -203,6 +208,10 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::put('/admin/shop/update', [ShopController::class, 'updateWeb'])->name('admin.shop.update');
         Route::put('/admin/shop/{shop}/update-signature', [ShopController::class, 'updateSignature'])->name('admin.shop.update-signature');
         Route::delete('/admin/shop/{shop}/delete-signature', [ShopController::class, 'deleteSignature'])->name('admin.shop.delete-signature');
+
+        // Documentos legales (solo lectura)
+        Route::get('/admin/legal/terms', [AdminPagesController::class, 'legalTerms'])->name('admin.legal.terms');
+        Route::get('/admin/legal/privacy', [AdminPagesController::class, 'legalPrivacy'])->name('admin.legal.privacy');
 
         Route::get('/admin/configurations', [AdminPagesController::class, 'configurations'])->name('admin.configurations');
 

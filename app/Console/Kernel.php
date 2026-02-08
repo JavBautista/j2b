@@ -32,6 +32,12 @@ class Kernel extends ConsoleKernel
         $schedule->command('create:rents_notifications')->daily();
         $schedule->command('create:shop_cutoff_notifications')->daily();
 
+        // Recordatorios de renta para clientes con APP (3 días y 1 día antes)
+        $schedule->command('create:client_rent_reminders')->dailyAt('10:00');
+
+        // Recordatorios de pago a crédito para clientes con APP (3 días y 1 día antes)
+        $schedule->command('create:client_payment_reminders')->dailyAt('10:00');
+
         // Verificar suscripciones vencidas (trials, grace periods, bloqueos)
         $schedule->command('subscriptions:check-expired')->dailyAt('02:00');
     }

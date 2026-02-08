@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\Shop;
 use App\Models\ClientService;
 use App\Models\User;
+use App\Models\LegalDocument;
 use App\Http\Controllers\ClientServiceController;
 
 class AdminPagesController extends Controller
@@ -75,6 +76,18 @@ class AdminPagesController extends Controller
         ];
 
         return view('admin.contracts.index', compact('templates', 'defaultVariables'));
+    }
+
+    public function legalTerms()
+    {
+        $document = LegalDocument::getActiveTerms();
+        return view('admin.legal', ['document' => $document, 'type' => 'terms']);
+    }
+
+    public function legalPrivacy()
+    {
+        $document = LegalDocument::getActivePrivacy();
+        return view('admin.legal', ['document' => $document, 'type' => 'privacy']);
     }
 
     public function clients(){

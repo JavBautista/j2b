@@ -26,7 +26,10 @@
       "Bash(sudo -S systemctl daemon-reload:*)",
       "Bash(pkill:*)",
       "Bash(sudo -S systemctl enable:*)",
-      "WebFetch(domain:levcore.app)"
+      "WebFetch(domain:levcore.app)",
+      "WebSearch",
+      "WebFetch(domain:www.termsfeed.com)",
+      "Bash(mysql:*)"
     ],
     "deny": []
   }

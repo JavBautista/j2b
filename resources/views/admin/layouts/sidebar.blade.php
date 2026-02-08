@@ -98,6 +98,18 @@
                 </a>
             </li>
 
+            <li class="nav-item nav-dropdown">
+                <a class="nav-link nav-dropdown-toggle" href="#"><i class="fa fa-info-circle"></i> Acerca de J2Biznes</a>
+                <ul class="nav-dropdown-items">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ route('admin.legal.terms') }}"><i class="fa fa-file-text"></i> Términos y Condiciones</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ route('admin.legal.privacy') }}"><i class="fa fa-shield"></i> Aviso de Privacidad</a>
+                    </li>
+                </ul>
+            </li>
+
             <!--<li class="nav-item nav-dropdown">
                 <a class="nav-link nav-dropdown-toggle" href="#"><i class="icon-bag"></i> Tiendas</a>
                 <ul class="nav-dropdown-items">

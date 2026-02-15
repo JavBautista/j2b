@@ -97,6 +97,17 @@
                                 <li><a class="dropdown-item" href="#" @click.prevent="descargarPDF(receipt)">
                                     <i class="fa fa-file-pdf-o text-danger"></i> Descargar PDF
                                 </a></li>
+                                <li v-if="canInvoice(receipt)"><hr class="dropdown-divider"></li>
+                                <li v-if="canInvoice(receipt)"><a class="dropdown-item" href="#" @click.prevent="facturar(receipt)">
+                                    <i class="fa fa-file-text-o text-success"></i> Facturar
+                                </a></li>
+                                <li v-if="receipt.is_tax_invoiced && receipt.cfdi_invoice"><hr class="dropdown-divider"></li>
+                                <li v-if="receipt.is_tax_invoiced && receipt.cfdi_invoice"><a class="dropdown-item" href="#" @click.prevent="descargarCfdi(receipt, 'xml')">
+                                    <i class="fa fa-code text-primary"></i> Descargar XML
+                                </a></li>
+                                <li v-if="receipt.is_tax_invoiced && receipt.cfdi_invoice"><a class="dropdown-item" href="#" @click.prevent="descargarCfdi(receipt, 'pdf')">
+                                    <i class="fa fa-file-pdf-o text-danger"></i> Descargar Factura PDF
+                                </a></li>
                             </ul>
                         </div>
                     </div>
@@ -126,8 +137,9 @@
                             </div>
                         </div>
                     </div>
-                    <div class="card-footer bg-transparent">
+                    <div class="card-footer bg-transparent d-flex justify-content-between align-items-center">
                         <span :class="getStatusClass(receipt.status)">{{ receipt.status }}</span>
+                        <span v-if="receipt.is_tax_invoiced" class="badge bg-success"><i class="fa fa-check me-1"></i>Facturada</span>
                     </div>
                 </div>
             </div>
@@ -180,6 +192,7 @@
                                     <span :class="getStatusClass(receipt.status)">
                                         {{ receipt.status }}
                                     </span>
+                                    <span v-if="receipt.is_tax_invoiced" class="badge bg-success ms-1">Facturada</span>
                                 </td>
                                 <td>
                                     {{ formatDate(receipt.created_at) }}
@@ -196,6 +209,18 @@
                                         </button>
                                         <button class="btn btn-outline-secondary"
                                                 @click="descargarPDF(receipt)" title="Descargar PDF">
+                                            <i class="fa fa-file-pdf-o"></i>
+                                        </button>
+                                        <button v-if="canInvoice(receipt)" class="btn btn-outline-success"
+                                                @click="facturar(receipt)" title="Facturar">
+                                            <i class="fa fa-file-text-o"></i>
+                                        </button>
+                                        <button v-if="receipt.is_tax_invoiced && receipt.cfdi_invoice" class="btn btn-outline-info"
+                                                @click="descargarCfdi(receipt, 'xml')" title="Descargar XML">
+                                            <i class="fa fa-code"></i>
+                                        </button>
+                                        <button v-if="receipt.is_tax_invoiced && receipt.cfdi_invoice" class="btn btn-outline-danger"
+                                                @click="descargarCfdi(receipt, 'pdf')" title="Descargar Factura PDF">
                                             <i class="fa fa-file-pdf-o"></i>
                                         </button>
                                     </div>
@@ -231,17 +256,28 @@
             </div>
         </div>
 
+        <!-- Modal Facturación CFDI -->
+        <cfdi-invoice-modal
+            v-if="cfdiActivo"
+            :receipt-id="facturarReceiptId"
+            @invoiced="onInvoiced"
+            @closed="onModalClosed"
+        />
     </div>
 </template>
 
 <script>
+import CfdiInvoiceModal from './CfdiInvoiceModal.vue';
+
 export default {
     name: 'ReceiptListComponent',
-    props: ['userLimited'],
+    components: { CfdiInvoiceModal },
+    props: ['userLimited', 'cfdiActivo'],
     data() {
         return {
             loading: false,
             receipts: [],
+            facturarReceiptId: null,
             pagination: {
                 total: 0,
                 current_page: 1,
@@ -317,6 +353,30 @@ export default {
                 this.cargarReceipts();
             }
         },
+        async descargarCfdi(receipt, formato) {
+            if (!receipt.cfdi_invoice) return;
+            try {
+                const response = await axios.get(
+                    `/admin/facturacion/descargar/${receipt.cfdi_invoice.id}/${formato}`,
+                    { responseType: 'blob' }
+                );
+                if (response.headers['content-type']?.includes('application/json')) {
+                    const text = await response.data.text();
+                    const json = JSON.parse(text);
+                    if (json.url) { window.open(json.url, '_blank'); }
+                    else if (!json.ok) { Swal.fire('Error', json.message, 'error'); }
+                    return;
+                }
+                const url = window.URL.createObjectURL(response.data);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `factura_${receipt.cfdi_invoice.serie}${receipt.cfdi_invoice.folio}.${formato}`;
+                a.click();
+                window.URL.revokeObjectURL(url);
+            } catch (e) {
+                Swal.fire('Error', 'No se pudo descargar el archivo', 'error');
+            }
+        },
         async descargarPDF(receipt) {
             const result = await Swal.fire({
                 title: 'Generar PDF',
@@ -344,10 +404,24 @@ export default {
                 window.open(url, '_blank');
             }
         },
-        canEdit(receipt) {
-            // No se puede editar si está facturado
+        canInvoice(receipt) {
+            if (!this.cfdiActivo) return false;
+            if (receipt.quotation) return false;
             if (receipt.is_tax_invoiced) return false;
-            // Se puede editar siempre (cotizaciones y notas)
+            return ['PAGADA', 'POR FACTURAR'].includes(receipt.status);
+        },
+        facturar(receipt) {
+            this.facturarReceiptId = receipt.id;
+        },
+        onInvoiced() {
+            this.facturarReceiptId = null;
+            this.cargarReceipts();
+        },
+        onModalClosed() {
+            this.facturarReceiptId = null;
+        },
+        canEdit(receipt) {
+            if (receipt.is_tax_invoiced) return false;
             return true;
         },
         editarNota(receipt) {

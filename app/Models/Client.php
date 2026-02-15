@@ -48,4 +48,12 @@ class Client extends Model
     public function primaryAddress(){
         return $this->hasOne(ClientAddress::class)->where('is_primary', true);
     }
+
+    public function fiscalData(){
+        return $this->hasMany(ClientFiscalData::class);
+    }
+
+    public function defaultFiscalData(){
+        return $this->hasOne(ClientFiscalData::class)->where('is_default', true);
+    }
 }

@@ -21,6 +21,7 @@ class Shop extends Model
         'is_trial' => 'boolean',
         'active' => 'boolean',
         'is_exempt' => 'boolean',
+        'cfdi_enabled' => 'boolean',
     ];
 
     public function extraFields()
@@ -62,6 +63,11 @@ class Shop extends Model
     public function plan()
     {
         return $this->belongsTo(Plan::class);
+    }
+
+    public function cfdiEmisor()
+    {
+        return $this->hasOne(CfdiEmisor::class);
     }
 
     public function planFeatures()

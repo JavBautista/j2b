@@ -20,6 +20,7 @@ import SubscriptionManagementComponent from './components/superadmin/Subscriptio
 import ShopPaymentsComponent from './components/superadmin/ShopPaymentsComponent.vue'
 import ContactMessagesComponent from './components/superadmin/ContactMessagesComponent.vue'
 import LegalDocumentsComponent from './components/superadmin/LegalDocumentsComponent.vue'
+import CfdiManagementComponent from './components/superadmin/CfdiManagementComponent.vue'
 import ExampleComponent from './components/ExampleComponent.vue';
 //Componenetes de tiendas
 import ClientsComponent from './components/shops/ClientsComponent.vue';
@@ -45,6 +46,7 @@ import PurchaseOrderCreateComponent from './components/admin/PurchaseOrderCreate
 import PurchaseOrderShowComponent from './components/admin/PurchaseOrderShowComponent.vue';
 import AiSettingsComponent from './components/admin/AiSettingsComponent.vue';
 import AiIndexingComponent from './components/admin/AiIndexingComponent.vue';
+import CfdiConfigComponent from './components/admin/CfdiConfigComponent.vue';
 
 // Componentes Shared (reutilizables)
 import ModalSelectClient from './components/shared/ModalSelectClient.vue';
@@ -64,6 +66,7 @@ app.component('subscription-management-component', SubscriptionManagementCompone
 app.component('shop-payments-component', ShopPaymentsComponent);
 app.component('contact-messages-component', ContactMessagesComponent);
 app.component('legal-documents-component', LegalDocumentsComponent);
+app.component('cfdi-management-component', CfdiManagementComponent);
 //Tiendas
 app.component('shop-template-creator-component', TemplateCreatorComponent);
 app.component('shop-clients-component', ClientsComponent);
@@ -79,6 +82,7 @@ app.component('services-component', ServicesComponent);
 app.component('equipments-component', EquipmentsComponent);
 app.component('ai-settings-component', AiSettingsComponent);
 app.component('ai-indexing-component', AiIndexingComponent);
+app.component('cfdi-config-component', CfdiConfigComponent);
 app.component('users-component', AdminUsersComponent);
 app.component('reports-component', ReportsComponent);
 app.component('gastos-component', GastosComponent);

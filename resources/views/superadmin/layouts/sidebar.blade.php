@@ -46,6 +46,12 @@
                 </a>
             </li>
 
+            <li class="nav-item">
+                <a href="{{ route('superadmin.cfdi') }}" class="nav-link">
+                    <i class="fa fa-file-text-o"></i> Facturacion CFDI
+                </a>
+            </li>
+
             <!-- Menú Configuraciones -->
             <li class="nav-item nav-dropdown">
                 <a class="nav-link nav-dropdown-toggle" href="#">

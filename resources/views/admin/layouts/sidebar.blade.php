@@ -92,6 +92,14 @@
                 </a>
             </li>
 
+            @if(Auth::user()->shop && Auth::user()->shop->cfdi_enabled)
+            <li class="nav-item">
+                <a href="{{ route('admin.cfdi.config') }}" class="nav-link">
+                    <i class="fa fa-file-text-o"></i> Facturacion CFDI
+                </a>
+            </li>
+            @endif
+
             <li class="nav-item">
                 <a href="{{ route('admin.configurations') }}" class="nav-link">
                     <i class="fa fa-cogs"></i> Configuraciones

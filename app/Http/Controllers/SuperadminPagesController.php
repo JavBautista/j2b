@@ -82,4 +82,8 @@ class SuperadminPagesController extends Controller
     public function preRegisters(){
         return view('superadmin.pre_registers');
     }
+
+    public function cfdi(){
+        return view('superadmin.cfdi');
+    }
 }

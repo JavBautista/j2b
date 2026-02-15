@@ -30,6 +30,7 @@ use App\Http\Controllers\DownloadController;
 use App\Http\Controllers\LegalPageController;
 use App\Http\Controllers\Superadmin\ContactMessagesController;
 use App\Http\Controllers\Superadmin\LegalDocumentsController;
+use App\Http\Controllers\Superadmin\CfdiController;
 
 
 /*
@@ -182,6 +183,14 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::delete('/superadmin/contact-messages/{id}', [ContactMessagesController::class, 'destroy']);
         Route::post('/superadmin/contact-messages/delete-multiple', [ContactMessagesController::class, 'destroyMultiple']);
 
+        // Facturación CFDI
+        Route::get('/superadmin/cfdi', [SuperadminPagesController::class, 'cfdi'])->name('superadmin.cfdi');
+        Route::get('/superadmin/cfdi/shops', [CfdiController::class, 'getShops']);
+        Route::post('/superadmin/cfdi/toggle', [CfdiController::class, 'toggleCfdi']);
+        Route::post('/superadmin/cfdi/asignar-timbres-shop', [CfdiController::class, 'asignarTimbresShop']);
+        Route::get('/superadmin/cfdi/get', [CfdiController::class, 'get']);
+        Route::get('/superadmin/cfdi/timbres-globales', [CfdiController::class, 'getTimbresGlobales']);
+
         // Legal Documents (Términos y Condiciones, Aviso de Privacidad)
         Route::get('/superadmin/legal-documents', [LegalDocumentsController::class, 'index'])->name('superadmin.legal-documents');
         Route::get('/superadmin/legal-documents/get', [LegalDocumentsController::class, 'get']);
@@ -243,6 +252,18 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::post('/admin/configurations/ai-settings/indexing/services', [App\Http\Controllers\Admin\AiSettingsController::class, 'indexServices']);
         Route::post('/admin/configurations/ai-settings/indexing/all', [App\Http\Controllers\Admin\AiSettingsController::class, 'indexAll']);
         Route::post('/admin/configurations/ai-settings/indexing/clients', [App\Http\Controllers\Admin\AiSettingsController::class, 'indexClients']);
+
+        // Facturación CFDI - Configuración Emisor
+        Route::get('/admin/facturacion/configuracion', [App\Http\Controllers\Admin\CfdiConfigController::class, 'index'])->name('admin.cfdi.config');
+        Route::get('/admin/facturacion/configuracion/get', [App\Http\Controllers\Admin\CfdiConfigController::class, 'get']);
+        Route::post('/admin/facturacion/configuracion/save', [App\Http\Controllers\Admin\CfdiConfigController::class, 'save']);
+        Route::post('/admin/facturacion/configuracion/upload-csd', [App\Http\Controllers\Admin\CfdiConfigController::class, 'uploadCsd']);
+        Route::post('/admin/facturacion/configuracion/registrar', [App\Http\Controllers\Admin\CfdiConfigController::class, 'registrar']);
+
+        // Facturación CFDI - Timbrado de Notas
+        Route::get('/admin/facturacion/receipt/{id}/data', [App\Http\Controllers\Admin\CfdiInvoiceController::class, 'getReceiptData']);
+        Route::post('/admin/facturacion/timbrar', [App\Http\Controllers\Admin\CfdiInvoiceController::class, 'timbrar']);
+        Route::get('/admin/facturacion/descargar/{id}/{formato}', [App\Http\Controllers\Admin\CfdiInvoiceController::class, 'descargar']);
 
         Route::get('/admin/contracts', [AdminPagesController::class, 'contracts'])->name('admin.contracts');
 

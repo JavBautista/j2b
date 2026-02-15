@@ -11,8 +11,13 @@
         </div>
         <div class="row">
             <div class="col-md-12">
+                @php
+                    $shop = auth()->user()->shop;
+                    $cfdiActivo = $shop && $shop->cfdi_enabled && $shop->cfdiEmisor && $shop->cfdiEmisor->is_registered;
+                @endphp
                 <receipt-list-component
                     :user-limited="{{ auth()->user()->limited ? 'true' : 'false' }}"
+                    :cfdi-activo="{{ $cfdiActivo ? 'true' : 'false' }}"
                 ></receipt-list-component>
             </div>
         </div>

@@ -30,4 +30,9 @@ class Receipt extends Model
     {
         return $this->hasMany(ReceiptInfoExtra::class, 'receipt_id');
     }
+
+    public function cfdiInvoice()
+    {
+        return $this->hasOne(CfdiInvoice::class);
+    }
 }

@@ -235,6 +235,11 @@ class CfdiInvoiceController extends Controller
             $tieneIva = $receipt->iva > 0;
 
             foreach ($receipt->detail as $item) {
+                // Saltar items con precio/subtotal = 0 (SAT no acepta valor_unitario ni base = 0)
+                if (round($item->subtotal, 2) <= 0) {
+                    continue;
+                }
+
                 if ($tieneIva) {
                     // IVA ya separado en la nota
                     $valorUnitario = round($item->price, 2);
@@ -259,12 +264,8 @@ class CfdiInvoiceController extends Controller
                     'valor_unitario' => $valorUnitario,
                     'subtotal' => $subtotalItem,
                     'importe' => $subtotalItem,
-                ];
-
-                // SAT requiere base > 0 para traslados; items con subtotal 0 van sin impuesto
-                if ($subtotalItem > 0) {
-                    $concepto['objeto_impuesto'] = '02';
-                    $concepto['impuestos'] = [
+                    'objeto_impuesto' => '02',
+                    'impuestos' => [
                         'traslados' => [
                             [
                                 'base' => $subtotalItem,
@@ -274,11 +275,8 @@ class CfdiInvoiceController extends Controller
                                 'importe' => $ivaItem,
                             ]
                         ]
-                    ];
-                } else {
-                    $concepto['objeto_impuesto'] = '01';
-                    $ivaItem = 0;
-                }
+                    ],
+                ];
 
                 $conceptos[] = $concepto;
                 $subtotalTotal += $subtotalItem;

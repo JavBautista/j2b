@@ -187,6 +187,16 @@ class HubCfdiService
             ];
 
         } catch (Exception $e) {
+            $errorMsg = $e->getMessage();
+
+            // Extraer mensaje legible del JSON de la API si viene en la excepción
+            if (preg_match('/\{.*\}/s', $errorMsg, $matches)) {
+                $json = json_decode($matches[0], true);
+                if ($json) {
+                    $errorMsg = $json['message'] ?? $json['Mensaje'] ?? $errorMsg;
+                }
+            }
+
             Log::error('HubCfdi Service Error', [
                 'endpoint' => $endpoint,
                 'error' => $e->getMessage(),
@@ -195,7 +205,7 @@ class HubCfdiService
             return [
                 'success' => false,
                 'data' => null,
-                'error' => $e->getMessage(),
+                'error' => $errorMsg,
             ];
         }
     }

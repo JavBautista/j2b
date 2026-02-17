@@ -260,6 +260,11 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::post('/admin/facturacion/configuracion/upload-csd', [App\Http\Controllers\Admin\CfdiConfigController::class, 'uploadCsd']);
         Route::post('/admin/facturacion/configuracion/registrar', [App\Http\Controllers\Admin\CfdiConfigController::class, 'registrar']);
 
+        // Facturación CFDI - Facturas Emitidas
+        Route::get('/admin/facturacion/facturas', [App\Http\Controllers\Admin\CfdiInvoiceController::class, 'indexFacturas'])->name('admin.cfdi.facturas');
+        Route::get('/admin/facturacion/facturas/get', [App\Http\Controllers\Admin\CfdiInvoiceController::class, 'getFacturas']);
+        Route::get('/admin/facturacion/facturas/export', [App\Http\Controllers\Admin\CfdiInvoiceController::class, 'exportFacturas']);
+
         // Facturación CFDI - Timbrado de Notas
         Route::get('/admin/facturacion/receipt/{id}/data', [App\Http\Controllers\Admin\CfdiInvoiceController::class, 'getReceiptData']);
         Route::post('/admin/facturacion/timbrar', [App\Http\Controllers\Admin\CfdiInvoiceController::class, 'timbrar']);

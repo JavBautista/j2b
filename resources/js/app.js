@@ -47,6 +47,7 @@ import PurchaseOrderShowComponent from './components/admin/PurchaseOrderShowComp
 import AiSettingsComponent from './components/admin/AiSettingsComponent.vue';
 import AiIndexingComponent from './components/admin/AiIndexingComponent.vue';
 import CfdiConfigComponent from './components/admin/CfdiConfigComponent.vue';
+import CfdiFacturasComponent from './components/admin/CfdiFacturasComponent.vue';
 
 // Componentes Shared (reutilizables)
 import ModalSelectClient from './components/shared/ModalSelectClient.vue';
@@ -83,6 +84,7 @@ app.component('equipments-component', EquipmentsComponent);
 app.component('ai-settings-component', AiSettingsComponent);
 app.component('ai-indexing-component', AiIndexingComponent);
 app.component('cfdi-config-component', CfdiConfigComponent);
+app.component('cfdi-facturas-component', CfdiFacturasComponent);
 app.component('users-component', AdminUsersComponent);
 app.component('reports-component', ReportsComponent);
 app.component('gastos-component', GastosComponent);

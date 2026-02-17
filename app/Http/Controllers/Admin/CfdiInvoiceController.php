@@ -8,12 +8,114 @@ use App\Models\CfdiInvoice;
 use App\Models\ClientFiscalData;
 use App\Models\Receipt;
 use App\Services\Facturacion\HubCfdiService;
+use App\Exports\FacturasEmitidasExport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Maatwebsite\Excel\Facades\Excel;
 use Carbon\Carbon;
 
 class CfdiInvoiceController extends Controller
 {
+    /**
+     * Vista index de facturas emitidas (Blade + Vue)
+     */
+    public function indexFacturas()
+    {
+        $shop = auth()->user()->shop;
+        if (!$shop || !$shop->cfdi_enabled) {
+            return redirect('/admin')->with('error', 'CFDI no habilitado');
+        }
+        return view('admin.cfdi.facturas');
+    }
+
+    /**
+     * Obtener facturas emitidas con filtros (JSON)
+     */
+    public function getFacturas(Request $request)
+    {
+        $shop = auth()->user()->shop;
+        if (!$shop || !$shop->cfdi_enabled) {
+            return response()->json(['ok' => false, 'message' => 'CFDI no habilitado'], 403);
+        }
+
+        $fechaInicio = $request->fecha_inicio
+            ? Carbon::parse($request->fecha_inicio)->startOfDay()
+            : Carbon::now('America/Mexico_City')->startOfMonth()->startOfDay();
+        $fechaFin = $request->fecha_fin
+            ? Carbon::parse($request->fecha_fin)->endOfDay()
+            : Carbon::now('America/Mexico_City')->endOfDay();
+
+        $query = CfdiInvoice::where('shop_id', $shop->id)
+            ->whereBetween('fecha_emision', [$fechaInicio, $fechaFin]);
+
+        if ($request->status && $request->status !== 'todos') {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->buscar) {
+            $buscar = $request->buscar;
+            $query->where(function ($q) use ($buscar) {
+                $q->where('receptor_rfc', 'like', "%{$buscar}%")
+                  ->orWhere('receptor_nombre', 'like', "%{$buscar}%");
+            });
+        }
+
+        $facturas = $query->with('receipt:id,folio')->orderBy('fecha_emision', 'desc')->get();
+
+        $vigentes = $facturas->where('status', 'vigente');
+        $canceladas = $facturas->where('status', 'cancelada');
+
+        return response()->json([
+            'ok' => true,
+            'periodo' => $fechaInicio->format('d/m/Y') . ' - ' . $fechaFin->format('d/m/Y'),
+            'totales' => [
+                'count' => $facturas->count(),
+                'vigentes' => $vigentes->count(),
+                'canceladas' => $canceladas->count(),
+                'subtotal' => round($vigentes->sum('subtotal'), 2),
+                'impuestos' => round($vigentes->sum('total_impuestos'), 2),
+                'total' => round($vigentes->sum('total'), 2),
+            ],
+            'facturas' => $facturas->map(function ($f) {
+                return [
+                    'id' => $f->id,
+                    'uuid' => $f->uuid,
+                    'serie' => $f->serie,
+                    'folio' => $f->folio,
+                    'fecha_emision' => $f->fecha_emision ? $f->fecha_emision->format('d/m/Y H:i') : null,
+                    'fecha_timbrado' => $f->fecha_timbrado ? $f->fecha_timbrado->format('d/m/Y H:i') : null,
+                    'receptor_rfc' => $f->receptor_rfc,
+                    'receptor_nombre' => $f->receptor_nombre,
+                    'receipt_folio' => $f->receipt ? $f->receipt->folio : null,
+                    'subtotal' => $f->subtotal,
+                    'total_impuestos' => $f->total_impuestos,
+                    'total' => $f->total,
+                    'status' => $f->status,
+                ];
+            })->values(),
+        ]);
+    }
+
+    /**
+     * Exportar facturas emitidas a Excel
+     */
+    public function exportFacturas(Request $request)
+    {
+        $shop = auth()->user()->shop;
+        if (!$shop || !$shop->cfdi_enabled) {
+            return redirect('/admin')->with('error', 'CFDI no habilitado');
+        }
+
+        $fechaInicio = $request->fecha_inicio ?: Carbon::now('America/Mexico_City')->startOfMonth()->format('Y-m-d');
+        $fechaFin = $request->fecha_fin ?: Carbon::now('America/Mexico_City')->format('Y-m-d');
+        $status = $request->status ?: 'todos';
+
+        return Excel::download(
+            new FacturasEmitidasExport($shop, $fechaInicio, $fechaFin, $status),
+            'facturas_emitidas_' . date('Ymd') . '.xlsx'
+        );
+    }
+
     /**
      * Obtener datos de un receipt para facturación (AJAX)
      */

@@ -169,7 +169,7 @@ class HubCfdiService
                 return [
                     'success' => false,
                     'data' => null,
-                    'error' => $errorBody['message'] ?? $errorBody['error'] ?? $response->body(),
+                    'error' => $errorBody['message'] ?? $errorBody['Mensaje'] ?? $errorBody['error'] ?? $response->body(),
                 ];
             }
 

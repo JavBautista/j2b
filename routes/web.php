@@ -263,6 +263,7 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         // Facturación CFDI - Timbrado de Notas
         Route::get('/admin/facturacion/receipt/{id}/data', [App\Http\Controllers\Admin\CfdiInvoiceController::class, 'getReceiptData']);
         Route::post('/admin/facturacion/timbrar', [App\Http\Controllers\Admin\CfdiInvoiceController::class, 'timbrar']);
+        Route::post('/admin/facturacion/cancelar', [App\Http\Controllers\Admin\CfdiInvoiceController::class, 'cancelar']);
         Route::get('/admin/facturacion/descargar/{id}/{formato}', [App\Http\Controllers\Admin\CfdiInvoiceController::class, 'descargar']);
 
         Route::get('/admin/contracts', [AdminPagesController::class, 'contracts'])->name('admin.contracts');

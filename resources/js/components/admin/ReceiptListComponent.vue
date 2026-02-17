@@ -108,6 +108,9 @@
                                 <li v-if="receipt.is_tax_invoiced && receipt.cfdi_invoice"><a class="dropdown-item" href="#" @click.prevent="descargarCfdi(receipt, 'pdf')">
                                     <i class="fa fa-file-pdf-o text-danger"></i> Descargar Factura PDF
                                 </a></li>
+                                <li v-if="canCancelInvoice(receipt)"><a class="dropdown-item" href="#" @click.prevent="cancelarFactura(receipt)">
+                                    <i class="fa fa-ban text-danger"></i> Cancelar Factura
+                                </a></li>
                             </ul>
                         </div>
                     </div>
@@ -222,6 +225,10 @@
                                         <button v-if="receipt.is_tax_invoiced && receipt.cfdi_invoice" class="btn btn-outline-danger"
                                                 @click="descargarCfdi(receipt, 'pdf')" title="Descargar Factura PDF">
                                             <i class="fa fa-file-pdf-o"></i>
+                                        </button>
+                                        <button v-if="canCancelInvoice(receipt)" class="btn btn-outline-danger"
+                                                @click="cancelarFactura(receipt)" title="Cancelar Factura">
+                                            <i class="fa fa-ban"></i>
                                         </button>
                                     </div>
                                 </td>
@@ -419,6 +426,83 @@ export default {
         },
         onModalClosed() {
             this.facturarReceiptId = null;
+        },
+        canCancelInvoice(receipt) {
+            if (!this.cfdiActivo) return false;
+            if (!receipt.is_tax_invoiced) return false;
+            if (!receipt.cfdi_invoice) return false;
+            return receipt.cfdi_invoice.status === 'vigente';
+        },
+        async cancelarFactura(receipt) {
+            const { value: motivo } = await Swal.fire({
+                title: 'Cancelar Factura',
+                html: `<p>Factura <strong>${receipt.cfdi_invoice.serie}-${receipt.cfdi_invoice.folio}</strong></p>
+                       <p class="text-muted mb-2" style="font-size:0.8rem;">UUID: ${receipt.cfdi_invoice.uuid}</p>
+                       <label class="form-label fw-bold">Motivo de cancelacion (SAT):</label>
+                       <select id="swal-motivo" class="form-select">
+                           <option value="03">03 - No se llevo a cabo la operacion</option>
+                           <option value="02">02 - Comprobante con errores sin relacion</option>
+                           <option value="01">01 - Comprobante con errores con relacion</option>
+                           <option value="04">04 - Operacion nominativa en factura global</option>
+                       </select>
+                       <div id="swal-folio-div" style="display:none; margin-top:10px;">
+                           <label class="form-label fw-bold">UUID factura que sustituye:</label>
+                           <input id="swal-folio" class="form-control" placeholder="UUID de la factura nueva">
+                       </div>`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Cancelar Factura',
+                cancelButtonText: 'No, volver',
+                confirmButtonColor: '#dc3545',
+                didOpen: () => {
+                    const sel = document.getElementById('swal-motivo');
+                    const div = document.getElementById('swal-folio-div');
+                    sel.addEventListener('change', () => {
+                        div.style.display = sel.value === '01' ? 'block' : 'none';
+                    });
+                },
+                preConfirm: () => {
+                    const motivo = document.getElementById('swal-motivo').value;
+                    const folio = document.getElementById('swal-folio')?.value || '';
+                    if (motivo === '01' && !folio.trim()) {
+                        Swal.showValidationMessage('El motivo 01 requiere el UUID de la factura que sustituye');
+                        return false;
+                    }
+                    return { motivo, folio_sustitucion: folio.trim() || null };
+                }
+            });
+
+            if (!motivo) return;
+
+            const confirm2 = await Swal.fire({
+                title: 'Confirmar cancelacion',
+                html: `<p class="text-danger"><strong>Esta accion es irreversible ante el SAT.</strong></p>
+                       <p>¿Estas seguro de cancelar la factura <strong>${receipt.cfdi_invoice.serie}-${receipt.cfdi_invoice.folio}</strong>?</p>`,
+                icon: 'error',
+                showCancelButton: true,
+                confirmButtonText: 'Si, cancelar',
+                cancelButtonText: 'No',
+                confirmButtonColor: '#dc3545',
+            });
+
+            if (!confirm2.isConfirmed) return;
+
+            try {
+                const res = await axios.post('/admin/facturacion/cancelar', {
+                    invoice_id: receipt.cfdi_invoice.id,
+                    motivo: motivo.motivo,
+                    folio_sustitucion: motivo.folio_sustitucion,
+                });
+
+                if (res.data.ok) {
+                    Swal.fire('Cancelada', 'La factura fue cancelada exitosamente.', 'success');
+                    this.cargarReceipts();
+                } else {
+                    Swal.fire('Error', res.data.message || 'Error al cancelar', 'error');
+                }
+            } catch (e) {
+                Swal.fire('Error', e.response?.data?.message || 'Error al cancelar factura', 'error');
+            }
         },
         canEdit(receipt) {
             if (receipt.is_tax_invoiced) return false;

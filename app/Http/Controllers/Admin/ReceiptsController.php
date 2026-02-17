@@ -40,7 +40,7 @@ class ReceiptsController extends Controller
         $fechaDesde = $request->get('fecha_desde', '');
         $fechaHasta = $request->get('fecha_hasta', '');
 
-        $query = Receipt::with(['partialPayments', 'shop', 'detail', 'client', 'cfdiInvoice:id,receipt_id,uuid,serie,folio'])
+        $query = Receipt::with(['partialPayments', 'shop', 'detail', 'client', 'cfdiInvoice:id,receipt_id,uuid,serie,folio,status'])
                         ->where('shop_id', $shop->id);
 
         // Filtro por tipo (venta o cotización)

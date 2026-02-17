@@ -67,14 +67,21 @@ class HubCfdiService
      * Cancelar una factura
      *
      * @param string $uuid UUID del timbrado
-     * @param string $motivo Clave del motivo de cancelación SAT
+     * @param string $motivo Clave del motivo de cancelación SAT (01, 02, 03, 04)
+     * @param string|null $folioSustitucion UUID de la factura que sustituye (solo motivo 01)
      * @return array
      */
-    public function cancelar(string $uuid, string $motivo): array
+    public function cancelar(string $uuid, string $motivo, ?string $folioSustitucion = null): array
     {
-        return $this->request('DELETE', "/v1/facturacion/cancelar/{$uuid}", [
-            'motivo' => $motivo,
-        ]);
+        $queryParams = ['motivo' => $motivo];
+
+        if ($folioSustitucion) {
+            $queryParams['folio_sustitucion'] = $folioSustitucion;
+        }
+
+        $queryString = http_build_query($queryParams);
+
+        return $this->request('DELETE', "/v1/facturacion/cancelar/{$uuid}?{$queryString}");
     }
 
     /**

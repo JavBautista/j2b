@@ -346,6 +346,108 @@ class CfdiInvoiceController extends Controller
     }
 
     /**
+     * Cancelar una factura CFDI (AJAX)
+     */
+    public function cancelar(Request $request)
+    {
+        if (!$request->ajax()) return redirect('/');
+
+        $shop = auth()->user()->shop;
+
+        if (!$shop || !$shop->cfdi_enabled) {
+            return response()->json(['ok' => false, 'message' => 'CFDI no habilitado'], 403);
+        }
+
+        $request->validate([
+            'invoice_id' => 'required|integer',
+            'motivo' => 'required|string|in:01,02,03,04',
+            'folio_sustitucion' => 'nullable|string|max:255',
+        ]);
+
+        // Motivo 01 requiere folio de sustitución
+        if ($request->motivo === '01' && empty($request->folio_sustitucion)) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'El motivo 01 requiere el UUID de la factura que sustituye',
+            ], 422);
+        }
+
+        $invoice = CfdiInvoice::where('id', $request->invoice_id)
+            ->where('shop_id', $shop->id)
+            ->first();
+
+        if (!$invoice) {
+            return response()->json(['ok' => false, 'message' => 'Factura no encontrada'], 404);
+        }
+
+        if ($invoice->status !== 'vigente') {
+            return response()->json(['ok' => false, 'message' => 'Solo se pueden cancelar facturas vigentes'], 422);
+        }
+
+        try {
+            $hubService = new HubCfdiService();
+            $result = $hubService->cancelar(
+                $invoice->uuid,
+                $request->motivo,
+                $request->folio_sustitucion
+            );
+
+            if (!$result['success']) {
+                Log::error('CFDI Cancelación fallida', [
+                    'shop_id' => $shop->id,
+                    'invoice_id' => $invoice->id,
+                    'uuid' => $invoice->uuid,
+                    'error' => $result['error'],
+                ]);
+
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'Error al cancelar: ' . ($result['error'] ?? 'Error desconocido'),
+                ]);
+            }
+
+            // Actualizar factura
+            $invoice->update([
+                'status' => 'cancelada',
+                'motivo_cancelacion' => $request->motivo,
+                'fecha_cancelacion' => Carbon::now('America/Mexico_City'),
+            ]);
+
+            // Revertir receipt
+            if ($invoice->receipt_id) {
+                $receipt = Receipt::find($invoice->receipt_id);
+                if ($receipt) {
+                    $receipt->is_tax_invoiced = false;
+                    $receipt->save();
+                }
+            }
+
+            Log::info('CFDI Cancelación exitosa', [
+                'shop_id' => $shop->id,
+                'invoice_id' => $invoice->id,
+                'uuid' => $invoice->uuid,
+                'motivo' => $request->motivo,
+            ]);
+
+            return response()->json([
+                'ok' => true,
+                'message' => 'Factura cancelada exitosamente',
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('CFDI Cancelación exception', [
+                'invoice_id' => $invoice->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'ok' => false,
+                'message' => 'Error al cancelar: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
      * Descargar factura en formato XML o PDF
      */
     public function descargar($id, $formato)

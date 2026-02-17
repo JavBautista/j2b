@@ -3,10 +3,14 @@
 namespace App\Http\Controllers\Superadmin;
 
 use App\Http\Controllers\Controller;
+use App\Exports\FacturasEmitidasExport;
 use Illuminate\Http\Request;
 use App\Models\Shop;
 use App\Models\CfdiEmisor;
+use App\Models\CfdiInvoice;
 use App\Services\Facturacion\HubCfdiService;
+use Maatwebsite\Excel\Facades\Excel;
+use Carbon\Carbon;
 
 class CfdiController extends Controller
 {
@@ -139,6 +143,88 @@ class CfdiController extends Controller
             ],
             'emisores' => $emisores,
         ];
+    }
+
+    /**
+     * Obtener facturas de todas las tiendas con filtros (JSON)
+     */
+    public function getFacturas(Request $request)
+    {
+        $fechaInicio = $request->fecha_inicio
+            ? Carbon::parse($request->fecha_inicio)->startOfDay()
+            : Carbon::now('America/Mexico_City')->startOfMonth()->startOfDay();
+        $fechaFin = $request->fecha_fin
+            ? Carbon::parse($request->fecha_fin)->endOfDay()
+            : Carbon::now('America/Mexico_City')->endOfDay();
+
+        $query = CfdiInvoice::with('shop:id,name')
+            ->whereBetween('fecha_emision', [$fechaInicio, $fechaFin]);
+
+        if ($request->status && $request->status !== 'todos') {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->shop_id) {
+            $query->where('shop_id', $request->shop_id);
+        }
+
+        if ($request->buscar) {
+            $buscar = $request->buscar;
+            $query->where(function ($q) use ($buscar) {
+                $q->where('receptor_rfc', 'like', "%{$buscar}%")
+                  ->orWhere('receptor_nombre', 'like', "%{$buscar}%");
+            });
+        }
+
+        $facturas = $query->orderBy('fecha_emision', 'desc')->get();
+
+        $vigentes = $facturas->where('status', 'vigente');
+        $canceladas = $facturas->where('status', 'cancelada');
+
+        return response()->json([
+            'ok' => true,
+            'periodo' => $fechaInicio->format('d/m/Y') . ' - ' . $fechaFin->format('d/m/Y'),
+            'totales' => [
+                'count' => $facturas->count(),
+                'vigentes' => $vigentes->count(),
+                'canceladas' => $canceladas->count(),
+                'subtotal' => round($vigentes->sum('subtotal'), 2),
+                'impuestos' => round($vigentes->sum('total_impuestos'), 2),
+                'total' => round($vigentes->sum('total'), 2),
+            ],
+            'facturas' => $facturas->map(function ($f) {
+                return [
+                    'id' => $f->id,
+                    'uuid' => $f->uuid,
+                    'serie' => $f->serie,
+                    'folio' => $f->folio,
+                    'fecha_emision' => $f->fecha_emision ? $f->fecha_emision->format('d/m/Y H:i') : null,
+                    'receptor_rfc' => $f->receptor_rfc,
+                    'receptor_nombre' => $f->receptor_nombre,
+                    'shop_name' => $f->shop ? $f->shop->name : '-',
+                    'subtotal' => $f->subtotal,
+                    'total_impuestos' => $f->total_impuestos,
+                    'total' => $f->total,
+                    'status' => $f->status,
+                ];
+            })->values(),
+        ]);
+    }
+
+    /**
+     * Exportar facturas de todas las tiendas a Excel
+     */
+    public function exportFacturas(Request $request)
+    {
+        $fechaInicio = $request->fecha_inicio ?: Carbon::now('America/Mexico_City')->startOfMonth()->format('Y-m-d');
+        $fechaFin = $request->fecha_fin ?: Carbon::now('America/Mexico_City')->format('Y-m-d');
+        $status = $request->status ?: 'todos';
+        $shopId = $request->shop_id ?: null;
+
+        return Excel::download(
+            new FacturasEmitidasExport(null, $fechaInicio, $fechaFin, $status, $shopId),
+            'facturas_todas_tiendas_' . date('Ymd') . '.xlsx'
+        );
     }
 
     /**

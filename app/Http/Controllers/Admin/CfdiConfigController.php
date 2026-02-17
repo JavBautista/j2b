@@ -121,17 +121,30 @@ class CfdiConfigController extends Controller
         $cerPath = $request->file('cer_file')->storeAs($dir, 'csd.cer');
         $keyPath = $request->file('key_file')->storeAs($dir, 'csd.key');
 
-        $emisor->update([
+        $wasRegistered = $emisor->is_registered;
+
+        $updateData = [
             'cer_file' => $cerPath,
             'key_file' => $keyPath,
             'password' => $request->password,
-        ]);
+        ];
+
+        // Si ya estaba registrado, desactivar hasta re-registro
+        if ($wasRegistered) {
+            $updateData['is_registered'] = false;
+        }
+
+        $emisor->update($updateData);
 
         return response()->json([
             'ok' => true,
-            'message' => 'Archivos CSD subidos correctamente',
+            'message' => $wasRegistered
+                ? 'Archivos CSD actualizados. Debe re-activar la facturacion.'
+                : 'Archivos CSD subidos correctamente',
             'has_cer' => true,
             'has_key' => true,
+            'needs_reregistration' => $wasRegistered,
+            'emisor' => $emisor->fresh(),
         ]);
     }
 

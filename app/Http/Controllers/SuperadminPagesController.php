@@ -86,4 +86,8 @@ class SuperadminPagesController extends Controller
     public function cfdi(){
         return view('superadmin.cfdi');
     }
+
+    public function cfdiFacturas(){
+        return view('superadmin.cfdi_facturas');
+    }
 }

@@ -190,6 +190,10 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::post('/superadmin/cfdi/asignar-timbres-shop', [CfdiController::class, 'asignarTimbresShop']);
         Route::get('/superadmin/cfdi/get', [CfdiController::class, 'get']);
         Route::get('/superadmin/cfdi/timbres-globales', [CfdiController::class, 'getTimbresGlobales']);
+        // Facturación CFDI - Facturas Emitidas (todas las tiendas)
+        Route::get('/superadmin/cfdi/facturas', [SuperadminPagesController::class, 'cfdiFacturas'])->name('superadmin.cfdi.facturas');
+        Route::get('/superadmin/cfdi/facturas/get', [CfdiController::class, 'getFacturas']);
+        Route::get('/superadmin/cfdi/facturas/export', [CfdiController::class, 'exportFacturas']);
 
         // Legal Documents (Términos y Condiciones, Aviso de Privacidad)
         Route::get('/superadmin/legal-documents', [LegalDocumentsController::class, 'index'])->name('superadmin.legal-documents');

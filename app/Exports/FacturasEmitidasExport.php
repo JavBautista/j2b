@@ -14,19 +14,31 @@ class FacturasEmitidasExport implements FromCollection, WithHeadings, WithMappin
     protected $fechaInicio;
     protected $fechaFin;
     protected $status;
+    protected $shopId;
 
-    public function __construct($shop, $fechaInicio, $fechaFin, $status = 'todos')
+    public function __construct($shop, $fechaInicio, $fechaFin, $status = 'todos', $shopId = null)
     {
         $this->shop = $shop;
         $this->fechaInicio = Carbon::parse($fechaInicio)->startOfDay();
         $this->fechaFin = Carbon::parse($fechaFin)->endOfDay();
         $this->status = $status;
+        $this->shopId = $shopId;
     }
 
     public function collection()
     {
-        $query = CfdiInvoice::where('shop_id', $this->shop->id)
+        $query = CfdiInvoice::with('shop:id,name')
             ->whereBetween('fecha_emision', [$this->fechaInicio, $this->fechaFin]);
+
+        // Si hay shop (admin), filtrar por su id
+        if ($this->shop) {
+            $query->where('shop_id', $this->shop->id);
+        }
+
+        // Si hay shopId explícito (superadmin filtrando por tienda)
+        if ($this->shopId) {
+            $query->where('shop_id', $this->shopId);
+        }
 
         if ($this->status && $this->status !== 'todos') {
             $query->where('status', $this->status);
@@ -37,23 +49,19 @@ class FacturasEmitidasExport implements FromCollection, WithHeadings, WithMappin
 
     public function headings(): array
     {
-        return [
-            'UUID',
-            'Serie-Folio',
-            'Fecha Emisión',
-            'Fecha Timbrado',
-            'Receptor RFC',
-            'Receptor Nombre',
-            'Subtotal',
-            'IVA',
-            'Total',
-            'Status',
-        ];
+        $headers = ['UUID', 'Serie-Folio', 'Fecha Emisión', 'Fecha Timbrado', 'Receptor RFC', 'Receptor Nombre', 'Subtotal', 'IVA', 'Total', 'Status'];
+
+        // Si es superadmin (sin shop), agregar columna Tienda
+        if (!$this->shop) {
+            array_splice($headers, 1, 0, 'Tienda');
+        }
+
+        return $headers;
     }
 
     public function map($factura): array
     {
-        return [
+        $row = [
             $factura->uuid,
             $factura->serie . $factura->folio,
             $factura->fecha_emision ? $factura->fecha_emision->format('d/m/Y H:i') : '',
@@ -65,5 +73,11 @@ class FacturasEmitidasExport implements FromCollection, WithHeadings, WithMappin
             number_format($factura->total, 2, '.', ''),
             $factura->status,
         ];
+
+        if (!$this->shop) {
+            array_splice($row, 1, 0, $factura->shop ? $factura->shop->name : '-');
+        }
+
+        return $row;
     }
 }

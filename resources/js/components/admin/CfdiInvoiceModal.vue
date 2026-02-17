@@ -160,21 +160,21 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <tr v-for="item in receiptData.detail" :key="item.id">
+                                            <tr v-for="item in conceptosDisplay" :key="item.id">
                                                 <td>{{ item.descripcion }}</td>
                                                 <td class="text-center">{{ item.qty }}</td>
-                                                <td class="text-end">${{ formatNumber(item.price) }}</td>
+                                                <td class="text-end">${{ formatNumber(item.precio) }}</td>
                                                 <td class="text-end">${{ formatNumber(item.subtotal) }}</td>
                                             </tr>
                                         </tbody>
                                         <tfoot>
                                             <tr>
                                                 <td colspan="3" class="text-end"><strong>Subtotal:</strong></td>
-                                                <td class="text-end">${{ formatNumber(receiptData.subtotal) }}</td>
+                                                <td class="text-end">${{ formatNumber(subtotalDisplay) }}</td>
                                             </tr>
-                                            <tr v-if="receiptData.iva > 0">
+                                            <tr>
                                                 <td colspan="3" class="text-end"><strong>IVA (16%):</strong></td>
-                                                <td class="text-end">${{ formatNumber(receiptData.iva) }}</td>
+                                                <td class="text-end">${{ formatNumber(ivaDisplay) }}</td>
                                             </tr>
                                             <tr>
                                                 <td colspan="3" class="text-end"><strong>Total:</strong></td>
@@ -301,6 +301,27 @@ export default {
                    this.receptor.codigo_postal &&
                    this.formaPago &&
                    this.metodoPago;
+        },
+        conceptosDisplay() {
+            if (!this.receiptData) return [];
+            const extraerIva = !(this.receiptData.iva > 0);
+            return this.receiptData.detail.map(item => ({
+                id: item.id,
+                descripcion: item.descripcion,
+                qty: item.qty,
+                precio: extraerIva ? Math.round(item.price / 1.16 * 100) / 100 : item.price,
+                subtotal: extraerIva ? Math.round(item.subtotal / 1.16 * 100) / 100 : item.subtotal,
+            }));
+        },
+        subtotalDisplay() {
+            if (!this.receiptData) return 0;
+            if (this.receiptData.iva > 0) return this.receiptData.subtotal;
+            return this.conceptosDisplay.reduce((sum, item) => sum + item.subtotal, 0);
+        },
+        ivaDisplay() {
+            if (!this.receiptData) return 0;
+            if (this.receiptData.iva > 0) return this.receiptData.iva;
+            return this.receiptData.total - this.subtotalDisplay;
         },
     },
     watch: {

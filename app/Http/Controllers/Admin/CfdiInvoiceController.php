@@ -235,13 +235,20 @@ class CfdiInvoiceController extends Controller
             $tieneIva = $receipt->iva > 0;
 
             foreach ($receipt->detail as $item) {
-                $subtotalItem = round($item->subtotal, 2);
-
-                // Si la nota tiene IVA, calcularlo proporcionalmente por concepto
-                $ivaItem = 0;
-                if ($tieneIva && $receipt->subtotal > 0) {
-                    $proporcion = $subtotalItem / $receipt->subtotal;
-                    $ivaItem = round($receipt->iva * $proporcion, 2);
+                if ($tieneIva) {
+                    // IVA ya separado en la nota
+                    $valorUnitario = round($item->price, 2);
+                    $subtotalItem = round($item->subtotal, 2);
+                    $ivaItem = 0;
+                    if ($receipt->subtotal > 0) {
+                        $proporcion = $subtotalItem / $receipt->subtotal;
+                        $ivaItem = round($receipt->iva * $proporcion, 2);
+                    }
+                } else {
+                    // Extraer IVA de los precios (el precio ya incluye IVA)
+                    $valorUnitario = round($item->price / 1.16, 2);
+                    $subtotalItem = round($item->subtotal / 1.16, 2);
+                    $ivaItem = round($subtotalItem * 0.16, 2);
                 }
 
                 $concepto = [
@@ -249,14 +256,11 @@ class CfdiInvoiceController extends Controller
                     'descripcion' => $item->descripcion,
                     'cantidad' => $item->qty,
                     'clave_unidad' => 'E48',
-                    'valor_unitario' => round($item->price, 2),
+                    'valor_unitario' => $valorUnitario,
                     'subtotal' => $subtotalItem,
                     'importe' => $subtotalItem,
-                ];
-
-                if ($tieneIva) {
-                    $concepto['objeto_impuesto'] = '02';
-                    $concepto['impuestos'] = [
+                    'objeto_impuesto' => '02',
+                    'impuestos' => [
                         'traslados' => [
                             [
                                 'base' => $subtotalItem,
@@ -266,23 +270,31 @@ class CfdiInvoiceController extends Controller
                                 'importe' => $ivaItem,
                             ]
                         ]
-                    ];
-                } else {
-                    $concepto['objeto_impuesto'] = '01';
-                }
+                    ],
+                ];
 
                 $conceptos[] = $concepto;
                 $subtotalTotal += $subtotalItem;
                 $ivaTotal += $ivaItem;
             }
 
-            // Ajustar redondeo: asegurar que iva total coincide con receipt.iva
+            // Ajustar redondeo
             if ($tieneIva) {
+                // Asegurar que IVA total coincide con receipt.iva
                 $diff = round($receipt->iva - $ivaTotal, 2);
                 if ($diff != 0 && count($conceptos) > 0) {
                     $lastIdx = count($conceptos) - 1;
                     $conceptos[$lastIdx]['impuestos']['traslados'][0]['importe'] += $diff;
                     $ivaTotal = round($receipt->iva, 2);
+                }
+            } else {
+                // Asegurar que subtotal + IVA = total de la nota
+                $totalCalculado = round($subtotalTotal + $ivaTotal, 2);
+                $diff = round($receipt->total - $totalCalculado, 2);
+                if ($diff != 0 && count($conceptos) > 0) {
+                    $lastIdx = count($conceptos) - 1;
+                    $conceptos[$lastIdx]['impuestos']['traslados'][0]['importe'] += $diff;
+                    $ivaTotal += $diff;
                 }
             }
 
@@ -325,21 +337,19 @@ class CfdiInvoiceController extends Controller
                 ];
             }
 
-            // Nodo impuestos global
-            if ($tieneIva) {
-                $cfdiPayload['impuestos'] = [
-                    'total_impuestos_trasladados' => $ivaTotal,
-                    'traslados' => [
-                        [
-                            'base' => $subtotalTotal,
-                            'impuesto' => '002',
-                            'tipo_factor' => 'Tasa',
-                            'tasa_cuota' => '0.160000',
-                            'importe' => $ivaTotal,
-                        ]
+            // Nodo impuestos global (siempre, IVA se desglosa en todos los casos)
+            $cfdiPayload['impuestos'] = [
+                'total_impuestos_trasladados' => $ivaTotal,
+                'traslados' => [
+                    [
+                        'base' => $subtotalTotal,
+                        'impuesto' => '002',
+                        'tipo_factor' => 'Tasa',
+                        'tasa_cuota' => '0.160000',
+                        'importe' => $ivaTotal,
                     ]
-                ];
-            }
+                ]
+            ];
 
             // Llamar API
             $hubService = new HubCfdiService();

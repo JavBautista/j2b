@@ -21,6 +21,7 @@ import ShopPaymentsComponent from './components/superadmin/ShopPaymentsComponent
 import ContactMessagesComponent from './components/superadmin/ContactMessagesComponent.vue'
 import LegalDocumentsComponent from './components/superadmin/LegalDocumentsComponent.vue'
 import CfdiManagementComponent from './components/superadmin/CfdiManagementComponent.vue'
+import SuperadminCfdiFacturasComponent from './components/superadmin/CfdiFacturasComponent.vue'
 import ExampleComponent from './components/ExampleComponent.vue';
 //Componenetes de tiendas
 import ClientsComponent from './components/shops/ClientsComponent.vue';
@@ -68,6 +69,7 @@ app.component('shop-payments-component', ShopPaymentsComponent);
 app.component('contact-messages-component', ContactMessagesComponent);
 app.component('legal-documents-component', LegalDocumentsComponent);
 app.component('cfdi-management-component', CfdiManagementComponent);
+app.component('superadmin-cfdi-facturas-component', SuperadminCfdiFacturasComponent);
 //Tiendas
 app.component('shop-template-creator-component', TemplateCreatorComponent);
 app.component('shop-clients-component', ClientsComponent);

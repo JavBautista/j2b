@@ -46,10 +46,22 @@
                 </a>
             </li>
 
-            <li class="nav-item">
-                <a href="{{ route('superadmin.cfdi') }}" class="nav-link">
-                    <i class="fa fa-file-text-o"></i> Facturacion CFDI
+            <li class="nav-item nav-dropdown">
+                <a class="nav-link nav-dropdown-toggle" href="#">
+                    <i class="fa fa-file-text-o"></i> Facturación CFDI
                 </a>
+                <ul class="nav-dropdown-items">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ route('superadmin.cfdi') }}">
+                            <i class="fa fa-cog"></i> Gestión Tiendas
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ route('superadmin.cfdi.facturas') }}">
+                            <i class="fa fa-list-alt"></i> Facturas Emitidas
+                        </a>
+                    </li>
+                </ul>
             </li>
 
             <!-- Menú Configuraciones -->

@@ -259,8 +259,12 @@ class CfdiInvoiceController extends Controller
                     'valor_unitario' => $valorUnitario,
                     'subtotal' => $subtotalItem,
                     'importe' => $subtotalItem,
-                    'objeto_impuesto' => '02',
-                    'impuestos' => [
+                ];
+
+                // SAT requiere base > 0 para traslados; items con subtotal 0 van sin impuesto
+                if ($subtotalItem > 0) {
+                    $concepto['objeto_impuesto'] = '02';
+                    $concepto['impuestos'] = [
                         'traslados' => [
                             [
                                 'base' => $subtotalItem,
@@ -270,8 +274,11 @@ class CfdiInvoiceController extends Controller
                                 'importe' => $ivaItem,
                             ]
                         ]
-                    ],
-                ];
+                    ];
+                } else {
+                    $concepto['objeto_impuesto'] = '01';
+                    $ivaItem = 0;
+                }
 
                 $conceptos[] = $concepto;
                 $subtotalTotal += $subtotalItem;

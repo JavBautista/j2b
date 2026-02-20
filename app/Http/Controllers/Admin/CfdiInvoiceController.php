@@ -11,7 +11,9 @@ use App\Services\Facturacion\HubCfdiService;
 use App\Exports\FacturasEmitidasExport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 
 class CfdiInvoiceController extends Controller
@@ -221,7 +223,7 @@ class CfdiInvoiceController extends Controller
         }
 
         try {
-            // Armar JSON CFDI
+            // Armar JSON CFDI (folio se revierte si el timbrado falla)
             $folio = $emisor->siguienteFolio();
             $fechaEmision = Carbon::now('America/Mexico_City')->format('Y-m-d H:i:s');
 
@@ -244,11 +246,8 @@ class CfdiInvoiceController extends Controller
                     // IVA ya separado en la nota
                     $valorUnitario = round($item->price, 2);
                     $subtotalItem = round($item->subtotal, 2);
-                    $ivaItem = 0;
-                    if ($receipt->subtotal > 0) {
-                        $proporcion = $subtotalItem / $receipt->subtotal;
-                        $ivaItem = round($receipt->iva * $proporcion, 2);
-                    }
+                    // SAT exige: importe traslado = round(base × tasa_cuota, 2)
+                    $ivaItem = round($subtotalItem * 0.16, 2);
                 } else {
                     // Extraer IVA de los precios (el precio ya incluye IVA)
                     $valorUnitario = round($item->price / 1.16, 2);
@@ -283,26 +282,8 @@ class CfdiInvoiceController extends Controller
                 $ivaTotal += $ivaItem;
             }
 
-            // Ajustar redondeo
-            if ($tieneIva) {
-                // Asegurar que IVA total coincide con receipt.iva
-                $diff = round($receipt->iva - $ivaTotal, 2);
-                if ($diff != 0 && count($conceptos) > 0) {
-                    $lastIdx = count($conceptos) - 1;
-                    $conceptos[$lastIdx]['impuestos']['traslados'][0]['importe'] += $diff;
-                    $ivaTotal = round($receipt->iva, 2);
-                }
-            } else {
-                // Asegurar que subtotal + IVA = total de la nota
-                $totalCalculado = round($subtotalTotal + $ivaTotal, 2);
-                $diff = round($receipt->total - $totalCalculado, 2);
-                if ($diff != 0 && count($conceptos) > 0) {
-                    $lastIdx = count($conceptos) - 1;
-                    $conceptos[$lastIdx]['impuestos']['traslados'][0]['importe'] += $diff;
-                    $ivaTotal += $diff;
-                }
-            }
-
+            // Total CFDI = subtotal + IVA (calculado por item, SAT-compliant)
+            // Puede diferir por centavos del receipt.total debido a redondeo — esto es normal
             $total = round($subtotalTotal + $ivaTotal, 2);
 
             $cfdiPayload = [
@@ -361,9 +342,13 @@ class CfdiInvoiceController extends Controller
             $result = $hubService->timbrar($cfdiPayload);
 
             if (!$result['success']) {
+                // Revertir folio para no dejar huecos
+                $emisor->revertirFolio();
+
                 Log::error('CFDI Timbrado fallido', [
                     'shop_id' => $shop->id,
                     'receipt_id' => $receipt->id,
+                    'folio_revertido' => $folio,
                     'error' => $result['error'],
                 ]);
 
@@ -432,6 +417,9 @@ class CfdiInvoiceController extends Controller
                 }
             }
 
+            // Guardar XML y PDF en storage local
+            $this->guardarArchivosLocales($hubService, $invoice, $shop->id);
+
             Log::info('CFDI Timbrado exitoso', [
                 'shop_id' => $shop->id,
                 'receipt_id' => $receipt->id,
@@ -449,9 +437,15 @@ class CfdiInvoiceController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            // Revertir folio si ya se había incrementado
+            if (isset($folio)) {
+                $emisor->revertirFolio();
+            }
+
             Log::error('CFDI Timbrado exception', [
                 'shop_id' => $shop->id,
                 'receipt_id' => $receipt->id,
+                'folio_revertido' => $folio ?? null,
                 'error' => $e->getMessage(),
             ]);
 
@@ -565,7 +559,8 @@ class CfdiInvoiceController extends Controller
     }
 
     /**
-     * Descargar factura en formato XML o PDF
+     * Descargar factura en formato XML o PDF.
+     * Sirve desde storage local si existe, fallback a TBT API con backfill.
      */
     public function descargar($id, $formato)
     {
@@ -583,41 +578,64 @@ class CfdiInvoiceController extends Controller
             return response()->json(['ok' => false, 'message' => 'Formato no válido'], 422);
         }
 
+        $contentType = $formato === 'xml' ? 'application/xml' : 'application/pdf';
+        $filename = "factura_{$invoice->serie}{$invoice->folio}.{$formato}";
+        $pathColumn = "{$formato}_path";
+
+        // 1. Servir desde storage local si existe
+        if ($invoice->$pathColumn && Storage::disk('cfdi')->exists($invoice->$pathColumn)) {
+            $content = Storage::disk('cfdi')->get($invoice->$pathColumn);
+
+            return response($content)
+                ->header('Content-Type', $contentType)
+                ->header('Content-Disposition', "attachment; filename=\"{$filename}\"");
+        }
+
+        // 2. Fallback según formato
         try {
-            $hubService = new HubCfdiService();
-            $result = $hubService->descargar($invoice->uuid, $formato);
+            if ($formato === 'pdf') {
+                // PDF: generar localmente con dompdf
+                $content = $this->generarPdf($invoice);
 
-            if (!$result['success']) {
-                return response()->json([
-                    'ok' => false,
-                    'message' => 'Error al descargar: ' . ($result['error'] ?? 'Error desconocido'),
-                ]);
-            }
+                // Guardar para futuras descargas
+                $path = "{$shop->id}/{$invoice->uuid}.pdf";
+                Storage::disk('cfdi')->put($path, $content);
+                $invoice->pdf_path = $path;
+                $invoice->save();
+            } else {
+                // XML: descargar de TBT API
+                $hubService = new HubCfdiService();
+                $result = $hubService->descargar($invoice->uuid, 'xml');
 
-            $data = $result['data'];
+                if (!$result['success']) {
+                    return response()->json([
+                        'ok' => false,
+                        'message' => 'Error al descargar XML: ' . ($result['error'] ?? 'Error desconocido'),
+                    ]);
+                }
 
-            // La API devuelve el archivo en base64 (campo "archivo")
-            $base64 = $data['archivo'] ?? $data['base64'] ?? null;
+                $base64 = $result['data']['archivo'] ?? $result['data']['base64'] ?? null;
+                if (!$base64) {
+                    return response()->json(['ok' => false, 'message' => 'No se recibió el XML de la API']);
+                }
 
-            if ($base64) {
                 $content = base64_decode($base64);
-                $contentType = $formato === 'xml' ? 'application/xml' : 'application/pdf';
-                $filename = "factura_{$invoice->serie}{$invoice->folio}.{$formato}";
 
-                return response($content)
-                    ->header('Content-Type', $contentType)
-                    ->header('Content-Disposition', "attachment; filename=\"{$filename}\"");
+                // Backfill: guardar localmente
+                $path = "{$shop->id}/{$invoice->uuid}.xml";
+                Storage::disk('cfdi')->put($path, $content);
+                $invoice->xml_path = $path;
+                $invoice->save();
             }
 
-            if (isset($data['url'])) {
-                return response()->json(['ok' => true, 'url' => $data['url']]);
-            }
-
-            return response()->json(['ok' => false, 'message' => 'No se recibió el archivo de la API']);
+            return response($content)
+                ->header('Content-Type', $contentType)
+                ->header('Content-Disposition', "attachment; filename=\"{$filename}\"");
 
         } catch (\Exception $e) {
             Log::error('CFDI Descarga error', [
                 'invoice_id' => $id,
+                'formato' => $formato,
                 'error' => $e->getMessage(),
             ]);
 
@@ -626,5 +644,274 @@ class CfdiInvoiceController extends Controller
                 'message' => 'Error al descargar: ' . $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * Guardar XML y PDF de una factura en storage local.
+     * No lanza excepción si falla (el timbrado ya fue exitoso).
+     */
+    private function guardarArchivosLocales(HubCfdiService $hubService, CfdiInvoice $invoice, int $shopId): void
+    {
+        // 1. XML: seguir descargando de TBT (es el documento fiscal oficial)
+        try {
+            $result = $hubService->descargar($invoice->uuid, 'xml');
+
+            if ($result['success']) {
+                $base64 = $result['data']['archivo'] ?? $result['data']['base64'] ?? null;
+                if ($base64) {
+                    $path = "{$shopId}/{$invoice->uuid}.xml";
+                    Storage::disk('cfdi')->put($path, base64_decode($base64));
+                    $invoice->xml_path = $path;
+                }
+            } else {
+                Log::warning("CFDI: No se pudo descargar XML post-timbrado", [
+                    'invoice_id' => $invoice->id,
+                    'error' => $result['error'],
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::warning("CFDI: Excepción al guardar XML localmente", [
+                'invoice_id' => $invoice->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        // 2. PDF: generar localmente con dompdf (incluye logo de la tienda)
+        try {
+            $pdfContent = $this->generarPdf($invoice);
+            $path = "{$shopId}/{$invoice->uuid}.pdf";
+            Storage::disk('cfdi')->put($path, $pdfContent);
+            $invoice->pdf_path = $path;
+        } catch (\Exception $e) {
+            Log::warning("CFDI: Excepción al generar PDF localmente", [
+                'invoice_id' => $invoice->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        // Guardar paths en DB si se obtuvieron
+        if ($invoice->isDirty(['xml_path', 'pdf_path'])) {
+            $invoice->save();
+        }
+    }
+
+    /**
+     * Genera el PDF de una factura CFDI usando dompdf.
+     * Retorna el contenido binario del PDF.
+     */
+    public function generarPdf(CfdiInvoice $invoice): string
+    {
+        $invoice->loadMissing('emisor');
+        $emisor = $invoice->emisor;
+
+        // Logo de la tienda (desde shops.logo en storage/public)
+        $logoBase64 = null;
+        $shop = \App\Models\Shop::find($invoice->shop_id);
+        if ($shop && $shop->logo) {
+            $logoPath = storage_path('app/public/' . $shop->logo);
+            if (file_exists($logoPath)) {
+                $logoBase64 = base64_encode(file_get_contents($logoPath));
+            }
+        }
+
+        // Datos del request_json (conceptos, impuestos)
+        $requestData = $invoice->request_json ?? [];
+        $conceptos = $requestData['conceptos'] ?? [];
+
+        // Datos del response_json (timbre fiscal)
+        $responseData = $invoice->response_json ?? [];
+        $timbreFiscal = $responseData['timbre_fiscal'] ?? null;
+
+        // No. Certificado del Emisor: solo disponible en el XML
+        $noCertificadoEmisor = null;
+        if ($invoice->xml_path && Storage::disk('cfdi')->exists($invoice->xml_path)) {
+            try {
+                $xml = Storage::disk('cfdi')->get($invoice->xml_path);
+                if (preg_match('/NoCertificado="([^"]+)"/', $xml, $matches)) {
+                    $noCertificadoEmisor = $matches[1];
+                }
+            } catch (\Exception $e) {
+                // No es crítico, continuar sin este dato
+            }
+        }
+
+        // Catálogos SAT para descripciones legibles
+        $catalogos = [
+            'forma_pago' => [
+                '01' => 'Efectivo', '02' => 'Cheque nominativo', '03' => 'Transferencia electrónica',
+                '04' => 'Tarjeta de crédito', '28' => 'Tarjeta de débito', '99' => 'Por definir',
+            ],
+            'metodo_pago' => [
+                'PUE' => 'Pago en Una sola Exhibición', 'PPD' => 'Pago en Parcialidades o Diferido',
+            ],
+            'tipo_comprobante' => [
+                'I' => 'Ingreso', 'E' => 'Egreso', 'T' => 'Traslado', 'P' => 'Pago',
+            ],
+            'regimen' => [
+                '601' => 'General de Ley PM', '603' => 'PM con Fines no Lucrativos',
+                '612' => 'Personas Físicas con Act. Empresariales y Profesionales',
+                '616' => 'Sin obligaciones fiscales', '621' => 'Incorporación Fiscal',
+                '626' => 'Régimen Simplificado de Confianza',
+            ],
+            'uso_cfdi' => [
+                'G01' => 'Adquisición de mercancías', 'G03' => 'Gastos en general',
+                'S01' => 'Sin efectos fiscales',
+            ],
+        ];
+
+        // Generar QR de verificación SAT (PNG con GD, sin imagick)
+        $qrBase64 = null;
+        if ($invoice->uuid && $emisor) {
+            $sello = $timbreFiscal['sello'] ?? '';
+            $fe = substr($sello, -8);
+            $totalFormatted = str_pad(number_format($invoice->total, 6, '.', ''), 24, '0', STR_PAD_LEFT);
+
+            $qrUrl = "https://verificacfdi.facturaelectronica.sat.gob.mx/default.aspx"
+                . "?id={$invoice->uuid}"
+                . "&re={$emisor->rfc}"
+                . "&rr={$invoice->receptor_rfc}"
+                . "&tt={$totalFormatted}"
+                . "&fe={$fe}";
+
+            try {
+                $qrPngData = base64_decode($this->generarQrPng($qrUrl));
+                $qrTmpPath = sys_get_temp_dir() . '/cfdi_qr_' . $invoice->uuid . '.png';
+                file_put_contents($qrTmpPath, $qrPngData);
+                $qrBase64 = base64_encode($qrPngData);
+            } catch (\Exception $e) {
+                Log::warning('CFDI: Error generando QR', ['error' => $e->getMessage()]);
+            }
+        }
+
+        // Importe con letra
+        $importeLetra = $this->numeroALetras($invoice->total) . ' M.N.';
+
+        // Datos adicionales del response_json
+        $responseData = $invoice->response_json ?? [];
+
+        $pdf = Pdf::loadView('cfdi.pdf-factura', [
+            'invoice' => $invoice,
+            'emisor' => $emisor,
+            'logoBase64' => $logoBase64,
+            'conceptos' => $conceptos,
+            'requestData' => $requestData,
+            'responseData' => $responseData,
+            'timbreFiscal' => $timbreFiscal,
+            'catalogos' => $catalogos,
+            'qrBase64' => $qrBase64,
+            'qrPath' => $qrTmpPath ?? null,
+            'noCertificadoEmisor' => $noCertificadoEmisor,
+            'importeLetra' => $importeLetra,
+        ])->setPaper('letter')
+          ->setOption('isRemoteEnabled', true);
+
+        return $pdf->output();
+    }
+
+    /**
+     * Genera un QR como PNG base64 usando bacon-qr-code + GD (sin imagick).
+     */
+    private function generarQrPng(string $text): ?string
+    {
+        $qrCode = \BaconQrCode\Encoder\Encoder::encode(
+            $text,
+            \BaconQrCode\Common\ErrorCorrectionLevel::L()
+        );
+        $matrix = $qrCode->getMatrix();
+        $size = $matrix->getWidth();
+        $scale = 6;
+        $margin = 2;
+        $imgSize = ($size + $margin * 2) * $scale;
+
+        $img = imagecreatetruecolor($imgSize, $imgSize);
+        $white = imagecolorallocate($img, 255, 255, 255);
+        $black = imagecolorallocate($img, 0, 0, 0);
+        imagefill($img, 0, 0, $white);
+
+        for ($y = 0; $y < $size; $y++) {
+            for ($x = 0; $x < $size; $x++) {
+                if ($matrix->get($x, $y) === 1) {
+                    $px = ($x + $margin) * $scale;
+                    $py = ($y + $margin) * $scale;
+                    imagefilledrectangle($img, $px, $py, $px + $scale - 1, $py + $scale - 1, $black);
+                }
+            }
+        }
+
+        ob_start();
+        imagepng($img);
+        $png = ob_get_clean();
+        imagedestroy($img);
+
+        return base64_encode($png);
+    }
+
+    /**
+     * Convierte un número a su representación en letras (español MX).
+     * Ej: 4749.10 → "CUATRO MIL SETECIENTOS CUARENTA Y NUEVE PESOS 10/100"
+     */
+    private function numeroALetras(float $numero): string
+    {
+        $entero = (int) floor($numero);
+        $centavos = (int) round(($numero - $entero) * 100);
+
+        $unidades = ['', 'UN', 'DOS', 'TRES', 'CUATRO', 'CINCO', 'SEIS', 'SIETE', 'OCHO', 'NUEVE'];
+        $decenas = ['', 'DIEZ', 'VEINTE', 'TREINTA', 'CUARENTA', 'CINCUENTA', 'SESENTA', 'SETENTA', 'OCHENTA', 'NOVENTA'];
+        $especiales = [11 => 'ONCE', 12 => 'DOCE', 13 => 'TRECE', 14 => 'CATORCE', 15 => 'QUINCE',
+                       16 => 'DIECISEIS', 17 => 'DIECISIETE', 18 => 'DIECIOCHO', 19 => 'DIECINUEVE'];
+        $centenas = ['', 'CIENTO', 'DOSCIENTOS', 'TRESCIENTOS', 'CUATROCIENTOS', 'QUINIENTOS',
+                     'SEISCIENTOS', 'SETECIENTOS', 'OCHOCIENTOS', 'NOVECIENTOS'];
+
+        $convertirGrupo = function (int $n) use ($unidades, $decenas, $especiales, $centenas): string {
+            if ($n === 0) return '';
+            if ($n === 100) return 'CIEN';
+
+            $resultado = '';
+            if ($n >= 100) {
+                $resultado .= $centenas[(int) floor($n / 100)] . ' ';
+                $n %= 100;
+            }
+            if ($n >= 11 && $n <= 19) {
+                $resultado .= $especiales[$n];
+                return trim($resultado);
+            }
+            if ($n >= 21 && $n <= 29) {
+                $resultado .= 'VEINTI' . $unidades[$n - 20];
+                return trim($resultado);
+            }
+            if ($n >= 10) {
+                $resultado .= $decenas[(int) floor($n / 10)];
+                $n %= 10;
+                if ($n > 0) $resultado .= ' Y ';
+            }
+            if ($n > 0) {
+                $resultado .= $unidades[$n];
+            }
+            return trim($resultado);
+        };
+
+        if ($entero === 0) {
+            $texto = 'CERO';
+        } elseif ($entero === 1) {
+            $texto = 'UN';
+        } else {
+            $texto = '';
+            if ($entero >= 1000000) {
+                $millones = (int) floor($entero / 1000000);
+                $texto .= ($millones === 1 ? 'UN MILLON' : $convertirGrupo($millones) . ' MILLONES') . ' ';
+                $entero %= 1000000;
+            }
+            if ($entero >= 1000) {
+                $miles = (int) floor($entero / 1000);
+                $texto .= ($miles === 1 ? 'MIL' : $convertirGrupo($miles) . ' MIL') . ' ';
+                $entero %= 1000;
+            }
+            if ($entero > 0) {
+                $texto .= $convertirGrupo($entero);
+            }
+            $texto = trim($texto);
+        }
+
+        return $texto . ' PESOS ' . str_pad($centavos, 2, '0', STR_PAD_LEFT) . '/100';
     }
 }

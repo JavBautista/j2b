@@ -42,6 +42,11 @@ return [
             'visibility' => 'public',
         ],
 
+        'cfdi' => [
+            'driver' => env('CFDI_DISK_DRIVER', 'local'),
+            'root' => storage_path('app/cfdi'),
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

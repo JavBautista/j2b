@@ -17,6 +17,25 @@ window.axios = require('axios');
 
 window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 
+// Interceptor global: detectar sesión expirada (419) y recargar
+window.axios.interceptors.response.use(
+    response => response,
+    error => {
+        if (error.response && error.response.status === 419) {
+            Swal.fire({
+                title: 'Sesión expirada',
+                text: 'Tu sesión ha expirado. La página se recargará.',
+                icon: 'warning',
+                confirmButtonText: 'Recargar'
+            }).then(() => {
+                window.location.reload();
+            });
+            return new Promise(() => {});
+        }
+        return Promise.reject(error);
+    }
+);
+
 /**
  * Echo exposes an expressive API for subscribing to channels and listening
  * for events that are broadcast by Laravel. Echo and event broadcasting

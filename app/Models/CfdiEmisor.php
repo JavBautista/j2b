@@ -36,11 +36,19 @@ class CfdiEmisor extends Model
     }
 
     /**
-     * Incrementa folio_actual y retorna el siguiente folio
+     * Incrementa folio_actual atómicamente y retorna el siguiente folio
      */
     public function siguienteFolio(): int
     {
         $this->increment('folio_actual');
         return $this->folio_actual;
+    }
+
+    /**
+     * Revierte el folio si el timbrado falló (decrementa folio_actual)
+     */
+    public function revertirFolio(): void
+    {
+        $this->decrement('folio_actual');
     }
 }

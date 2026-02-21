@@ -220,68 +220,81 @@
             </div>
             
             <div class="pricing-grid">
-                <!--
+
+                <!-- Plan Básico -->
                 <div class="pricing-card scroll-reveal">
                     <div class="pricing-header">
-                        <h3>Prueba Gratuita</h3>
+                        <h3>BÁSICO</h3>
                         <div class="price">
                             <span class="currency">MX$</span>
-                            <span class="amount">0</span>
-                            <span class="period">/{{ $trialDays }} días</span>
-                        </div>
-                    </div>
-                    <ul class="pricing-features">
-                        <li><i class="fas fa-check"></i> Hasta 100 productos</li>
-                        <li><i class="fas fa-check"></i> 50 clientes</li>
-                        <li><i class="fas fa-check"></i> 1 usuario</li>
-                        <li><i class="fas fa-check"></i> Soporte en español</li>
-                        <li><i class="fas fa-check"></i> Sincronización automática</li>
-                    </ul>
-                    <a href="#descarga" class="pricing-btn btn-outline">Comenzar Gratis</a>
-                </div>
-                -->
-                
-                <div class="pricing-card scroll-reveal">
-                    <div class="pricing-header">
-                        <h3>STANDAR</h3>
-                        <div class="price">
-                            <span class="currency">MX$</span>
-                            <span class="amount">349</span>
+                            <span class="amount">499</span>
                             <span class="period">/mes</span>
                         </div>
                     </div>
                     <ul class="pricing-features">
                         <li><i class="fas fa-check"></i> Productos ilimitados</li>
-                        <li><i class="fas fa-check"></i> 500 clientes</li>
-                        <li><i class="fas fa-check"></i> 2 Usuarios Admin </li>
+                        <li><i class="fas fa-check"></i> Hasta 200 clientes</li>
+                        <li><i class="fas fa-check"></i> 2 usuarios admin</li>
+                        <li><i class="fas fa-check"></i> Notas de venta y cotizaciones</li>
+                        <li><i class="fas fa-check"></i> Control de inventario con alertas</li>
+                        <li><i class="fas fa-check"></i> Gestión de proveedores y compras</li>
                         <li><i class="fas fa-check"></i> Reportes básicos</li>
-                        <li><i class="fas fa-check"></i> Soporte prioritario</li>
+                        <li><i class="fas fa-check"></i> App móvil completa</li>
+                        <li><i class="fas fa-check"></i> Soporte por email</li>
                     </ul>
                     <a href="#descarga" class="pricing-btn btn-outline">Elegir Plan</a>
                 </div>
-                
+
+                <!-- Plan PRO -->
                 <div class="pricing-card pricing-card-featured scroll-reveal">
                     <div class="pricing-badge">Más Popular</div>
                     <div class="pricing-header">
                         <h3>PRO</h3>
                         <div class="price">
                             <span class="currency">MX$</span>
-                            <span class="amount">599</span>
+                            <span class="amount">999</span>
                             <span class="period">/mes</span>
                         </div>
                     </div>
                     <ul class="pricing-features">
                         <li><i class="fas fa-check"></i> Todo lo del plan Básico</li>
                         <li><i class="fas fa-check"></i> Clientes ilimitados</li>
-                        <li><i class="fas fa-check"></i> 5 usuarios Admin</li>
-                        <li><i class="fas fa-check"></i> Reportes avanzados</li>
-                        <li><i class="fas fa-check"></i> Geolicalización</li>                
-                        <li><i class="fas fa-check"></i> Plataforma WEB</li>
-
+                        <li><i class="fas fa-check"></i> 5 usuarios admin + colaboradores</li>
+                        <li><i class="fas fa-check"></i> Reportes avanzados (8 módulos)</li>
+                        <li><i class="fas fa-check"></i> Contratos digitales con firma</li>
+                        <li><i class="fas fa-check"></i> Renta de equipos</li>
+                        <li><i class="fas fa-check"></i> Pagos parciales y crédito</li>
+                        <li><i class="fas fa-check"></i> Plataforma WEB completa</li>
+                        <li><i class="fas fa-check"></i> Exportación Excel y PDF</li>
+                        <li><i class="fas fa-check"></i> Soporte prioritario</li>
                     </ul>
                     <a href="#descarga" class="pricing-btn btn-primary">Elegir Plan</a>
                 </div>
-                
+
+                <!-- Plan Enterprise -->
+                <div class="pricing-card scroll-reveal">
+                    <div class="pricing-header">
+                        <h3>ENTERPRISE</h3>
+                        <div class="price">
+                            <span class="currency">MX$</span>
+                            <span class="amount">1,999</span>
+                            <span class="period">/mes</span>
+                        </div>
+                    </div>
+                    <ul class="pricing-features">
+                        <li><i class="fas fa-check"></i> Todo lo del plan PRO</li>
+                        <li><i class="fas fa-check"></i> Usuarios ilimitados</li>
+                        <li><i class="fas fa-star"></i> <strong>Asistente de Inteligencia Artificial</strong></li>
+                        <li><i class="fas fa-star"></i> <strong>Facturación CFDI (timbrado SAT)</strong></li>
+                        <li><i class="fas fa-star"></i> <strong>GPS tiempo real de técnicos</strong></li>
+                        <li><i class="fas fa-check"></i> Órdenes de trabajo con fotos y firma</li>
+                        <li><i class="fas fa-check"></i> Portal de cliente en la app</li>
+                        <li><i class="fas fa-check"></i> Multi-moneda</li>
+                        <li><i class="fas fa-check"></i> Soporte dedicado</li>
+                    </ul>
+                    <a href="#descarga" class="pricing-btn btn-outline">Elegir Plan</a>
+                </div>
+
             </div>
         </div>
     </section>

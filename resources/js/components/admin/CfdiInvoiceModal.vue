@@ -154,14 +154,64 @@
                                         <thead class="table-light">
                                             <tr>
                                                 <th>Descripcion</th>
+                                                <th style="min-width: 160px;">Clave SAT</th>
+                                                <th style="min-width: 130px;">Unidad</th>
                                                 <th class="text-center">Cant.</th>
                                                 <th class="text-end">P. Unit.</th>
                                                 <th class="text-end">Subtotal</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <tr v-for="item in conceptosDisplay" :key="item.id">
+                                            <tr v-for="(item, idx) in conceptosSat" :key="item.detail_id">
                                                 <td>{{ item.descripcion }}</td>
+                                                <td>
+                                                    <div class="position-relative">
+                                                        <input type="text" class="form-control form-control-sm"
+                                                            v-model="item.productSearch"
+                                                            placeholder="Buscar..."
+                                                            @input="buscarSatProduct(idx)"
+                                                            @focus="item.showProductResults = true"
+                                                            style="font-size: 0.75rem;">
+                                                        <div v-if="item.clave_prod_serv" class="mt-1">
+                                                            <small :class="item.clave_prod_serv !== '01010101' ? 'text-success' : 'text-warning'">
+                                                                <i class="fa fa-check" v-if="item.clave_prod_serv !== '01010101'"></i>
+                                                                <i class="fa fa-exclamation-triangle" v-else></i>
+                                                                {{ item.clave_prod_serv }}
+                                                            </small>
+                                                        </div>
+                                                        <ul v-if="item.showProductResults && satProductResults.length > 0 && activeSearchIdx === idx"
+                                                            class="list-group position-absolute w-100" style="z-index: 1060; max-height: 180px; overflow-y: auto;">
+                                                            <li v-for="r in satProductResults" :key="r.code"
+                                                                class="list-group-item list-group-item-action py-1 px-2"
+                                                                style="cursor: pointer; font-size: 0.75rem;"
+                                                                @mousedown.prevent="selectSatProduct(idx, r)">
+                                                                <strong>{{ r.code }}</strong> — {{ r.description }}
+                                                            </li>
+                                                        </ul>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="position-relative">
+                                                        <input type="text" class="form-control form-control-sm"
+                                                            v-model="item.unitSearch"
+                                                            placeholder="Buscar..."
+                                                            @input="buscarSatUnit(idx)"
+                                                            @focus="item.showUnitResults = true"
+                                                            style="font-size: 0.75rem;">
+                                                        <div v-if="item.clave_unidad" class="mt-1">
+                                                            <small class="text-muted">{{ item.clave_unidad }}</small>
+                                                        </div>
+                                                        <ul v-if="item.showUnitResults && satUnitResults.length > 0 && activeSearchIdx === idx"
+                                                            class="list-group position-absolute w-100" style="z-index: 1060; max-height: 180px; overflow-y: auto;">
+                                                            <li v-for="r in satUnitResults" :key="r.code"
+                                                                class="list-group-item list-group-item-action py-1 px-2"
+                                                                style="cursor: pointer; font-size: 0.75rem;"
+                                                                @mousedown.prevent="selectSatUnit(idx, r)">
+                                                                <strong>{{ r.code }}</strong> — {{ r.name }}
+                                                            </li>
+                                                        </ul>
+                                                    </div>
+                                                </td>
                                                 <td class="text-center">{{ item.qty }}</td>
                                                 <td class="text-end">${{ formatNumber(item.precio) }}</td>
                                                 <td class="text-end">${{ formatNumber(item.subtotal) }}</td>
@@ -169,15 +219,15 @@
                                         </tbody>
                                         <tfoot>
                                             <tr>
-                                                <td colspan="3" class="text-end"><strong>Subtotal:</strong></td>
+                                                <td colspan="5" class="text-end"><strong>Subtotal:</strong></td>
                                                 <td class="text-end">${{ formatNumber(subtotalDisplay) }}</td>
                                             </tr>
                                             <tr>
-                                                <td colspan="3" class="text-end"><strong>IVA (16%):</strong></td>
+                                                <td colspan="5" class="text-end"><strong>IVA (16%):</strong></td>
                                                 <td class="text-end">${{ formatNumber(ivaDisplay) }}</td>
                                             </tr>
                                             <tr>
-                                                <td colspan="3" class="text-end"><strong>Total:</strong></td>
+                                                <td colspan="5" class="text-end"><strong>Total:</strong></td>
                                                 <td class="text-end"><strong>${{ formatNumber(receiptData.total) }}</strong></td>
                                             </tr>
                                         </tfoot>
@@ -269,6 +319,11 @@ export default {
             },
             formaPago: '01',
             metodoPago: 'PUE',
+            conceptosSat: [],
+            satProductResults: [],
+            satUnitResults: [],
+            activeSearchIdx: null,
+            satSearchTimer: null,
             catalogoRegimen: [
                 { clave: '601', nombre: 'General de Ley PM' },
                 { clave: '603', nombre: 'PM Fines no Lucrativos' },
@@ -311,6 +366,8 @@ export default {
                 qty: item.qty,
                 precio: extraerIva ? Math.round(item.price / 1.16 * 100) / 100 : item.price,
                 subtotal: extraerIva ? Math.round(item.subtotal / 1.16 * 100) / 100 : item.subtotal,
+                sat_product_code: item.product?.sat_product_code || null,
+                sat_unit_code: item.product?.sat_unit_code || null,
             }));
         },
         subtotalDisplay() {
@@ -360,6 +417,10 @@ export default {
             this.receptor = { rfc: '', razon_social: '', regimen_fiscal: '', uso_cfdi: 'G03', codigo_postal: '' };
             this.formaPago = '01';
             this.metodoPago = 'PUE';
+            this.conceptosSat = [];
+            this.satProductResults = [];
+            this.satUnitResults = [];
+            this.activeSearchIdx = null;
         },
         async cargarDatos() {
             this.cargando = true;
@@ -370,6 +431,7 @@ export default {
                     this.receiptData = res.data.receipt;
                     this.emisorData = res.data.emisor;
                     this.perfilesFiscales = res.data.receipt.client?.fiscal_data || [];
+                    this.initConceptosSat();
 
                     const defaultPerfil = this.perfilesFiscales.find(p => p.is_default);
                     if (defaultPerfil) {
@@ -450,6 +512,11 @@ export default {
                     forma_pago: this.formaPago,
                     metodo_pago: this.metodoPago,
                     guardar_datos_cliente: this.guardarDatosCliente,
+                    conceptos_sat: this.conceptosSat.map(c => ({
+                        detail_id: c.detail_id,
+                        clave_prod_serv: c.clave_prod_serv,
+                        clave_unidad: c.clave_unidad,
+                    })),
                 });
 
                 if (res.data.ok) {
@@ -494,6 +561,59 @@ export default {
             } finally {
                 this.descargando = false;
             }
+        },
+        initConceptosSat() {
+            if (!this.receiptData) return;
+            const extraerIva = !(this.receiptData.iva > 0);
+            this.conceptosSat = this.receiptData.detail.map(item => ({
+                detail_id: item.id,
+                descripcion: item.descripcion,
+                qty: item.qty,
+                precio: extraerIva ? Math.round(item.price / 1.16 * 100) / 100 : item.price,
+                subtotal: extraerIva ? Math.round(item.subtotal / 1.16 * 100) / 100 : item.subtotal,
+                clave_prod_serv: item.product?.sat_product_code || '01010101',
+                clave_unidad: item.product?.sat_unit_code || 'E48',
+                productSearch: '',
+                unitSearch: '',
+                showProductResults: false,
+                showUnitResults: false,
+            }));
+        },
+        buscarSatProduct(idx) {
+            clearTimeout(this.satSearchTimer);
+            this.activeSearchIdx = idx;
+            let q = this.conceptosSat[idx].productSearch;
+            if (q.length < 2) { this.satProductResults = []; return; }
+            this.satSearchTimer = setTimeout(() => {
+                axios.get('/admin/sat/product-codes', { params: { q } }).then(res => {
+                    this.satProductResults = res.data;
+                    this.conceptosSat[idx].showProductResults = true;
+                });
+            }, 300);
+        },
+        selectSatProduct(idx, item) {
+            this.conceptosSat[idx].clave_prod_serv = item.code;
+            this.conceptosSat[idx].productSearch = '';
+            this.conceptosSat[idx].showProductResults = false;
+            this.satProductResults = [];
+        },
+        buscarSatUnit(idx) {
+            clearTimeout(this.satSearchTimer);
+            this.activeSearchIdx = idx;
+            let q = this.conceptosSat[idx].unitSearch;
+            if (q.length < 1) { this.satUnitResults = []; return; }
+            this.satSearchTimer = setTimeout(() => {
+                axios.get('/admin/sat/unit-codes', { params: { q } }).then(res => {
+                    this.satUnitResults = res.data;
+                    this.conceptosSat[idx].showUnitResults = true;
+                });
+            }, 300);
+        },
+        selectSatUnit(idx, item) {
+            this.conceptosSat[idx].clave_unidad = item.code;
+            this.conceptosSat[idx].unitSearch = '';
+            this.conceptosSat[idx].showUnitResults = false;
+            this.satUnitResults = [];
         },
         formatNumber(num) {
             if (!num) return '0.00';

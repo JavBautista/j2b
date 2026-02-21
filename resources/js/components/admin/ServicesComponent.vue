@@ -123,6 +123,46 @@
                                 <input type="number" step="0.01" class="form-control" v-model="formService.price" required min="0">
                             </div>
                         </div>
+                        <hr>
+                        <h6 class="text-muted mb-3"><i class="fa fa-file-invoice"></i> Facturación SAT</h6>
+                        <div class="form-group">
+                            <label>Clave Prod/Serv</label>
+                            <div class="position-relative">
+                                <input type="text" class="form-control" v-model="satProductSearch"
+                                    placeholder="Buscar clave SAT... ej: servicio, 01010101"
+                                    @input="buscarSatProduct" @focus="showSatProductResults = true">
+                                <small v-if="formService.sat_product_code" class="text-success">
+                                    <i class="fa fa-check"></i> {{ formService.sat_product_code }} — {{ formService.sat_product_desc }}
+                                </small>
+                                <small v-else class="text-muted">Opcional. Si no se asigna, se usa 01010101 (genérico).</small>
+                                <ul v-if="showSatProductResults && satProductResults.length > 0" class="list-group position-absolute w-100" style="z-index: 1050; max-height: 200px; overflow-y: auto;">
+                                    <li v-for="item in satProductResults" :key="item.code"
+                                        class="list-group-item list-group-item-action py-1 px-2" style="cursor: pointer; font-size: 0.85rem;"
+                                        @mousedown.prevent="selectSatProduct(item)">
+                                        <strong>{{ item.code }}</strong> — {{ item.description }}
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Clave Unidad</label>
+                            <div class="position-relative">
+                                <input type="text" class="form-control" v-model="satUnitSearch"
+                                    placeholder="Buscar unidad... ej: servicio, pieza, E48"
+                                    @input="buscarSatUnit" @focus="showSatUnitResults = true">
+                                <small v-if="formService.sat_unit_code" class="text-success">
+                                    <i class="fa fa-check"></i> {{ formService.sat_unit_code }} — {{ formService.sat_unit_name }}
+                                </small>
+                                <small v-else class="text-muted">Default: E48 (Unidad de servicio)</small>
+                                <ul v-if="showSatUnitResults && satUnitResults.length > 0" class="list-group position-absolute w-100" style="z-index: 1050; max-height: 200px; overflow-y: auto;">
+                                    <li v-for="item in satUnitResults" :key="item.code"
+                                        class="list-group-item list-group-item-action py-1 px-2" style="cursor: pointer; font-size: 0.85rem;"
+                                        @mousedown.prevent="selectSatUnit(item)">
+                                        <strong>{{ item.code }}</strong> — {{ item.name }}
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
                     </form>
                 </div>
                 <div class="modal-footer">
@@ -165,8 +205,21 @@ export default {
                 id: null,
                 name: '',
                 description: '',
-                price: 0
+                price: 0,
+                sat_product_code: null,
+                sat_product_desc: '',
+                sat_unit_code: 'E48',
+                sat_unit_name: 'Unidad de servicio'
             },
+
+            // SAT autocomplete
+            satProductSearch: '',
+            satProductResults: [],
+            showSatProductResults: false,
+            satUnitSearch: '',
+            satUnitResults: [],
+            showSatUnitResults: false,
+            satSearchTimer: null,
 
             // UI
             guardando: false,
@@ -244,8 +297,14 @@ export default {
                     id: null,
                     name: '',
                     description: '',
-                    price: 0
+                    price: 0,
+                    sat_product_code: null,
+                    sat_product_desc: '',
+                    sat_unit_code: 'E48',
+                    sat_unit_name: 'Unidad de servicio'
                 };
+                this.satProductSearch = '';
+                this.satUnitSearch = '';
                 this.errorForm = false;
                 this.erroresForm = [];
                 this.modalEditar = true;
@@ -255,8 +314,14 @@ export default {
                     id: service.id,
                     name: service.name,
                     description: service.description || '',
-                    price: service.price || 0
+                    price: service.price || 0,
+                    sat_product_code: service.sat_product_code || null,
+                    sat_product_desc: service.sat_product_desc || '',
+                    sat_unit_code: service.sat_unit_code || 'E48',
+                    sat_unit_name: service.sat_unit_name || ''
                 };
+                this.satProductSearch = '';
+                this.satUnitSearch = '';
                 this.errorForm = false;
                 this.erroresForm = [];
                 this.modalEditar = true;
@@ -334,6 +399,47 @@ export default {
             }).catch(function(error) {
                 Swal.fire('Error', 'Error al activar servicio', 'error');
             });
+        },
+
+        // SAT Catalog search
+        buscarSatProduct() {
+            clearTimeout(this.satSearchTimer);
+            let q = this.satProductSearch;
+            if (q.length < 2) { this.satProductResults = []; return; }
+            this.satSearchTimer = setTimeout(() => {
+                axios.get('/admin/sat/product-codes', { params: { q } }).then(res => {
+                    this.satProductResults = res.data;
+                    this.showSatProductResults = true;
+                });
+            }, 300);
+        },
+
+        selectSatProduct(item) {
+            this.formService.sat_product_code = item.code;
+            this.formService.sat_product_desc = item.description;
+            this.satProductSearch = '';
+            this.satProductResults = [];
+            this.showSatProductResults = false;
+        },
+
+        buscarSatUnit() {
+            clearTimeout(this.satSearchTimer);
+            let q = this.satUnitSearch;
+            if (q.length < 1) { this.satUnitResults = []; return; }
+            this.satSearchTimer = setTimeout(() => {
+                axios.get('/admin/sat/unit-codes', { params: { q } }).then(res => {
+                    this.satUnitResults = res.data;
+                    this.showSatUnitResults = true;
+                });
+            }, 300);
+        },
+
+        selectSatUnit(item) {
+            this.formService.sat_unit_code = item.code;
+            this.formService.sat_unit_name = item.name;
+            this.satUnitSearch = '';
+            this.satUnitResults = [];
+            this.showSatUnitResults = false;
         },
 
         desactivarServicio(id) {

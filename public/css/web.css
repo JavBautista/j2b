@@ -993,6 +993,10 @@ body {
     flex-shrink: 0;
 }
 
+.pricing-features li i.fa-star {
+    color: #f59e0b;
+}
+
 .pricing-btn {
     margin-top: var(--spacing-xl);
     width: 100%;

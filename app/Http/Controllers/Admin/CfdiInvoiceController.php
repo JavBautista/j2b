@@ -135,7 +135,7 @@ class CfdiInvoiceController extends Controller
             return response()->json(['ok' => false, 'message' => 'No hay emisor CFDI registrado'], 422);
         }
 
-        $receipt = Receipt::with(['detail', 'client.fiscalData'])
+        $receipt = Receipt::with(['detail.product', 'client.fiscalData'])
             ->where('id', $id)
             ->where('shop_id', $shop->id)
             ->first();
@@ -205,7 +205,7 @@ class CfdiInvoiceController extends Controller
             'metodo_pago' => 'required|string|max:3',
         ]);
 
-        $receipt = Receipt::with('detail')
+        $receipt = Receipt::with('detail.product')
             ->where('id', $request->receipt_id)
             ->where('shop_id', $shop->id)
             ->first();
@@ -229,6 +229,14 @@ class CfdiInvoiceController extends Controller
 
             $receptorRfc = strtoupper($request->receptor_rfc);
             $esPublicoGeneral = ($receptorRfc === 'XAXX010101000');
+
+            // Indexar claves SAT enviadas desde el modal (override del admin)
+            $conceptosSatMap = [];
+            if ($request->has('conceptos_sat')) {
+                foreach ($request->conceptos_sat as $cs) {
+                    $conceptosSatMap[$cs['detail_id']] = $cs;
+                }
+            }
 
             // Calcular conceptos e impuestos
             $conceptos = [];
@@ -255,11 +263,16 @@ class CfdiInvoiceController extends Controller
                     $ivaItem = round($subtotalItem * 0.16, 2);
                 }
 
+                // Prioridad: 1) Override del modal, 2) Del producto, 3) Genérico
+                $satOverride = $conceptosSatMap[$item->id] ?? null;
+                $claveProdServ = $satOverride['clave_prod_serv'] ?? $item->product?->sat_product_code ?? '01010101';
+                $claveUnidad = $satOverride['clave_unidad'] ?? $item->product?->sat_unit_code ?? 'E48';
+
                 $concepto = [
-                    'clave_prod_serv' => '01010101',
+                    'clave_prod_serv' => $claveProdServ,
                     'descripcion' => $item->descripcion,
                     'cantidad' => $item->qty,
-                    'clave_unidad' => 'E48',
+                    'clave_unidad' => $claveUnidad,
                     'valor_unitario' => $valorUnitario,
                     'subtotal' => $subtotalItem,
                     'importe' => $subtotalItem,

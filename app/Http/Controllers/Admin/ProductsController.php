@@ -132,6 +132,8 @@ class ProductsController extends Controller
             $product->wholesale_premium = $request->wholesale_premium ?? 0;
             $product->stock = $request->stock ?? 0;
             $product->reserve = $request->reserve ?? 0;
+            $product->sat_product_code = $request->sat_product_code;
+            $product->sat_unit_code = $request->sat_unit_code ?? 'H87';
             $product->save();
 
             $product->load('category', 'images');
@@ -180,6 +182,8 @@ class ProductsController extends Controller
         $product->wholesale_premium = $request->wholesale_premium ?? 0;
         $product->stock = $request->stock ?? $product->stock;
         $product->reserve = $request->reserve ?? $product->reserve;
+        $product->sat_product_code = $request->sat_product_code;
+        $product->sat_unit_code = $request->sat_unit_code ?? $product->sat_unit_code;
         $product->save();
 
         // Notificar clientes en espera si stock pasó de 0 a >0

@@ -73,6 +73,8 @@ class ServicesController extends Controller
         $service->name = $request->name;
         $service->description = $request->description;
         $service->price = $request->price;
+        $service->sat_product_code = $request->sat_product_code;
+        $service->sat_unit_code = $request->sat_unit_code ?? 'E48';
         $service->save();
 
         return response()->json([
@@ -101,6 +103,8 @@ class ServicesController extends Controller
         $service->name = $request->name;
         $service->description = $request->description;
         $service->price = $request->price;
+        $service->sat_product_code = $request->sat_product_code;
+        $service->sat_unit_code = $request->sat_unit_code ?? $service->sat_unit_code;
         $service->save();
 
         return response()->json([

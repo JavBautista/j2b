@@ -737,4 +737,178 @@ class ReceiptsController extends Controller
             'message' => 'Nota actualizada exitosamente'
         ]);
     }
+
+    /**
+     * Agregar pago parcial / abono a una nota
+     */
+    public function storePartialPayment(Request $request, $id)
+    {
+        $user = Auth::user();
+        $shop = $user->shop;
+
+        $receipt = Receipt::where('shop_id', $shop->id)
+            ->with('partialPayments')
+            ->findOrFail($id);
+
+        $suma_actual = $receipt->partialPayments->sum('amount');
+        $nueva_suma = $suma_actual + $request->amount;
+
+        // Determinar tipo de pago
+        $payment_type = ($nueva_suma >= $receipt->total) ? 'liquidacion' : 'abono';
+
+        $payment = new PartialPayments();
+        $payment->receipt_id = $receipt->id;
+        $payment->amount = $request->amount;
+        $payment->payment_type = $payment_type;
+        $payment->payment_date = now();
+        $payment->save();
+
+        // Actualizar receipt
+        $receipt->received = $nueva_suma;
+        if ($nueva_suma >= $receipt->total) {
+            $receipt->finished = 1;
+            $receipt->status = 'PAGADA';
+            if ($receipt->credit) {
+                $receipt->credit = 0;
+                $receipt->credit_completed = 1;
+            }
+        }
+        $receipt->save();
+
+        $receipt->load('partialPayments');
+
+        return response()->json([
+            'ok' => true,
+            'receipt' => $receipt
+        ]);
+    }
+
+    /**
+     * Eliminar pago parcial de una nota
+     */
+    public function deletePartialPayment($paymentId)
+    {
+        $user = Auth::user();
+        $shop = $user->shop;
+
+        $payment = PartialPayments::findOrFail($paymentId);
+
+        // Verificar que el pago pertenece a una nota de esta tienda
+        $receipt = Receipt::where('shop_id', $shop->id)
+            ->where('id', $payment->receipt_id)
+            ->firstOrFail();
+
+        $payment->delete();
+
+        // Recalcular suma de pagos restantes
+        $suma_pagos = PartialPayments::where('receipt_id', $receipt->id)->sum('amount');
+
+        $receipt->received = $suma_pagos;
+        if ($suma_pagos >= $receipt->total) {
+            $receipt->finished = 1;
+            $receipt->status = 'PAGADA';
+        } else {
+            $receipt->finished = 0;
+            $receipt->status = 'POR COBRAR';
+        }
+        $receipt->save();
+
+        $receipt->load('partialPayments');
+
+        return response()->json([
+            'ok' => true,
+            'receipt' => $receipt
+        ]);
+    }
+
+    /**
+     * Cancelar nota - restaura stock de productos y reactiva equipos
+     */
+    public function cancelReceipt($id)
+    {
+        $user = Auth::user();
+        $shop = $user->shop;
+
+        $receipt = Receipt::where('shop_id', $shop->id)->findOrFail($id);
+        $receipt->status = 'CANCELADA';
+        $receipt->save();
+
+        // Solo ajustar stock si es nota de venta (no cotización)
+        if ($receipt->type == 'venta' && !$receipt->quotation) {
+            $detail = ReceiptDetail::where('receipt_id', $receipt->id)->get();
+            foreach ($detail as $data) {
+                if ($data->type == 'product') {
+                    $product = Product::find($data->product_id);
+                    if ($product) {
+                        $product->stock = $product->stock + $data->qty;
+                        $product->save();
+                    }
+                }
+                if ($data->type == 'equipment') {
+                    $equipo = RentDetail::find($data->product_id);
+                    if ($equipo) {
+                        $equipo->active = 1;
+                        $equipo->save();
+                    }
+                }
+            }
+        }
+
+        return response()->json([
+            'ok' => true,
+            'receipt' => $receipt
+        ]);
+    }
+
+    /**
+     * Toggle marcar como facturado / no facturado
+     */
+    public function toggleInvoiced(Request $request, $id)
+    {
+        $user = Auth::user();
+        $shop = $user->shop;
+
+        $receipt = Receipt::where('shop_id', $shop->id)->findOrFail($id);
+        $receipt->is_tax_invoiced = $request->is_facturado ? true : false;
+        $receipt->save();
+
+        return response()->json([
+            'ok' => true,
+            'receipt' => $receipt
+        ]);
+    }
+
+    /**
+     * Convertir cotización a nota de venta - descuenta stock
+     */
+    public function convertToSale($id)
+    {
+        $user = Auth::user();
+        $shop = $user->shop;
+
+        $receipt = Receipt::where('shop_id', $shop->id)->findOrFail($id);
+        $receipt->quotation = 0;
+        $receipt->quotation_expiration = null;
+        $receipt->save();
+
+        // Descontar stock al pasar a venta
+        $detail = ReceiptDetail::where('receipt_id', $receipt->id)->get();
+        foreach ($detail as $data) {
+            if ($data->type == 'product') {
+                $product = Product::find($data->product_id);
+                if ($product) {
+                    $new_stock = $product->stock - $data->qty;
+                    $product->stock = max(0, $new_stock);
+                    $product->save();
+                }
+            }
+        }
+
+        $receipt->load('partialPayments');
+
+        return response()->json([
+            'ok' => true,
+            'receipt' => $receipt
+        ]);
+    }
 }

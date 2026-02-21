@@ -426,6 +426,100 @@
                         <span class="h4 mb-0 text-success fw-bold">{{ formatCurrency(total) }}</span>
                     </div>
 
+                    <!-- Pagos Parciales / Abonos (solo notas existentes, no crear) -->
+                    <div v-if="!cotizacion && !isCreateMode">
+                        <hr>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="mb-0"><i class="fa fa-money me-2"></i>Abonos</h6>
+                            <button
+                                v-if="adeudo > 0"
+                                class="btn btn-success btn-sm"
+                                @click="abrirModalAbono"
+                                :disabled="agregandoAbono"
+                            >
+                                <i class="fa fa-plus me-1"></i>Abonar
+                            </button>
+                        </div>
+
+                        <!-- Lista de pagos -->
+                        <div v-if="partialPayments.length > 0" class="mb-2">
+                            <div
+                                v-for="pago in partialPayments"
+                                :key="pago.id"
+                                class="d-flex justify-content-between align-items-center border-bottom py-2"
+                            >
+                                <div>
+                                    <small class="text-muted">{{ formatDate(pago.payment_date || pago.created_at) }}</small>
+                                    <span class="badge bg-secondary ms-1" style="font-size: 0.65em;">{{ pago.payment_type }}</span>
+                                    <div class="fw-bold">{{ formatCurrency(pago.amount) }}</div>
+                                </div>
+                                <button
+                                    class="btn btn-outline-danger btn-sm"
+                                    @click="eliminarAbono(pago)"
+                                    :disabled="eliminandoAbono"
+                                    title="Eliminar abono"
+                                >
+                                    <i class="fa fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div v-else class="text-center text-muted py-2">
+                            <small>Sin abonos registrados</small>
+                        </div>
+
+                        <!-- Resumen -->
+                        <div class="d-flex justify-content-between small">
+                            <span>Pagado:</span>
+                            <span class="fw-bold text-success">{{ formatCurrency(totalPagado) }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between small">
+                            <span>Adeudo:</span>
+                            <span class="fw-bold" :class="adeudo > 0 ? 'text-danger' : 'text-success'">
+                                {{ formatCurrency(adeudo) }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Modal Agregar Abono -->
+                    <div v-if="showModalAbono" class="modal d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+                        <div class="modal-dialog modal-sm modal-dialog-centered">
+                            <div class="modal-content">
+                                <div class="modal-header py-2">
+                                    <h6 class="modal-title"><i class="fa fa-money me-2"></i>Agregar Abono</h6>
+                                    <button type="button" class="btn-close" @click="showModalAbono = false"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <label class="form-label small">Monto del abono</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input
+                                            ref="inputAbono"
+                                            type="number"
+                                            class="form-control"
+                                            v-model.number="nuevoAbono.amount"
+                                            min="0.01"
+                                            :max="adeudo"
+                                            step="0.01"
+                                            @keyup.enter="agregarAbono"
+                                        >
+                                    </div>
+                                    <small class="text-muted">Adeudo actual: {{ formatCurrency(adeudo) }}</small>
+                                </div>
+                                <div class="modal-footer py-2">
+                                    <button class="btn btn-secondary btn-sm" @click="showModalAbono = false">Cancelar</button>
+                                    <button
+                                        class="btn btn-success btn-sm"
+                                        @click="agregarAbono"
+                                        :disabled="!nuevoAbono.amount || nuevoAbono.amount <= 0 || agregandoAbono"
+                                    >
+                                        <span v-if="agregandoAbono"><i class="fa fa-spinner fa-spin me-1"></i>Guardando...</span>
+                                        <span v-else><i class="fa fa-check me-1"></i>Agregar</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Opciones de Pago (solo notas, no cotizaciones) -->
                     <div v-if="!cotizacion">
                         <hr>
@@ -451,27 +545,30 @@
                             </select>
                         </div>
 
-                        <!-- Cantidad Recibida -->
+                        <!-- Cantidad Recibida: editable solo al crear, lectura al editar -->
                         <div class="mb-3">
                             <label class="form-label small">Cantidad Recibida</label>
-                            <div class="input-group">
+                            <div v-if="isCreateMode" class="input-group">
                                 <span class="input-group-text">$</span>
                                 <input
                                     type="number"
                                     class="form-control"
                                     v-model.number="receipt.received"
                                     min="0"
+                                    :max="total"
                                     step="0.01"
-                                    :disabled="isViewMode"
                                 >
                                 <button
-                                    v-if="!isViewMode"
                                     class="btn btn-outline-secondary"
                                     @click="receipt.received = total"
                                     title="Copiar total"
                                 >
                                     <i class="fa fa-copy"></i>
                                 </button>
+                            </div>
+                            <div v-else class="form-control-plaintext fw-bold">
+                                {{ formatCurrency(totalPagado) }}
+                                <small class="text-muted fw-normal">(suma de abonos)</small>
                             </div>
                         </div>
 
@@ -565,6 +662,49 @@
                             <li v-if="!client">Seleccione un cliente</li>
                             <li v-if="items.length === 0">Agregue al menos un item</li>
                         </ul>
+                    </div>
+
+                    <!-- Acciones rápidas (solo notas existentes) -->
+                    <div v-if="!isCreateMode && receiptOriginal" class="mt-3">
+                        <hr>
+                        <h6 class="mb-2"><i class="fa fa-cogs me-2"></i>Acciones</h6>
+
+                        <!-- Convertir cotización a venta -->
+                        <button
+                            v-if="receiptOriginal.quotation"
+                            class="btn btn-outline-primary btn-sm w-100 mb-2"
+                            @click="convertirAVenta"
+                            :disabled="accionEnProceso"
+                        >
+                            <i class="fa fa-exchange me-1"></i>Cambiar a Nota de Venta
+                        </button>
+
+                        <!-- Toggle facturado -->
+                        <button
+                            v-if="!receiptOriginal.quotation"
+                            class="btn btn-sm w-100 mb-2"
+                            :class="receiptOriginal.is_tax_invoiced ? 'btn-outline-warning' : 'btn-outline-info'"
+                            @click="toggleFacturado"
+                            :disabled="accionEnProceso"
+                        >
+                            <i class="fa fa-file-text-o me-1"></i>
+                            {{ receiptOriginal.is_tax_invoiced ? 'Marcar como NO Facturado' : 'Marcar como Facturado' }}
+                        </button>
+
+                        <!-- Cancelar nota -->
+                        <button
+                            v-if="receiptOriginal.status !== 'CANCELADA' && receiptOriginal.status !== 'DEVOLUCION'"
+                            class="btn btn-outline-danger btn-sm w-100"
+                            @click="cancelarNota"
+                            :disabled="accionEnProceso"
+                        >
+                            <i class="fa fa-ban me-1"></i>Cancelar Nota
+                        </button>
+
+                        <!-- Badge cancelada -->
+                        <div v-if="receiptOriginal.status === 'CANCELADA'" class="alert alert-danger text-center mb-0 py-2">
+                            <i class="fa fa-ban me-1"></i><strong>NOTA CANCELADA</strong>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -766,7 +906,16 @@ export default {
             taskSearchResults: [],
             taskSearchTimeout: null,
             showModalTarea: false,
-            taskSearchLoading: false
+            taskSearchLoading: false,
+
+            // Pagos parciales
+            showModalAbono: false,
+            nuevoAbono: { amount: 0 },
+            agregandoAbono: false,
+            eliminandoAbono: false,
+
+            // Acciones rápidas
+            accionEnProceso: false
         }
     },
     computed: {
@@ -785,6 +934,15 @@ export default {
         canEdit() {
             // Puede editar si no está facturado
             return this.receiptOriginal && !this.receiptOriginal.is_tax_invoiced;
+        },
+        partialPayments() {
+            return this.receiptOriginal?.partial_payments || [];
+        },
+        totalPagado() {
+            return this.partialPayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+        },
+        adeudo() {
+            return Math.max(0, parseFloat(this.receiptOriginal?.total || 0) - this.totalPagado);
         },
         getButtonLabel() {
             if (this.isCreateMode) {
@@ -1589,7 +1747,171 @@ export default {
             }
         },
 
+        // ==================== PAGOS PARCIALES / ABONOS ====================
+        abrirModalAbono() {
+            this.nuevoAbono.amount = this.adeudo;
+            this.showModalAbono = true;
+            this.$nextTick(() => {
+                if (this.$refs.inputAbono) {
+                    this.$refs.inputAbono.focus();
+                    this.$refs.inputAbono.select();
+                }
+            });
+        },
+
+        async agregarAbono() {
+            if (!this.nuevoAbono.amount || this.nuevoAbono.amount <= 0) return;
+
+            this.agregandoAbono = true;
+            try {
+                const response = await axios.post(`/admin/receipts/${this.receiptId}/partial-payment`, {
+                    amount: this.nuevoAbono.amount
+                });
+                if (response.data.ok) {
+                    this.showModalAbono = false;
+                    this.nuevoAbono.amount = 0;
+                    // Actualizar receiptOriginal con datos frescos del server
+                    this.receiptOriginal = response.data.receipt;
+                    this.receipt.received = response.data.receipt.received;
+                    this.receipt.status = response.data.receipt.status;
+                    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Abono registrado', showConfirmButton: false, timer: 2000 });
+                } else {
+                    Swal.fire('Error', response.data.message || 'Error al agregar abono', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                Swal.fire('Error', 'No se pudo agregar el abono', 'error');
+            } finally {
+                this.agregandoAbono = false;
+            }
+        },
+
+        async eliminarAbono(pago) {
+            const result = await Swal.fire({
+                title: 'Eliminar Abono',
+                text: `¿Eliminar abono de ${this.formatCurrency(pago.amount)}?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, Eliminar',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#dc3545'
+            });
+
+            if (!result.isConfirmed) return;
+
+            this.eliminandoAbono = true;
+            try {
+                const response = await axios.delete(`/admin/receipts/partial-payment/${pago.id}`);
+                if (response.data.ok) {
+                    this.receiptOriginal = response.data.receipt;
+                    this.receipt.received = response.data.receipt.received;
+                    this.receipt.status = response.data.receipt.status;
+                    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Abono eliminado', showConfirmButton: false, timer: 2000 });
+                } else {
+                    Swal.fire('Error', response.data.message || 'Error al eliminar', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                Swal.fire('Error', 'No se pudo eliminar el abono', 'error');
+            } finally {
+                this.eliminandoAbono = false;
+            }
+        },
+
+        // ==================== ACCIONES RÁPIDAS ====================
+        async cancelarNota() {
+            const result = await Swal.fire({
+                title: 'Cancelar Nota',
+                text: '¿Está seguro de cancelar esta nota? Se restaurará el stock de los productos.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, Cancelar Nota',
+                cancelButtonText: 'No',
+                confirmButtonColor: '#dc3545'
+            });
+            if (!result.isConfirmed) return;
+
+            this.accionEnProceso = true;
+            try {
+                const response = await axios.post(`/admin/receipts/${this.receiptId}/cancel`);
+                if (response.data.ok) {
+                    this.receiptOriginal.status = 'CANCELADA';
+                    this.receipt.status = 'CANCELADA';
+                    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Nota cancelada', showConfirmButton: false, timer: 2000 });
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                Swal.fire('Error', 'No se pudo cancelar la nota', 'error');
+            } finally {
+                this.accionEnProceso = false;
+            }
+        },
+
+        async toggleFacturado() {
+            const nuevoValor = !this.receiptOriginal.is_tax_invoiced;
+            const texto = nuevoValor ? 'Marcar como Facturado' : 'Marcar como NO Facturado';
+
+            const result = await Swal.fire({
+                title: texto,
+                text: `¿${texto}?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Sí',
+                cancelButtonText: 'No'
+            });
+            if (!result.isConfirmed) return;
+
+            this.accionEnProceso = true;
+            try {
+                const response = await axios.patch(`/admin/receipts/${this.receiptId}/toggle-invoiced`, {
+                    is_facturado: nuevoValor
+                });
+                if (response.data.ok) {
+                    this.receiptOriginal.is_tax_invoiced = nuevoValor;
+                    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: nuevoValor ? 'Marcada como facturada' : 'Marcada como no facturada', showConfirmButton: false, timer: 2000 });
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                Swal.fire('Error', 'No se pudo actualizar', 'error');
+            } finally {
+                this.accionEnProceso = false;
+            }
+        },
+
+        async convertirAVenta() {
+            const result = await Swal.fire({
+                title: 'Cambiar a Nota de Venta',
+                text: '¿Realmente desea cambiar a nota de venta? Se descontará el stock de su inventario.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, Cambiar',
+                cancelButtonText: 'No',
+                confirmButtonColor: '#0d6efd'
+            });
+            if (!result.isConfirmed) return;
+
+            this.accionEnProceso = true;
+            try {
+                const response = await axios.post(`/admin/receipts/${this.receiptId}/convert-to-sale`);
+                if (response.data.ok) {
+                    this.receiptOriginal.quotation = 0;
+                    this.cotizacion = false;
+                    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Convertida a nota de venta', showConfirmButton: false, timer: 2000 });
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                Swal.fire('Error', 'No se pudo convertir', 'error');
+            } finally {
+                this.accionEnProceso = false;
+            }
+        },
+
         // ==================== UTILIDADES ====================
+        formatDate(dateStr) {
+            if (!dateStr) return '';
+            const d = new Date(dateStr);
+            return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+        },
         formatCurrency(amount) {
             return new Intl.NumberFormat('es-MX', {
                 style: 'currency',

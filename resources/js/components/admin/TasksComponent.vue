@@ -573,13 +573,45 @@
                         </div>
                         <div class="form-group row">
                             <label class="col-md-3 col-form-label text-md-right">Cliente</label>
-                            <div class="col-md-9">
-                                <select class="form-control" v-model="formTask.client_id">
-                                    <option value="">Sin cliente</option>
-                                    <option v-for="client in clientes" :key="client.id" :value="client.id">
-                                        {{ client.name }} {{ client.company ? '(' + client.company + ')' : '' }}
-                                    </option>
-                                </select>
+                            <div class="col-md-9 position-relative">
+                                <!-- Cliente seleccionado -->
+                                <div v-if="clienteSeleccionadoNombre" class="input-group">
+                                    <input type="text" class="form-control bg-light" :value="clienteSeleccionadoNombre" readonly>
+                                    <button class="btn btn-outline-secondary" type="button" @click="limpiarCliente">
+                                        <i class="fa fa-times"></i>
+                                    </button>
+                                </div>
+                                <!-- Buscador -->
+                                <div v-else>
+                                    <input
+                                        type="text"
+                                        class="form-control"
+                                        v-model="buscarCliente"
+                                        @input="buscarClientes"
+                                        @focus="mostrarDropdownClientes = true"
+                                        placeholder="Buscar cliente por nombre, email o empresa..."
+                                    >
+                                    <div v-if="mostrarDropdownClientes && (clientes.length > 0 || buscarCliente)" class="dropdown-menu show w-100" style="max-height: 200px; overflow-y: auto;">
+                                        <a class="dropdown-item" href="#" @click.prevent="seleccionarCliente(null)">
+                                            <em class="text-muted">Sin cliente</em>
+                                        </a>
+                                        <a
+                                            v-for="client in clientes"
+                                            :key="client.id"
+                                            class="dropdown-item"
+                                            href="#"
+                                            @click.prevent="seleccionarCliente(client)"
+                                        >
+                                            {{ client.name }} <small class="text-muted" v-if="client.company">({{ client.company }})</small>
+                                        </a>
+                                        <div v-if="buscandoClientes" class="dropdown-item text-center text-muted">
+                                            <i class="fa fa-spinner fa-spin me-1"></i>Buscando...
+                                        </div>
+                                        <div v-if="!buscandoClientes && clientes.length === 0 && buscarCliente.length >= 2" class="dropdown-item text-muted">
+                                            Sin resultados
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div class="form-group row">
@@ -946,6 +978,13 @@ export default {
             clientes: [],
             colaboradorSeleccionado: '',
 
+            // Búsqueda de clientes
+            buscarCliente: '',
+            buscandoClientes: false,
+            mostrarDropdownClientes: false,
+            clienteSeleccionadoNombre: '',
+            buscarClienteTimeout: null,
+
             // Estados
             nuevoEstatus: '',
             nuevaResena: '',
@@ -1065,14 +1104,47 @@ export default {
         },
 
         loadClientes() {
-            let me = this;
-            axios.get('/admin/tasks/clients').then(function(response) {
-                if (response.data.ok) {
-                    me.clientes = response.data.clients;
-                }
-            }).catch(function(error) {
-                console.log(error);
-            });
+            // Se mantiene para carga inicial vacía
+            // Los clientes se buscan dinámicamente con buscarClientes()
+        },
+
+        buscarClientes() {
+            clearTimeout(this.buscarClienteTimeout);
+            if (this.buscarCliente.length < 2) {
+                this.clientes = [];
+                return;
+            }
+            this.buscandoClientes = true;
+            this.buscarClienteTimeout = setTimeout(() => {
+                axios.get('/admin/tasks/clients', { params: { q: this.buscarCliente } })
+                    .then(response => {
+                        if (response.data.ok) {
+                            this.clientes = response.data.clients;
+                        }
+                    })
+                    .catch(error => console.error(error))
+                    .finally(() => { this.buscandoClientes = false; });
+            }, 300);
+        },
+
+        seleccionarCliente(client) {
+            if (client) {
+                this.formTask.client_id = client.id;
+                this.clienteSeleccionadoNombre = client.name + (client.company ? ' (' + client.company + ')' : '');
+            } else {
+                this.formTask.client_id = '';
+                this.clienteSeleccionadoNombre = '';
+            }
+            this.mostrarDropdownClientes = false;
+            this.buscarCliente = '';
+            this.clientes = [];
+        },
+
+        limpiarCliente() {
+            this.formTask.client_id = '';
+            this.clienteSeleccionadoNombre = '';
+            this.buscarCliente = '';
+            this.clientes = [];
         },
 
         cambiarPagina(page) {
@@ -1100,6 +1172,7 @@ export default {
                     expiration: '',
                     client_id: ''
                 };
+                this.limpiarCliente();
                 this.errorForm = false;
                 this.erroresForm = [];
                 this.modalEditar = true;
@@ -1114,6 +1187,14 @@ export default {
                     expiration: task.expiration || '',
                     client_id: task.client_id || ''
                 };
+                // Pre-cargar nombre del cliente si existe
+                if (task.client) {
+                    this.clienteSeleccionadoNombre = task.client.name + (task.client.company ? ' (' + task.client.company + ')' : '');
+                } else {
+                    this.clienteSeleccionadoNombre = '';
+                }
+                this.buscarCliente = '';
+                this.clientes = [];
                 this.errorForm = false;
                 this.erroresForm = [];
                 this.modalEditar = true;
@@ -1133,6 +1214,7 @@ export default {
             this.modalEditar = false;
             this.modalEstatus = false;
             this.modalResena = false;
+            this.mostrarDropdownClientes = false;
         },
 
         // CRUD

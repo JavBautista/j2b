@@ -621,6 +621,11 @@ Route::group([
             Route::get('status', [SubscriptionController::class, 'getStatus']);
         });
 
+        /* CFDI FACTURAS - Consulta de facturas emitidas */
+        Route::get('cfdi/facturas', [\App\Http\Controllers\CfdiInvoiceController::class, 'getFacturas']);
+        Route::get('cfdi/facturas/export', [\App\Http\Controllers\CfdiInvoiceController::class, 'exportFacturas']);
+        Route::get('cfdi/facturas/{id}/download/{formato}', [\App\Http\Controllers\CfdiInvoiceController::class, 'descargar']);
+
     });
 });
 /*------------------------------------------------------------------

@@ -72,6 +72,7 @@ Route::post('/registro/create', [RequestsJ2bController::class, 'store'])->name('
 Route::get('/print-receipt-rent', [ReceiptController::class, 'printReceiptRent']);
 Route::get('/print-purchase-order', [PurchaseOrderController::class, 'printPurchaseOrder']);
 Route::get('/print-contract', [ContractController::class, 'printContract']);
+Route::get('/print-cfdi/{id}/{formato}', [\App\Http\Controllers\CfdiInvoiceController::class, 'descargarPublic']);
 
 
 Auth::routes([

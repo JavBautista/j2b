@@ -9,6 +9,17 @@
 
     <title>{{ config('app.name', 'J2Biznes') }}</title>
 
+    <!-- Shop Config -->
+    @auth
+    <script>
+        window.__shopConfig = {
+            currency: '{{ auth()->user()->shop->currency ?? "MXN" }}',
+            taxName: '{{ auth()->user()->shop->tax_name ?? "IVA" }}',
+            taxRate: {{ auth()->user()->shop->tax_rate ?? 16 }},
+        };
+    </script>
+    @endauth
+
     <!-- Scripts -->
     <script src="{{ asset('js/app.js') }}" defer></script>
     <script src="{{ asset('js/dashboard.js') }}" defer></script>

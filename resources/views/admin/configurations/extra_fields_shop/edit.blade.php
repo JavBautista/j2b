@@ -71,6 +71,25 @@
                             </div>
                         </div>
 
+                        <div class="mb-4">
+                            <div class="form-check form-switch">
+                                <input type="checkbox"
+                                       class="form-check-input"
+                                       id="filterable"
+                                       name="filterable"
+                                       value="1"
+                                       {{ old('filterable', $extraField->filterable) ? 'checked' : '' }}>
+                                <label class="form-check-label fw-bold" for="filterable">
+                                    <i class="fas fa-filter text-info me-1"></i>
+                                    Usar como filtro en ventas
+                                </label>
+                            </div>
+                            <div class="form-text">
+                                <i class="fas fa-search me-1"></i>
+                                Si se activa, este campo aparecerá como opción de búsqueda en el listado de ventas.
+                            </div>
+                        </div>
+
                         <!-- Información del campo -->
                         <div class="alert alert-light border">
                             <h6 class="alert-heading mb-2">

@@ -255,12 +255,12 @@ class CfdiInvoiceController extends Controller
                     $valorUnitario = round($item->price, 2);
                     $subtotalItem = round($item->subtotal, 2);
                     // SAT exige: importe traslado = round(base × tasa_cuota, 2)
-                    $ivaItem = round($subtotalItem * 0.16, 2);
+                    $ivaItem = round($subtotalItem * $shop->getTaxDecimal(), 2);
                 } else {
                     // Extraer IVA de los precios (el precio ya incluye IVA)
-                    $valorUnitario = round($item->price / 1.16, 2);
-                    $subtotalItem = round($item->subtotal / 1.16, 2);
-                    $ivaItem = round($subtotalItem * 0.16, 2);
+                    $valorUnitario = round($item->price / $shop->getTaxDivisor(), 2);
+                    $subtotalItem = round($item->subtotal / $shop->getTaxDivisor(), 2);
+                    $ivaItem = round($subtotalItem * $shop->getTaxDecimal(), 2);
                 }
 
                 // Prioridad: 1) Override del modal, 2) Del producto, 3) Genérico
@@ -283,7 +283,7 @@ class CfdiInvoiceController extends Controller
                                 'base' => $subtotalItem,
                                 'impuesto' => '002',
                                 'tipo_factor' => 'Tasa',
-                                'tasa_cuota' => '0.160000',
+                                'tasa_cuota' => $shop->getTaxSatRate(),
                                 'importe' => $ivaItem,
                             ]
                         ]
@@ -307,7 +307,7 @@ class CfdiInvoiceController extends Controller
                 'metodo_pago' => $request->metodo_pago,
                 'tipo_comprobante' => 'I',
                 'exportacion' => '01',
-                'moneda' => 'MXN',
+                'moneda' => $shop->getCurrencyCode(),
                 'lugar_expedicion' => $emisor->codigo_postal,
                 'subtotal' => $subtotalTotal,
                 'total' => $total,
@@ -344,7 +344,7 @@ class CfdiInvoiceController extends Controller
                         'base' => $subtotalTotal,
                         'impuesto' => '002',
                         'tipo_factor' => 'Tasa',
-                        'tasa_cuota' => '0.160000',
+                        'tasa_cuota' => $shop->getTaxSatRate(),
                         'importe' => $ivaTotal,
                     ]
                 ]
@@ -797,7 +797,8 @@ class CfdiInvoiceController extends Controller
         }
 
         // Importe con letra
-        $importeLetra = $this->numeroALetras($invoice->total) . ' M.N.';
+        $monedaSufijo = ($requestData['moneda'] ?? 'MXN') === 'MXN' ? 'M.N.' : 'USD';
+        $importeLetra = $this->numeroALetras($invoice->total) . ' ' . $monedaSufijo;
 
         // Datos adicionales del response_json
         $responseData = $invoice->response_json ?? [];

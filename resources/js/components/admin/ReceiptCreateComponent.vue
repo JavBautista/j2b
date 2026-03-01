@@ -300,11 +300,11 @@
                     <div class="form-check mb-2">
                         <input class="form-check-input" type="checkbox" id="toggleIVA" v-model="conIVA" @change="calcularTotales">
                         <label class="form-check-label" for="toggleIVA">
-                            Agregar IVA (16%)
+                            Agregar {{ $shopTaxName || 'IVA' }} ({{ $shopTaxRate }}%)
                         </label>
                     </div>
                     <div v-if="conIVA" class="d-flex justify-content-between mb-2">
-                        <span>IVA:</span>
+                        <span>{{ $shopTaxName || 'IVA' }}:</span>
                         <span>{{ formatCurrency(ivaMonto) }}</span>
                     </div>
 
@@ -765,7 +765,7 @@ export default {
 
             // IVA
             if (this.conIVA) {
-                this.ivaMonto = base * 0.16;
+                this.ivaMonto = base * this.$taxDecimal;
             } else {
                 this.ivaMonto = 0;
             }
@@ -896,9 +896,11 @@ export default {
             this.receipt.quotation = this.cotizacion ? 1 : 0;
         },
         formatCurrency(amount) {
-            return new Intl.NumberFormat('es-MX', {
+            const curr = this.$shopCurrency || 'MXN';
+            const locale = curr === 'USD' ? 'en-US' : 'es-MX';
+            return new Intl.NumberFormat(locale, {
                 style: 'currency',
-                currency: 'MXN'
+                currency: curr
             }).format(amount || 0);
         },
         getItemImage(imagePath) {

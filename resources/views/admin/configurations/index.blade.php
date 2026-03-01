@@ -65,6 +65,30 @@
             </div>
         </div>
 
+        <!-- Moneda e Impuesto -->
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card shadow-sm border-0 hover-config-card h-100">
+                <div class="card-body text-center p-4">
+                    <div class="config-icon mb-3">
+                        <i class="fas fa-coins fa-3x text-primary"></i>
+                    </div>
+                    <h5 class="card-title mb-2">Moneda e Impuesto</h5>
+                    <p class="card-text text-muted mb-3">Configura la moneda y el impuesto de tu tienda</p>
+                    <div class="d-flex justify-content-center">
+                        <a href="{{ route('admin.configurations.currency') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-arrow-right me-1"></i>Configurar
+                        </a>
+                    </div>
+                </div>
+                <div class="card-footer bg-light text-center border-0">
+                    <small class="text-muted">
+                        <i class="fas fa-check-circle text-success me-1"></i>
+                        {{ auth()->user()->shop->getCurrencySymbol() }} | {{ auth()->user()->shop->tax_name ?? 'Sin impuesto' }} {{ auth()->user()->shop->tax_rate }}%
+                    </small>
+                </div>
+            </div>
+        </div>
+
         <!-- Configuraciones Futuras -->
         <div class="col-md-6 col-lg-4 mb-4">
             <div class="card shadow-sm border-0 hover-config-card h-100 opacity-75">

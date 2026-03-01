@@ -9,11 +9,17 @@
                         <input type="text" class="form-control" v-model="filtros.buscar"
                                placeholder="Folio, cliente..." @keyup.enter="buscar">
                     </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Buscar por articulo</label>
+                        <input type="text" class="form-control" v-model="filtros.buscar_articulo"
+                               placeholder="Nombre del articulo..." @keyup.enter="buscar">
+                    </div>
                     <div class="col-md-2">
                         <label class="form-label">Tipo</label>
                         <select class="form-select" v-model="filtros.tipo" @change="buscar">
                             <option value="">Todos</option>
-                            <option value="venta">Notas de Venta</option>
+                            <option value="venta">Ventas</option>
+                            <option value="renta">Rentas</option>
                             <option value="cotizacion">Cotizaciones</option>
                         </select>
                     </div>
@@ -22,11 +28,24 @@
                         <select class="form-select" v-model="filtros.status" @change="buscar">
                             <option value="">Todos</option>
                             <option value="POR COBRAR">Por Cobrar</option>
+                            <option value="NUEVA COMPRA">Nueva Compra</option>
                             <option value="PAGADA">Pagada</option>
                             <option value="POR FACTURAR">Por Facturar</option>
                             <option value="CANCELADA">Cancelada</option>
+                            <option value="DEVOLUCION">Devolucion</option>
                         </select>
                     </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Origen</label>
+                        <select class="form-select" v-model="filtros.origen" @change="buscar">
+                            <option value="">Todos</option>
+                            <option value="ADMIN">Admin</option>
+                            <option value="CLIENT">Cliente</option>
+                            <option value="CHATBOT">Chatbot</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row g-3 mt-1">
                     <div class="col-md-2">
                         <label class="form-label">Desde</label>
                         <input type="date" class="form-control" v-model="filtros.fecha_desde" @change="buscar">
@@ -39,6 +58,19 @@
                         <button class="btn btn-primary w-100" @click="buscar">
                             <i class="fa fa-search"></i>
                         </button>
+                    </div>
+                </div>
+                <!-- Filtros de campos extras -->
+                <div v-if="extraFilterFields.length > 0" class="row g-3 mt-1">
+                    <div class="col-12">
+                        <small class="text-muted"><i class="fa fa-filter me-1"></i>Filtros adicionales:</small>
+                    </div>
+                    <div v-for="field in extraFilterFields" :key="field.id" class="col-md-3">
+                        <label class="form-label small">{{ field.field_name }}</label>
+                        <input type="text" class="form-control form-control-sm"
+                               v-model="extraFilters[field.field_name]"
+                               :placeholder="'Buscar por ' + field.field_name"
+                               @keyup.enter="buscar">
                     </div>
                 </div>
             </div>
@@ -291,10 +323,14 @@ export default {
                 per_page: 15,
                 last_page: 1
             },
+            extraFilterFields: [],
+            extraFilters: {},
             filtros: {
                 buscar: '',
+                buscar_articulo: '',
                 tipo: '',
                 status: '',
+                origen: '',
                 fecha_desde: '',
                 fecha_hasta: ''
             },
@@ -322,6 +358,7 @@ export default {
         }
     },
     mounted() {
+        this.cargarFilterableFields();
         this.cargarReceipts();
     },
     methods: {
@@ -331,11 +368,21 @@ export default {
                 const params = new URLSearchParams({
                     page: this.pagination.current_page,
                     buscar: this.filtros.buscar,
+                    buscar_articulo: this.filtros.buscar_articulo,
                     tipo: this.filtros.tipo,
                     status: this.filtros.status,
+                    origen: this.filtros.origen,
                     fecha_desde: this.filtros.fecha_desde,
                     fecha_hasta: this.filtros.fecha_hasta
                 });
+
+                // Agregar filtros de campos extras
+                const activeExtraFilters = Object.entries(this.extraFilters)
+                    .filter(([_, value]) => value && value.trim() !== '')
+                    .map(([field_name, value]) => ({ field_name, value: value.trim() }));
+                if (activeExtraFilters.length > 0) {
+                    params.append('extra_filters', JSON.stringify(activeExtraFilters));
+                }
 
                 const response = await axios.get(`/admin/receipts/list/get?${params}`);
 
@@ -348,6 +395,20 @@ export default {
                 Swal.fire('Error', 'No se pudieron cargar las notas de venta', 'error');
             } finally {
                 this.loading = false;
+            }
+        },
+        async cargarFilterableFields() {
+            try {
+                const response = await axios.get('/admin/receipts/extra-fields-filterable');
+                if (response.data.ok) {
+                    this.extraFilterFields = response.data.extra_fields;
+                    // Inicializar objeto de filtros vacío
+                    this.extraFilterFields.forEach(field => {
+                        this.extraFilters[field.field_name] = '';
+                    });
+                }
+            } catch (error) {
+                console.error('Error cargando campos filtrables:', error);
             }
         },
         buscar() {

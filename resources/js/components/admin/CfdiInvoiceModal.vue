@@ -223,7 +223,7 @@
                                                 <td class="text-end">${{ formatNumber(subtotalDisplay) }}</td>
                                             </tr>
                                             <tr>
-                                                <td colspan="5" class="text-end"><strong>IVA (16%):</strong></td>
+                                                <td colspan="5" class="text-end"><strong>{{ $shopTaxName || 'IVA' }} ({{ $shopTaxRate }}%):</strong></td>
                                                 <td class="text-end">${{ formatNumber(ivaDisplay) }}</td>
                                             </tr>
                                             <tr>
@@ -364,8 +364,8 @@ export default {
                 id: item.id,
                 descripcion: item.descripcion,
                 qty: item.qty,
-                precio: extraerIva ? Math.round(item.price / 1.16 * 100) / 100 : item.price,
-                subtotal: extraerIva ? Math.round(item.subtotal / 1.16 * 100) / 100 : item.subtotal,
+                precio: extraerIva ? Math.round(item.price / this.$taxDivisor * 100) / 100 : item.price,
+                subtotal: extraerIva ? Math.round(item.subtotal / this.$taxDivisor * 100) / 100 : item.subtotal,
                 sat_product_code: item.product?.sat_product_code || null,
                 sat_unit_code: item.product?.sat_unit_code || null,
             }));
@@ -569,8 +569,8 @@ export default {
                 detail_id: item.id,
                 descripcion: item.descripcion,
                 qty: item.qty,
-                precio: extraerIva ? Math.round(item.price / 1.16 * 100) / 100 : item.price,
-                subtotal: extraerIva ? Math.round(item.subtotal / 1.16 * 100) / 100 : item.subtotal,
+                precio: extraerIva ? Math.round(item.price / this.$taxDivisor * 100) / 100 : item.price,
+                subtotal: extraerIva ? Math.round(item.subtotal / this.$taxDivisor * 100) / 100 : item.subtotal,
                 clave_prod_serv: item.product?.sat_product_code || '01010101',
                 clave_unidad: item.product?.sat_unit_code || 'E48',
                 productSearch: '',

@@ -513,7 +513,8 @@ export default {
         },
 
         formatMoney(value) {
-            return parseFloat(value || 0).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+            const locale = (this.$shopCurrency === 'USD') ? 'en-US' : 'es-MX';
+            return parseFloat(value || 0).toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         },
 
         formatDate(date) {

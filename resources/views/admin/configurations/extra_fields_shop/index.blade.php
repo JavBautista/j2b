@@ -76,6 +76,9 @@
                                             <i class="fas fa-eye me-1 text-info"></i>Visibilidad
                                         </th>
                                         <th class="fw-bold text-center">
+                                            <i class="fas fa-filter me-1 text-info"></i>Filtrable
+                                        </th>
+                                        <th class="fw-bold text-center">
                                             <i class="fas fa-cogs me-1 text-warning"></i>Acciones
                                         </th>
                                     </tr>
@@ -108,6 +111,17 @@
                                             @else
                                                 <span class="badge bg-warning">
                                                     <i class="fas fa-eye-slash me-1"></i>Oculto
+                                                </span>
+                                            @endif
+                                        </td>
+                                        <td class="text-center">
+                                            @if ($extra_field->filterable)
+                                                <span class="badge bg-info">
+                                                    <i class="fas fa-filter me-1"></i>Si
+                                                </span>
+                                            @else
+                                                <span class="badge bg-light text-muted">
+                                                    No
                                                 </span>
                                             @endif
                                         </td>
@@ -146,7 +160,7 @@
                                     </tr>
                                     @empty
                                     <tr>
-                                        <td colspan="4" class="text-center py-5">
+                                        <td colspan="5" class="text-center py-5">
                                             <div class="empty-state">
                                                 <i class="fas fa-plus-square fa-3x text-muted mb-3"></i>
                                                 <h6 class="text-muted">No hay campos extras configurados</h6>

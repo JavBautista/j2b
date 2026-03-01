@@ -410,11 +410,11 @@
                             :disabled="isViewMode"
                         >
                         <label class="form-check-label" for="toggleIVA">
-                            Agregar IVA (16%)
+                            Agregar {{ $shopTaxName || 'IVA' }} ({{ $shopTaxRate }}%)
                         </label>
                     </div>
                     <div v-if="conIVA" class="d-flex justify-content-between mb-2">
-                        <span>IVA:</span>
+                        <span>{{ $shopTaxName || 'IVA' }}:</span>
                         <span>{{ formatCurrency(ivaMonto) }}</span>
                     </div>
 
@@ -1166,6 +1166,10 @@ export default {
             this.conIVA = r.iva > 0;
             this.esCredito = r.credit === 1 || r.credit === true;
 
+            // Preservar tipo y rent_id del recibo original
+            this.receipt.type = r.type || 'venta';
+            this.receipt.rent_id = r.rent_id || 0;
+
             // Datos generales
             this.receipt.description = r.description || '';
             this.receipt.observation = r.observation || '';
@@ -1529,7 +1533,7 @@ export default {
 
             // IVA
             if (this.conIVA) {
-                this.ivaMonto = base * 0.16;
+                this.ivaMonto = base * this.$taxDecimal;
             } else {
                 this.ivaMonto = 0;
             }
@@ -1913,9 +1917,11 @@ export default {
             return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
         },
         formatCurrency(amount) {
-            return new Intl.NumberFormat('es-MX', {
+            const curr = this.$shopCurrency || 'MXN';
+            const locale = curr === 'USD' ? 'en-US' : 'es-MX';
+            return new Intl.NumberFormat(locale, {
                 style: 'currency',
-                currency: 'MXN'
+                currency: curr
             }).format(amount || 0);
         },
         getItemImage(imagePath) {

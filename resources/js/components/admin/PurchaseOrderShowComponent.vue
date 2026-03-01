@@ -543,9 +543,11 @@ export default {
 
         // ==================== UTILIDADES ====================
         formatCurrency(amount) {
-            return new Intl.NumberFormat('es-MX', {
+            const curr = this.$shopCurrency || 'MXN';
+            const locale = curr === 'USD' ? 'en-US' : 'es-MX';
+            return new Intl.NumberFormat(locale, {
                 style: 'currency',
-                currency: 'MXN'
+                currency: curr
             }).format(amount || 0);
         },
         formatDate(dateStr) {

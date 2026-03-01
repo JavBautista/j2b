@@ -257,6 +257,10 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::post('/admin/configurations/ai-settings/indexing/all', [App\Http\Controllers\Admin\AiSettingsController::class, 'indexAll']);
         Route::post('/admin/configurations/ai-settings/indexing/clients', [App\Http\Controllers\Admin\AiSettingsController::class, 'indexClients']);
 
+        // Configuración Moneda e Impuesto
+        Route::get('/admin/configurations/currency', [App\Http\Controllers\Admin\CurrencySettingsController::class, 'index'])->name('admin.configurations.currency');
+        Route::put('/admin/configurations/currency/update', [App\Http\Controllers\Admin\CurrencySettingsController::class, 'update'])->name('admin.configurations.currency.update');
+
         // Facturación CFDI - Configuración Emisor
         Route::get('/admin/facturacion/configuracion', [App\Http\Controllers\Admin\CfdiConfigController::class, 'index'])->name('admin.cfdi.config');
         Route::get('/admin/facturacion/configuracion/get', [App\Http\Controllers\Admin\CfdiConfigController::class, 'get']);
@@ -373,6 +377,7 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::get('/admin/receipts/create', [App\Http\Controllers\Admin\ReceiptsController::class, 'create'])->name('admin.receipts.create');
         Route::post('/admin/receipts/store', [App\Http\Controllers\Admin\ReceiptsController::class, 'store'])->name('admin.receipts.store');
         Route::get('/admin/receipts/extra-fields', [App\Http\Controllers\Admin\ReceiptsController::class, 'getExtraFields'])->name('admin.receipts.extra-fields');
+        Route::get('/admin/receipts/extra-fields-filterable', [App\Http\Controllers\Admin\ReceiptsController::class, 'getFilterableExtraFields'])->name('admin.receipts.extra-fields-filterable');
         Route::get('/admin/receipts/{id}/detail', [App\Http\Controllers\Admin\ReceiptsController::class, 'getDetail'])->name('admin.receipts.detail');
         Route::get('/admin/receipts/{id}/edit', [App\Http\Controllers\Admin\ReceiptsController::class, 'edit'])->name('admin.receipts.edit');
         Route::get('/admin/receipts/{id}/show', [App\Http\Controllers\Admin\ReceiptsController::class, 'show'])->name('admin.receipts.show');

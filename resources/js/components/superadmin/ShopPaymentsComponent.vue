@@ -833,7 +833,8 @@ export default {
         // Utilidades
         formatNumber(value) {
             if (value === null || value === undefined) return '0.00';
-            return Number(value).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const locale = (this.$shopCurrency === 'USD') ? 'en-US' : 'es-MX';
+            return Number(value).toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         },
 
         truncate(text, length) {

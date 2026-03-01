@@ -110,16 +110,26 @@ app.component('modal-select-equipment', ModalSelectEquipment);
 // Plugin de visor de imágenes (disponible como this.$viewImage, this.$viewImages)
 app.use(ImageViewerPlugin);
 
+// Shop config global (currency + tax)
+const shopConfig = window.__shopConfig || { currency: 'MXN', taxName: 'IVA', taxRate: 16 };
+app.config.globalProperties.$shopCurrency = shopConfig.currency;
+app.config.globalProperties.$shopTaxName = shopConfig.taxName;
+app.config.globalProperties.$shopTaxRate = shopConfig.taxRate;
+app.config.globalProperties.$taxDecimal = shopConfig.taxRate / 100;
+app.config.globalProperties.$taxDivisor = 1 + (shopConfig.taxRate / 100);
+app.config.globalProperties.$hasTax = shopConfig.taxRate > 0 && shopConfig.taxName !== null;
+
 // Filtros ya no existen en Vue 3, pero puedes usar propiedades globales
 app.config.globalProperties.$filters = {
     formatDate(value, format = 'DD/MM/YYYY') {
         return dayjs(value).format(format);
     },
-    toCurrency(value) {
+    toCurrency(value, currencyCode = 'MXN') {
         if (typeof value !== "number") return value;
-        return new Intl.NumberFormat('es-MX', {
+        const locale = currencyCode === 'USD' ? 'en-US' : 'es-MX';
+        return new Intl.NumberFormat(locale, {
             style: 'currency',
-            currency: 'MXN'
+            currency: currencyCode
         }).format(value);
     }
 };

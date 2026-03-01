@@ -41,6 +41,7 @@ class ExtraFieldsShopController extends Controller
             $extraField->shop_id = $shop_id;
             $extraField->field_name = $request->field_name;
             $extraField->active = $request->has('active'); // Asignar true si el checkbox está marcado
+            $extraField->filterable = $request->has('filterable');
             $extraField->save();
             // Redireccionar con un mensaje de éxito
             return redirect()->route('admin.configurations.extra_fields')->with('success', '¡Campo extra creado exitosamente!');
@@ -83,6 +84,7 @@ class ExtraFieldsShopController extends Controller
         // Actualizar los valores del campo extra
         $extraField->field_name = $request->field_name;
         $extraField->active = $request->has('active') ? true : false;
+        $extraField->filterable = $request->has('filterable') ? true : false;
         $extraField->save();
 
         // Redireccionar con un mensaje de éxito
@@ -109,6 +111,7 @@ class ExtraFieldsShopController extends Controller
         $extra_field->shop_id    = $shop->id;
         $extra_field->field_name = $request->field_name;
         $extra_field->active     = 1;
+        $extra_field->filterable = $request->filterable ?? false;
         $extra_field->save();
 
         return response()->json([
@@ -121,6 +124,9 @@ class ExtraFieldsShopController extends Controller
     public function updateApiExtraFieldsShop(Request $request){
         $extra_field = ExtraFieldShop::findOrFail($request->id);
         $extra_field->field_name = $request->field_name;
+        if ($request->has('filterable')) {
+            $extra_field->filterable = $request->filterable;
+        }
         $extra_field->save();
         return response()->json([
             'ok'=>true,

@@ -368,7 +368,8 @@ export default {
             this.importResult = { created: 0, errors: [] };
         },
         formatMoney(value) {
-            return '$' + parseFloat(value || 0).toFixed(2);
+            const prefix = (this.$shopCurrency === 'USD') ? 'USD $' : '$';
+            return prefix + parseFloat(value || 0).toFixed(2);
         }
     }
 }

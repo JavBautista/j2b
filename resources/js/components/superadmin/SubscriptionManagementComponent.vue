@@ -1212,7 +1212,7 @@ export default {
             const planName = plan?.name || '-';
             const price = this.customPrice > 0 ? this.customPrice : (plan?.price || 0);
             const subtotal = price * this.durationMonths;
-            const iva = this.includeIva ? subtotal * 0.16 : 0;
+            const iva = this.includeIva ? subtotal * this.$taxDecimal : 0;
             const total = subtotal + iva;
 
             // Calcular fecha vencimiento

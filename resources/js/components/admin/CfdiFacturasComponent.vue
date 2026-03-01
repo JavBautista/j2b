@@ -185,7 +185,8 @@ export default {
         },
         formatMoney(val) {
             if (val === null || val === undefined) return '$0.00';
-            return '$' + Number(val).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const locale = (this.$shopCurrency === 'USD') ? 'en-US' : 'es-MX';
+            return '$' + Number(val).toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         },
     },
 };

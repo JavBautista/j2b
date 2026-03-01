@@ -1019,7 +1019,8 @@ export default {
         },
         formatMoney(value) {
             if (!value) return '0.00';
-            return parseFloat(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const locale = (this.$shopCurrency === 'USD') ? 'en-US' : 'es-MX';
+            return parseFloat(value).toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         },
         getBadgeStatus(status) {
             if (status === 'PAGADA') return 'badge-success';

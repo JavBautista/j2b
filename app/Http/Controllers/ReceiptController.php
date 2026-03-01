@@ -93,6 +93,12 @@ class ReceiptController extends Controller
 
         $quotation = (isset($request->type_cotizacion) && $request->type_cotizacion == 'true') ? 1 : 0;
 
+        // Filtros dinámicos por campos extras
+        $extra_filters = [];
+        if ($request->has('extra_filters') && !empty($request->extra_filters)) {
+            $extra_filters = json_decode($request->extra_filters, true) ?? [];
+        }
+
         $where_type = ($filtro_type_receipt == 'todos') ? null : $filtro_type_receipt;
         $where_origin = ($filtro_origin_receipt == 'TODOS') ? null : $filtro_origin_receipt;
 
@@ -131,6 +137,18 @@ class ReceiptController extends Controller
                         })
                         ->when($where_origin, function ($query, $where_origin) {
                             return $query->where('origin', $where_origin);
+                        })
+                        // Filtros dinámicos por campos extras
+                        ->when(!empty($extra_filters), function ($query) use ($extra_filters) {
+                            foreach ($extra_filters as $filter) {
+                                if (!empty($filter['value'])) {
+                                    $query->whereHas('infoExtra', function ($q) use ($filter) {
+                                        $q->where('field_name', $filter['field_name'])
+                                          ->where('value', 'like', '%' . $filter['value'] . '%');
+                                    });
+                                }
+                            }
+                            return $query;
                         })
                         ->orderBy('id', 'desc')
                         ->paginate(10);
@@ -422,10 +440,18 @@ class ReceiptController extends Controller
         //deben de venir desde la APP con algun valor
         $receipt = Receipt::findOrFail($rcp['receipt_id']);
         $receipt->client_id   = $rcp['client_id'];
-        $receipt->rent_id     = $rcp['rent_id'];
-        $receipt->type        = $rcp['type'];
+
+        // PROTECCIÓN: Si el recibo es de tipo renta, preservar campos críticos
+        if ($receipt->type === 'renta') {
+            // No permitir cambiar type, rent_id ni observation en rentas
+            // Estos valores se generan automáticamente al crear la renta
+        } else {
+            $receipt->rent_id     = $rcp['rent_id'];
+            $receipt->type        = $rcp['type'];
+            $receipt->observation = $rcp['observation'];
+        }
+
         $receipt->description = $rcp['description'];
-        $receipt->observation = $rcp['observation'];
         $receipt->discount    = $rcp['discount'];
         $receipt->discount_concept = $rcp['discount_concept'];
         //---

@@ -221,7 +221,7 @@
                 <td>002 - IVA</td>
                 <td>{{ $traslado['tipo_factor'] ?? 'Tasa' }}</td>
                 <td class="r">${{ number_format($traslado['base'] ?? 0, 2) }}</td>
-                <td class="r">{{ $traslado['tasa_cuota'] ?? '0.160000' }}</td>
+                <td class="r">{{ $traslado['tasa_cuota'] ?? '0.000000' }}</td>
                 <td class="r">${{ number_format($traslado['importe'] ?? 0, 2) }}</td>
             </tr>
             @endforeach
@@ -241,13 +241,13 @@
                     </tr>
                     @if($invoice->total_impuestos > 0)
                     <tr>
-                        <td class="tot-lbl">IVA 16%:</td>
+                        <td class="tot-lbl">{{ $requestData['moneda'] === 'MXN' ? 'IVA' : 'Tax' }} {{ number_format(($impuestos['traslados'][0]['tasa_cuota'] ?? 0.16) * 100, 0) }}%:</td>
                         <td class="tot-val">${{ number_format($invoice->total_impuestos, 2) }}</td>
                     </tr>
                     @endif
                     <tr class="tot-total">
                         <td class="tot-lbl">TOTAL:</td>
-                        <td class="tot-val">${{ number_format($invoice->total, 2) }} MXN</td>
+                        <td class="tot-val">${{ number_format($invoice->total, 2) }} {{ $requestData['moneda'] ?? 'MXN' }}</td>
                     </tr>
                 </table>
             </td>

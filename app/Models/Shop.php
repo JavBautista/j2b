@@ -148,6 +148,46 @@ class Shop extends Model
         return $this->billing_cycle === 'yearly';
     }
 
+    // === Currency & Tax helpers ===
+
+    public function getCurrencySymbol(): string
+    {
+        return match($this->currency) {
+            'USD' => 'USD $',
+            default => 'MXN $',
+        };
+    }
+
+    public function getCurrencyCode(): string
+    {
+        return $this->currency ?? 'MXN';
+    }
+
+    public function getTaxRate(): float
+    {
+        return $this->tax_rate ?? 16.00;
+    }
+
+    public function getTaxDecimal(): float
+    {
+        return $this->getTaxRate() / 100;
+    }
+
+    public function getTaxDivisor(): float
+    {
+        return 1 + $this->getTaxDecimal();
+    }
+
+    public function hasTax(): bool
+    {
+        return $this->tax_rate > 0 && $this->tax_name !== null;
+    }
+
+    public function getTaxSatRate(): string
+    {
+        return number_format($this->getTaxDecimal(), 6);
+    }
+
     /**
      * Accessor para obtener la URL pública de la firma del representante legal
      */

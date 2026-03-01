@@ -495,7 +495,7 @@
             </div>
             @if($iva > 0)
             <div class="totals-row">
-                <div class="totals-label">IVA (16%)</div>
+                <div class="totals-label">IVA</div>
                 <div class="totals-value">{{ $moneda }} ${{ number_format($iva, 2) }}</div>
             </div>
             @endif

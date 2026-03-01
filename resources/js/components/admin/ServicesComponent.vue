@@ -285,7 +285,8 @@ export default {
 
         formatMoney(value) {
             if (!value) return '0.00';
-            return parseFloat(value).toFixed(2);
+            const locale = (this.$shopCurrency === 'USD') ? 'en-US' : 'es-MX';
+            return parseFloat(value).toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         },
 
         abrirModal(tipo, service = null) {

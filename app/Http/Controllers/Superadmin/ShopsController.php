@@ -50,7 +50,10 @@ class ShopsController extends Controller
         if(!$request->ajax()) return redirect('/');
 
         $request->validate([
-            'name' => 'required|string|max:255'
+            'name' => 'required|string|max:255',
+            'currency' => 'nullable|in:MXN,USD',
+            'tax_name' => 'nullable|string|max:20',
+            'tax_rate' => 'nullable|numeric|min:0|max:99.99',
         ]);
 
         //Desde la app validamos en wl whatsapp asi:
@@ -101,6 +104,9 @@ class ShopsController extends Controller
         $shop->bank_number_secondary = $request->bank_number_secondary;
         $shop->owner_name = $request->owner_name;
         $shop->cutoff = 1;
+        $shop->currency = $request->currency ?? 'MXN';
+        $shop->tax_name = $request->has('tax_name') ? $request->tax_name : 'IVA';
+        $shop->tax_rate = $request->tax_rate ?? 16.00;
         $shop->save();
     }//store()
 
@@ -134,6 +140,15 @@ class ShopsController extends Controller
         $shop->values = $request->values;
         $shop->bank_number_secondary = $request->bank_number_secondary;
         $shop->owner_name = $request->owner_name;
+        if ($request->has('currency')) {
+            $shop->currency = $request->currency;
+        }
+        if ($request->has('tax_name')) {
+            $shop->tax_name = $request->tax_name;
+        }
+        if ($request->has('tax_rate')) {
+            $shop->tax_rate = $request->tax_rate;
+        }
         $shop->save();
     }//update()
 
@@ -203,6 +218,9 @@ class ShopsController extends Controller
                 'description' => $shop->description,
                 'owner_name' => $shop->owner_name,
                 'active' => $shop->active,
+                'currency' => $shop->currency,
+                'tax_name' => $shop->tax_name,
+                'tax_rate' => $shop->tax_rate,
                 'created_at' => $shop->created_at ? $shop->created_at->format('d/m/Y') : null,
 
                 // Contacto

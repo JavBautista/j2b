@@ -35,17 +35,21 @@ class ReceiptsController extends Controller
         $shop = $user->shop;
 
         $buscar = $request->get('buscar', '');
+        $buscarArticulo = $request->get('buscar_articulo', '');
         $tipo = $request->get('tipo', '');
         $status = $request->get('status', '');
+        $origen = $request->get('origen', '');
         $fechaDesde = $request->get('fecha_desde', '');
         $fechaHasta = $request->get('fecha_hasta', '');
 
         $query = Receipt::with(['partialPayments', 'shop', 'detail', 'client', 'cfdiInvoice:id,receipt_id,uuid,serie,folio,status'])
                         ->where('shop_id', $shop->id);
 
-        // Filtro por tipo (venta o cotización)
+        // Filtro por tipo (venta, renta o cotización)
         if ($tipo === 'venta') {
-            $query->where('quotation', 0);
+            $query->where('quotation', 0)->where('type', 'venta');
+        } elseif ($tipo === 'renta') {
+            $query->where('quotation', 0)->where('type', 'renta');
         } elseif ($tipo === 'cotizacion') {
             $query->where('quotation', 1);
         }
@@ -53,6 +57,18 @@ class ReceiptsController extends Controller
         // Filtro por status
         if (!empty($status)) {
             $query->where('status', $status);
+        }
+
+        // Filtro por origen
+        if (!empty($origen)) {
+            $query->where('origin', $origen);
+        }
+
+        // Filtro por artículo vendido
+        if (!empty($buscarArticulo)) {
+            $query->whereHas('detail', function($q) use ($buscarArticulo) {
+                $q->where('descripcion', 'like', '%' . $buscarArticulo . '%');
+            });
         }
 
         // Filtro por fecha
@@ -73,6 +89,24 @@ class ReceiptsController extends Controller
                                   ->orWhere('movil', 'like', '%' . $buscar . '%');
                   });
             });
+        }
+
+        // Filtro por campos extras filtrables
+        $extraFilters = $request->get('extra_filters', '');
+        if (!empty($extraFilters)) {
+            $filters = json_decode($extraFilters, true);
+            if (is_array($filters)) {
+                foreach ($filters as $filter) {
+                    if (!empty($filter['field_name']) && !empty($filter['value'])) {
+                        $fn = $filter['field_name'];
+                        $fv = $filter['value'];
+                        $query->whereHas('infoExtra', function($q) use ($fn, $fv) {
+                            $q->where('field_name', $fn)
+                              ->where('value', 'like', '%' . $fv . '%');
+                        });
+                    }
+                }
+            }
         }
 
         $receipts = $query->orderBy('id', 'desc')->paginate(15);
@@ -421,6 +455,25 @@ class ReceiptsController extends Controller
     }
 
     /**
+     * Obtener campos extra filtrables para la tienda (para filtros en listado)
+     */
+    public function getFilterableExtraFields()
+    {
+        $user = Auth::user();
+        $shop = $user->shop;
+
+        $extraFields = ExtraFieldShop::where('shop_id', $shop->id)
+                                       ->where('active', 1)
+                                       ->where('filterable', 1)
+                                       ->get(['id', 'field_name']);
+
+        return response()->json([
+            'ok' => true,
+            'extra_fields' => $extraFields
+        ]);
+    }
+
+    /**
      * Obtener servicios para el modal de selección
      */
     public function getServices(Request $request)
@@ -613,10 +666,18 @@ class ReceiptsController extends Controller
 
         // ==================== ACTUALIZAR RECEIPT ====================
         $receipt->client_id = $rcp['client_id'];
-        $receipt->rent_id = $rcp['rent_id'] ?? 0;
-        $receipt->type = $rcp['type'] ?? 'venta';
+
+        // PROTECCIÓN: Si el recibo es de tipo renta, preservar campos críticos
+        if ($receipt->type === 'renta') {
+            // No permitir cambiar type, rent_id ni observation en rentas
+            // Estos valores se generan automáticamente al crear la renta
+        } else {
+            $receipt->rent_id = $rcp['rent_id'] ?? 0;
+            $receipt->type = $rcp['type'] ?? 'venta';
+            $receipt->observation = $rcp['observation'] ?? '';
+        }
+
         $receipt->description = $rcp['description'] ?? '';
-        $receipt->observation = $rcp['observation'] ?? '';
         $receipt->discount = $rcp['discount'] ?? 0;
         $receipt->discount_concept = $rcp['discount_concept'] ?? '$';
         $receipt->subtotal = $rcp['subtotal'] ?? 0;

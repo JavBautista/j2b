@@ -81,16 +81,16 @@
                 <tr>
 
                     <td>{{$data->description}}</td>
-                    <td>MXN $ {{ number_format($data->price,2) }}</td>
-                    <td> MXN ${{ number_format($data->price) }} x {{$data->qty}}</td>
-                    <td> MXN ${{$data->subtotal}}</td>
+                    <td>{{ $purchase_order->shop->getCurrencySymbol() }}{{ number_format($data->price,2) }}</td>
+                    <td> {{ $purchase_order->shop->getCurrencySymbol() }}{{ number_format($data->price) }} x {{$data->qty}}</td>
+                    <td> {{ $purchase_order->shop->getCurrencySymbol() }}{{$data->subtotal}}</td>
                 </tr>
                 @endforeach
             </tbody>
         </table>
         <hr>
         <div align="right">
-            <p>Total a pagar <strong>MXN $ {{number_format($purchase_order->total,2)}}</strong></p>
+            <p>Total a pagar <strong>{{ $purchase_order->shop->getCurrencySymbol() }}{{number_format($purchase_order->total,2)}}</strong></p>
         </div>
 
             <hr>
@@ -115,7 +115,7 @@
                             {{$data->payment_date}}
                         </td>
                         <td align="center">
-                            MXN $ {{ number_format($data->amount,2)}}
+                            {{ $purchase_order->shop->getCurrencySymbol() }}{{ number_format($data->amount,2)}}
                         </td>
                     </tr>
                 @endforeach
@@ -123,12 +123,12 @@
                 <tfoot>
                     <tr>
                         <th>PAGADO</th>
-                        <th>MXN $ {{number_format($total_payments ,2)}}</th>
+                        <th>{{ $purchase_order->shop->getCurrencySymbol() }}{{number_format($total_payments ,2)}}</th>
                     </tr>
                     @if($total_payments  < $purchase_order->total )
                     <tr>
                         <th>ADEUDO</th>
-                        <th>MXN $ {{number_format(($purchase_order->total-$total_payments ),2)}}</th>
+                        <th>{{ $purchase_order->shop->getCurrencySymbol() }}{{number_format(($purchase_order->total-$total_payments ),2)}}</th>
                     </tr>
                     @endif
 

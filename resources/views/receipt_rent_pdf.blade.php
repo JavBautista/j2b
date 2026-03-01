@@ -137,9 +137,9 @@
                     <td style="max-width: 50%; word-wrap: break-word;">{!! nl2br(e($data->descripcion)) !!}</td>
 
                     @if($data->discount_concept=='')
-                        <td>MXN $ {{ number_format($data->price,2) }}</td>
+                        <td>{{ $receipt->shop->getCurrencySymbol() }}{{ number_format($data->price,2) }}</td>
                     @else
-                        <td>MXN $ {{ number_format($data->price,2) }}
+                        <td>{{ $receipt->shop->getCurrencySymbol() }}{{ number_format($data->price,2) }}
                             - {{ ($data->discount_concept=='$')?('$'.$data->discount):$data->discount_concept }}
                         </td>
                     @endif
@@ -147,10 +147,10 @@
                     @if($receipt->type=='renta')
                         <td> {{$data->qty}} </td>
                     @else
-                        <td> MXN ${{ number_format($data->price - $data->discount) }} x{{$data->qty}}</td>
+                        <td> {{ $receipt->shop->getCurrencySymbol() }}{{ number_format($data->price - $data->discount) }} x{{$data->qty}}</td>
                     @endif
 
-                    <td> MXN ${{$data->subtotal}}</td>
+                    <td> {{ $receipt->shop->getCurrencySymbol() }}{{$data->subtotal}}</td>
                 </tr>
                 @endforeach
             </tbody>
@@ -158,18 +158,18 @@
         <hr>
         <div align="right">
 
-            <p>Subtotal MXN $ {{ number_format($receipt->subtotal,2) }}</p>
+            <p>Subtotal {{ $receipt->shop->getCurrencySymbol() }}{{ number_format($receipt->subtotal,2) }}</p>
 
             @if($receipt->discount_concept=='$')
-                <p>Descuento MXN $ {{ number_format($receipt->discount,2) }}</p>
+                <p>Descuento {{ $receipt->shop->getCurrencySymbol() }}{{ number_format($receipt->discount,2) }}</p>
             @else
                 <p>Descuento % {{ $receipt->discount }}</p>
             @endif
 
             @if($receipt->iva)
-                <p>IVA 16% MXN $ {{number_format($receipt->iva,2)}}</p>
+                <p>{{ $receipt->shop->tax_name ?? 'IVA' }} {{ $receipt->shop->tax_rate ?? 16 }}% {{ $receipt->shop->getCurrencySymbol() }}{{number_format($receipt->iva,2)}}</p>
             @endif
-            <p>Total a pagar <strong>MXN $ {{number_format($receipt->total,2)}}</strong></p>
+            <p>Total a pagar <strong>{{ $receipt->shop->getCurrencySymbol() }}{{number_format($receipt->total,2)}}</strong></p>
         </div>
         @if(!$receipt->quotation)
             <hr>
@@ -188,7 +188,7 @@
                             {{$data->payment_date}}
                         </td>
                         <td align="center">
-                            MXN $ {{ number_format($data->amount,2)}}
+                            {{ $receipt->shop->getCurrencySymbol() }}{{ number_format($data->amount,2)}}
                         </td>
                     </tr>
                 @endforeach
@@ -196,12 +196,12 @@
                 <tfoot>
                     <tr>
                         <th>RECIBIDO</th>
-                        <th>MXN $ {{number_format($receipt->received,2)}}</th>
+                        <th>{{ $receipt->shop->getCurrencySymbol() }}{{number_format($receipt->received,2)}}</th>
                     </tr>
                     @if($receipt->received < $receipt->total )
                     <tr>
                         <th>ADEUDO</th>
-                        <th>MXN $ {{number_format(($receipt->total-$receipt->received),2)}}</th>
+                        <th>{{ $receipt->shop->getCurrencySymbol() }}{{number_format(($receipt->total-$receipt->received),2)}}</th>
                     </tr>
                     @endif
 

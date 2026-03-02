@@ -193,6 +193,8 @@ Route::group([
         Route::post('shop/update','App\Http\Controllers\ShopController@update');
         Route::post('shop/upload-logo','App\Http\Controllers\ShopController@uploadLogo');
         Route::post('shop/delete-logo','App\Http\Controllers\ShopController@deleteLogo');
+        Route::get('shop/currency-settings','App\Http\Controllers\ShopController@getCurrencySettings');
+        Route::put('shop/currency-settings','App\Http\Controllers\ShopController@updateCurrencySettings');
 
         /*RECIBOS*/
         Route::get('receipt/all',[ReceiptController::class,'getAll']);

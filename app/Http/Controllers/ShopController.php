@@ -147,6 +147,41 @@ class ShopController extends Controller
         return redirect()->route('admin.shop.edit')->with('success', 'Firma del representante legal eliminada correctamente');
     }
 
+    public function getCurrencySettings(Request $request)
+    {
+        $shop = $request->user()->shop;
+
+        return response()->json([
+            'ok' => true,
+            'currency' => $shop->currency,
+            'tax_name' => $shop->tax_name,
+            'tax_rate' => (float) $shop->tax_rate,
+        ]);
+    }
+
+    public function updateCurrencySettings(Request $request)
+    {
+        $request->validate([
+            'currency' => 'required|in:MXN,USD',
+            'tax_name' => 'nullable|string|max:20',
+            'tax_rate' => 'required|numeric|min:0|max:99.99',
+        ]);
+
+        $shop = $request->user()->shop;
+        $shop->currency = $request->currency;
+        $shop->tax_name = $request->tax_name ?: null;
+        $shop->tax_rate = $request->tax_rate;
+        $shop->save();
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Moneda e impuesto actualizados correctamente.',
+            'currency' => $shop->currency,
+            'tax_name' => $shop->tax_name,
+            'tax_rate' => (float) $shop->tax_rate,
+        ]);
+    }
+
     public function uploadLogo(Request $request)
     {
         $user = $request->user();

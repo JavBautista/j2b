@@ -1058,11 +1058,11 @@ class SuperAdminController extends Controller
 
         $payments = $query->paginate(15);
 
-        // Estadísticas
+        // Estadísticas (excluir cancelados)
         $stats = [
-            'total_payments' => Subscription::where('shop_id', $id)->count(),
-            'total_paid' => Subscription::where('shop_id', $id)->sum('total_amount'),
-            'last_payment' => Subscription::where('shop_id', $id)->latest()->first()?->created_at?->format('d/m/Y'),
+            'total_payments' => Subscription::where('shop_id', $id)->where('status', '!=', 'cancelled')->count(),
+            'total_paid' => Subscription::where('shop_id', $id)->where('status', '!=', 'cancelled')->sum('total_amount'),
+            'last_payment' => Subscription::where('shop_id', $id)->where('status', '!=', 'cancelled')->latest()->first()?->created_at?->format('d/m/Y'),
         ];
 
         return response()->json([

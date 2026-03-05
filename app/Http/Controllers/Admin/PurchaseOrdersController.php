@@ -40,10 +40,10 @@ class PurchaseOrdersController extends Controller
         $query = PurchaseOrder::with(['supplier', 'partialPayments'])
             ->where('shop_id', $shop->id);
 
-        // Filtro de búsqueda (proveedor o folio)
+        // Filtro de búsqueda (proveedor o ID)
         if (!empty($buscar)) {
             $query->where(function ($q) use ($buscar) {
-                $q->where('folio', 'like', '%' . $buscar . '%')
+                $q->where('id', $buscar)
                   ->orWhereHas('supplier', function (Builder $subquery) use ($buscar) {
                       $subquery->where('name', 'like', '%' . $buscar . '%')
                                ->orWhere('company', 'like', '%' . $buscar . '%');

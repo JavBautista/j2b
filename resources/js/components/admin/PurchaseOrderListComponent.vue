@@ -77,7 +77,7 @@
                 <div class="card order-card h-100">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <div>
-                            <strong>#{{ order.folio }}</strong>
+                            <strong>#{{ order.id }}</strong>
                         </div>
                         <div class="dropdown">
                             <button class="btn btn-sm btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -156,7 +156,7 @@
                             </tr>
                             <tr v-for="order in orders" :key="order.id">
                                 <td>
-                                    <strong>#{{ order.folio }}</strong>
+                                    <strong>#{{ order.id }}</strong>
                                 </td>
                                 <td>
                                     <div>{{ order.supplier?.name || order.supplier?.company || 'N/A' }}</div>
@@ -315,7 +315,7 @@ export default {
             }
         },
         descargarPDF(order) {
-            window.open(`/print-purchase-order?id=${order.id}&name_file=compra_${order.folio}`, '_blank');
+            window.open(`/print-purchase-order?id=${order.id}&name_file=compra_${order.id}`, '_blank');
         },
         editarOrden(order) {
             window.location.href = `/admin/purchase-orders/${order.id}/edit`;

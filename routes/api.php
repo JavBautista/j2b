@@ -129,6 +129,8 @@ Route::group([
 
 
 
+        Route::get('dashboard/summary', [\App\Http\Controllers\DashboardController::class, 'summary']);
+
         Route::get('logout', '\App\Http\Controllers\AuthController@logout');
         Route::get('user', '\App\Http\Controllers\AuthController@user');
         Route::post('user', '\App\Http\Controllers\AuthController@update');

@@ -733,17 +733,17 @@ class TaskController extends Controller
 
     /**
      * GET /api/auth/tasks/collaborators
-     * Obtiene lista de usuarios colaboradores del shop (role_id = 4)
+     * Obtiene lista de admins y colaboradores del shop para asignacion de tareas
      */
     public function getCollaborators(Request $request){
         $user = $request->user();
 
         try {
-            // Obtener usuarios colaboradores activos del mismo shop
+            // Obtener admins y colaboradores activos del mismo shop
             $collaborators = User::where('shop_id', $user->shop_id)
                 ->where('active', 1)
                 ->whereHas('roles', function($query) {
-                    $query->where('roles.id', 4); // role_id = 4 (collaborator)
+                    $query->whereIn('roles.id', [1, 2, 4]); // admin, admin, collaborator
                 })
                 ->select('id', 'name', 'email')
                 ->orderBy('name', 'asc')

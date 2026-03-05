@@ -336,7 +336,7 @@
                                     <div v-if="taskSeleccionada.assigned_user">
                                         <div class="d-flex align-items-center justify-content-between">
                                             <div>
-                                                <label class="text-muted small mb-1">Colaborador asignado</label>
+                                                <label class="text-muted small mb-1">Asignado a</label>
                                                 <p class="font-weight-bold mb-0">
                                                     <i class="fa fa-user-circle text-primary mr-1"></i>
                                                     {{ taskSeleccionada.assigned_user.name }}
@@ -354,7 +354,7 @@
                                         </p>
                                         <div class="input-group">
                                             <select class="form-control form-control-lg" v-model="colaboradorSeleccionado">
-                                                <option value="">Seleccionar colaborador...</option>
+                                                <option value="">Seleccionar usuario...</option>
                                                 <option v-for="colab in colaboradores" :key="colab.id" :value="colab.id">
                                                     {{ colab.name }}
                                                 </option>

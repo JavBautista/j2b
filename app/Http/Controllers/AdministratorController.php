@@ -89,6 +89,39 @@ class AdministratorController extends Controller
     public function update(Request $request)
     {
         $administrator = Administrator::findOrFail($request->id);
+
+        // Actualizar name y email si vienen en el request
+        if ($request->has('name') && $request->name) {
+            $administrator->name = $request->name;
+
+            if ($administrator->user) {
+                $administrator->user->name = $request->name;
+                $administrator->user->save();
+            }
+        }
+
+        if ($request->has('email') && $request->email) {
+            $newEmail = $request->email;
+
+            if ($administrator->user && $newEmail !== $administrator->user->email) {
+                $emailExists = User::where('email', $newEmail)
+                    ->where('id', '!=', $administrator->user->id)
+                    ->exists();
+
+                if ($emailExists) {
+                    return response()->json([
+                        'ok' => false,
+                        'message' => 'El email ya está en uso por otro usuario.',
+                    ], 422);
+                }
+
+                $administrator->user->email = $newEmail;
+                $administrator->user->save();
+            }
+
+            $administrator->email = $newEmail;
+        }
+
         $administrator->phone=$request->phone;
         $administrator->movil=$request->movil;
         $administrator->zip_code=$request->zip_code;

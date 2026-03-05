@@ -7,6 +7,9 @@ use App\Models\Product;
 use App\Models\Category;
 use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
 
 class ProductImportController extends Controller
 {
@@ -47,46 +50,39 @@ class ProductImportController extends Controller
      */
     public function downloadTemplate()
     {
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Productos');
+
         $headers = [
-            'Nombre *',
-            'Codigo',
-            'Codigo Barras',
-            'Descripcion',
-            'Costo *',
-            'Precio Nv1 *',
-            'Precio Nv2',
-            'Precio Nv3',
-            'Stock',
-            'Reserva'
+            'Nombre *', 'Codigo', 'Codigo Barras', 'Descripcion',
+            'Costo *', 'Precio Nv1 *', 'Precio Nv2', 'Precio Nv3',
+            'Stock', 'Reserva'
         ];
 
-        $callback = function() use ($headers) {
-            $file = fopen('php://output', 'w');
-            // BOM para UTF-8
-            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
-            fputcsv($file, $headers);
-            // Fila de ejemplo
-            fputcsv($file, [
-                'Producto Ejemplo',
-                'SKU001',
-                '7501234567890',
-                'Descripcion del producto',
-                '100.00',
-                '150.00',
-                '140.00',
-                '130.00',
-                '10',
-                '0'
-            ]);
-            fclose($file);
-        };
+        $columns = range('A', 'J');
+        foreach ($headers as $col => $header) {
+            $sheet->setCellValue($columns[$col] . '1', $header);
+        }
 
-        $filename = 'plantilla_productos_' . date('Y-m-d') . '.csv';
+        // Estilo encabezados: fondo azul, texto blanco, negrita
+        $headerRange = 'A1:J1';
+        $sheet->getStyle($headerRange)->getFont()->setBold(true)->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color('FFFFFF'));
+        $sheet->getStyle($headerRange)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('4472C4');
 
-        return response()->stream($callback, 200, [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-        ]);
+        // Auto-ajustar ancho de columnas
+        foreach ($columns as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $filename = 'plantilla_productos_' . date('Y-m-d') . '.xlsx';
+        $temp = tempnam(sys_get_temp_dir(), 'productos_');
+        $writer = new Xlsx($spreadsheet);
+        $writer->save($temp);
+
+        return response()->download($temp, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ])->deleteFileAfterSend(true);
     }
 
     /**

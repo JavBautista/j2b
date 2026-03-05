@@ -301,6 +301,12 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::get('/admin/clients', [AdminPagesController::class, 'clients'])->name('admin.clients');
         Route::get('/admin/clients/{client}/rentas', [AdminPagesController::class, 'clientRentas'])->name('admin.clients.rentas.page');
 
+        // Rutas de importacion masiva de clientes
+        Route::get('/admin/clients/import', [\App\Http\Controllers\Admin\ClientImportController::class, 'index'])->name('admin.clients.import');
+        Route::get('/admin/clients/import/template', [\App\Http\Controllers\Admin\ClientImportController::class, 'downloadTemplate'])->name('admin.clients.import.template');
+        Route::post('/admin/clients/import/preview', [\App\Http\Controllers\Admin\ClientImportController::class, 'preview'])->name('admin.clients.import.preview');
+        Route::post('/admin/clients/import/execute', [\App\Http\Controllers\Admin\ClientImportController::class, 'import'])->name('admin.clients.import.execute');
+
         // Rutas AJAX para CRUD de clientes (admin web - separadas de Ionic)
         Route::get('/admin/clients/get', [ClientsController::class, 'index'])->name('admin.clients.get');
         Route::post('/admin/clients/store', [ClientsController::class, 'store'])->name('admin.clients.store');

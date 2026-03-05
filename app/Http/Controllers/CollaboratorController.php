@@ -88,6 +88,41 @@ class CollaboratorController extends Controller
     public function update(Request $request)
     {
         $collaborator = Collaborator::findOrFail($request->id);
+
+        // Actualizar name y email si vienen en el request
+        if ($request->has('name') && $request->name) {
+            $collaborator->name = $request->name;
+
+            // Actualizar tambien en tabla users
+            if ($collaborator->user) {
+                $collaborator->user->name = $request->name;
+                $collaborator->user->save();
+            }
+        }
+
+        if ($request->has('email') && $request->email) {
+            $newEmail = $request->email;
+
+            // Validar que el email no este en uso por otro user
+            if ($collaborator->user && $newEmail !== $collaborator->user->email) {
+                $emailExists = User::where('email', $newEmail)
+                    ->where('id', '!=', $collaborator->user->id)
+                    ->exists();
+
+                if ($emailExists) {
+                    return response()->json([
+                        'ok' => false,
+                        'message' => 'El email ya está en uso por otro usuario.',
+                    ], 422);
+                }
+
+                $collaborator->user->email = $newEmail;
+                $collaborator->user->save();
+            }
+
+            $collaborator->email = $newEmail;
+        }
+
         $collaborator->phone=$request->phone;
         $collaborator->movil=$request->movil;
         $collaborator->zip_code=$request->zip_code;

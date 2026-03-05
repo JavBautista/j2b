@@ -271,7 +271,7 @@ class TasksController extends Controller
 
     /**
      * Obtener lista de colaboradores de la tienda
-     * Usa role_id = 4 (collaborator) igual que el API
+     * Obtiene admins y colaboradores del shop para asignacion de tareas
      */
     public function getCollaborators()
     {
@@ -282,7 +282,7 @@ class TasksController extends Controller
             $collaborators = User::where('shop_id', $shop->id)
                 ->where('active', 1)
                 ->whereHas('roles', function($query) {
-                    $query->where('roles.id', 4); // role_id = 4 (collaborator)
+                    $query->whereIn('roles.id', [1, 2, 4]); // admin, admin, collaborator
                 })
                 ->select('id', 'name', 'email')
                 ->orderBy('name', 'asc')

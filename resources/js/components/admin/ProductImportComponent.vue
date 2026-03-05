@@ -1,94 +1,99 @@
 <template>
     <div class="product-import">
         <!-- Paso 1: Subir archivo -->
-        <div class="card mb-4" v-if="step === 1">
-            <div class="card-header bg-primary text-white">
-                <i class="fa fa-upload"></i> Paso 1: Seleccionar archivo
-            </div>
-            <div class="card-body">
-                <div class="row mb-4">
-                    <div class="col-md-6">
+        <div class="row mb-4" v-if="step === 1">
+            <!-- Columna izquierda: Instrucciones + Categoria + Upload (75%) -->
+            <div class="col-md-9">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <i class="fa fa-upload"></i> Paso 1: Seleccionar archivo
+                    </div>
+                    <div class="card-body">
                         <h5>Instrucciones:</h5>
                         <ol>
                             <li>Descarga la plantilla de ejemplo</li>
                             <li>Llena los datos de tus productos</li>
                             <li>Guarda el archivo como CSV o Excel (.xlsx)</li>
-                            <li>Sube el archivo aquí</li>
+                            <li>Sube el archivo aqui</li>
                         </ol>
-                        <a href="/admin/products/import/template" class="btn btn-outline-primary">
-                            <i class="fa fa-download"></i> Descargar Plantilla
+                        <a href="/admin/products/import/template" class="btn btn-outline-primary mb-4">
+                            <i class="fa fa-download"></i> Descargar Plantilla Excel
                         </a>
+
+                        <!-- Seleccionar Categoria -->
+                        <div class="form-group row mb-4">
+                            <label class="col-md-3 col-form-label"><strong>Categoria para los productos:</strong></label>
+                            <div class="col-md-5">
+                                <select class="form-control" v-model="selectedCategoryId" required>
+                                    <option value="">-- Selecciona una categoria --</option>
+                                    <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+                                </select>
+                                <small class="text-muted">Todos los productos importados se asignaran a esta categoria</small>
+                            </div>
+                        </div>
+
+                        <!-- Zona de carga -->
+                        <div
+                            class="upload-zone"
+                            :class="{ 'drag-over': isDragging }"
+                            @dragover.prevent="isDragging = true"
+                            @dragleave.prevent="isDragging = false"
+                            @drop.prevent="handleDrop"
+                            @click="$refs.fileInput.click()"
+                        >
+                            <input
+                                type="file"
+                                ref="fileInput"
+                                @change="handleFileSelect"
+                                accept=".csv,.xlsx,.xls"
+                                style="display: none"
+                            >
+                            <div v-if="!uploading">
+                                <i class="fa fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                                <p class="mb-0">Arrastra tu archivo aqui o haz clic para seleccionar</p>
+                                <small class="text-muted">Formatos: CSV, Excel (.xlsx, .xls) - Max 5MB</small>
+                            </div>
+                            <div v-else>
+                                <i class="fa fa-spinner fa-spin fa-3x text-primary mb-3"></i>
+                                <p class="mb-0">Procesando archivo...</p>
+                            </div>
+                        </div>
+
+                        <div v-if="errorMessage" class="alert alert-danger mt-3">
+                            <i class="fa fa-exclamation-circle"></i> {{ errorMessage }}
+                        </div>
                     </div>
-                    <div class="col-md-6">
-                        <h5>Campos del archivo:</h5>
-                        <table class="table table-sm table-bordered">
+                </div>
+            </div>
+
+            <!-- Columna derecha: Campos del archivo (25%) -->
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <i class="fa fa-list"></i> Campos del archivo
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-sm table-bordered mb-0">
                             <thead class="thead-light">
                                 <tr>
                                     <th>Columna</th>
-                                    <th>Obligatorio</th>
+                                    <th class="text-center" style="width: 50px;">Req.</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr><td>Nombre</td><td><span class="badge badge-danger">Si</span></td></tr>
-                                <tr><td>Codigo (SKU)</td><td><span class="badge badge-secondary">No</span></td></tr>
-                                <tr><td>Codigo Barras</td><td><span class="badge badge-secondary">No</span></td></tr>
-                                <tr><td>Descripcion</td><td><span class="badge badge-secondary">No</span></td></tr>
-                                <tr><td>Costo</td><td><span class="badge badge-danger">Si</span></td></tr>
-                                <tr><td>Precio Nv1</td><td><span class="badge badge-danger">Si</span></td></tr>
-                                <tr><td>Precio Nv2</td><td><span class="badge badge-secondary">No</span></td></tr>
-                                <tr><td>Precio Nv3</td><td><span class="badge badge-secondary">No</span></td></tr>
-                                <tr><td>Stock</td><td><span class="badge badge-secondary">No</span></td></tr>
-                                <tr><td>Reserva</td><td><span class="badge badge-secondary">No</span></td></tr>
+                                <tr><td>Nombre</td><td class="text-center"><span class="badge badge-danger">Si</span></td></tr>
+                                <tr><td>Codigo (SKU)</td><td class="text-center"><span class="badge badge-secondary">No</span></td></tr>
+                                <tr><td>Codigo Barras</td><td class="text-center"><span class="badge badge-secondary">No</span></td></tr>
+                                <tr><td>Descripcion</td><td class="text-center"><span class="badge badge-secondary">No</span></td></tr>
+                                <tr><td>Costo</td><td class="text-center"><span class="badge badge-danger">Si</span></td></tr>
+                                <tr><td>Precio Nv1</td><td class="text-center"><span class="badge badge-danger">Si</span></td></tr>
+                                <tr><td>Precio Nv2</td><td class="text-center"><span class="badge badge-secondary">No</span></td></tr>
+                                <tr><td>Precio Nv3</td><td class="text-center"><span class="badge badge-secondary">No</span></td></tr>
+                                <tr><td>Stock</td><td class="text-center"><span class="badge badge-secondary">No</span></td></tr>
+                                <tr><td>Reserva</td><td class="text-center"><span class="badge badge-secondary">No</span></td></tr>
                             </tbody>
                         </table>
                     </div>
-                </div>
-
-                <hr>
-
-                <!-- Seleccionar Categoría -->
-                <div class="form-group row mb-4">
-                    <label class="col-md-3 col-form-label"><strong>Categoria para los productos:</strong></label>
-                    <div class="col-md-5">
-                        <select class="form-control" v-model="selectedCategoryId" required>
-                            <option value="">-- Selecciona una categoria --</option>
-                            <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
-                        </select>
-                        <small class="text-muted">Todos los productos importados se asignaran a esta categoria</small>
-                    </div>
-                </div>
-
-                <hr>
-
-                <!-- Zona de carga -->
-                <div
-                    class="upload-zone"
-                    :class="{ 'drag-over': isDragging }"
-                    @dragover.prevent="isDragging = true"
-                    @dragleave.prevent="isDragging = false"
-                    @drop.prevent="handleDrop"
-                    @click="$refs.fileInput.click()"
-                >
-                    <input
-                        type="file"
-                        ref="fileInput"
-                        @change="handleFileSelect"
-                        accept=".csv,.xlsx,.xls"
-                        style="display: none"
-                    >
-                    <div v-if="!uploading">
-                        <i class="fa fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
-                        <p class="mb-0">Arrastra tu archivo aquí o haz clic para seleccionar</p>
-                        <small class="text-muted">Formatos: CSV, Excel (.xlsx, .xls) - Max 5MB</small>
-                    </div>
-                    <div v-else>
-                        <i class="fa fa-spinner fa-spin fa-3x text-primary mb-3"></i>
-                        <p class="mb-0">Procesando archivo...</p>
-                    </div>
-                </div>
-
-                <div v-if="errorMessage" class="alert alert-danger mt-3">
-                    <i class="fa fa-exclamation-circle"></i> {{ errorMessage }}
                 </div>
             </div>
         </div>
@@ -289,8 +294,6 @@ export default {
                 this.errorMessage = 'Primero selecciona una categoria para los productos';
                 return;
             }
-            // Validar tipo
-            const validTypes = ['text/csv', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
             const validExtensions = ['.csv', '.xls', '.xlsx'];
             const extension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
 

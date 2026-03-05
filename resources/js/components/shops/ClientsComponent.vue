@@ -21,6 +21,9 @@
                     <button type="button" @click="abrirModal('client','registrar')" class="btn btn-primary">
                         <i class="icon-plus"></i>&nbsp;Nuevo Cliente
                     </button>
+                    <a v-if="!isLimitedUser" href="/admin/clients/import" class="btn btn-success ms-2">
+                        <i class="fa fa-file-excel"></i>&nbsp;Importar Excel
+                    </a>
                 </div>
             </div>
             <div class="card-body">

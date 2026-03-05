@@ -885,20 +885,21 @@ export default {
         },
 
         mostrarExito(mensaje) {
-            // Usar toastr si está disponible, sino alert
-            if (typeof toastr !== 'undefined') {
-                toastr.success(mensaje);
-            } else {
-                alert(mensaje);
-            }
+            Swal.fire({
+                icon: 'success',
+                title: 'Exito',
+                text: mensaje,
+                confirmButtonColor: '#38b2ac'
+            });
         },
 
         mostrarError(mensaje) {
-            if (typeof toastr !== 'undefined') {
-                toastr.error(mensaje);
-            } else {
-                alert('Error: ' + mensaje);
-            }
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: mensaje,
+                confirmButtonColor: '#e53e3e'
+            });
         }
     }
 }

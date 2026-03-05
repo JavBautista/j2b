@@ -10,4 +10,8 @@ class PurchaseOrderDetail extends Model
     use HasFactory;
     protected $guarded=[];
     public $timestamps=false;
+
+    public function product(){
+        return $this->belongsTo(Product::class);
+    }
 }

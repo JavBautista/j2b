@@ -284,7 +284,7 @@ class PurchaseOrderController extends Controller
                             ->with('supplier')
                             ->findOrFail($id);
 
-        $name_file = $purchase_order->id;
+        $name_file = $purchase_order->folio;
 
         $pdf = PDF::loadView('purchase_order_pdf',['purchase_order'=>$purchase_order]);
         return $pdf->stream($name_file.'.pdf',array("Attachment" => false));

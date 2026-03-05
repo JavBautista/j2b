@@ -54,7 +54,7 @@
                     <img src="{{public_path('img/j2b_qr.png')}}" alt="QR" width="50%">
                 </td>
                 <td width="30%">
-                    <h2>Orden de compra #{{$purchase_order->id}}</h2>
+                    <h2>Orden de compra #{{$purchase_order->folio}}</h2>
                     <h3>Vencimiento: {{$purchase_order->expiration}}</h3>
                     <h3>Creación: {{$purchase_order->created_at}}</h3>
                     <p>Status: {{$purchase_order->status}}</p>

@@ -36,9 +36,12 @@ class PurchaseOrderController extends Controller
                             });
                         })
                         ->when(!empty($filtro_buscar) && $search_scope !== 'items', function ($query) use($filtro_buscar) {
-                            // ACTUAL: Buscar en proveedores (comportamiento original)
-                            return $query->whereHas('supplier', function (Builder $subquery) use($filtro_buscar) {
-                                $subquery->where('name', 'like', '%'.$filtro_buscar.'%');
+                            // Buscar por folio o por nombre de proveedor
+                            return $query->where(function ($q) use ($filtro_buscar) {
+                                $q->where('folio', $filtro_buscar)
+                                  ->orWhereHas('supplier', function (Builder $subquery) use($filtro_buscar) {
+                                      $subquery->where('name', 'like', '%'.$filtro_buscar.'%');
+                                  });
                             });
                         })
                         ->where('shop_id',$shop->id)
@@ -86,9 +89,14 @@ class PurchaseOrderController extends Controller
         //formateamos la fecha de vencimiento
         $fecha_exp_request =Carbon::parse($po['expiration']);
         $expiration=Carbon::createFromFormat('Y-m-d H:i:s',$fecha_exp_request)->format('Y-m-d');
+        // Generar folio consecutivo por tienda
+        $ultimo_folio = PurchaseOrder::where('shop_id', $shop->id)->max('folio');
+        $nuevo_folio = $ultimo_folio ? $ultimo_folio + 1 : 1;
+
         //Guardamos todos los datos de la PO, deben de venir desde la APP con algun valor
         $purchase_order = new PurchaseOrder();
         $purchase_order->shop_id = $shop->id;
+        $purchase_order->folio = $nuevo_folio;
         $purchase_order->supplier_id = $po['supplier_id'];
         $purchase_order->status      = $po['status'];
         $purchase_order->expiration  = $expiration;

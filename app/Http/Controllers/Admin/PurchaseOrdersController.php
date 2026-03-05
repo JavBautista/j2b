@@ -40,10 +40,10 @@ class PurchaseOrdersController extends Controller
         $query = PurchaseOrder::with(['supplier', 'partialPayments'])
             ->where('shop_id', $shop->id);
 
-        // Filtro de búsqueda (proveedor o ID)
+        // Filtro de búsqueda (proveedor o folio)
         if (!empty($buscar)) {
             $query->where(function ($q) use ($buscar) {
-                $q->where('id', $buscar)
+                $q->where('folio', $buscar)
                   ->orWhereHas('supplier', function (Builder $subquery) use ($buscar) {
                       $subquery->where('name', 'like', '%' . $buscar . '%')
                                ->orWhere('company', 'like', '%' . $buscar . '%');
@@ -57,7 +57,7 @@ class PurchaseOrdersController extends Controller
         }
 
         // Filtro por payable (por pagar / pagada)
-        if ($payable !== '') {
+        if ($payable !== '' && $payable !== null) {
             $query->where('payable', $payable);
         }
 
@@ -144,9 +144,14 @@ class PurchaseOrdersController extends Controller
             $expiration = Carbon::parse($po['expiration'])->format('Y-m-d');
         }
 
+        // Generar folio consecutivo por tienda
+        $ultimo_folio = PurchaseOrder::where('shop_id', $shop->id)->max('folio');
+        $nuevo_folio = $ultimo_folio ? $ultimo_folio + 1 : 1;
+
         // Crear la orden de compra
         $purchase_order = new PurchaseOrder();
         $purchase_order->shop_id = $shop->id;
+        $purchase_order->folio = $nuevo_folio;
         $purchase_order->supplier_id = $po['supplier_id'];
         $purchase_order->status = $po['status'] ?? 'CREADA';
         $purchase_order->expiration = $expiration;

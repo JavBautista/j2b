@@ -30,6 +30,7 @@ import TemplateCreatorComponent from './components/shops/TemplateCreator.vue';
 //Componentes de admin
 import ReceiptsComponent from './components/admin/ReceiptsComponent.vue';
 import AdminChatAIComponent from './components/admin/AdminChatAIComponent.vue';
+import AdminDashboardComponent from './components/admin/AdminDashboardComponent.vue';
 import TasksComponent from './components/admin/TasksComponent.vue';
 import ProductsComponent from './components/admin/ProductsComponent.vue';
 import ProductImportComponent from './components/admin/ProductImportComponent.vue';
@@ -78,6 +79,7 @@ app.component('rentas-cliente-component', RentasClienteComponent);
 //Admin
 app.component('receipts-component', ReceiptsComponent);
 app.component('admin-chat-ai-component', AdminChatAIComponent);
+app.component('admin-dashboard-component', AdminDashboardComponent);
 app.component('tasks-component', TasksComponent);
 app.component('products-component', ProductsComponent);
 app.component('product-import-component', ProductImportComponent);

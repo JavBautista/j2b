@@ -7,8 +7,8 @@
         <!-- Welcome Banner -->
         <div class="welcome-banner mb-4">
             <div class="welcome-content">
-                <h1 class="welcome-title">Hola, {{ auth()->user()->name }} 👋</h1>
-                <p class="welcome-subtitle">Panel de administración · ¿En qué puedo ayudarte?</p>
+                <h1 class="welcome-title">Hola, {{ explode(' ', auth()->user()->name)[0] }}</h1>
+                <p class="welcome-subtitle">Panel de administración</p>
             </div>
         </div>
 
@@ -29,8 +29,17 @@
             </div>
         @endif
 
+        <!-- ========== MI TIENDA - Dashboard Summary ========== -->
+        @if(Auth::user()->isFullAdmin())
+        <div class="mb-4">
+            <admin-dashboard-component
+                currency-symbol="{{ auth()->user()->shop ? auth()->user()->shop->getCurrencySymbol() : '$' }}"
+            ></admin-dashboard-component>
+        </div>
+        @endif
+
+        <!-- ========== ASISTENTE IA ========== -->
         <div class="row">
-            <!-- ASISTENTE IA - PROTAGONISTA (70%) -->
             <div class="col-lg-8 col-xl-9 mb-4">
                 <div class="card chat-card shadow-lg">
                     <div class="card-header chat-header">
@@ -50,7 +59,7 @@
                 </div>
             </div>
 
-            <!-- ACCESOS RÁPIDOS - DISCRETOS (30%) -->
+            <!-- ACCESOS RÁPIDOS -->
             <div class="col-lg-4 col-xl-3">
                 <div class="quick-access-section">
                     <h6 class="quick-access-title mb-3">
@@ -93,6 +102,7 @@
                         <i class="fas fa-chevron-right quick-arrow"></i>
                     </a>
 
+                    @if(Auth::user()->isFullAdmin())
                     <!-- Configuraciones -->
                     <a href="{{ route('admin.configurations') }}" class="quick-action-card mb-3">
                         <div class="quick-icon bg-gradient-warning">
@@ -104,6 +114,7 @@
                         </div>
                         <i class="fas fa-chevron-right quick-arrow"></i>
                     </a>
+                    @endif
 
                 </div>
             </div>

@@ -208,6 +208,7 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
     Route::group(['middleware' => ['admin', 'web.access']], function () {
         //Index
         Route::get('/admin', [AdminPagesController::class, 'index'])->name('admin.index');
+        Route::get('/admin/dashboard/summary', [App\Http\Controllers\DashboardController::class, 'summary'])->name('admin.dashboard.summary');
 
         // 🔥 TEMPORAL: Crear servicio de prueba para testing FCM
         Route::post('/admin/test-create-service', [AdminPagesController::class, 'testCreateService'])->name('admin.test.create.service');

@@ -27,11 +27,13 @@
                     <i class="fa fa-users"></i> Clientes
                 </a>
             </li>
+            @if(Auth::user()->isFullAdmin())
             <li class="nav-item">
                 <a href="{{ route('admin.users') }}" class="nav-link">
                     <i class="fa fa-user-circle"></i> Usuarios App
                 </a>
             </li>
+            @endif
             <li class="nav-item">
                 <a href="{{ route('admin.gastos') }}" class="nav-link">
                     <i class="fa fa-money"></i> Gastos
@@ -106,11 +108,13 @@
             </li>
             @endif
 
+            @if(Auth::user()->isFullAdmin())
             <li class="nav-item">
                 <a href="{{ route('admin.configurations') }}" class="nav-link">
                     <i class="fa fa-cogs"></i> Configuraciones
                 </a>
             </li>
+            @endif
 
             <li class="nav-item nav-dropdown">
                 <a class="nav-link nav-dropdown-toggle" href="#"><i class="fa fa-info-circle"></i> Acerca de J2Biznes</a>

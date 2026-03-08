@@ -46,7 +46,7 @@
         <!-- Botón Nueva Compra y Toggle Vista -->
         <div class="d-flex justify-content-between align-items-center mb-3">
             <div>
-                <a href="/admin/purchase-orders/create" class="btn btn-success">
+                <a v-if="!userLimited" href="/admin/purchase-orders/create" class="btn btn-success">
                     <i class="fa fa-plus me-1"></i> Nueva Compra
                 </a>
             </div>
@@ -87,7 +87,7 @@
                                 <li><a class="dropdown-item" href="#" @click.prevent="verDetalle(order)">
                                     <i class="fa fa-eye text-primary"></i> Ver Detalle
                                 </a></li>
-                                <li v-if="order.status === 'CREADA'"><a class="dropdown-item" href="#" @click.prevent="editarOrden(order)">
+                                <li v-if="order.status === 'CREADA' && !userLimited"><a class="dropdown-item" href="#" @click.prevent="editarOrden(order)">
                                     <i class="fa fa-edit text-warning"></i> Editar
                                 </a></li>
                                 <li><a class="dropdown-item" href="#" @click.prevent="descargarPDF(order)">
@@ -188,7 +188,7 @@
                                                 @click="verDetalle(order)" title="Ver detalle">
                                             <i class="fa fa-eye"></i>
                                         </button>
-                                        <button v-if="order.status === 'CREADA'" class="btn btn-outline-warning"
+                                        <button v-if="order.status === 'CREADA' && !userLimited" class="btn btn-outline-warning"
                                                 @click="editarOrden(order)" title="Editar">
                                             <i class="fa fa-edit"></i>
                                         </button>
@@ -235,6 +235,12 @@
 <script>
 export default {
     name: 'PurchaseOrderListComponent',
+    props: {
+        userLimited: {
+            type: Boolean,
+            default: false
+        }
+    },
     data() {
         return {
             loading: false,

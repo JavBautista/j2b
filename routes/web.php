@@ -227,40 +227,43 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::get('/admin/legal/terms', [AdminPagesController::class, 'legalTerms'])->name('admin.legal.terms');
         Route::get('/admin/legal/privacy', [AdminPagesController::class, 'legalPrivacy'])->name('admin.legal.privacy');
 
-        Route::get('/admin/configurations', [AdminPagesController::class, 'configurations'])->name('admin.configurations');
+        // Configuraciones - Solo Admin Full (limited = 0)
+        Route::group(['middleware' => ['full.admin']], function () {
+            Route::get('/admin/configurations', [AdminPagesController::class, 'configurations'])->name('admin.configurations');
 
-        Route::get('/admin/configurations/extra-fields-shop', [ExtraFieldsShopController::class, 'index'])->name('admin.configurations.extra_fields');
+            Route::get('/admin/configurations/extra-fields-shop', [ExtraFieldsShopController::class, 'index'])->name('admin.configurations.extra_fields');
 
-        Route::get('/admin/configurations/extra-fields-shop/create', [ExtraFieldsShopController::class, 'create'])->name('admin.configurations.extra_fields.create');
+            Route::get('/admin/configurations/extra-fields-shop/create', [ExtraFieldsShopController::class, 'create'])->name('admin.configurations.extra_fields.create');
 
-        Route::get('/admin/configurations/extra-fields-shop/edit/{id}', [ExtraFieldsShopController::class, 'edit'])->name('admin.configurations.extra_fields.edit');
+            Route::get('/admin/configurations/extra-fields-shop/edit/{id}', [ExtraFieldsShopController::class, 'edit'])->name('admin.configurations.extra_fields.edit');
 
-        Route::post('/admin/configurations/extra-fields/store', [ExtraFieldsShopController::class, 'store'])->name('admin.configurations.extra-fields.store');
+            Route::post('/admin/configurations/extra-fields/store', [ExtraFieldsShopController::class, 'store'])->name('admin.configurations.extra-fields.store');
 
-        Route::put('/admin/configurations/extra-fields-shop/{id}/toggle', [ExtraFieldsShopController::class, 'toggleShow'])->name('admin.configurations.extra_fields.toggle');
+            Route::put('/admin/configurations/extra-fields-shop/{id}/toggle', [ExtraFieldsShopController::class, 'toggleShow'])->name('admin.configurations.extra_fields.toggle');
 
-        Route::delete('/admin/configurations/extra-fields/{id}', [ExtraFieldsShopController::class, 'destroy'])->name('admin.configurations.extra_fields.destroy');
+            Route::delete('/admin/configurations/extra-fields/{id}', [ExtraFieldsShopController::class, 'destroy'])->name('admin.configurations.extra_fields.destroy');
 
-        Route::put('/admin/configurations/extra-fields-shop/update/{id}', [ExtraFieldsShopController::class, 'update'])->name('admin.configurations.extra-fields.update');
+            Route::put('/admin/configurations/extra-fields-shop/update/{id}', [ExtraFieldsShopController::class, 'update'])->name('admin.configurations.extra-fields.update');
 
-        // Configuraciones IA
-        Route::get('/admin/configurations/ai-settings', [App\Http\Controllers\Admin\AiSettingsController::class, 'index'])->name('admin.configurations.ai_settings');
-        // Prompt / Contexto de tienda
-        Route::get('/admin/configurations/ai-settings/prompt', [App\Http\Controllers\Admin\AiSettingsController::class, 'prompt'])->name('admin.configurations.ai_settings.prompt');
-        Route::get('/admin/configurations/ai-settings/prompt/get', [App\Http\Controllers\Admin\AiSettingsController::class, 'get']);
-        Route::post('/admin/configurations/ai-settings/prompt/save', [App\Http\Controllers\Admin\AiSettingsController::class, 'save']);
-        Route::post('/admin/configurations/ai-settings/prompt/reset', [App\Http\Controllers\Admin\AiSettingsController::class, 'resetPrompt']);
-        // Indexación de productos
-        Route::get('/admin/configurations/ai-settings/indexing', [App\Http\Controllers\Admin\AiSettingsController::class, 'indexing'])->name('admin.configurations.ai_settings.indexing');
-        Route::get('/admin/configurations/ai-settings/indexing/status', [App\Http\Controllers\Admin\AiSettingsController::class, 'getIndexStatus']);
-        Route::post('/admin/configurations/ai-settings/indexing/products', [App\Http\Controllers\Admin\AiSettingsController::class, 'indexProducts']);
-        Route::post('/admin/configurations/ai-settings/indexing/services', [App\Http\Controllers\Admin\AiSettingsController::class, 'indexServices']);
-        Route::post('/admin/configurations/ai-settings/indexing/all', [App\Http\Controllers\Admin\AiSettingsController::class, 'indexAll']);
-        Route::post('/admin/configurations/ai-settings/indexing/clients', [App\Http\Controllers\Admin\AiSettingsController::class, 'indexClients']);
+            // Configuraciones IA
+            Route::get('/admin/configurations/ai-settings', [App\Http\Controllers\Admin\AiSettingsController::class, 'index'])->name('admin.configurations.ai_settings');
+            // Prompt / Contexto de tienda
+            Route::get('/admin/configurations/ai-settings/prompt', [App\Http\Controllers\Admin\AiSettingsController::class, 'prompt'])->name('admin.configurations.ai_settings.prompt');
+            Route::get('/admin/configurations/ai-settings/prompt/get', [App\Http\Controllers\Admin\AiSettingsController::class, 'get']);
+            Route::post('/admin/configurations/ai-settings/prompt/save', [App\Http\Controllers\Admin\AiSettingsController::class, 'save']);
+            Route::post('/admin/configurations/ai-settings/prompt/reset', [App\Http\Controllers\Admin\AiSettingsController::class, 'resetPrompt']);
+            // Indexación de productos
+            Route::get('/admin/configurations/ai-settings/indexing', [App\Http\Controllers\Admin\AiSettingsController::class, 'indexing'])->name('admin.configurations.ai_settings.indexing');
+            Route::get('/admin/configurations/ai-settings/indexing/status', [App\Http\Controllers\Admin\AiSettingsController::class, 'getIndexStatus']);
+            Route::post('/admin/configurations/ai-settings/indexing/products', [App\Http\Controllers\Admin\AiSettingsController::class, 'indexProducts']);
+            Route::post('/admin/configurations/ai-settings/indexing/services', [App\Http\Controllers\Admin\AiSettingsController::class, 'indexServices']);
+            Route::post('/admin/configurations/ai-settings/indexing/all', [App\Http\Controllers\Admin\AiSettingsController::class, 'indexAll']);
+            Route::post('/admin/configurations/ai-settings/indexing/clients', [App\Http\Controllers\Admin\AiSettingsController::class, 'indexClients']);
 
-        // Configuración Moneda e Impuesto
-        Route::get('/admin/configurations/currency', [App\Http\Controllers\Admin\CurrencySettingsController::class, 'index'])->name('admin.configurations.currency');
-        Route::put('/admin/configurations/currency/update', [App\Http\Controllers\Admin\CurrencySettingsController::class, 'update'])->name('admin.configurations.currency.update');
+            // Configuración Moneda e Impuesto
+            Route::get('/admin/configurations/currency', [App\Http\Controllers\Admin\CurrencySettingsController::class, 'index'])->name('admin.configurations.currency');
+            Route::put('/admin/configurations/currency/update', [App\Http\Controllers\Admin\CurrencySettingsController::class, 'update'])->name('admin.configurations.currency.update');
+        }); // ./Configuraciones (full.admin)
 
         // Facturación CFDI - Configuración Emisor
         Route::get('/admin/facturacion/configuracion', [App\Http\Controllers\Admin\CfdiConfigController::class, 'index'])->name('admin.cfdi.config');
@@ -301,18 +304,19 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::get('/admin/clients', [AdminPagesController::class, 'clients'])->name('admin.clients');
         Route::get('/admin/clients/{client}/rentas', [AdminPagesController::class, 'clientRentas'])->name('admin.clients.rentas.page');
 
-        // Rutas de importacion masiva de clientes
-        Route::get('/admin/clients/import', [\App\Http\Controllers\Admin\ClientImportController::class, 'index'])->name('admin.clients.import');
-        Route::get('/admin/clients/import/template', [\App\Http\Controllers\Admin\ClientImportController::class, 'downloadTemplate'])->name('admin.clients.import.template');
-        Route::post('/admin/clients/import/preview', [\App\Http\Controllers\Admin\ClientImportController::class, 'preview'])->name('admin.clients.import.preview');
-        Route::post('/admin/clients/import/execute', [\App\Http\Controllers\Admin\ClientImportController::class, 'import'])->name('admin.clients.import.execute');
-
-        // Rutas AJAX para CRUD de clientes (admin web - separadas de Ionic)
+        // Rutas AJAX para CRUD de clientes - Lectura: todos los admin
         Route::get('/admin/clients/get', [ClientsController::class, 'index'])->name('admin.clients.get');
-        Route::post('/admin/clients/store', [ClientsController::class, 'store'])->name('admin.clients.store');
-        Route::put('/admin/clients/update', [ClientsController::class, 'update'])->name('admin.clients.update');
-        Route::put('/admin/clients/inactive', [ClientsController::class, 'inactive'])->name('admin.clients.inactive');
-        Route::put('/admin/clients/active', [ClientsController::class, 'active'])->name('admin.clients.active');
+        // Clientes - Escritura: Solo Admin Full
+        Route::group(['middleware' => ['full.admin']], function () {
+            Route::get('/admin/clients/import', [\App\Http\Controllers\Admin\ClientImportController::class, 'index'])->name('admin.clients.import');
+            Route::get('/admin/clients/import/template', [\App\Http\Controllers\Admin\ClientImportController::class, 'downloadTemplate'])->name('admin.clients.import.template');
+            Route::post('/admin/clients/import/preview', [\App\Http\Controllers\Admin\ClientImportController::class, 'preview'])->name('admin.clients.import.preview');
+            Route::post('/admin/clients/import/execute', [\App\Http\Controllers\Admin\ClientImportController::class, 'import'])->name('admin.clients.import.execute');
+            Route::post('/admin/clients/store', [ClientsController::class, 'store'])->name('admin.clients.store');
+            Route::put('/admin/clients/update', [ClientsController::class, 'update'])->name('admin.clients.update');
+            Route::put('/admin/clients/inactive', [ClientsController::class, 'inactive'])->name('admin.clients.inactive');
+            Route::put('/admin/clients/active', [ClientsController::class, 'active'])->name('admin.clients.active');
+        }); // ./Clientes escritura (full.admin)
 
         // Rutas para contratos desde clientes
         Route::get('/admin/clients/{client}/assign-contract', [ClientsController::class, 'assignContractPage'])->name('admin.clients.assign-contract');
@@ -400,20 +404,23 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::get('/admin/services/get', [App\Http\Controllers\Admin\ReceiptsController::class, 'getServices'])->name('admin.services.get');
         Route::get('/admin/equipment/get', [App\Http\Controllers\Admin\ReceiptsController::class, 'getEquipment'])->name('admin.equipment.get');
 
-        // Rutas para Órdenes de Compra (admin web)
+        // Rutas para Órdenes de Compra (admin web) - Lectura: todos los admin
         Route::get('/admin/purchase-orders', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'list'])->name('admin.purchase-orders');
         Route::get('/admin/purchase-orders/list/get', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'getList'])->name('admin.purchase-orders.list.get');
-        Route::get('/admin/purchase-orders/create', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'create'])->name('admin.purchase-orders.create');
         Route::get('/admin/purchase-orders/{id}/show', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'show'])->name('admin.purchase-orders.show');
-        Route::get('/admin/purchase-orders/{id}/edit', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'edit'])->name('admin.purchase-orders.edit');
         Route::get('/admin/purchase-orders/{id}/detail', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'getDetail'])->name('admin.purchase-orders.detail');
-        Route::post('/admin/purchase-orders/store', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'store'])->name('admin.purchase-orders.store');
-        Route::post('/admin/purchase-orders/{id}/complete', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'complete'])->name('admin.purchase-orders.complete');
-        Route::post('/admin/purchase-orders/{id}/cancel', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'cancel'])->name('admin.purchase-orders.cancel');
-        Route::post('/admin/purchase-orders/{id}/toggle-payable', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'togglePayable'])->name('admin.purchase-orders.toggle-payable');
-        Route::post('/admin/purchase-orders/{id}/toggle-invoiced', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'toggleInvoiced'])->name('admin.purchase-orders.toggle-invoiced');
-        Route::post('/admin/purchase-orders/{id}/partial-payment', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'storePartialPayment'])->name('admin.purchase-orders.partial-payment');
-        Route::delete('/admin/purchase-orders/partial-payment/{paymentId}', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'deletePartialPayment'])->name('admin.purchase-orders.delete-partial-payment');
+        // Órdenes de Compra - Escritura: Solo Admin Full
+        Route::group(['middleware' => ['full.admin']], function () {
+            Route::get('/admin/purchase-orders/create', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'create'])->name('admin.purchase-orders.create');
+            Route::get('/admin/purchase-orders/{id}/edit', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'edit'])->name('admin.purchase-orders.edit');
+            Route::post('/admin/purchase-orders/store', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'store'])->name('admin.purchase-orders.store');
+            Route::post('/admin/purchase-orders/{id}/complete', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'complete'])->name('admin.purchase-orders.complete');
+            Route::post('/admin/purchase-orders/{id}/cancel', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'cancel'])->name('admin.purchase-orders.cancel');
+            Route::post('/admin/purchase-orders/{id}/toggle-payable', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'togglePayable'])->name('admin.purchase-orders.toggle-payable');
+            Route::post('/admin/purchase-orders/{id}/toggle-invoiced', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'toggleInvoiced'])->name('admin.purchase-orders.toggle-invoiced');
+            Route::post('/admin/purchase-orders/{id}/partial-payment', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'storePartialPayment'])->name('admin.purchase-orders.partial-payment');
+            Route::delete('/admin/purchase-orders/partial-payment/{paymentId}', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'deletePartialPayment'])->name('admin.purchase-orders.delete-partial-payment');
+        }); // ./Órdenes de Compra escritura (full.admin)
 
         // Rutas para recibos de Tareas(admin web)
         Route::get('/admin/tasks', [TasksController::class, 'index'])->name('admin.tasks');
@@ -499,24 +506,26 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::post('/admin/equipments/{id}/upload-image', [\App\Http\Controllers\Admin\EquipmentsController::class, 'uploadImage'])->name('admin.equipments.upload-image');
         Route::delete('/admin/equipments/delete-image/{imageId}', [\App\Http\Controllers\Admin\EquipmentsController::class, 'deleteImage'])->name('admin.equipments.delete-image');
 
-        // Users (Admins y Colaboradores de la tienda)
-        Route::get('/admin/users', [AdminUsersController::class, 'index'])->name('admin.users');
-        Route::get('/admin/users/shop-slug', [AdminUsersController::class, 'getShopSlug']);
-        Route::get('/admin/users/counters', [AdminUsersController::class, 'getCounters']);
-        Route::get('/admin/users/verify-email', [AdminUsersController::class, 'verifyEmail']);
-        // Administradores
-        Route::get('/admin/users/administrators', [AdminUsersController::class, 'getAdministrators']);
-        Route::post('/admin/users/administrators/store', [AdminUsersController::class, 'storeAdministrator']);
-        Route::put('/admin/users/administrators/update', [AdminUsersController::class, 'updateAdministrator']);
-        Route::put('/admin/users/administrators/{id}/activate', [AdminUsersController::class, 'activateAdministrator']);
-        Route::put('/admin/users/administrators/{id}/deactivate', [AdminUsersController::class, 'deactivateAdministrator']);
-        Route::put('/admin/users/administrators/{id}/toggle-limited', [AdminUsersController::class, 'toggleLimitedAdministrator']);
-        // Colaboradores
-        Route::get('/admin/users/collaborators', [AdminUsersController::class, 'getCollaborators']);
-        Route::post('/admin/users/collaborators/store', [AdminUsersController::class, 'storeCollaborator']);
-        Route::put('/admin/users/collaborators/update', [AdminUsersController::class, 'updateCollaborator']);
-        Route::put('/admin/users/collaborators/{id}/activate', [AdminUsersController::class, 'activateCollaborator']);
-        Route::put('/admin/users/collaborators/{id}/deactivate', [AdminUsersController::class, 'deactivateCollaborator']);
+        // Users (Admins y Colaboradores de la tienda) - Solo Admin Full
+        Route::group(['middleware' => ['full.admin']], function () {
+            Route::get('/admin/users', [AdminUsersController::class, 'index'])->name('admin.users');
+            Route::get('/admin/users/shop-slug', [AdminUsersController::class, 'getShopSlug']);
+            Route::get('/admin/users/counters', [AdminUsersController::class, 'getCounters']);
+            Route::get('/admin/users/verify-email', [AdminUsersController::class, 'verifyEmail']);
+            // Administradores
+            Route::get('/admin/users/administrators', [AdminUsersController::class, 'getAdministrators']);
+            Route::post('/admin/users/administrators/store', [AdminUsersController::class, 'storeAdministrator']);
+            Route::put('/admin/users/administrators/update', [AdminUsersController::class, 'updateAdministrator']);
+            Route::put('/admin/users/administrators/{id}/activate', [AdminUsersController::class, 'activateAdministrator']);
+            Route::put('/admin/users/administrators/{id}/deactivate', [AdminUsersController::class, 'deactivateAdministrator']);
+            Route::put('/admin/users/administrators/{id}/toggle-limited', [AdminUsersController::class, 'toggleLimitedAdministrator']);
+            // Colaboradores
+            Route::get('/admin/users/collaborators', [AdminUsersController::class, 'getCollaborators']);
+            Route::post('/admin/users/collaborators/store', [AdminUsersController::class, 'storeCollaborator']);
+            Route::put('/admin/users/collaborators/update', [AdminUsersController::class, 'updateCollaborator']);
+            Route::put('/admin/users/collaborators/{id}/activate', [AdminUsersController::class, 'activateCollaborator']);
+            Route::put('/admin/users/collaborators/{id}/deactivate', [AdminUsersController::class, 'deactivateCollaborator']);
+        }); // ./Users (full.admin)
 
         // Gastos
         Route::get('/admin/gastos', [\App\Http\Controllers\Admin\GastosController::class, 'index'])->name('admin.gastos');

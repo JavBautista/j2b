@@ -11,7 +11,9 @@
         </div>
         <div class="row">
             <div class="col-md-12">
-                <purchase-order-list-component></purchase-order-list-component>
+                <purchase-order-list-component
+                    :user-limited="{{ auth()->user()->limited ? 'true' : 'false' }}"
+                ></purchase-order-list-component>
             </div>
         </div>
     </div>

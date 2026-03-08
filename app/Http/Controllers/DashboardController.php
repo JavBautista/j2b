@@ -16,9 +16,9 @@ class DashboardController extends Controller
 
         return response()->json([
             'ok' => true,
+            'ventas_hoy' => $this->getVentasHoy($shop_id),
             'ventas_mes' => $this->getVentasMes($shop_id),
             'tareas' => $this->getTareas($shop_id),
-            'servicios' => $this->getServicios($shop_id),
             'adeudos' => $this->getAdeudos($shop_id),
             'stock_bajo' => $this->getStockBajo($shop_id),
             'usuarios' => $this->getUsuarios($shop_id),
@@ -26,6 +26,31 @@ class DashboardController extends Controller
             'cliente_top_incidencias' => $this->getClienteTopIncidencias($shop_id),
             'productos_mas_vendidos' => $this->getProductosMasVendidos($shop_id),
         ]);
+    }
+
+    private function getVentasHoy($shop_id)
+    {
+        try {
+            $hoy = Carbon::today();
+
+            $result = DB::table('receipts')
+                ->where('shop_id', $shop_id)
+                ->where('quotation', 0)
+                ->whereNotIn('status', ['CANCELADA', 'DEVOLUCION'])
+                ->whereDate('created_at', $hoy)
+                ->selectRaw('COALESCE(SUM(total), 0) as total, COUNT(*) as cantidad')
+                ->first();
+
+            $cantidad = (int) $result->cantidad;
+
+            return [
+                'total' => round((float) $result->total, 2),
+                'cantidad' => $cantidad,
+                'ticket_promedio' => $cantidad > 0 ? round((float) $result->total / $cantidad, 2) : 0,
+            ];
+        } catch (\Exception $e) {
+            return ['total' => 0, 'cantidad' => 0, 'ticket_promedio' => 0];
+        }
     }
 
     private function getVentasMes($shop_id)
@@ -55,29 +80,6 @@ class DashboardController extends Controller
     {
         try {
             $counts = DB::table('tasks')
-                ->where('shop_id', $shop_id)
-                ->whereIn('status', ['NUEVO', 'PENDIENTE', 'ATENDIDO'])
-                ->selectRaw("
-                    SUM(CASE WHEN status = 'NUEVO' THEN 1 ELSE 0 END) as nuevo,
-                    SUM(CASE WHEN status = 'PENDIENTE' THEN 1 ELSE 0 END) as pendiente,
-                    SUM(CASE WHEN status = 'ATENDIDO' THEN 1 ELSE 0 END) as atendido
-                ")
-                ->first();
-
-            return [
-                'nuevo' => (int) ($counts->nuevo ?? 0),
-                'pendiente' => (int) ($counts->pendiente ?? 0),
-                'atendido' => (int) ($counts->atendido ?? 0),
-            ];
-        } catch (\Exception $e) {
-            return ['nuevo' => 0, 'pendiente' => 0, 'atendido' => 0];
-        }
-    }
-
-    private function getServicios($shop_id)
-    {
-        try {
-            $counts = DB::table('client_services')
                 ->where('shop_id', $shop_id)
                 ->whereIn('status', ['NUEVO', 'PENDIENTE', 'ATENDIDO'])
                 ->selectRaw("
@@ -180,19 +182,28 @@ class DashboardController extends Controller
     private function getTareasPorColaborador($shop_id)
     {
         try {
+            $inicioMes = Carbon::now()->startOfMonth();
+            $inicioSemana = Carbon::now()->startOfWeek();
+
             $rows = DB::table('tasks')
                 ->join('users', 'tasks.assigned_user_id', '=', 'users.id')
                 ->where('tasks.shop_id', $shop_id)
                 ->where('tasks.status', 'ATENDIDO')
+                ->where('tasks.updated_at', '>=', $inicioMes)
                 ->groupBy('tasks.assigned_user_id', 'users.name')
-                ->selectRaw('users.name, COUNT(*) as total')
-                ->orderByDesc('total')
+                ->selectRaw("
+                    users.name,
+                    COUNT(*) as total_mes,
+                    SUM(CASE WHEN tasks.updated_at >= ? THEN 1 ELSE 0 END) as total_semana
+                ", [$inicioSemana])
+                ->orderByDesc('total_mes')
                 ->limit(5)
                 ->get();
 
             return $rows->map(fn($r) => [
                 'nombre' => $r->name,
-                'total' => (int) $r->total,
+                'total_mes' => (int) $r->total_mes,
+                'total_semana' => (int) $r->total_semana,
             ])->values()->toArray();
         } catch (\Exception $e) {
             return [];

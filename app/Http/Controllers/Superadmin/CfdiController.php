@@ -238,12 +238,22 @@ class CfdiController extends Controller
 
             if ($result['success']) {
                 $body = $result['data']['body'] ?? $result['data'];
+
+                // Totales internos (asignados a tiendas)
+                $asignados = (int) Shop::sum('cfdi_timbres_contratados');
+                $usados = (int) CfdiEmisor::sum('timbres_usados');
+
                 return response()->json([
                     'ok' => true,
                     'data' => [
                         'contratados' => $body['TimbresContratados'] ?? 0,
                         'consumidos' => $body['TimbresConsumidos'] ?? 0,
                         'disponibles' => $body['TimbresDisponibles'] ?? 0,
+                    ],
+                    'internos' => [
+                        'asignados' => $asignados,
+                        'usados' => $usados,
+                        'disponibles' => $asignados - $usados,
                     ],
                 ]);
             }

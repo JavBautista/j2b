@@ -32,23 +32,51 @@
                     <i class="fa fa-exclamation-triangle fa-2x" style="color: var(--j2b-warning);"></i>
                     <p class="mt-2 mb-0" style="color: var(--j2b-gray-500);">{{ timbresError }}</p>
                 </div>
-                <div v-else class="row">
-                    <div class="col-md-4 mb-2">
-                        <div class="stat-card stat-card-primary">
-                            <div class="stat-number">{{ timbresGlobales.contratados ?? '-' }}</div>
-                            <div class="stat-label">Contratados</div>
+                <div v-else>
+                    <div class="row">
+                        <div class="col-md-4 mb-2">
+                            <div class="stat-card stat-card-primary">
+                                <div class="stat-number">{{ timbresGlobales.contratados ?? '-' }}</div>
+                                <div class="stat-label">Contratados</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <div class="stat-card stat-card-warning">
+                                <div class="stat-number">{{ timbresGlobales.consumidos ?? '-' }}</div>
+                                <div class="stat-label">Consumidos</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <div class="stat-card stat-card-success">
+                                <div class="stat-number">{{ timbresGlobales.disponibles ?? '-' }}</div>
+                                <div class="stat-label">Disponibles</div>
+                            </div>
                         </div>
                     </div>
-                    <div class="col-md-4 mb-2">
-                        <div class="stat-card stat-card-warning">
-                            <div class="stat-number">{{ timbresGlobales.consumidos ?? '-' }}</div>
-                            <div class="stat-label">Consumidos</div>
-                        </div>
-                    </div>
-                    <div class="col-md-4 mb-2">
-                        <div class="stat-card stat-card-success">
-                            <div class="stat-number">{{ timbresGlobales.disponibles ?? '-' }}</div>
-                            <div class="stat-label">Disponibles</div>
+                    <!-- Timbres asignados internamente a tiendas -->
+                    <div v-if="timbresInternos" style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px dashed var(--j2b-gray-300);">
+                        <small style="color: var(--j2b-gray-500); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+                            <i class="fa fa-store"></i> Asignados a tiendas
+                        </small>
+                        <div class="row mt-2">
+                            <div class="col-md-4 mb-2">
+                                <div class="stat-card stat-card-primary" style="padding: 0.5rem 0.75rem;">
+                                    <div class="stat-number" style="font-size: 1.25rem;">{{ timbresInternos.asignados }}</div>
+                                    <div class="stat-label">Asignados</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                <div class="stat-card stat-card-warning" style="padding: 0.5rem 0.75rem;">
+                                    <div class="stat-number" style="font-size: 1.25rem;">{{ timbresInternos.usados }}</div>
+                                    <div class="stat-label">Usados</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                <div class="stat-card stat-card-success" style="padding: 0.5rem 0.75rem;">
+                                    <div class="stat-number" style="font-size: 1.25rem;">{{ timbresInternos.disponibles }}</div>
+                                    <div class="stat-label">Disponibles</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -309,6 +337,7 @@ export default {
 
             // Timbres globales
             timbresGlobales: {},
+            timbresInternos: null,
             timbresLoading: false,
             timbresError: null,
 
@@ -371,6 +400,7 @@ export default {
                 me.timbresLoading = false;
                 if (response.data.ok) {
                     me.timbresGlobales = response.data.data;
+                    me.timbresInternos = response.data.internos || null;
                 } else {
                     me.timbresError = response.data.error || 'Error desconocido';
                 }

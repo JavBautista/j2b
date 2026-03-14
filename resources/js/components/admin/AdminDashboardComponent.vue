@@ -32,9 +32,10 @@
                             <i class="fa fa-calendar-check-o"></i>
                             <span>HOY</span>
                         </div>
-                        <div class="summary-card__value">{{ currencySymbol }}{{ formatMoney(data.ventas_hoy.total) }}</div>
+                        <div class="summary-card__value">{{ currencySymbol }}{{ formatMoney(data.ventas_hoy.cobrado) }}</div>
                         <div class="summary-card__sub">{{ data.ventas_hoy.cantidad }} ventas</div>
                         <div class="summary-card__sub">Ticket prom: {{ currencySymbol }}{{ formatMoney(data.ventas_hoy.ticket_promedio) }}</div>
+                        <div class="summary-card__sub" v-if="data.ventas_hoy.total > data.ventas_hoy.cobrado">Notas: {{ currencySymbol }}{{ formatMoney(data.ventas_hoy.total) }}</div>
                     </div>
                 </div>
                 <div class="col-6">
@@ -43,8 +44,9 @@
                             <i class="fa fa-calendar"></i>
                             <span>MES</span>
                         </div>
-                        <div class="summary-card__value">{{ currencySymbol }}{{ formatMoney(data.ventas_mes.total) }}</div>
+                        <div class="summary-card__value">{{ currencySymbol }}{{ formatMoney(data.ventas_mes.cobrado) }}</div>
                         <div class="summary-card__sub">{{ data.ventas_mes.cantidad }} ventas</div>
+                        <div class="summary-card__sub" v-if="data.ventas_mes.total > data.ventas_mes.cobrado">Notas: {{ currencySymbol }}{{ formatMoney(data.ventas_mes.total) }}</div>
                     </div>
                 </div>
             </div>
@@ -53,12 +55,21 @@
             <div class="summary-card summary-card--warning mb-3">
                 <div class="summary-card__header">
                     <i class="fa fa-clipboard"></i>
-                    <span>TAREAS</span>
+                    <span>TAREAS DEL MES</span>
                 </div>
                 <div class="d-flex gap-2 mt-2">
-                    <span class="badge bg-primary rounded-pill px-3 py-2">{{ data.tareas.nuevo }} Nuevo</span>
-                    <span class="badge bg-warning text-dark rounded-pill px-3 py-2">{{ data.tareas.pendiente }} Pendiente</span>
-                    <span class="badge bg-success rounded-pill px-3 py-2">{{ data.tareas.atendido }} Atendido</span>
+                    <span class="badge bg-primary rounded-pill px-3 py-2">{{ data.tareas.mes.nuevo }} Nuevo</span>
+                    <span class="badge bg-warning text-dark rounded-pill px-3 py-2">{{ data.tareas.mes.pendiente }} Pendiente</span>
+                    <span class="badge bg-success rounded-pill px-3 py-2">{{ data.tareas.mes.atendido }} Atendido</span>
+                </div>
+                <div class="summary-card__header mt-3">
+                    <i class="fa fa-calendar-o"></i>
+                    <span>SEMANA ({{ data.tareas.semana.inicio }} - {{ data.tareas.semana.fin }})</span>
+                </div>
+                <div class="d-flex gap-2 mt-2">
+                    <span class="badge bg-primary rounded-pill px-3 py-2">{{ data.tareas.semana.nuevo }} Nuevo</span>
+                    <span class="badge bg-warning text-dark rounded-pill px-3 py-2">{{ data.tareas.semana.pendiente }} Pendiente</span>
+                    <span class="badge bg-success rounded-pill px-3 py-2">{{ data.tareas.semana.atendido }} Atendido</span>
                 </div>
             </div>
 
@@ -156,25 +167,76 @@
                             <span>CLIENTES CON MAS REPORTES</span>
                         </div>
                         <table class="table table-sm table-borderless mt-2 mb-0">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    <th></th>
+                                    <th class="text-center" style="width:50px">Mes</th>
+                                    <th class="text-center" style="width:50px">Sem</th>
+                                </tr>
+                            </thead>
                             <tbody>
                                 <tr v-for="(c, i) in data.cliente_top_incidencias" :key="i">
                                     <td style="width:30px">
                                         <span class="ranking-num">{{ i + 1 }}</span>
                                     </td>
                                     <td class="text-truncate" style="max-width:150px">{{ c.nombre }}</td>
-                                    <td class="text-end fw-bold">{{ c.total }}</td>
+                                    <td class="text-center fw-bold">{{ c.total_mes }}</td>
+                                    <td class="text-center">{{ c.total_semana }}</td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
 
-                <!-- Productos Mas Vendidos -->
+                <!-- Productos Mas Vendidos - Mes -->
+                <div class="col-md-6" v-if="data.productos_mas_vendidos_mes && data.productos_mas_vendidos_mes.length">
+                    <div class="summary-card summary-card--success">
+                        <div class="summary-card__header">
+                            <i class="fa fa-line-chart"></i>
+                            <span>MAS VENDIDOS DEL MES</span>
+                        </div>
+                        <table class="table table-sm table-borderless mt-2 mb-0">
+                            <tbody>
+                                <tr v-for="(p, i) in data.productos_mas_vendidos_mes" :key="i">
+                                    <td style="width:30px">
+                                        <span class="ranking-num">{{ i + 1 }}</span>
+                                    </td>
+                                    <td class="text-truncate" style="max-width:150px">{{ p.nombre }}</td>
+                                    <td class="text-end fw-bold">{{ p.cantidad }} uds</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Productos Mas Vendidos - Semana -->
+                <div class="col-md-6" v-if="data.productos_mas_vendidos_semana && data.productos_mas_vendidos_semana.length">
+                    <div class="summary-card summary-card--success">
+                        <div class="summary-card__header">
+                            <i class="fa fa-line-chart"></i>
+                            <span>MAS VENDIDOS DE LA SEMANA</span>
+                        </div>
+                        <table class="table table-sm table-borderless mt-2 mb-0">
+                            <tbody>
+                                <tr v-for="(p, i) in data.productos_mas_vendidos_semana" :key="i">
+                                    <td style="width:30px">
+                                        <span class="ranking-num">{{ i + 1 }}</span>
+                                    </td>
+                                    <td class="text-truncate" style="max-width:150px">{{ p.nombre }}</td>
+                                    <td class="text-end fw-bold">{{ p.cantidad }} uds</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Productos Mas Vendidos - General -->
                 <div class="col-md-6" v-if="data.productos_mas_vendidos && data.productos_mas_vendidos.length">
                     <div class="summary-card summary-card--success">
                         <div class="summary-card__header">
                             <i class="fa fa-line-chart"></i>
-                            <span>PRODUCTOS MAS VENDIDOS</span>
+                            <span>MAS VENDIDOS (GENERAL)</span>
                         </div>
                         <table class="table table-sm table-borderless mt-2 mb-0">
                             <tbody>

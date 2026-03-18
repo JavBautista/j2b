@@ -9,6 +9,7 @@ use App\Models\Shop;
 use App\Models\CfdiEmisor;
 use App\Models\CfdiInvoice;
 use App\Services\Facturacion\HubCfdiService;
+use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Facades\Excel;
 use Carbon\Carbon;
 
@@ -76,6 +77,7 @@ class CfdiController extends Controller
 
     /**
      * Asignar timbres contratados a una tienda
+     * Primero asigna en TBT API, solo si responde ok suma en BD local
      */
     public function asignarTimbresShop(Request $request)
     {
@@ -87,14 +89,58 @@ class CfdiController extends Controller
         ]);
 
         $shop = Shop::findOrFail($request->shop_id);
+
+        // Validar que tenga emisor registrado en TBT (necesita RFC)
+        if (!$shop->cfdiEmisor || !$shop->cfdiEmisor->is_registered) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'La tienda no tiene emisor registrado en HUB CFDI. Debe registrar su emisor primero.',
+            ], 422);
+        }
+
+        // Llamar a TBT API para asignar timbres al emisor
+        try {
+            $service = new HubCfdiService();
+            $result = $service->asignarTimbres($shop->cfdiEmisor->rfc, $request->cantidad);
+
+            if (!$result['success']) {
+                Log::warning('TBT AsignarTimbres falló', [
+                    'shop_id' => $shop->id,
+                    'rfc' => $shop->cfdiEmisor->rfc,
+                    'cantidad' => $request->cantidad,
+                    'error' => $result['error'],
+                ]);
+
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'Error al asignar timbres en HUB CFDI: ' . ($result['error'] ?? 'Error desconocido'),
+                ], 500);
+            }
+        } catch (\Exception $e) {
+            Log::error('TBT AsignarTimbres excepción', [
+                'shop_id' => $shop->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'ok' => false,
+                'message' => 'No se pudo conectar con HUB CFDI: ' . $e->getMessage(),
+            ], 500);
+        }
+
+        // TBT respondió ok, ahora sí sumar en BD local
         $shop->cfdi_timbres_contratados += $request->cantidad;
         $shop->save();
 
-        // Si ya tiene emisor configurado, sincronizar timbres_asignados
-        if ($shop->cfdiEmisor) {
-            $shop->cfdiEmisor->timbres_asignados = $shop->cfdi_timbres_contratados;
-            $shop->cfdiEmisor->save();
-        }
+        $shop->cfdiEmisor->timbres_asignados = $shop->cfdi_timbres_contratados;
+        $shop->cfdiEmisor->save();
+
+        Log::info('Timbres asignados exitosamente', [
+            'shop_id' => $shop->id,
+            'rfc' => $shop->cfdiEmisor->rfc,
+            'cantidad' => $request->cantidad,
+            'total_contratados' => $shop->cfdi_timbres_contratados,
+        ]);
 
         return response()->json([
             'ok' => true,

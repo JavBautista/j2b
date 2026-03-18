@@ -140,13 +140,13 @@
                                         <i class="fa fa-times-circle"></i> Inactivo
                                     </span>
                                 </td>
-                                <td>
+                                <td class="text-center">
                                     <span class="j2b-badge j2b-badge-info">
                                         {{ shop.cfdi_timbres_contratados }}
                                     </span>
-                                    <span v-if="shop.cfdi_emisor" style="color: var(--j2b-gray-500); font-size: 12px;">
-                                        ({{ shop.cfdi_emisor.timbres_usados }} usados)
-                                    </span>
+                                    <div v-if="shop.cfdi_emisor" style="color: var(--j2b-gray-500); font-size: 11px; margin-top: 2px;">
+                                        {{ shop.cfdi_emisor.timbres_usados }} usados
+                                    </div>
                                 </td>
                                 <td>
                                     <span v-if="shop.cfdi_emisor" class="j2b-badge j2b-badge-success">
@@ -158,7 +158,7 @@
                                 </td>
                                 <td>
                                     <div class="d-flex gap-1">
-                                        <button class="j2b-btn j2b-btn-sm j2b-btn-primary" @click="abrirModalAsignar(shop)" title="Asignar Timbres">
+                                        <button class="j2b-btn j2b-btn-sm j2b-btn-primary" @click="abrirModalAsignar(shop)" title="Asignar Timbres" :disabled="!shop.cfdi_emisor || !shop.cfdi_emisor.is_registered">
                                             <i class="fa fa-ticket"></i>
                                         </button>
                                         <button v-if="shop.cfdi_emisor" class="j2b-btn j2b-btn-sm j2b-btn-outline" @click="verDetalle(shop)" title="Ver Emisor">
@@ -477,7 +477,11 @@ export default {
             }).catch(function(error) {
                 me.asignando = false;
                 console.log(error);
-                Swal.fire('Error', 'Ocurrio un error al asignar timbres', 'error');
+                let msg = 'Ocurrio un error al asignar timbres';
+                if (error.response && error.response.data && error.response.data.message) {
+                    msg = error.response.data.message;
+                }
+                Swal.fire('Error', msg, 'error');
             });
         },
     },

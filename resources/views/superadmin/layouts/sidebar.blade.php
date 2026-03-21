@@ -75,6 +75,11 @@
                             <i class="fa fa-file-text"></i> Documentos Legales
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ route('superadmin.pdf-phrases') }}">
+                            <i class="fa fa-quote-left"></i> Frases PDF
+                        </a>
+                    </li>
                 </ul>
             </li>
 

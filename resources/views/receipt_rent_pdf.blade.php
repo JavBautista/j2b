@@ -26,10 +26,8 @@
                     {{ $receipt->shop->phone }}</p>
                 </td>
                 <td width="50%" align="right">
-                    @if (trim($receipt->shop->logo)!=null)
-                        <img src="{{ public_path('storage/'.$receipt->shop->logo) }}" width="50%">
-                    @else
-                        <p style="font-weight: bold;">Logo</p>
+                    @if (($receiptSettings->show_logo ?? true) && trim($receipt->shop->logo) != null)
+                        <img src="{{ public_path('storage/'.$receipt->shop->logo) }}" style="max-height: 80px; max-width: 100%; width: auto;">
                     @endif
                 </td>
             </tr>
@@ -55,7 +53,9 @@
         <table width="100%">
             <tr>
                 <td width="20%">
-                    <img src="{{ public_path('img/j2b_qr.png') }}" alt="QR" width="50%">
+                    @if (($receiptSettings->show_qr ?? true) && !empty($qrImage))
+                        <img src="{{ $qrImage }}" alt="QR" width="80">
+                    @endif
                 </td>
                 <td width="40%">
                     <h2>{{$receipt->quotation?'COTIZACIÓN':'FOLIO'}} #{{$receipt->folio}}</h2>
@@ -208,6 +208,13 @@
                 </tfoot>
             </table>
         @endif
+
+        <!-- Footer J2Biznes -->
+        <div style="position: fixed; bottom: 10px; left: 0; right: 0; text-align: center;">
+            <p style="font-size: 9px; color: #999; margin: 0;">
+                De <img src="{{ public_path('images/heart-j2b.png') }}" style="width: 12px; height: 12px; vertical-align: middle;"> <a href="{{ $pdfPhraseUrl ?? 'https://j2biznes.com' }}" style="color: #555; text-decoration: none; font-weight: bold;">J2Biznes.com</a> - {{ $pdfPhrase ?? 'Tu negocio, simplificado.' }}
+            </p>
+        </div>
 
     </body>
 </html>

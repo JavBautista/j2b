@@ -12,7 +12,10 @@ use App\Models\Shop;
 use App\Models\Rent;
 use App\Models\Product;
 use Illuminate\Support\Carbon;
+use App\Models\ShopReceiptSetting;
+use App\Models\PdfPhrase;
 use Barryvdh\DomPDF\Facade\Pdf as PDF;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use Illuminate\Database\Eloquent\Builder;
 
 class ReceiptController extends Controller
@@ -70,9 +73,30 @@ class ReceiptController extends Controller
 
         //$shop = Shop::findOrFail($shop_id);
 
+        // Configuración de recibos PDF
+        $receiptSettings = ShopReceiptSetting::where('shop_id', $receipt->shop_id)->first();
+
+        // Generar QR dinámico si está habilitado
+        $qrImage = null;
+        if ($receiptSettings === null || $receiptSettings->show_qr) {
+            $qrUrlSource = $receiptSettings->qr_url_source ?? 'web';
+            $qrUrl = $receipt->shop->$qrUrlSource ?? '';
+
+            if (!empty(trim($qrUrl))) {
+                $qrImage = 'data:image/svg+xml;base64,' . base64_encode(
+                    QrCode::size(150)->generate($qrUrl)
+                );
+            }
+        }
+
+        $randomPhrase = PdfPhrase::getRandom();
         $pdf = PDF::loadView('receipt_rent_pdf', [
             'receipt' => $receipt,
-            'withImages' => $withImages
+            'withImages' => $withImages,
+            'receiptSettings' => $receiptSettings,
+            'qrImage' => $qrImage,
+            'pdfPhrase' => $randomPhrase['phrase'],
+            'pdfPhraseUrl' => $randomPhrase['link_url'],
         ]);
         return $pdf->stream($name_file.'.pdf',array("Attachment" => false));
     }//printReceiptRent()
@@ -830,7 +854,12 @@ class ReceiptController extends Controller
         
         $name_file = $receipt->folio;
        
-        $pdf = PDF::loadView('receipt_rent_pdf',['receipt'=>$receipt]);
+        $randomPhrase = PdfPhrase::getRandom();
+        $pdf = PDF::loadView('receipt_rent_pdf',[
+            'receipt'=>$receipt,
+            'pdfPhrase' => $randomPhrase['phrase'],
+            'pdfPhraseUrl' => $randomPhrase['link_url'],
+        ]);
         return $pdf->stream($name_file.'.pdf',array("Attachment" => false));
     }//printReceiptRent()
 

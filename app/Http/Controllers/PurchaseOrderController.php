@@ -10,6 +10,7 @@ use App\Services\StockAlertService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Database\Eloquent\Builder;
+use App\Models\PdfPhrase;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 
@@ -260,7 +261,12 @@ class PurchaseOrderController extends Controller
 
         //$shop = Shop::findOrFail($shop_id);
 
-        $pdf = PDF::loadView('purchase_order_pdf',['purchase_order'=>$purchase_order]);
+        $randomPhrase = PdfPhrase::getRandom();
+        $pdf = PDF::loadView('purchase_order_pdf',[
+            'purchase_order'=>$purchase_order,
+            'pdfPhrase' => $randomPhrase['phrase'],
+            'pdfPhraseUrl' => $randomPhrase['link_url'],
+        ]);
         return $pdf->stream($name_file.'.pdf',array("Attachment" => false));
     }
 
@@ -286,7 +292,12 @@ class PurchaseOrderController extends Controller
 
         $name_file = $purchase_order->folio;
 
-        $pdf = PDF::loadView('purchase_order_pdf',['purchase_order'=>$purchase_order]);
+        $randomPhrase = PdfPhrase::getRandom();
+        $pdf = PDF::loadView('purchase_order_pdf',[
+            'purchase_order'=>$purchase_order,
+            'pdfPhrase' => $randomPhrase['phrase'],
+            'pdfPhraseUrl' => $randomPhrase['link_url'],
+        ]);
         return $pdf->stream($name_file.'.pdf',array("Attachment" => false));
     }
 }

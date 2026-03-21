@@ -8,10 +8,12 @@ use App\Models\Task;
 use App\Models\TaskImage;
 use App\Models\TaskLog;
 use App\Models\TaskProduct;
+use App\Models\TaskChecklistItem;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
+use App\Models\Service;
 use App\Services\ImageService;
 
 class TasksController extends Controller
@@ -39,7 +41,7 @@ class TasksController extends Controller
         $ordenar = $request->filtro_ordenar ?? 'ID_DESC';
         $status = $request->filtro_status ?? 'TODOS';
 
-        $query = Task::with(['client.addresses', 'images', 'logs', 'assignedUser', 'trackingHistory', 'products.product', 'products.deliveredBy'])
+        $query = Task::with(['client.addresses', 'images', 'logs', 'assignedUser', 'trackingHistory', 'products.product', 'products.deliveredBy', 'checklistItems'])
                     ->where('shop_id', $shop->id);
 
         // Búsqueda por título o descripción
@@ -869,5 +871,167 @@ class TasksController extends Controller
             'task' => $task,
             'message' => 'Imagen alternativa eliminada.'
         ]);
+    }
+
+    // ==========================================
+    // MÉTODOS PARA CHECKLIST DE TAREA
+    // ==========================================
+
+    /**
+     * Agregar item al checklist
+     */
+    public function addChecklistItem(Request $request, $id)
+    {
+        $request->validate([
+            'text' => 'required|string|max:500',
+        ]);
+
+        $user = auth()->user();
+        $shop = $user->shop;
+
+        $task = Task::where('shop_id', $shop->id)->findOrFail($id);
+
+        $maxOrder = $task->checklistItems()->max('sort_order') ?? -1;
+
+        $item = TaskChecklistItem::create([
+            'task_id' => $task->id,
+            'text' => $request->text,
+            'is_completed' => false,
+            'sort_order' => $maxOrder + 1,
+        ]);
+
+        return response()->json([
+            'ok' => true,
+            'item' => $item,
+            'message' => 'Item agregado.'
+        ]);
+    }
+
+    /**
+     * Editar texto de un item del checklist
+     */
+    public function updateChecklistItem(Request $request, $id, $itemId)
+    {
+        $request->validate([
+            'text' => 'required|string|max:500',
+        ]);
+
+        $user = auth()->user();
+        $shop = $user->shop;
+
+        $task = Task::where('shop_id', $shop->id)->findOrFail($id);
+        $item = TaskChecklistItem::where('task_id', $task->id)->findOrFail($itemId);
+
+        $item->text = $request->text;
+        $item->save();
+
+        return response()->json([
+            'ok' => true,
+            'item' => $item,
+            'message' => 'Item actualizado.'
+        ]);
+    }
+
+    /**
+     * Toggle completado de un item del checklist
+     */
+    public function toggleChecklistItem($id, $itemId)
+    {
+        $user = auth()->user();
+        $shop = $user->shop;
+
+        $task = Task::where('shop_id', $shop->id)->findOrFail($id);
+        $item = TaskChecklistItem::where('task_id', $task->id)->findOrFail($itemId);
+
+        $item->is_completed = !$item->is_completed;
+        $item->save();
+
+        return response()->json([
+            'ok' => true,
+            'item' => $item,
+        ]);
+    }
+
+    /**
+     * Reordenar items del checklist
+     */
+    public function reorderChecklist(Request $request, $id)
+    {
+        $request->validate([
+            'items' => 'required|array',
+            'items.*' => 'integer|exists:task_checklist_items,id',
+        ]);
+
+        $user = auth()->user();
+        $shop = $user->shop;
+
+        $task = Task::where('shop_id', $shop->id)->findOrFail($id);
+
+        foreach ($request->items as $index => $itemId) {
+            TaskChecklistItem::where('id', $itemId)
+                ->where('task_id', $task->id)
+                ->update(['sort_order' => $index]);
+        }
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Orden actualizado.'
+        ]);
+    }
+
+    /**
+     * Eliminar item del checklist
+     */
+    public function deleteChecklistItem($id, $itemId)
+    {
+        $user = auth()->user();
+        $shop = $user->shop;
+
+        $task = Task::where('shop_id', $shop->id)->findOrFail($id);
+        $item = TaskChecklistItem::where('task_id', $task->id)->findOrFail($itemId);
+
+        $item->delete();
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Item eliminado.'
+        ]);
+    }
+
+    /**
+     * Buscar productos y servicios para agregar al checklist
+     */
+    public function searchChecklistCatalog(Request $request)
+    {
+        $user = auth()->user();
+        $shop = $user->shop;
+        $q = $request->q ?? '';
+
+        if (strlen($q) < 2) {
+            return response()->json(['ok' => true, 'results' => []]);
+        }
+
+        $products = Product::where('shop_id', $shop->id)
+            ->where('active', 1)
+            ->where(function($query) use ($q) {
+                $query->where('name', 'like', "%{$q}%")
+                      ->orWhere('key', 'like', "%{$q}%");
+            })
+            ->select('id', 'name', 'key as code', 'retail as price')
+            ->limit(10)
+            ->get()
+            ->map(fn($p) => ['id' => $p->id, 'type' => 'producto', 'name' => $p->name, 'code' => $p->code, 'price' => $p->price]);
+
+        $services = Service::where('shop_id', $shop->id)
+            ->where('active', 1)
+            ->where('name', 'like', "%{$q}%")
+            ->select('id', 'name', 'price')
+            ->limit(10)
+            ->get()
+            ->map(fn($s) => ['id' => $s->id, 'type' => 'servicio', 'name' => $s->name, 'code' => null, 'price' => $s->price]);
+
+        $results = $products->concat($services)->sortBy('name')->values();
+
+        return response()->json(['ok' => true, 'results' => $results]);
     }
 }

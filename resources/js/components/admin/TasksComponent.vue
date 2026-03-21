@@ -455,6 +455,100 @@
                                 </div>
                             </div>
 
+                            <!-- Checklist -->
+                            <div class="card">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <span>
+                                        <i class="fa fa-check-square-o mr-2"></i>Checklist
+                                        <span class="badge badge-secondary ml-1" v-if="taskSeleccionada.checklist_items && taskSeleccionada.checklist_items.length > 0">
+                                            {{ getChecklistCompleted() }}/{{ taskSeleccionada.checklist_items.length }}
+                                        </span>
+                                    </span>
+                                </div>
+                                <div class="card-body">
+                                    <!-- Lista de items -->
+                                    <div v-if="taskSeleccionada.checklist_items && taskSeleccionada.checklist_items.length > 0">
+                                        <!-- Barra de progreso -->
+                                        <div class="progress mb-3" style="height: 6px;">
+                                            <div class="progress-bar bg-success" :style="{ width: getChecklistPercent() + '%' }"></div>
+                                        </div>
+
+                                        <div v-for="(item, index) in taskSeleccionada.checklist_items" :key="item.id"
+                                             class="checklist-item d-flex align-items-center py-1 px-2 mb-1 rounded"
+                                             :class="{ 'bg-light': dragOverIndex === index }"
+                                             draggable="true"
+                                             @dragstart="onDragStart(index, $event)"
+                                             @dragover.prevent="onDragOver(index)"
+                                             @dragleave="dragOverIndex = null"
+                                             @drop.prevent="onDrop(index)"
+                                             @dragend="dragOverIndex = null">
+                                            <!-- Handle drag -->
+                                            <span class="text-muted mr-2" style="cursor: grab;"><i class="fa fa-bars"></i></span>
+                                            <!-- Checkbox -->
+                                            <input type="checkbox" class="mr-2" :checked="item.is_completed"
+                                                   @change="toggleChecklistItem(item)" style="cursor: pointer; width: 16px; height: 16px;">
+                                            <!-- Texto (editable inline) -->
+                                            <span v-if="editandoChecklistId !== item.id"
+                                                  class="flex-grow-1"
+                                                  :class="{ 'text-decoration-line-through text-muted': item.is_completed }"
+                                                  @dblclick="iniciarEdicionChecklist(item)"
+                                                  style="cursor: text;">
+                                                {{ item.text }}
+                                            </span>
+                                            <input v-else type="text" class="form-control form-control-sm flex-grow-1"
+                                                   v-model="editandoChecklistTexto"
+                                                   @keyup.enter="guardarEdicionChecklist(item)"
+                                                   @keyup.esc="editandoChecklistId = null"
+                                                   @blur="guardarEdicionChecklist(item)"
+                                                   ref="inputEditChecklist">
+                                            <!-- Eliminar -->
+                                            <button class="btn btn-sm text-danger ml-2 p-0" @click="eliminarChecklistItem(item)"
+                                                    style="line-height: 1;" title="Eliminar">
+                                                <i class="fa fa-times"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div v-else class="text-center text-muted py-2 mb-2">
+                                        <small>Sin items en el checklist</small>
+                                    </div>
+
+                                    <!-- Agregar nuevo item -->
+                                    <div class="position-relative mt-2">
+                                        <div class="input-group input-group-sm">
+                                            <input type="text" class="form-control" v-model="nuevoChecklistTexto"
+                                                   placeholder="Escribir o buscar producto/servicio..."
+                                                   @input="buscarCatalogoChecklist"
+                                                   @keyup.enter="agregarChecklistItem"
+                                                   @focus="mostrarDropdownChecklist = true">
+                                            <button class="btn btn-success btn-sm" @click="agregarChecklistItem"
+                                                    :disabled="!nuevoChecklistTexto.trim()" title="Agregar texto libre">
+                                                <i class="fa fa-plus"></i>
+                                            </button>
+                                        </div>
+                                        <!-- Dropdown de resultados del catálogo -->
+                                        <div v-if="mostrarDropdownChecklist && catalogoChecklistResultados.length > 0"
+                                             class="dropdown-menu show w-100" style="max-height: 200px; overflow-y: auto; z-index: 1050;">
+                                            <a class="dropdown-item" href="#"
+                                               v-for="item in catalogoChecklistResultados" :key="item.type + '-' + item.id"
+                                               @click.prevent="seleccionarCatalogoChecklist(item)">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <div>
+                                                        <strong>{{ item.name }}</strong>
+                                                        <br><small class="text-muted">
+                                                            <span class="badge" :class="item.type === 'producto' ? 'badge-primary' : 'badge-info'">
+                                                                {{ item.type === 'producto' ? 'Producto' : 'Servicio' }}
+                                                            </span>
+                                                            <span v-if="item.code" class="ml-1">{{ item.code }}</span>
+                                                        </small>
+                                                    </div>
+                                                    <small v-if="item.price">${{ item.price }}</small>
+                                                </div>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- Imágenes -->
                             <div class="card" v-if="(taskSeleccionada.images && taskSeleccionada.images.length > 0) || taskSeleccionada.image">
                                 <div class="card-header d-flex justify-content-between align-items-center">
@@ -1011,6 +1105,16 @@ export default {
                 qty_returned: 0,
                 notes: ''
             },
+
+            // Checklist
+            nuevoChecklistTexto: '',
+            editandoChecklistId: null,
+            editandoChecklistTexto: '',
+            dragIndex: null,
+            dragOverIndex: null,
+            catalogoChecklistResultados: [],
+            mostrarDropdownChecklist: false,
+            buscarCatalogoTimeout: null,
 
             // Imágenes de tarea
             modalImagenes: false,
@@ -1582,6 +1686,155 @@ export default {
         // Generar nota de venta desde productos de tarea
         generarNotaDesdeProductos() {
             window.location.href = `/admin/receipts/create?from_task=${this.taskSeleccionada.id}`;
+        },
+
+        // ==========================================
+        // MÉTODOS PARA CHECKLIST
+        // ==========================================
+
+        agregarChecklistItem() {
+            let me = this;
+            let text = me.nuevoChecklistTexto.trim();
+            if (!text) return;
+
+            me.catalogoChecklistResultados = [];
+            me.mostrarDropdownChecklist = false;
+
+            axios.post(`/admin/tasks/${me.taskSeleccionada.id}/checklist`, { text: text })
+                .then(function(response) {
+                    if (response.data.ok) {
+                        if (!me.taskSeleccionada.checklist_items) {
+                            me.taskSeleccionada.checklist_items = [];
+                        }
+                        me.taskSeleccionada.checklist_items.push(response.data.item);
+                        me.nuevoChecklistTexto = '';
+                    }
+                }).catch(function(error) {
+                    Swal.fire('Error', 'Error al agregar item', 'error');
+                });
+        },
+
+        toggleChecklistItem(item) {
+            let me = this;
+            axios.put(`/admin/tasks/${me.taskSeleccionada.id}/checklist/${item.id}/toggle`)
+                .then(function(response) {
+                    if (response.data.ok) {
+                        item.is_completed = response.data.item.is_completed;
+                    }
+                }).catch(function(error) {
+                    console.error(error);
+                });
+        },
+
+        iniciarEdicionChecklist(item) {
+            this.editandoChecklistId = item.id;
+            this.editandoChecklistTexto = item.text;
+            this.$nextTick(() => {
+                if (this.$refs.inputEditChecklist) {
+                    let inputs = this.$refs.inputEditChecklist;
+                    let input = Array.isArray(inputs) ? inputs[0] : inputs;
+                    if (input) input.focus();
+                }
+            });
+        },
+
+        guardarEdicionChecklist(item) {
+            let me = this;
+            let text = me.editandoChecklistTexto.trim();
+            if (!text || text === item.text) {
+                me.editandoChecklistId = null;
+                return;
+            }
+
+            axios.put(`/admin/tasks/${me.taskSeleccionada.id}/checklist/${item.id}`, { text: text })
+                .then(function(response) {
+                    if (response.data.ok) {
+                        item.text = response.data.item.text;
+                    }
+                }).catch(function(error) {
+                    Swal.fire('Error', 'Error al actualizar item', 'error');
+                }).finally(function() {
+                    me.editandoChecklistId = null;
+                });
+        },
+
+        eliminarChecklistItem(item) {
+            let me = this;
+            axios.delete(`/admin/tasks/${me.taskSeleccionada.id}/checklist/${item.id}`)
+                .then(function(response) {
+                    if (response.data.ok) {
+                        let idx = me.taskSeleccionada.checklist_items.findIndex(i => i.id === item.id);
+                        if (idx !== -1) {
+                            me.taskSeleccionada.checklist_items.splice(idx, 1);
+                        }
+                    }
+                }).catch(function(error) {
+                    Swal.fire('Error', 'Error al eliminar item', 'error');
+                });
+        },
+
+        // Drag & Drop
+        onDragStart(index, event) {
+            this.dragIndex = index;
+            event.dataTransfer.effectAllowed = 'move';
+        },
+
+        onDragOver(index) {
+            this.dragOverIndex = index;
+        },
+
+        onDrop(index) {
+            let me = this;
+            let items = me.taskSeleccionada.checklist_items;
+            if (me.dragIndex === null || me.dragIndex === index) return;
+
+            let moved = items.splice(me.dragIndex, 1)[0];
+            items.splice(index, 0, moved);
+
+            me.dragIndex = null;
+            me.dragOverIndex = null;
+
+            // Guardar nuevo orden
+            let orderedIds = items.map(i => i.id);
+            axios.put(`/admin/tasks/${me.taskSeleccionada.id}/checklist/reorder`, { items: orderedIds })
+                .catch(function(error) {
+                    console.error('Error al reordenar:', error);
+                });
+        },
+
+        buscarCatalogoChecklist() {
+            clearTimeout(this.buscarCatalogoTimeout);
+            if (this.nuevoChecklistTexto.length < 2) {
+                this.catalogoChecklistResultados = [];
+                return;
+            }
+            this.buscarCatalogoTimeout = setTimeout(() => {
+                axios.get('/admin/tasks/checklist/search-catalog', { params: { q: this.nuevoChecklistTexto } })
+                    .then(response => {
+                        if (response.data.ok) {
+                            this.catalogoChecklistResultados = response.data.results;
+                            this.mostrarDropdownChecklist = true;
+                        }
+                    })
+                    .catch(error => console.error(error));
+            }, 300);
+        },
+
+        seleccionarCatalogoChecklist(item) {
+            this.nuevoChecklistTexto = item.name;
+            this.catalogoChecklistResultados = [];
+            this.mostrarDropdownChecklist = false;
+            this.agregarChecklistItem();
+        },
+
+        getChecklistCompleted() {
+            if (!this.taskSeleccionada.checklist_items) return 0;
+            return this.taskSeleccionada.checklist_items.filter(i => i.is_completed).length;
+        },
+
+        getChecklistPercent() {
+            if (!this.taskSeleccionada.checklist_items || this.taskSeleccionada.checklist_items.length === 0) return 0;
+            return Math.round((this.getChecklistCompleted() / this.taskSeleccionada.checklist_items.length) * 100);
         },
 
         // ==========================================

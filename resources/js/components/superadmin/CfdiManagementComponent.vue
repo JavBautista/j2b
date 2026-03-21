@@ -19,9 +19,14 @@
                     <h6 class="mb-0" style="font-weight: 600; color: var(--j2b-dark);">
                         <i class="fa fa-ticket" style="color: var(--j2b-primary);"></i> Timbres Globales (HUB CFDI)
                     </h6>
-                    <button type="button" class="j2b-btn j2b-btn-sm j2b-btn-outline" @click="loadTimbresGlobales()" :disabled="timbresLoading">
-                        <i class="fa" :class="timbresLoading ? 'fa-spinner fa-spin' : 'fa-refresh'"></i> Actualizar
-                    </button>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="j2b-btn j2b-btn-sm j2b-btn-outline" @click="sincronizar()" :disabled="syncLoading">
+                            <i class="fa" :class="syncLoading ? 'fa-spinner fa-spin' : 'fa-exchange'"></i> Sincronizar
+                        </button>
+                        <button type="button" class="j2b-btn j2b-btn-sm j2b-btn-outline" @click="loadTimbresGlobales()" :disabled="timbresLoading">
+                            <i class="fa" :class="timbresLoading ? 'fa-spinner fa-spin' : 'fa-refresh'"></i> Actualizar
+                        </button>
+                    </div>
                 </div>
             </div>
             <div class="j2b-card-body">
@@ -77,6 +82,12 @@
                                     <div class="stat-label">Disponibles</div>
                                 </div>
                             </div>
+                        </div>
+                        <!-- Nota si hay consumo externo -->
+                        <div v-if="timbresGlobales.consumidos > timbresInternos.usados" style="margin-top: 0.5rem; padding: 0.5rem 0.75rem; background: #fff8e1; border-radius: 6px; font-size: 12px; color: #f57f17;">
+                            <i class="fa fa-info-circle"></i>
+                            TBT reporta {{ timbresGlobales.consumidos }} consumidos vs {{ timbresInternos.usados }} usados en J2B.
+                            La diferencia ({{ timbresGlobales.consumidos - timbresInternos.usados }}) corresponde a consumo externo a este sistema.
                         </div>
                     </div>
                 </div>
@@ -315,6 +326,133 @@
         </div>
     </div>
 
+    <!-- Modal Sincronizar Timbres -->
+    <div class="modal fade" tabindex="-1" :class="{'mostrar': modalSync}" role="dialog" style="display: none;" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content j2b-modal-content">
+                <div class="modal-header j2b-modal-header">
+                    <h5 class="modal-title">
+                        <i class="fa fa-exchange" style="color: var(--j2b-primary);"></i>
+                        Sincronizar Timbres
+                    </h5>
+                    <button type="button" class="j2b-modal-close" @click="cerrarModalSync()" aria-label="Close">
+                        <i class="fa fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body j2b-modal-body">
+                    <!-- Loading -->
+                    <div v-if="syncLoading" class="text-center py-4">
+                        <i class="fa fa-spinner fa-spin fa-2x" style="color: var(--j2b-primary);"></i>
+                        <p class="mt-2" style="color: var(--j2b-gray-500);">Verificando datos con HUB CFDI...</p>
+                    </div>
+
+                    <div v-else-if="syncData">
+                        <!-- Resultado global -->
+                        <div v-if="syncData.total_problemas === 0" class="text-center py-3 mb-3" style="background: var(--j2b-success-bg, #e8f5e9); border-radius: 8px;">
+                            <i class="fa fa-check-circle fa-2x" style="color: var(--j2b-success);"></i>
+                            <p class="mt-2 mb-0" style="color: var(--j2b-success); font-weight: 600;">Todo esta sincronizado correctamente</p>
+                        </div>
+                        <div v-else class="text-center py-3 mb-3" style="background: #fff3e0; border-radius: 8px;">
+                            <i class="fa fa-exclamation-triangle fa-2x" style="color: var(--j2b-warning);"></i>
+                            <p class="mt-2 mb-0" style="color: var(--j2b-warning); font-weight: 600;">
+                                Se encontraron {{ syncData.total_problemas }} discrepancia(s)
+                            </p>
+                        </div>
+
+                        <!-- Alerta global -->
+                        <div v-if="syncData.alerta_global" class="mb-3 p-3" style="background: #fce4ec; border-radius: 8px; border-left: 4px solid var(--j2b-danger);">
+                            <strong style="color: var(--j2b-danger);"><i class="fa fa-warning"></i> Alerta global:</strong>
+                            <span>{{ syncData.alerta_global }}</span>
+                        </div>
+
+                        <!-- TBT Global -->
+                        <div v-if="syncData.tbt_global" class="mb-3">
+                            <small style="color: var(--j2b-gray-500); font-weight: 600; text-transform: uppercase;">TBT Global</small>
+                            <div class="row mt-1">
+                                <div class="col-4">
+                                    <small style="color: var(--j2b-gray-500);">Contratados</small>
+                                    <strong class="d-block">{{ syncData.tbt_global.contratados }}</strong>
+                                </div>
+                                <div class="col-4">
+                                    <small style="color: var(--j2b-gray-500);">Consumidos</small>
+                                    <strong class="d-block">{{ syncData.tbt_global.consumidos }}</strong>
+                                </div>
+                                <div class="col-4">
+                                    <small style="color: var(--j2b-gray-500);">Disponibles</small>
+                                    <strong class="d-block">{{ syncData.tbt_global.disponibles }}</strong>
+                                </div>
+                            </div>
+                        </div>
+                        <div v-if="syncData.tbt_error" class="mb-3 p-2" style="background: #fff3e0; border-radius: 6px;">
+                            <small style="color: var(--j2b-warning);"><i class="fa fa-warning"></i> No se pudo consultar TBT: {{ syncData.tbt_error }}</small>
+                        </div>
+
+                        <!-- Tabla por tienda -->
+                        <div class="j2b-table-responsive">
+                            <table class="j2b-table" style="font-size: 13px;">
+                                <thead>
+                                    <tr>
+                                        <th>Tienda</th>
+                                        <th>RFC</th>
+                                        <th class="text-center">Contratados</th>
+                                        <th class="text-center">Asignados</th>
+                                        <th class="text-center">Usados</th>
+                                        <th class="text-center">Facturas</th>
+                                        <th class="text-center">Estado</th>
+                                        <th>Accion</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="t in syncData.tiendas" :key="t.shop_id">
+                                        <td><strong>{{ t.shop_name }}</strong></td>
+                                        <td><small>{{ t.rfc }}</small></td>
+                                        <td class="text-center">{{ t.contratados_shop }}</td>
+                                        <td class="text-center" :style="t.contratados_shop !== t.asignados_emisor ? 'color: var(--j2b-danger); font-weight: 700;' : ''">
+                                            {{ t.asignados_emisor }}
+                                        </td>
+                                        <td class="text-center" :style="t.usados_emisor !== t.facturas_vigentes ? 'color: var(--j2b-danger); font-weight: 700;' : ''">
+                                            {{ t.usados_emisor }}
+                                        </td>
+                                        <td class="text-center">{{ t.facturas_vigentes }}</td>
+                                        <td class="text-center">
+                                            <span v-if="t.ok" class="j2b-badge j2b-badge-success"><i class="fa fa-check"></i></span>
+                                            <span v-else class="j2b-badge j2b-badge-danger"><i class="fa fa-warning"></i></span>
+                                        </td>
+                                        <td>
+                                            <div v-if="!t.ok" class="d-flex flex-column gap-1">
+                                                <button v-for="p in t.problemas" :key="p.tipo"
+                                                    class="j2b-btn j2b-btn-sm j2b-btn-outline" style="font-size: 11px; white-space: nowrap;"
+                                                    @click="corregirTimbre(t.shop_id, p.tipo, t.shop_name)"
+                                                    :disabled="corrigiendo">
+                                                    <i class="fa" :class="corrigiendo ? 'fa-spinner fa-spin' : 'fa-wrench'"></i>
+                                                    Corregir {{ p.tipo }}
+                                                </button>
+                                            </div>
+                                            <span v-else style="color: var(--j2b-gray-400); font-size: 12px;">-</span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Leyenda -->
+                        <div class="mt-3 p-2" style="background: var(--j2b-gray-100, #f5f5f5); border-radius: 6px; font-size: 12px; color: var(--j2b-gray-500);">
+                            <strong>Contratados</strong> = timbres asignados en shops |
+                            <strong>Asignados</strong> = registro en cfdi_emisores |
+                            <strong>Usados</strong> = contador emisor |
+                            <strong>Facturas</strong> = facturas vigentes reales
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer j2b-modal-footer">
+                    <button type="button" class="j2b-btn j2b-btn-secondary" @click="cerrarModalSync()">
+                        <i class="fa fa-times"></i> Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
   </div>
 </template>
 
@@ -350,6 +488,12 @@ export default {
             shopAsignar: null,
             cantidadTimbres: null,
             asignando: false,
+
+            // Sincronización
+            modalSync: 0,
+            syncLoading: false,
+            syncData: null,
+            corrigiendo: false,
         }
     },
     computed: {
@@ -482,6 +626,64 @@ export default {
                     msg = error.response.data.message;
                 }
                 Swal.fire('Error', msg, 'error');
+            });
+        },
+        sincronizar() {
+            let me = this;
+            me.syncLoading = true;
+            me.syncData = null;
+            me.modalSync = 1;
+
+            axios.get('/superadmin/cfdi/sincronizar').then(function(response) {
+                me.syncLoading = false;
+                if (response.data.ok) {
+                    me.syncData = response.data;
+                }
+            }).catch(function(error) {
+                me.syncLoading = false;
+                console.log(error);
+                Swal.fire('Error', 'No se pudo ejecutar la sincronizacion', 'error');
+                me.modalSync = 0;
+            });
+        },
+        cerrarModalSync() {
+            this.modalSync = 0;
+            this.syncData = null;
+        },
+        corregirTimbre(shopId, tipo, shopName) {
+            let me = this;
+
+            Swal.fire({
+                title: 'Corregir ' + tipo,
+                text: 'Se corregira el desface de "' + tipo + '" para ' + shopName + '. ¿Continuar?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Si, corregir',
+                cancelButtonText: 'Cancelar',
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    me.corrigiendo = true;
+                    axios.post('/superadmin/cfdi/sincronizar/corregir', {
+                        shop_id: shopId,
+                        tipo: tipo,
+                    }).then(function(response) {
+                        me.corrigiendo = false;
+                        if (response.data.ok) {
+                            Swal.fire('Corregido', response.data.message, 'success');
+                            me.sincronizar();
+                            me.loadShops(me.pagination.current_page);
+                            me.loadTimbresGlobales();
+                        }
+                    }).catch(function(error) {
+                        me.corrigiendo = false;
+                        console.log(error);
+                        let msg = 'Error al corregir';
+                        if (error.response && error.response.data && error.response.data.message) {
+                            msg = error.response.data.message;
+                        }
+                        Swal.fire('Error', msg, 'error');
+                    });
+                }
             });
         },
     },

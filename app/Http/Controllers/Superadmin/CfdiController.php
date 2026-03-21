@@ -274,6 +274,148 @@ class CfdiController extends Controller
     }
 
     /**
+     * Sincronizar: cruce interno BD + comparación global con TBT
+     */
+    public function sincronizarTimbres()
+    {
+        // 1. Obtener datos globales de TBT
+        $tbtGlobal = null;
+        $tbtError = null;
+        try {
+            $service = new HubCfdiService();
+            $result = $service->obtenerTimbres();
+            if ($result['success']) {
+                $body = $result['data']['body'] ?? $result['data'];
+                $tbtGlobal = [
+                    'contratados' => $body['TimbresContratados'] ?? 0,
+                    'consumidos' => $body['TimbresConsumidos'] ?? 0,
+                    'disponibles' => $body['TimbresDisponibles'] ?? 0,
+                ];
+            } else {
+                $tbtError = $result['error'] ?? 'Error al consultar TBT';
+            }
+        } catch (\Exception $e) {
+            $tbtError = $e->getMessage();
+        }
+
+        // 2. Obtener tiendas con emisor
+        $shops = Shop::with('cfdiEmisor')
+            ->whereHas('cfdiEmisor')
+            ->get();
+
+        $tiendas = [];
+        $totalProblemas = 0;
+
+        foreach ($shops as $shop) {
+            $emisor = $shop->cfdiEmisor;
+            $facturasVigentes = CfdiInvoice::where('shop_id', $shop->id)
+                ->where('status', 'vigente')->count();
+
+            $problemas = [];
+
+            // Check 1: shops.cfdi_timbres_contratados vs cfdi_emisores.timbres_asignados
+            if ((int) $shop->cfdi_timbres_contratados !== (int) $emisor->timbres_asignados) {
+                $problemas[] = [
+                    'tipo' => 'asignados',
+                    'desc' => "shops.cfdi_timbres_contratados ({$shop->cfdi_timbres_contratados}) ≠ cfdi_emisores.timbres_asignados ({$emisor->timbres_asignados})",
+                    'valor_shop' => (int) $shop->cfdi_timbres_contratados,
+                    'valor_emisor' => (int) $emisor->timbres_asignados,
+                ];
+            }
+
+            // Check 2: cfdi_emisores.timbres_usados vs count(facturas vigentes)
+            if ((int) $emisor->timbres_usados !== $facturasVigentes) {
+                $problemas[] = [
+                    'tipo' => 'usados',
+                    'desc' => "cfdi_emisores.timbres_usados ({$emisor->timbres_usados}) ≠ facturas vigentes ({$facturasVigentes})",
+                    'valor_emisor' => (int) $emisor->timbres_usados,
+                    'valor_facturas' => $facturasVigentes,
+                ];
+            }
+
+            $totalProblemas += count($problemas);
+
+            $tiendas[] = [
+                'shop_id' => $shop->id,
+                'shop_name' => $shop->name,
+                'rfc' => $emisor->rfc,
+                'contratados_shop' => (int) $shop->cfdi_timbres_contratados,
+                'asignados_emisor' => (int) $emisor->timbres_asignados,
+                'usados_emisor' => (int) $emisor->timbres_usados,
+                'facturas_vigentes' => $facturasVigentes,
+                'ok' => empty($problemas),
+                'problemas' => $problemas,
+            ];
+        }
+
+        // 3. Check global: asignados internos no deben exceder contratados TBT
+        $sumAsignados = (int) Shop::sum('cfdi_timbres_contratados');
+        $alertaGlobal = null;
+        if ($tbtGlobal && $sumAsignados > $tbtGlobal['contratados']) {
+            $alertaGlobal = "Total asignado a tiendas ({$sumAsignados}) excede los contratados en TBT ({$tbtGlobal['contratados']})";
+            $totalProblemas++;
+        }
+
+        return response()->json([
+            'ok' => true,
+            'tbt_global' => $tbtGlobal,
+            'tbt_error' => $tbtError,
+            'alerta_global' => $alertaGlobal,
+            'tiendas' => $tiendas,
+            'total_problemas' => $totalProblemas,
+        ]);
+    }
+
+    /**
+     * Corregir discrepancia de una tienda específica
+     */
+    public function corregirTimbres(Request $request)
+    {
+        $request->validate([
+            'shop_id' => 'required|exists:shops,id',
+            'tipo' => 'required|in:asignados,usados',
+        ]);
+
+        $shop = Shop::with('cfdiEmisor')->findOrFail($request->shop_id);
+
+        if (!$shop->cfdiEmisor) {
+            return response()->json(['ok' => false, 'message' => 'La tienda no tiene emisor configurado.'], 422);
+        }
+
+        $emisor = $shop->cfdiEmisor;
+        $mensaje = '';
+
+        if ($request->tipo === 'asignados') {
+            // Fuente de verdad: shops.cfdi_timbres_contratados (lo que el superadmin asignó)
+            $antes = $emisor->timbres_asignados;
+            $emisor->timbres_asignados = $shop->cfdi_timbres_contratados;
+            $emisor->save();
+            $mensaje = "timbres_asignados: {$antes} → {$shop->cfdi_timbres_contratados}";
+        }
+
+        if ($request->tipo === 'usados') {
+            // Fuente de verdad: count de facturas vigentes
+            $facturasVigentes = CfdiInvoice::where('shop_id', $shop->id)
+                ->where('status', 'vigente')->count();
+            $antes = $emisor->timbres_usados;
+            $emisor->timbres_usados = $facturasVigentes;
+            $emisor->save();
+            $mensaje = "timbres_usados: {$antes} → {$facturasVigentes}";
+        }
+
+        Log::info('Corrección de timbres por sincronización', [
+            'shop_id' => $shop->id,
+            'tipo' => $request->tipo,
+            'correccion' => $mensaje,
+        ]);
+
+        return response()->json([
+            'ok' => true,
+            'message' => "Corregido {$shop->name}: {$mensaje}",
+        ]);
+    }
+
+    /**
      * Timbres globales desde HUB CFDI
      */
     public function getTimbresGlobales()

@@ -47,4 +47,9 @@ class Task extends Model
     public function products(){
         return $this->hasMany(TaskProduct::class);
     }
+
+    // Relación con checklist items
+    public function checklistItems(){
+        return $this->hasMany(TaskChecklistItem::class)->orderBy('sort_order');
+    }
 }

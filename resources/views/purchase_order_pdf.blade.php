@@ -26,7 +26,9 @@
                     {{ $purchase_order->shop->phone }}</p>
                 </td>
                 <td width="50%" align="right">
-                    <img src="{{ public_path('storage/'.$purchase_order->shop->logo)  }}"  width="50%">
+                    @if(trim($purchase_order->shop->logo) != null)
+                        <img src="{{ public_path('storage/'.$purchase_order->shop->logo) }}" style="max-height: 80px; max-width: 100%; width: auto;">
+                    @endif
                 </td>
             </tr>
             <tr>
@@ -134,6 +136,13 @@
 
                 </tfoot>
             </table>
+
+        <!-- Footer J2Biznes -->
+        <div style="position: fixed; bottom: 10px; left: 0; right: 0; text-align: center;">
+            <p style="font-size: 9px; color: #999; margin: 0;">
+                De <img src="{{ public_path('images/heart-j2b.png') }}" style="width: 12px; height: 12px; vertical-align: middle;"> <a href="{{ $pdfPhraseUrl ?? 'https://j2biznes.com' }}" style="color: #555; text-decoration: none; font-weight: bold;">J2Biznes.com</a> - {{ $pdfPhrase ?? 'Tu negocio, simplificado.' }}
+            </p>
+        </div>
 
     </body>
 </html>

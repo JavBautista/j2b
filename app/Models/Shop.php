@@ -70,6 +70,11 @@ class Shop extends Model
         return $this->hasOne(CfdiEmisor::class);
     }
 
+    public function receiptSettings()
+    {
+        return $this->hasOne(ShopReceiptSetting::class);
+    }
+
     public function planFeatures()
     {
         return $this->hasOneThrough(

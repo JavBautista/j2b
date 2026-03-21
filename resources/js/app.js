@@ -22,6 +22,7 @@ import ContactMessagesComponent from './components/superadmin/ContactMessagesCom
 import LegalDocumentsComponent from './components/superadmin/LegalDocumentsComponent.vue'
 import CfdiManagementComponent from './components/superadmin/CfdiManagementComponent.vue'
 import SuperadminCfdiFacturasComponent from './components/superadmin/CfdiFacturasComponent.vue'
+import PdfPhrasesComponent from './components/superadmin/PdfPhrasesComponent.vue'
 import ExampleComponent from './components/ExampleComponent.vue';
 //Componenetes de tiendas
 import ClientsComponent from './components/shops/ClientsComponent.vue';
@@ -51,6 +52,7 @@ import AiSettingsComponent from './components/admin/AiSettingsComponent.vue';
 import AiIndexingComponent from './components/admin/AiIndexingComponent.vue';
 import CfdiConfigComponent from './components/admin/CfdiConfigComponent.vue';
 import CfdiFacturasComponent from './components/admin/CfdiFacturasComponent.vue';
+import ReceiptSettingsComponent from './components/admin/ReceiptSettingsComponent.vue';
 
 // Componentes Shared (reutilizables)
 import ModalSelectClient from './components/shared/ModalSelectClient.vue';
@@ -72,6 +74,7 @@ app.component('contact-messages-component', ContactMessagesComponent);
 app.component('legal-documents-component', LegalDocumentsComponent);
 app.component('cfdi-management-component', CfdiManagementComponent);
 app.component('superadmin-cfdi-facturas-component', SuperadminCfdiFacturasComponent);
+app.component('pdf-phrases-component', PdfPhrasesComponent);
 //Tiendas
 app.component('shop-template-creator-component', TemplateCreatorComponent);
 app.component('shop-clients-component', ClientsComponent);
@@ -91,6 +94,7 @@ app.component('ai-settings-component', AiSettingsComponent);
 app.component('ai-indexing-component', AiIndexingComponent);
 app.component('cfdi-config-component', CfdiConfigComponent);
 app.component('cfdi-facturas-component', CfdiFacturasComponent);
+app.component('receipt-settings-component', ReceiptSettingsComponent);
 app.component('users-component', AdminUsersComponent);
 app.component('reports-component', ReportsComponent);
 app.component('gastos-component', GastosComponent);

@@ -30,6 +30,7 @@ use App\Http\Controllers\DownloadController;
 use App\Http\Controllers\LegalPageController;
 use App\Http\Controllers\Superadmin\ContactMessagesController;
 use App\Http\Controllers\Superadmin\LegalDocumentsController;
+use App\Http\Controllers\Superadmin\PdfPhraseController;
 use App\Http\Controllers\Superadmin\CfdiController;
 
 
@@ -191,6 +192,8 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::post('/superadmin/cfdi/asignar-timbres-shop', [CfdiController::class, 'asignarTimbresShop']);
         Route::get('/superadmin/cfdi/get', [CfdiController::class, 'get']);
         Route::get('/superadmin/cfdi/timbres-globales', [CfdiController::class, 'getTimbresGlobales']);
+        Route::get('/superadmin/cfdi/sincronizar', [CfdiController::class, 'sincronizarTimbres']);
+        Route::post('/superadmin/cfdi/sincronizar/corregir', [CfdiController::class, 'corregirTimbres']);
         // Facturación CFDI - Facturas Emitidas (todas las tiendas)
         Route::get('/superadmin/cfdi/facturas', [SuperadminPagesController::class, 'cfdiFacturas'])->name('superadmin.cfdi.facturas');
         Route::get('/superadmin/cfdi/facturas/get', [CfdiController::class, 'getFacturas']);
@@ -202,6 +205,15 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::post('/superadmin/legal-documents/store', [LegalDocumentsController::class, 'store']);
         Route::put('/superadmin/legal-documents/update', [LegalDocumentsController::class, 'update']);
         Route::delete('/superadmin/legal-documents/{id}', [LegalDocumentsController::class, 'destroy']);
+
+        // Frases PDF (Growth Hacking en pie de página)
+        Route::get('/superadmin/pdf-phrases', [PdfPhraseController::class, 'index'])->name('superadmin.pdf-phrases');
+        Route::get('/superadmin/pdf-phrases/get', [PdfPhraseController::class, 'get']);
+        Route::post('/superadmin/pdf-phrases/store', [PdfPhraseController::class, 'store']);
+        Route::post('/superadmin/pdf-phrases/bulk-import', [PdfPhraseController::class, 'bulkImport']);
+        Route::put('/superadmin/pdf-phrases/update', [PdfPhraseController::class, 'update']);
+        Route::put('/superadmin/pdf-phrases/toggle-active', [PdfPhraseController::class, 'toggleActive']);
+        Route::delete('/superadmin/pdf-phrases/{id}', [PdfPhraseController::class, 'destroy']);
     }); //./Routes Middleware superadmin
 
     //====================RUTAS AUTH/ADMIN DE TIENDAS====================
@@ -264,6 +276,12 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
             // Configuración Moneda e Impuesto
             Route::get('/admin/configurations/currency', [App\Http\Controllers\Admin\CurrencySettingsController::class, 'index'])->name('admin.configurations.currency');
             Route::put('/admin/configurations/currency/update', [App\Http\Controllers\Admin\CurrencySettingsController::class, 'update'])->name('admin.configurations.currency.update');
+
+            // Recibos PDF
+            Route::get('/admin/configurations/receipt-settings', [App\Http\Controllers\Admin\ReceiptSettingsController::class, 'index'])->name('admin.configurations.receipt_settings');
+            Route::get('/admin/configurations/receipt-settings/get', [App\Http\Controllers\Admin\ReceiptSettingsController::class, 'get']);
+            Route::post('/admin/configurations/receipt-settings/save', [App\Http\Controllers\Admin\ReceiptSettingsController::class, 'save']);
+            Route::get('/admin/configurations/receipt-settings/qr-preview', [App\Http\Controllers\Admin\ReceiptSettingsController::class, 'qrPreview']);
         }); // ./Configuraciones (full.admin)
 
         // Facturación CFDI - Configuración Emisor
@@ -456,6 +474,14 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::delete('/admin/tasks/{taskId}/products/{taskProductId}', [TasksController::class, 'removeTaskProduct'])->name('admin.tasks.remove-product');
         Route::get('/admin/tasks/{taskId}/products-for-receipt', [TasksController::class, 'getUsedProductsForReceipt'])->name('admin.tasks.products-for-receipt');
         Route::get('/admin/tasks-with-pending-products', [TasksController::class, 'getTasksWithPendingProducts'])->name('admin.tasks.with-pending-products');
+
+        // Checklist de tareas
+        Route::get('/admin/tasks/checklist/search-catalog', [TasksController::class, 'searchChecklistCatalog'])->name('admin.tasks.checklist.search');
+        Route::post('/admin/tasks/{id}/checklist', [TasksController::class, 'addChecklistItem'])->name('admin.tasks.checklist.add');
+        Route::put('/admin/tasks/{id}/checklist/reorder', [TasksController::class, 'reorderChecklist'])->name('admin.tasks.checklist.reorder');
+        Route::put('/admin/tasks/{id}/checklist/{itemId}', [TasksController::class, 'updateChecklistItem'])->name('admin.tasks.checklist.update');
+        Route::put('/admin/tasks/{id}/checklist/{itemId}/toggle', [TasksController::class, 'toggleChecklistItem'])->name('admin.tasks.checklist.toggle');
+        Route::delete('/admin/tasks/{id}/checklist/{itemId}', [TasksController::class, 'deleteChecklistItem'])->name('admin.tasks.checklist.delete');
 
         // Rutas para Productos (CRUD admin)
         Route::get('/admin/products', [\App\Http\Controllers\Admin\ProductsController::class, 'index'])->name('admin.products');

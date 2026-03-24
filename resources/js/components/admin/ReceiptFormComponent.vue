@@ -9,122 +9,107 @@
         </button>
     </div>
 
-    <!-- Toggle Nota/Cotización -->
-    <div class="card mb-3">
-        <div class="card-body py-2">
-            <div class="d-flex align-items-center justify-content-between">
-                <div class="form-check form-switch">
-                    <input
-                        class="form-check-input"
-                        type="checkbox"
-                        id="toggleCotizacion"
-                        v-model="cotizacion"
-                        @change="onChangeCotizacion"
-                        :disabled="isViewMode"
-                    >
-                    <label class="form-check-label" for="toggleCotizacion">
-                        <span v-if="cotizacion" class="badge bg-warning text-dark">
-                            <i class="fa fa-file-alt me-1"></i>Cotización
-                        </span>
-                        <span v-else class="badge bg-success">
-                            <i class="fa fa-file-invoice-dollar me-1"></i>Nota de Venta
-                        </span>
-                    </label>
-                </div>
-                <div v-if="!cotizacion && !isViewMode" class="form-check form-switch">
-                    <input
-                        class="form-check-input"
-                        type="checkbox"
-                        id="toggleSinInventario"
-                        v-model="sinInventario"
-                    >
-                    <label class="form-check-label small text-muted" for="toggleSinInventario">
-                        Sin validar inventario
-                    </label>
-                </div>
+    <!-- Barra superior compacta: Toggles + Tarea -->
+    <div class="toolbar-compact mb-2">
+        <div class="d-flex align-items-center flex-wrap gap-2">
+            <!-- Toggle Nota/Cotización -->
+            <div class="form-check form-switch mb-0 me-3">
+                <input
+                    class="form-check-input"
+                    type="checkbox"
+                    id="toggleCotizacion"
+                    v-model="cotizacion"
+                    @change="onChangeCotizacion"
+                    :disabled="isViewMode"
+                >
+                <label class="form-check-label" for="toggleCotizacion">
+                    <span v-if="cotizacion" class="badge bg-warning text-dark">
+                        <i class="fa fa-file-alt me-1"></i>Cotización
+                    </span>
+                    <span v-else class="badge bg-success">
+                        <i class="fa fa-file-invoice-dollar me-1"></i>Nota de Venta
+                    </span>
+                </label>
             </div>
-            <!-- Warning al cambiar de nota a cotización en modo edición -->
-            <div v-if="isEditMode && showCotizacionWarning" class="alert alert-danger mt-2 mb-0 small">
-                <i class="fa fa-exclamation-triangle me-1"></i>
-                Al cambiar este valor se reiniciarán los datos relacionados a la nota o cotización
+            <!-- Toggle Sin inventario (solo cotizaciones, paridad con Ionic) -->
+            <div v-if="cotizacion && !isViewMode" class="form-check form-switch mb-0">
+                <input
+                    class="form-check-input"
+                    type="checkbox"
+                    id="toggleSinInventario"
+                    v-model="sinInventario"
+                >
+                <label class="form-check-label small text-muted" for="toggleSinInventario">
+                    Sin validar inventario
+                </label>
             </div>
+            <!-- Separador visual -->
+            <div class="vr d-none d-sm-block" style="height: 20px;"></div>
+            <!-- Tarea vinculada o botón cargar -->
+            <div v-if="fromTaskId" class="d-flex align-items-center text-info">
+                <i class="fa fa-clipboard-check me-1"></i>
+                <small>Tarea <strong>#{{ fromTaskId }}</strong></small>
+                <button v-if="isCreateMode" class="btn btn-outline-danger btn-sm ms-2 py-0 px-1" @click="clearTaskData" title="Desvincular tarea">
+                    <i class="fa fa-unlink" style="font-size: 0.7rem;"></i>
+                </button>
+            </div>
+            <button v-else-if="isCreateMode" class="btn btn-outline-info btn-sm py-0" @click="openTaskModal">
+                <i class="fa fa-clipboard-list me-1"></i>Desde Tarea
+            </button>
+        </div>
+        <!-- Warning al cambiar de nota a cotización en modo edición -->
+        <div v-if="isEditMode && showCotizacionWarning" class="alert alert-danger mt-2 mb-0 small py-1">
+            <i class="fa fa-exclamation-triangle me-1"></i>
+            Al cambiar este valor se reiniciarán los datos relacionados a la nota o cotización
         </div>
     </div>
 
     <div class="row">
         <!-- Columna Izquierda: Cliente + Items -->
         <div class="col-lg-8">
-            <!-- Indicador de Tarea Cargada o Botón para cargar -->
-            <div v-if="fromTaskId" class="alert alert-info mb-3 d-flex align-items-center">
-                <i class="fa fa-clipboard-check me-2"></i>
-                <span>Nota vinculada a <strong>Tarea #{{ fromTaskId }}</strong></span>
-                <button v-if="isCreateMode" class="btn btn-sm btn-outline-danger ms-auto" @click="clearTaskData" title="Desvincular tarea">
-                    <i class="fa fa-unlink"></i>
-                </button>
-            </div>
-            <div v-else-if="isCreateMode" class="mb-3">
-                <button class="btn btn-outline-info" @click="openTaskModal">
-                    <i class="fa fa-clipboard-list me-2"></i>Cargar desde Tarea
-                </button>
-            </div>
-
-            <!-- Sección Cliente -->
-            <div class="card mb-3">
-                <div class="card-header bg-primary text-white py-2">
-                    <i class="fa fa-user me-2"></i>Cliente
-                    <span v-if="clientFromTask" class="badge bg-light text-dark ms-2">
-                        <i class="fa fa-lock me-1"></i>De tarea
-                    </span>
+            <!-- Sección Cliente compacta -->
+            <div class="client-section mb-2">
+                <div v-if="!client" class="client-bar client-bar-empty" @click="isViewMode ? null : showModalCliente = true" :class="{ 'clickable': !isViewMode }">
+                    <i class="fa fa-user-plus text-primary me-2"></i>
+                    <span class="text-primary fw-500">Seleccionar Cliente</span>
+                    <span v-if="clientFromTask" class="badge bg-secondary ms-2"><i class="fa fa-lock me-1"></i>De tarea</span>
                 </div>
-                <div class="card-body">
-                    <div v-if="!client" class="text-center py-3">
-                        <button class="btn btn-outline-primary btn-lg" @click="showModalCliente = true" :disabled="isViewMode">
-                            <i class="fa fa-user-plus me-2"></i>Seleccionar Cliente
+                <div v-else class="client-bar client-bar-filled">
+                    <div class="client-avatar-sm me-2">
+                        <i class="fa fa-user"></i>
+                    </div>
+                    <div class="flex-grow-1 min-width-0">
+                        <span class="fw-600">{{ client.name }}</span>
+                        <small class="text-muted ms-2" v-if="client.movil">
+                            <i class="fa fa-phone me-1"></i>{{ client.movil }}
+                        </small>
+                        <span class="badge ms-2" :class="getLevelBadgeClass(client.level)">
+                            Nv{{ client.level || 1 }}
+                        </span>
+                        <span v-if="clientFromTask" class="badge bg-secondary ms-1"><i class="fa fa-lock me-1"></i>Tarea</span>
+                    </div>
+                    <template v-if="!clientFromTask">
+                        <button v-if="!isViewMode" class="btn btn-outline-secondary btn-sm py-0 me-1" @click="showModalCliente = true" title="Cambiar cliente">
+                            <i class="fa fa-exchange"></i>
                         </button>
-                    </div>
-                    <div v-else class="client-selected">
-                        <div class="d-flex align-items-center">
-                            <div class="client-avatar me-3">
-                                <i class="fa fa-user"></i>
-                            </div>
-                            <div class="flex-grow-1">
-                                <h5 class="mb-1">{{ client.name }}</h5>
-                                <small class="text-muted">
-                                    <span v-if="client.movil" class="me-3">
-                                        <i class="fa fa-phone me-1"></i>{{ client.movil }}
-                                    </span>
-                                    <span class="badge" :class="getLevelBadgeClass(client.level)">
-                                        Nivel {{ client.level || 1 }}
-                                    </span>
-                                </small>
-                            </div>
-                            <!-- Ocultar botones si el cliente viene de tarea -->
-                            <template v-if="!clientFromTask">
-                                <button v-if="!isViewMode" class="btn btn-outline-secondary btn-sm me-2" @click="showModalCliente = true" title="Cambiar cliente">
-                                    <i class="fa fa-exchange"></i>
-                                </button>
-                                <button v-if="!isViewMode" class="btn btn-outline-danger btn-sm" @click="removeClient">
-                                    <i class="fa fa-times"></i>
-                                </button>
-                            </template>
-                        </div>
-                    </div>
+                        <button v-if="!isViewMode" class="btn btn-outline-danger btn-sm py-0" @click="removeClient">
+                            <i class="fa fa-times"></i>
+                        </button>
+                    </template>
                 </div>
             </div>
 
-            <!-- Campos Extra Dinámicos -->
-            <div v-if="extraFields.length > 0" class="card mb-3">
-                <div class="card-header bg-light py-2">
-                    <i class="fa fa-list-alt me-2"></i>Información Adicional
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div
-                            v-for="field in extraFields"
-                            :key="field.id"
-                            class="col-md-6 mb-2"
-                        >
-                            <label class="form-label small">{{ field.field_name }}</label>
+            <!-- Campos Extra Dinámicos (inline si pocos) -->
+            <div v-if="extraFields.length > 0" class="extra-fields-bar mb-2">
+                <div class="row g-2">
+                    <div
+                        v-for="field in extraFields"
+                        :key="field.id"
+                        class="col-auto"
+                        style="min-width: 150px; flex: 1;"
+                    >
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text py-0 small">{{ field.field_name }}</span>
                             <input
                                 type="text"
                                 class="form-control form-control-sm"
@@ -137,36 +122,26 @@
                 </div>
             </div>
 
-            <!-- Botones Agregar Items (solo si no es viewMode) -->
-            <div v-if="!isViewMode" class="card mb-3">
-                <div class="card-header bg-light py-2">
-                    <i class="fa fa-plus-circle me-2"></i>Agregar Items
-                </div>
-                <div class="card-body py-2">
-                    <div class="btn-group w-100" role="group">
-                        <button class="btn btn-success" @click="showModalProducto = true" :disabled="!client">
-                            <i class="fa fa-box me-1"></i>Producto
+            <!-- Lista de Items con botones de agregar integrados en el header -->
+            <div class="card mb-3">
+                <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center">
+                    <span><i class="fa fa-list me-2"></i>Detalle <span class="badge bg-secondary ms-1">{{ items.length }}</span></span>
+                    <div v-if="!isViewMode" class="btn-group btn-group-sm" role="group">
+                        <button class="btn btn-success btn-sm py-0" @click="showModalProducto = true" :disabled="!client" title="Agregar Producto">
+                            <i class="fa fa-cube me-1"></i>Producto
                         </button>
-                        <button class="btn btn-info" @click="showModalServicio = true" :disabled="!client">
-                            <i class="fa fa-concierge-bell me-1"></i>Servicio
+                        <button class="btn btn-info btn-sm py-0" @click="showModalServicio = true" :disabled="!client" title="Agregar Servicio">
+                            <i class="fa fa-wrench me-1"></i>Servicio
                         </button>
-                        <button class="btn btn-warning" @click="showModalEquipo = true" :disabled="!client">
+                        <button class="btn btn-warning btn-sm py-0" @click="showModalEquipo = true" :disabled="!client" title="Agregar Equipo">
                             <i class="fa fa-print me-1"></i>Equipo
                         </button>
                     </div>
                 </div>
-            </div>
-
-            <!-- Lista de Items -->
-            <div class="card mb-3">
-                <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center">
-                    <span><i class="fa fa-list me-2"></i>Detalle de la Nota</span>
-                    <span class="badge bg-secondary">{{ items.length }} item(s)</span>
-                </div>
                 <div class="card-body">
-                    <div v-if="items.length === 0" class="text-center py-5 text-muted">
-                        <i class="fa fa-shopping-cart fa-3x mb-3"></i>
-                        <p>No hay items agregados</p>
+                    <div v-if="items.length === 0" class="text-center py-3 text-muted">
+                        <i class="fa fa-shopping-cart fa-2x mb-2"></i>
+                        <p class="mb-0 small">No hay items agregados</p>
                     </div>
 
                     <!-- Items como Cards -->
@@ -319,33 +294,26 @@
                 </div>
             </div>
 
-            <!-- Descripción y Observaciones -->
-            <div class="card mb-3">
-                <div class="card-header bg-light py-2">
-                    <i class="fa fa-comment me-2"></i>Notas
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <label class="form-label small">Descripción</label>
-                            <textarea
-                                class="form-control"
-                                v-model="receipt.description"
-                                rows="2"
-                                placeholder="Descripción de la nota..."
-                                :disabled="isViewMode"
-                            ></textarea>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label small">Observaciones</label>
-                            <textarea
-                                class="form-control"
-                                v-model="receipt.observation"
-                                rows="2"
-                                placeholder="Observaciones adicionales..."
-                                :disabled="isViewMode"
-                            ></textarea>
-                        </div>
+            <!-- Descripción y Observaciones (compacto) -->
+            <div class="notes-section mb-3">
+                <div class="row g-2">
+                    <div class="col-md-6">
+                        <textarea
+                            class="form-control form-control-sm"
+                            v-model="receipt.description"
+                            rows="2"
+                            placeholder="Descripción de la nota..."
+                            :disabled="isViewMode"
+                        ></textarea>
+                    </div>
+                    <div class="col-md-6">
+                        <textarea
+                            class="form-control form-control-sm"
+                            v-model="receipt.observation"
+                            rows="2"
+                            placeholder="Observaciones adicionales..."
+                            :disabled="isViewMode"
+                        ></textarea>
                     </div>
                 </div>
             </div>
@@ -1543,14 +1511,20 @@ export default {
 
             // Actualizar receipt
             this.receipt.subtotal = this.subtotal;
-            this.receipt.discount = this.descuentoMonto;
+            this.receipt.discount = this.descuentoGeneral;
             this.receipt.discount_concept = this.descuentoGeneralTipo;
             this.receipt.iva = this.ivaMonto;
             this.receipt.total = this.total;
         },
 
         // ==================== CAMBIO COTIZACIÓN ====================
+        getItemsSinStock() {
+            return this.items.filter(item => item.type === 'product' && !item.from_task_product_id && item.stock !== undefined && item.qty > item.stock);
+        },
         onChangeCotizacion() {
+            // Resetear sinInventario al cambiar tipo (paridad con Ionic)
+            this.sinInventario = false;
+
             if (this.isEditMode && this.cotizacion !== this.cotizacionOriginal) {
                 this.showCotizacionWarning = true;
                 // Reiniciar datos relacionados
@@ -1560,6 +1534,20 @@ export default {
                 this.cotizacionVencimiento = this.getDefaultQuotationDate();
             } else {
                 this.showCotizacionWarning = false;
+            }
+
+            // Si cambia de cotización a nota de venta, validar stock
+            if (!this.cotizacion && this.items.length > 0) {
+                const sinStock = this.getItemsSinStock();
+                if (sinStock.length > 0) {
+                    const lista = sinStock.map(i => `• ${i.name} (stock: ${i.stock}, cant: ${i.qty})`).join('\n');
+                    Swal.fire({
+                        title: 'Productos sin stock suficiente',
+                        html: `<p>Los siguientes productos no tienen stock suficiente para una nota de venta:</p><pre style="text-align:left;font-size:0.85rem;">${sinStock.map(i => `• ${i.name} (stock: ${i.stock}, cant: ${i.qty})`).join('\n')}</pre><p class="text-muted small">Elimínelos o ajuste las cantidades antes de guardar.</p>`,
+                        icon: 'warning',
+                        confirmButtonText: 'Entendido'
+                    });
+                }
             }
         },
 
@@ -1581,6 +1569,20 @@ export default {
 
         async guardarNota() {
             if (!this.puedeGuardar) return;
+
+            // Validar stock si es nota de venta (no cotización, no sinInventario)
+            if (!this.cotizacion && !this.sinInventario) {
+                const sinStock = this.getItemsSinStock();
+                if (sinStock.length > 0) {
+                    Swal.fire({
+                        title: 'No se puede guardar',
+                        html: `<p>Los siguientes productos no tienen stock suficiente:</p><pre style="text-align:left;font-size:0.85rem;">${sinStock.map(i => `• ${i.name} (stock: ${i.stock}, cant: ${i.qty})`).join('\n')}</pre><p class="text-muted small">Elimínelos o ajuste las cantidades.</p>`,
+                        icon: 'error',
+                        confirmButtonText: 'Entendido'
+                    });
+                    return;
+                }
+            }
 
             // Preparar datos
             this.receipt.quotation = this.cotizacion ? 1 : 0;
@@ -1883,6 +1885,18 @@ export default {
         },
 
         async convertirAVenta() {
+            // Validar stock antes de convertir
+            const sinStock = this.getItemsSinStock();
+            if (sinStock.length > 0) {
+                Swal.fire({
+                    title: 'No se puede convertir',
+                    html: `<p>Los siguientes productos no tienen stock suficiente:</p><pre style="text-align:left;font-size:0.85rem;">${sinStock.map(i => `• ${i.name} (stock: ${i.stock}, cant: ${i.qty})`).join('\n')}</pre><p class="text-muted small">Ajuste las cantidades o elimine los productos sin stock antes de convertir.</p>`,
+                    icon: 'error',
+                    confirmButtonText: 'Entendido'
+                });
+                return;
+            }
+
             const result = await Swal.fire({
                 title: 'Cambiar a Nota de Venta',
                 text: '¿Realmente desea cambiar a nota de venta? Se descontará el stock de su inventario.',
@@ -1987,29 +2001,91 @@ export default {
     margin: 0 auto;
 }
 
-.client-avatar {
-    width: 50px;
-    height: 50px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 50%;
+/* ============ TOOLBAR COMPACTA ============ */
+.toolbar-compact {
+    background: var(--j2b-gray-100);
+    border: 1px solid var(--j2b-gray-200);
+    border-radius: var(--j2b-radius-md);
+    padding: 0.4rem 0.75rem;
+}
+
+/* ============ CLIENTE COMPACTO ============ */
+.client-bar {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--j2b-gray-200);
+    border-radius: var(--j2b-radius-md);
+    padding: 0.5rem 0.75rem;
+    background: #fff;
+    min-height: 42px;
+    transition: var(--j2b-transition-fast);
+}
+.client-bar-empty.clickable {
+    cursor: pointer;
+    border-style: dashed;
+    border-color: var(--j2b-info);
+    background: rgba(0, 217, 245, 0.05);
+}
+.client-bar-empty.clickable:hover {
+    background: rgba(0, 217, 245, 0.1);
+    border-color: var(--j2b-primary);
+}
+.client-avatar-sm {
+    width: 32px;
+    height: 32px;
+    background: var(--j2b-gradient-primary);
+    border-radius: var(--j2b-radius-full);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: white;
+    color: var(--j2b-dark);
+    font-size: 0.85rem;
+    flex-shrink: 0;
+}
+.fw-500 { font-weight: 500; }
+.fw-600 { font-weight: 600; }
+.min-width-0 { min-width: 0; }
+
+/* ============ EXTRA FIELDS INLINE ============ */
+.extra-fields-bar {
+    background: var(--j2b-gray-100);
+    border: 1px solid var(--j2b-gray-200);
+    border-radius: var(--j2b-radius-md);
+    padding: 0.4rem 0.5rem;
+}
+
+/* ============ NOTES SECTION ============ */
+.notes-section {
+    background: var(--j2b-gray-100);
+    border: 1px solid var(--j2b-gray-200);
+    border-radius: var(--j2b-radius-md);
+    padding: 0.5rem;
+}
+
+/* Legacy support */
+.client-avatar {
+    width: 50px;
+    height: 50px;
+    background: var(--j2b-gradient-primary);
+    border-radius: var(--j2b-radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--j2b-dark);
     font-size: 1.5rem;
 }
 
 .client-selected {
     padding: 0.5rem;
-    background: #f8f9fa;
-    border-radius: 8px;
+    background: var(--j2b-gray-100);
+    border-radius: var(--j2b-radius-md);
 }
 
 .credit-options {
-    border-left: 3px solid #0dcaf0;
-    background: #f8f9fa;
+    border-left: 3px solid var(--j2b-info);
+    background: var(--j2b-gray-100);
     padding: 0.75rem;
-    border-radius: 0 8px 8px 0;
+    border-radius: 0 var(--j2b-radius-md) var(--j2b-radius-md) 0;
 }
 
 /* ============ ITEMS LIST - Card Style ============ */
@@ -2020,15 +2096,15 @@ export default {
 }
 
 .item-card {
-    border: 1px solid #e9ecef;
-    border-radius: 8px;
+    border: 1px solid var(--j2b-gray-200);
+    border-radius: var(--j2b-radius-md);
     padding: 1rem;
     background: #fff;
-    transition: box-shadow 0.2s;
+    transition: var(--j2b-transition-fast);
 }
 
 .item-card:hover {
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    box-shadow: var(--j2b-shadow-sm);
 }
 
 /* Fila Superior: Imagen + Info + Subtotal + Delete */
@@ -2038,7 +2114,7 @@ export default {
     gap: 1rem;
     margin-bottom: 0.75rem;
     padding-bottom: 0.75rem;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid var(--j2b-gray-100);
 }
 
 .item-image {
@@ -2051,8 +2127,8 @@ export default {
     width: 100%;
     height: 100%;
     object-fit: contain;
-    border-radius: 6px;
-    background: #f8f9fa;
+    border-radius: var(--j2b-radius-sm);
+    background: var(--j2b-gray-100);
     cursor: pointer;
 }
 
@@ -2062,9 +2138,9 @@ export default {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #f8f9fa;
-    border-radius: 6px;
-    color: #adb5bd;
+    background: var(--j2b-gray-100);
+    border-radius: var(--j2b-radius-sm);
+    color: var(--j2b-gray-400);
     font-size: 1.5rem;
 }
 
@@ -2074,20 +2150,22 @@ export default {
 }
 
 .item-name {
-    font-weight: 600;
+    font-weight: var(--j2b-font-semibold);
     font-size: 0.95rem;
     margin-bottom: 0.25rem;
     word-break: break-word;
+    color: var(--j2b-dark);
 }
 
 .item-meta {
-    font-size: 0.8rem;
+    font-size: var(--j2b-font-xs);
 }
 
 .item-subtotal {
     flex-shrink: 0;
     font-size: 1.1rem;
-    color: #198754;
+    color: var(--j2b-success);
+    font-weight: var(--j2b-font-semibold);
 }
 
 .item-delete {
@@ -2108,10 +2186,10 @@ export default {
 
 .item-control label {
     display: block;
-    font-size: 0.75rem;
-    color: #6c757d;
+    font-size: var(--j2b-font-xs);
+    color: var(--j2b-gray-500);
     margin-bottom: 0.25rem;
-    font-weight: 500;
+    font-weight: var(--j2b-font-medium);
 }
 
 /* Control de Cantidad */
@@ -2133,11 +2211,11 @@ export default {
 }
 
 .qty-control button:first-child {
-    border-radius: 4px 0 0 4px;
+    border-radius: var(--j2b-radius-sm) 0 0 var(--j2b-radius-sm);
 }
 
 .qty-control button:last-child {
-    border-radius: 0 4px 4px 0;
+    border-radius: 0 var(--j2b-radius-sm) var(--j2b-radius-sm) 0;
 }
 
 /* Control de Descuento */
@@ -2156,8 +2234,8 @@ export default {
 }
 
 .table th {
-    font-size: 0.85rem;
-    font-weight: 600;
+    font-size: var(--j2b-font-sm);
+    font-weight: var(--j2b-font-semibold);
 }
 
 .table td {

@@ -186,6 +186,60 @@ class PurchaseOrdersController extends Controller
     }
 
     /**
+     * Actualizar orden de compra existente (AJAX)
+     */
+    public function update(Request $request, $id)
+    {
+        $user = Auth::user();
+        $shop = $user->shop;
+
+        $purchase_order = PurchaseOrder::where('shop_id', $shop->id)
+            ->where('status', 'CREADA')
+            ->findOrFail($id);
+
+        $po = $request->purchase_order;
+
+        // Formatear fecha de vencimiento
+        $expiration = null;
+        if (!empty($po['expiration'])) {
+            $expiration = Carbon::parse($po['expiration'])->format('Y-m-d');
+        }
+
+        // Actualizar la orden
+        $purchase_order->supplier_id = $po['supplier_id'];
+        $purchase_order->expiration = $expiration;
+        $purchase_order->observation = $po['observation'] ?? '';
+        $purchase_order->payment = $po['payment'] ?? 'EFECTIVO';
+        $purchase_order->total = $po['total'] ?? 0;
+        $purchase_order->payable = $po['payable'] ?? 1;
+        $purchase_order->save();
+
+        // Eliminar detalle anterior y crear nuevo
+        PurchaseOrderDetail::where('purchase_order_id', $purchase_order->id)->delete();
+
+        $details = $request->detail;
+        foreach ($details as $data) {
+            $detail = new PurchaseOrderDetail();
+            $detail->purchase_order_id = $purchase_order->id;
+            $detail->product_id = $data['product_id'];
+            $detail->description = $data['description'];
+            $detail->qty = $data['qty'];
+            $detail->price = $data['price'];
+            $detail->subtotal = $data['subtotal'];
+            $detail->save();
+        }
+
+        // Recargar con relaciones
+        $order = PurchaseOrder::with(['supplier', 'partialPayments', 'shop'])
+            ->findOrFail($purchase_order->id);
+
+        return response()->json([
+            'ok' => true,
+            'order' => $order
+        ]);
+    }
+
+    /**
      * Obtener detalle de orden de compra (AJAX)
      */
     public function getDetail($id)
@@ -248,14 +302,55 @@ class PurchaseOrdersController extends Controller
     /**
      * Cancelar orden de compra
      */
-    public function cancel($id)
+    public function cancel(Request $request, $id)
     {
         $user = Auth::user();
         $shop = $user->shop;
 
         $purchase_order = PurchaseOrder::where('shop_id', $shop->id)
-            ->where('status', 'CREADA')
+            ->whereIn('status', ['CREADA', 'COMPLETA'])
             ->findOrFail($id);
+
+        $force_skip_stock = $request->input('force_skip_stock', false);
+
+        // Si la orden estaba COMPLETA y NO se fuerza skip, revertir stock
+        if($purchase_order->status == 'COMPLETA' && !$force_skip_stock){
+            $detail = PurchaseOrderDetail::where('purchase_order_id', $purchase_order->id)->get();
+            $productos_sin_stock = [];
+
+            // Validar que todos los productos tengan stock suficiente para restar
+            foreach($detail as $data){
+                $product = Product::find($data->product_id);
+                if($product && $product->stock < $data->qty){
+                    $productos_sin_stock[] = [
+                        'name' => $product->name,
+                        'stock_actual' => $product->stock,
+                        'qty_a_restar' => $data->qty
+                    ];
+                }
+            }
+
+            // Si hay productos sin stock suficiente, retornar error 422
+            if(count($productos_sin_stock) > 0){
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'No se puede cancelar: productos sin stock suficiente.',
+                    'productos_sin_stock' => $productos_sin_stock
+                ], 422);
+            }
+
+            // Revertir stock
+            foreach($detail as $data){
+                $product = Product::find($data->product_id);
+                if($product){
+                    $product->stock = $product->stock - $data->qty;
+                    $product->save();
+                }
+            }
+        }
+
+        // Eliminar pagos parciales
+        PurchaseOrderPartialPayments::where('purchase_order_id', $purchase_order->id)->delete();
 
         $purchase_order->status = 'CANCELADA';
         $purchase_order->save();

@@ -2,22 +2,16 @@
 
 @section('content')
     <div class="container-fluid">
-        <div class="row mb-3">
-            <div class="col-md-12 d-flex justify-content-between align-items-center">
-                <h1 class="page-header mb-0">
-                    <i class="fa fa-file-invoice-dollar me-2"></i>Nueva Nota de Venta
-                </h1>
-                <a href="{{ route('admin.receipts') }}" class="btn btn-primary">
-                    <i class="fa fa-arrow-left me-1"></i>Volver a la lista
-                </a>
-            </div>
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h5 class="mb-0" style="color: var(--j2b-dark); font-weight: 600;">
+                <i class="fa fa-file-invoice-dollar me-2" style="color: var(--j2b-primary);"></i>Nueva Nota de Venta
+            </h5>
+            <a href="{{ route('admin.receipts') }}" class="btn btn-outline-secondary btn-sm">
+                <i class="fa fa-arrow-left me-1"></i>Volver
+            </a>
         </div>
-        <div class="row">
-            <div class="col-md-12">
-                <receipt-form-component
-                    :user-limited="{{ auth()->user()->limited ? 'true' : 'false' }}"
-                ></receipt-form-component>
-            </div>
-        </div>
+        <receipt-form-component
+            :user-limited="{{ auth()->user()->limited ? 'true' : 'false' }}"
+        ></receipt-form-component>
     </div>
 @endsection

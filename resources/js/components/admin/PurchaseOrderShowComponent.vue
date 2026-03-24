@@ -243,7 +243,7 @@
                         {{ order.is_invoiced ? 'Quitar Facturado' : 'Marcar Facturado' }}
                     </button>
 
-                    <!-- Acciones solo si está CREADA -->
+                    <!-- Acciones si está CREADA -->
                     <template v-if="order.status === 'CREADA'">
                         <hr>
                         <button class="btn btn-success" @click="completarOrden" :disabled="actualizando">
@@ -252,6 +252,11 @@
                         <a :href="`/admin/purchase-orders/${order.id}/edit`" class="btn btn-warning">
                             <i class="fa fa-edit me-2"></i>Editar
                         </a>
+                    </template>
+
+                    <!-- Cancelar: disponible para CREADA y COMPLETA -->
+                    <template v-if="order.status === 'CREADA' || order.status === 'COMPLETA'">
+                        <hr v-if="order.status === 'COMPLETA'">
                         <button class="btn btn-danger" @click="cancelarOrden" :disabled="actualizando">
                             <i class="fa fa-times-circle me-2"></i>Cancelar Orden
                         </button>
@@ -420,22 +425,43 @@ export default {
             }
         },
 
-        async cancelarOrden() {
-            const result = await Swal.fire({
-                title: 'Cancelar Orden',
-                text: '¿Está seguro de cancelar esta orden de compra?',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: 'Sí, Cancelar',
-                cancelButtonText: 'No',
-                confirmButtonColor: '#dc3545'
-            });
+        async cancelarOrden(forceSkipStock = false) {
+            // Confirmación diferenciada según estado
+            if (!forceSkipStock) {
+                const esCompleta = this.order.status === 'COMPLETA';
+                const confirmConfig = esCompleta ? {
+                    title: 'Cancelar Orden Completada',
+                    html: `<p>Esta orden ya fue <strong>completada</strong>. Al cancelarla:</p>
+                        <ul class="text-start">
+                            <li>Se <strong>revertirá el inventario</strong> de los productos</li>
+                            <li>Se <strong>eliminarán los pagos parciales</strong> registrados</li>
+                        </ul>
+                        <p><strong>¿Desea continuar?</strong></p>`,
+                    icon: 'warning',
+                    confirmButtonText: 'Sí, Cancelar y Revertir',
+                    confirmButtonColor: '#dc3545'
+                } : {
+                    title: 'Cancelar Orden',
+                    text: '¿Está seguro de cancelar esta orden de compra?',
+                    icon: 'warning',
+                    confirmButtonText: 'Sí, Cancelar',
+                    confirmButtonColor: '#dc3545'
+                };
 
-            if (!result.isConfirmed) return;
+                const result = await Swal.fire({
+                    ...confirmConfig,
+                    showCancelButton: true,
+                    cancelButtonText: 'No'
+                });
+
+                if (!result.isConfirmed) return;
+            }
 
             this.actualizando = true;
             try {
-                const response = await axios.post(`/admin/purchase-orders/${this.order.id}/cancel`);
+                const response = await axios.post(`/admin/purchase-orders/${this.order.id}/cancel`, {
+                    force_skip_stock: forceSkipStock
+                });
                 if (response.data.ok) {
                     Swal.fire('Cancelada', 'La orden ha sido cancelada', 'success');
                     this.cargarOrden();
@@ -443,8 +469,33 @@ export default {
                     Swal.fire('Error', response.data.message || 'Error al cancelar', 'error');
                 }
             } catch (error) {
-                console.error('Error:', error);
-                Swal.fire('Error', 'No se pudo cancelar la orden', 'error');
+                // Manejar error 422: stock insuficiente para revertir
+                if (error.response && error.response.status === 422 && error.response.data.productos_sin_stock) {
+                    const productos = error.response.data.productos_sin_stock;
+                    const lista = productos.map(p =>
+                        `<li><strong>${p.name}</strong> — stock actual: ${p.stock_actual}, necesita restar: ${p.qty_a_restar}</li>`
+                    ).join('');
+
+                    const result2 = await Swal.fire({
+                        title: 'Stock insuficiente para revertir',
+                        html: `<p>Los siguientes productos no tienen stock suficiente para revertir:</p>
+                            <ul class="text-start small">${lista}</ul>
+                            <p class="mt-2">¿Desea <strong>cancelar sin revertir inventario</strong>?</p>`,
+                        icon: 'error',
+                        showCancelButton: true,
+                        confirmButtonText: 'Cancelar sin revertir inventario',
+                        cancelButtonText: 'No cancelar',
+                        confirmButtonColor: '#dc3545'
+                    });
+
+                    if (result2.isConfirmed) {
+                        // Reenviar con force_skip_stock=true
+                        await this.cancelarOrden(true);
+                    }
+                } else {
+                    console.error('Error:', error);
+                    Swal.fire('Error', 'No se pudo cancelar la orden', 'error');
+                }
             } finally {
                 this.actualizando = false;
             }

@@ -3,63 +3,43 @@
     <div class="row">
         <!-- Columna Izquierda: Proveedor + Items -->
         <div class="col-lg-8">
-            <!-- Sección Proveedor -->
-            <div class="card mb-3">
-                <div class="card-header bg-success text-white py-2">
-                    <i class="fa fa-truck me-2"></i>Proveedor
+            <!-- Sección Proveedor compacta -->
+            <div class="supplier-section mb-2">
+                <div v-if="!supplier" class="supplier-bar supplier-bar-empty" @click="showModalProveedor = true">
+                    <i class="fa fa-truck me-2" style="color: var(--j2b-primary);"></i>
+                    <span class="fw-500" style="color: var(--j2b-primary);">Seleccionar Proveedor</span>
                 </div>
-                <div class="card-body">
-                    <div v-if="!supplier" class="text-center py-3">
-                        <button class="btn btn-outline-success btn-lg" @click="showModalProveedor = true">
-                            <i class="fa fa-truck me-2"></i>Seleccionar Proveedor
-                        </button>
+                <div v-else class="supplier-bar supplier-bar-filled">
+                    <div class="supplier-avatar-sm me-2">
+                        <i class="fa fa-truck"></i>
                     </div>
-                    <div v-else class="supplier-selected">
-                        <div class="d-flex align-items-center">
-                            <div class="supplier-avatar me-3">
-                                <i class="fa fa-truck"></i>
-                            </div>
-                            <div class="flex-grow-1">
-                                <h5 class="mb-1">{{ supplier.name || supplier.company }}</h5>
-                                <small class="text-muted">
-                                    <span v-if="supplier.company && supplier.name" class="me-3">
-                                        <i class="fa fa-building me-1"></i>{{ supplier.company }}
-                                    </span>
-                                    <span v-if="supplier.phone || supplier.movil" class="me-3">
-                                        <i class="fa fa-phone me-1"></i>{{ supplier.phone || supplier.movil }}
-                                    </span>
-                                </small>
-                            </div>
-                            <button class="btn btn-outline-danger btn-sm" @click="removeSupplier">
-                                <i class="fa fa-times"></i>
-                            </button>
-                        </div>
+                    <div class="flex-grow-1" style="min-width: 0;">
+                        <span class="fw-600">{{ supplier.name || supplier.company }}</span>
+                        <small class="text-muted ms-2" v-if="supplier.company && supplier.name">
+                            <i class="fa fa-building me-1"></i>{{ supplier.company }}
+                        </small>
+                        <small class="text-muted ms-2" v-if="supplier.phone || supplier.movil">
+                            <i class="fa fa-phone me-1"></i>{{ supplier.phone || supplier.movil }}
+                        </small>
                     </div>
-                </div>
-            </div>
-
-            <!-- Botón Agregar Productos -->
-            <div class="card mb-3">
-                <div class="card-header bg-light py-2">
-                    <i class="fa fa-plus-circle me-2"></i>Agregar Productos
-                </div>
-                <div class="card-body py-2">
-                    <button class="btn btn-success w-100" @click="showModalProducto = true" :disabled="!supplier">
-                        <i class="fa fa-box me-1"></i>Agregar Producto
+                    <button class="btn btn-outline-danger btn-sm py-0" @click="removeSupplier">
+                        <i class="fa fa-times"></i>
                     </button>
                 </div>
             </div>
 
-            <!-- Lista de Items -->
+            <!-- Lista de Items con botón agregar integrado en header -->
             <div class="card mb-3">
                 <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center">
-                    <span><i class="fa fa-list me-2"></i>Detalle de la Compra</span>
-                    <span class="badge bg-secondary">{{ items.length }} item(s)</span>
+                    <span><i class="fa fa-list me-2"></i>Detalle <span class="badge bg-secondary ms-1">{{ items.length }}</span></span>
+                    <button class="btn btn-success btn-sm py-0" @click="showModalProducto = true" :disabled="!supplier">
+                        <i class="fa fa-cube me-1"></i>Agregar Producto
+                    </button>
                 </div>
                 <div class="card-body p-0">
-                    <div v-if="items.length === 0" class="text-center py-5 text-muted">
-                        <i class="fa fa-shopping-cart fa-3x mb-3"></i>
-                        <p>No hay productos agregados</p>
+                    <div v-if="items.length === 0" class="text-center py-3 text-muted">
+                        <i class="fa fa-shopping-cart fa-2x mb-2"></i>
+                        <p class="mb-0 small">No hay productos agregados</p>
                     </div>
                     <div v-else class="table-responsive">
                         <table class="table table-hover mb-0">
@@ -139,18 +119,13 @@
             </div>
 
             <!-- Observaciones -->
-            <div class="card mb-3">
-                <div class="card-header bg-light py-2">
-                    <i class="fa fa-comment me-2"></i>Observaciones
-                </div>
-                <div class="card-body">
-                    <textarea
-                        class="form-control"
-                        v-model="order.observation"
-                        rows="2"
-                        placeholder="Observaciones adicionales..."
-                    ></textarea>
-                </div>
+            <div class="notes-section mb-3">
+                <textarea
+                    class="form-control form-control-sm"
+                    v-model="order.observation"
+                    rows="2"
+                    placeholder="Observaciones adicionales..."
+                ></textarea>
             </div>
         </div>
 
@@ -214,7 +189,7 @@
                             <i class="fa fa-spinner fa-spin me-2"></i>Guardando...
                         </span>
                         <span v-else>
-                            <i class="fa fa-save me-2"></i>Guardar Orden de Compra
+                            <i class="fa fa-save me-2"></i>{{ isEditMode ? 'Actualizar Orden' : 'Guardar Orden de Compra' }}
                         </span>
                     </button>
 
@@ -250,10 +225,17 @@
 <script>
 export default {
     name: 'PurchaseOrderCreateComponent',
+    props: {
+        orderData: {
+            type: Object,
+            default: null
+        }
+    },
     data() {
         return {
             // UI
             isGuardando: false,
+            orderId: null,
 
             // Modales
             showModalProveedor: false,
@@ -281,8 +263,16 @@ export default {
         }
     },
     computed: {
+        isEditMode() {
+            return this.orderId !== null;
+        },
         puedeGuardar() {
             return this.supplier && this.items.length > 0;
+        }
+    },
+    mounted() {
+        if (this.orderData) {
+            this.cargarOrdenExistente(this.orderData);
         }
     },
     methods: {
@@ -357,6 +347,37 @@ export default {
             this.order.total = this.total;
         },
 
+        // ==================== CARGAR ORDEN EXISTENTE ====================
+        cargarOrdenExistente(data) {
+            this.orderId = data.id;
+
+            // Proveedor
+            this.supplier = data.supplier;
+            this.order.supplier_id = data.supplier_id;
+
+            // Datos de la orden
+            this.order.payment = data.payment || 'EFECTIVO';
+            this.order.payable = data.payable ?? 1;
+            this.order.observation = data.observation || '';
+            this.order.expiration = data.expiration ? data.expiration.split(' ')[0] : this.getDefaultExpirationDate();
+
+            // Items del detalle
+            if (data.detail && data.detail.length > 0) {
+                this.items = data.detail.map(d => ({
+                    product_id: d.product_id,
+                    name: d.product ? d.product.name : d.description,
+                    description: d.description,
+                    cost: parseFloat(d.price) || 0,
+                    qty: parseInt(d.qty) || 1,
+                    stock: d.product ? d.product.stock : 0,
+                    subtotal: parseFloat(d.subtotal) || 0,
+                    image: d.product ? d.product.image : null
+                }));
+            }
+
+            this.calcularTotal();
+        },
+
         // ==================== GUARDAR ====================
         async guardarOrden() {
             if (!this.puedeGuardar) return;
@@ -378,17 +399,25 @@ export default {
             this.isGuardando = true;
 
             try {
-                const response = await axios.post('/admin/purchase-orders/store', payload);
+                let url, titleOk;
+                if (this.isEditMode) {
+                    url = `/admin/purchase-orders/${this.orderId}/update`;
+                    titleOk = 'Orden Actualizada';
+                } else {
+                    url = '/admin/purchase-orders/store';
+                    titleOk = 'Orden de Compra Guardada';
+                }
+
+                const response = await axios.post(url, payload);
 
                 if (response.data.ok) {
                     await Swal.fire({
                         icon: 'success',
-                        title: 'Orden de Compra Guardada',
+                        title: titleOk,
                         text: `Folio: ${response.data.order.folio}`,
                         confirmButtonText: 'Aceptar'
                     });
 
-                    // Redireccionar a la lista o al detalle
                     window.location.href = '/admin/purchase-orders';
                 } else {
                     Swal.fire('Error', response.data.message || 'Error al guardar', 'error');
@@ -438,35 +467,61 @@ export default {
     margin: 0 auto;
 }
 
-.supplier-avatar {
-    width: 50px;
-    height: 50px;
-    background: linear-gradient(135deg, #198754 0%, #20c997 100%);
-    border-radius: 50%;
+/* ============ PROVEEDOR COMPACTO ============ */
+.supplier-bar {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--j2b-gray-200);
+    border-radius: var(--j2b-radius-md);
+    padding: 0.5rem 0.75rem;
+    background: #fff;
+    min-height: 42px;
+    transition: var(--j2b-transition-fast);
+}
+.supplier-bar-empty {
+    cursor: pointer;
+    border-style: dashed;
+    border-color: var(--j2b-primary);
+    background: rgba(0, 245, 160, 0.05);
+}
+.supplier-bar-empty:hover {
+    background: rgba(0, 245, 160, 0.1);
+}
+.supplier-avatar-sm {
+    width: 32px;
+    height: 32px;
+    background: var(--j2b-gradient-primary);
+    border-radius: var(--j2b-radius-full);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: white;
-    font-size: 1.5rem;
+    color: var(--j2b-dark);
+    font-size: 0.85rem;
+    flex-shrink: 0;
 }
+.fw-500 { font-weight: 500; }
+.fw-600 { font-weight: 600; }
 
-.supplier-selected {
+/* ============ NOTES SECTION ============ */
+.notes-section {
+    background: var(--j2b-gray-100);
+    border: 1px solid var(--j2b-gray-200);
+    border-radius: var(--j2b-radius-md);
     padding: 0.5rem;
-    background: #f8f9fa;
-    border-radius: 8px;
 }
 
+/* ============ TABLA ============ */
 .item-thumbnail {
     width: 40px;
     height: 40px;
     object-fit: contain;
-    border-radius: 4px;
-    background: #f8f9fa;
+    border-radius: var(--j2b-radius-sm);
+    background: var(--j2b-gray-100);
 }
 
 .table th {
-    font-size: 0.85rem;
-    font-weight: 600;
+    font-size: var(--j2b-font-sm);
+    font-weight: var(--j2b-font-semibold);
 }
 
 .table td {

@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderDetail;
-use App\Models\PurchaseOrderPayments;
+use App\Models\PurchaseOrderPartialPayments;
 use App\Services\StockAlertService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -222,8 +222,50 @@ class PurchaseOrderController extends Controller
 
     public function cancel(Request $request){
         $purchase_order = PurchaseOrder::findOrFail($request->purchase_order_id);
-        $purchase_order->status='CANCELADA';
+        $force_skip_stock = $request->input('force_skip_stock', false);
+
+        // Si la orden estaba COMPLETA y NO se fuerza skip, revertir stock
+        if($purchase_order->status == 'COMPLETA' && !$force_skip_stock){
+            $detail = PurchaseOrderDetail::where('purchase_order_id', $purchase_order->id)->get();
+            $productos_sin_stock = [];
+
+            // Validar que todos los productos tengan stock suficiente para restar
+            foreach($detail as $data){
+                $product = Product::find($data->product_id);
+                if($product && $product->stock < $data->qty){
+                    $productos_sin_stock[] = [
+                        'name' => $product->name,
+                        'stock_actual' => $product->stock,
+                        'qty_a_restar' => $data->qty
+                    ];
+                }
+            }
+
+            // Si hay productos sin stock suficiente, retornar error 422
+            if(count($productos_sin_stock) > 0){
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'No se puede cancelar: productos sin stock suficiente.',
+                    'productos_sin_stock' => $productos_sin_stock
+                ], 422);
+            }
+
+            // Revertir stock
+            foreach($detail as $data){
+                $product = Product::find($data->product_id);
+                if($product){
+                    $product->stock = $product->stock - $data->qty;
+                    $product->save();
+                }
+            }
+        }
+
+        // Eliminar pagos parciales
+        PurchaseOrderPartialPayments::where('purchase_order_id', $purchase_order->id)->delete();
+
+        $purchase_order->status = 'CANCELADA';
         $purchase_order->save();
+
         return response()->json([
                 'ok'=>true,
                 'purchase_order' => $purchase_order,

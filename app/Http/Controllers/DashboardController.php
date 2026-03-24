@@ -125,7 +125,13 @@ class DashboardController extends Controller
                     ELSE 0 END) as pendiente_semana,
                     SUM(CASE WHEN created_at BETWEEN ? AND ? THEN
                         CASE WHEN status = 'ATENDIDO' THEN 1 ELSE 0 END
-                    ELSE 0 END) as atendido_semana
+                    ELSE 0 END) as atendido_semana,
+                    SUM(CASE WHEN created_at < ? THEN
+                        CASE WHEN status = 'NUEVO' THEN 1 ELSE 0 END
+                    ELSE 0 END) as nuevo_anteriores,
+                    SUM(CASE WHEN created_at < ? THEN
+                        CASE WHEN status = 'PENDIENTE' THEN 1 ELSE 0 END
+                    ELSE 0 END) as pendiente_anteriores
                 ", [
                     $inicioMes, $finMes,
                     $inicioMes, $finMes,
@@ -133,6 +139,8 @@ class DashboardController extends Controller
                     $inicioSemana, $finSemana,
                     $inicioSemana, $finSemana,
                     $inicioSemana, $finSemana,
+                    $inicioMes,
+                    $inicioMes,
                 ])
                 ->first();
 
@@ -149,11 +157,16 @@ class DashboardController extends Controller
                     'inicio' => $inicioSemana->format('d/m'),
                     'fin' => $finSemana->format('d/m'),
                 ],
+                'anteriores' => [
+                    'nuevo' => (int) ($counts->nuevo_anteriores ?? 0),
+                    'pendiente' => (int) ($counts->pendiente_anteriores ?? 0),
+                ],
             ];
         } catch (\Exception $e) {
             return [
                 'mes' => ['nuevo' => 0, 'pendiente' => 0, 'atendido' => 0],
                 'semana' => ['nuevo' => 0, 'pendiente' => 0, 'atendido' => 0, 'inicio' => '', 'fin' => ''],
+                'anteriores' => ['nuevo' => 0, 'pendiente' => 0],
             ];
         }
     }

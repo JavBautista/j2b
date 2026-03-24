@@ -428,13 +428,15 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::get('/admin/purchase-orders/list/get', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'getList'])->name('admin.purchase-orders.list.get');
         Route::get('/admin/purchase-orders/{id}/show', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'show'])->name('admin.purchase-orders.show');
         Route::get('/admin/purchase-orders/{id}/detail', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'getDetail'])->name('admin.purchase-orders.detail');
+        // Órdenes de Compra - Cancelar: cualquier admin puede cancelar (paridad con Ionic)
+        Route::post('/admin/purchase-orders/{id}/cancel', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'cancel'])->name('admin.purchase-orders.cancel');
         // Órdenes de Compra - Escritura: Solo Admin Full
         Route::group(['middleware' => ['full.admin']], function () {
             Route::get('/admin/purchase-orders/create', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'create'])->name('admin.purchase-orders.create');
             Route::get('/admin/purchase-orders/{id}/edit', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'edit'])->name('admin.purchase-orders.edit');
             Route::post('/admin/purchase-orders/store', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'store'])->name('admin.purchase-orders.store');
+            Route::post('/admin/purchase-orders/{id}/update', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'update'])->name('admin.purchase-orders.update');
             Route::post('/admin/purchase-orders/{id}/complete', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'complete'])->name('admin.purchase-orders.complete');
-            Route::post('/admin/purchase-orders/{id}/cancel', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'cancel'])->name('admin.purchase-orders.cancel');
             Route::post('/admin/purchase-orders/{id}/toggle-payable', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'togglePayable'])->name('admin.purchase-orders.toggle-payable');
             Route::post('/admin/purchase-orders/{id}/toggle-invoiced', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'toggleInvoiced'])->name('admin.purchase-orders.toggle-invoiced');
             Route::post('/admin/purchase-orders/{id}/partial-payment', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'storePartialPayment'])->name('admin.purchase-orders.partial-payment');

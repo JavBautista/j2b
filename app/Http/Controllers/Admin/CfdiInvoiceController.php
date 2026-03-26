@@ -268,9 +268,13 @@ class CfdiInvoiceController extends Controller
                 $claveProdServ = $satOverride['clave_prod_serv'] ?? $item->product?->sat_product_code ?? '01010101';
                 $claveUnidad = $satOverride['clave_unidad'] ?? $item->product?->sat_unit_code ?? 'E48';
 
+                // SAT pattern: no permite \n, \r, \t, | ni otros caracteres de control
+                $descripcionSat = str_replace(["\n", "\r", "\t", "|"], [' ', '', ' ', '-'], $item->descripcion);
+                $descripcionSat = preg_replace('/\s+/', ' ', trim($descripcionSat));
+
                 $concepto = [
                     'clave_prod_serv' => $claveProdServ,
-                    'descripcion' => $item->descripcion,
+                    'descripcion' => $descripcionSat,
                     'cantidad' => $item->qty,
                     'clave_unidad' => $claveUnidad,
                     'valor_unitario' => $valorUnitario,

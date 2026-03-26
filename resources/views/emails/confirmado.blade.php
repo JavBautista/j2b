@@ -120,11 +120,12 @@
       <!--<p>Ahora puedes acceder a todas las funcionalidades de J2Biznes.</p>-->
       <p>Ahora puedes <strong>abrir la app</strong> e iniciar sesión con tus datos.</p>
     </div>
-    
+
+    @if(($source ?? null) === 'web')
     <div>
-      <!--<a href="j2biznesapp://login" class="app-button">Abrir la Aplicación</a>
-      <p class="footer-text">Si la aplicación no se abre automáticamente, búscala en tu dispositivo</p>-->
+      <a href="{{ url('/login') }}" class="app-button">Iniciar sesión en la web</a>
     </div>
+    @endif
   </div>
 </body>
 </html>

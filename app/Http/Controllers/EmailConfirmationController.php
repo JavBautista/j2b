@@ -77,9 +77,10 @@ class EmailConfirmationController extends Controller
         ]);
     }//.store()
 
-    public function confirmar($token)
+    public function confirmar(Request $request, $token)
     {
-        return DB::transaction(function () use ($token) {
+        $source = $request->query('source');
+        return DB::transaction(function () use ($token, $source) {
             // 1. Validar token
             $registro = EmailConfirmation::where('token', $token)->first();
 
@@ -135,7 +136,7 @@ class EmailConfirmationController extends Controller
                 // 8. Opcional: Enviar email de bienvenida
                 //Mail::to($user->email)->send(new WelcomeEmail($user, $shop));
 
-                return view('emails.confirmado');
+                return view('emails.confirmado', ['source' => $source]);
 
             } catch (\Illuminate\Database\QueryException $e) {
                 // Manejo específico de errores de DB

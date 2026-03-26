@@ -32,6 +32,7 @@ use App\Http\Controllers\Superadmin\ContactMessagesController;
 use App\Http\Controllers\Superadmin\LegalDocumentsController;
 use App\Http\Controllers\Superadmin\PdfPhraseController;
 use App\Http\Controllers\Superadmin\CfdiController;
+use App\Http\Controllers\WebRegisterController;
 
 
 /*
@@ -63,6 +64,10 @@ Route::post('/descargar', [DownloadController::class, 'processDownload'])->name(
 // Documentos legales (público)
 Route::get('/terminos', [LegalPageController::class, 'terms'])->name('legal.terms');
 Route::get('/privacidad', [LegalPageController::class, 'privacy'])->name('legal.privacy');
+
+// Registro web (mismo flujo que Ionic: email_confirmations)
+Route::get('/registro', [WebRegisterController::class, 'showForm'])->name('web.register');
+Route::post('/registro', [WebRegisterController::class, 'store'])->name('web.register.store');
 
 Route::get('/pre-registro', [RequestsJ2bController::class, 'j2bSolicitar'])->name('solicitud');
 Route::post('/pre-registro/create', [RequestsJ2bController::class, 'store'])->name('solicitud.store');

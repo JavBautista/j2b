@@ -845,18 +845,36 @@ class ReceiptController extends Controller
 
 
     public function createPDFReceiptRent(Request $request, $id){
-       
+
         $receipt = Receipt::with('partialPayments')
                             ->with('shop')
                             ->with('detail')
                             ->with('client')
                             ->findOrFail($id);
-        
+
         $name_file = $receipt->folio;
-       
+
+        // Configuración de recibos PDF
+        $receiptSettings = ShopReceiptSetting::where('shop_id', $receipt->shop_id)->first();
+
+        // Generar QR dinámico si está habilitado
+        $qrImage = null;
+        if ($receiptSettings === null || $receiptSettings->show_qr) {
+            $qrUrlSource = $receiptSettings->qr_url_source ?? 'web';
+            $qrUrl = $receipt->shop->$qrUrlSource ?? '';
+
+            if (!empty(trim($qrUrl))) {
+                $qrImage = 'data:image/svg+xml;base64,' . base64_encode(
+                    QrCode::size(150)->generate($qrUrl)
+                );
+            }
+        }
+
         $randomPhrase = PdfPhrase::getRandom();
         $pdf = PDF::loadView('receipt_rent_pdf',[
             'receipt'=>$receipt,
+            'receiptSettings' => $receiptSettings,
+            'qrImage' => $qrImage,
             'pdfPhrase' => $randomPhrase['phrase'],
             'pdfPhraseUrl' => $randomPhrase['link_url'],
         ]);

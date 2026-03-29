@@ -11,6 +11,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use App\Models\PdfPhrase;
+use App\Models\ShopReceiptSetting;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 
@@ -303,9 +305,27 @@ class PurchaseOrderController extends Controller
 
         //$shop = Shop::findOrFail($shop_id);
 
+        // Configuración de recibos PDF
+        $receiptSettings = ShopReceiptSetting::where('shop_id', $purchase_order->shop_id)->first();
+
+        // Generar QR dinámico si está habilitado
+        $qrImage = null;
+        if ($receiptSettings === null || $receiptSettings->show_qr) {
+            $qrUrlSource = $receiptSettings->qr_url_source ?? 'web';
+            $qrUrl = $purchase_order->shop->$qrUrlSource ?? '';
+
+            if (!empty(trim($qrUrl))) {
+                $qrImage = 'data:image/svg+xml;base64,' . base64_encode(
+                    QrCode::size(150)->generate($qrUrl)
+                );
+            }
+        }
+
         $randomPhrase = PdfPhrase::getRandom();
         $pdf = PDF::loadView('purchase_order_pdf',[
             'purchase_order'=>$purchase_order,
+            'receiptSettings' => $receiptSettings,
+            'qrImage' => $qrImage,
             'pdfPhrase' => $randomPhrase['phrase'],
             'pdfPhraseUrl' => $randomPhrase['link_url'],
         ]);
@@ -334,9 +354,27 @@ class PurchaseOrderController extends Controller
 
         $name_file = $purchase_order->folio;
 
+        // Configuración de recibos PDF
+        $receiptSettings = ShopReceiptSetting::where('shop_id', $purchase_order->shop_id)->first();
+
+        // Generar QR dinámico si está habilitado
+        $qrImage = null;
+        if ($receiptSettings === null || $receiptSettings->show_qr) {
+            $qrUrlSource = $receiptSettings->qr_url_source ?? 'web';
+            $qrUrl = $purchase_order->shop->$qrUrlSource ?? '';
+
+            if (!empty(trim($qrUrl))) {
+                $qrImage = 'data:image/svg+xml;base64,' . base64_encode(
+                    QrCode::size(150)->generate($qrUrl)
+                );
+            }
+        }
+
         $randomPhrase = PdfPhrase::getRandom();
         $pdf = PDF::loadView('purchase_order_pdf',[
             'purchase_order'=>$purchase_order,
+            'receiptSettings' => $receiptSettings,
+            'qrImage' => $qrImage,
             'pdfPhrase' => $randomPhrase['phrase'],
             'pdfPhraseUrl' => $randomPhrase['link_url'],
         ]);

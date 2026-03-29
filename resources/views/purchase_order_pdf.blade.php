@@ -29,7 +29,7 @@
                     {{ $purchase_order->shop->phone }}</p>
                 </td>
                 <td width="50%" align="right">
-                    @if(trim($purchase_order->shop->logo) != null)
+                    @if (($receiptSettings->show_logo ?? true) && trim($purchase_order->shop->logo) != null)
                         <img src="{{ public_path('storage/'.$purchase_order->shop->logo) }}" style="max-height: 60px; max-width: 100%; width: auto;">
                     @endif
                 </td>
@@ -56,7 +56,9 @@
         <table width="100%">
             <tr>
                 <td width="20%">
-                    <img src="{{public_path('img/j2b_qr.png')}}" alt="QR" width="50%">
+                    @if (($receiptSettings->show_qr ?? true) && !empty($qrImage))
+                        <img src="{{ $qrImage }}" alt="QR" width="80">
+                    @endif
                 </td>
                 <td width="30%">
                     <h2>Orden de compra #{{$purchase_order->folio}}</h2>

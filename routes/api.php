@@ -492,7 +492,10 @@ Route::group([
         Route::get('tasks/{id}/products', [TaskController::class, 'getProducts']);
 
         /*TASK CHECKLIST*/
+        Route::get('tasks/checklist/search-catalog', [TaskController::class, 'searchChecklistCatalog']);
+        Route::post('tasks/{id}/checklist', [TaskController::class, 'addChecklistItem']);
         Route::put('tasks/{id}/checklist/{itemId}/toggle', [TaskController::class, 'toggleChecklistItem']);
+        Route::delete('tasks/{id}/checklist/{itemId}', [TaskController::class, 'deleteChecklistItem']);
         Route::get('tasks/{id}/checklist-pdf', [TaskController::class, 'downloadChecklistPdf']);
 
         /*COLLABORATORS*/

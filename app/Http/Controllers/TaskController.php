@@ -17,6 +17,8 @@ use App\Services\ImageService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use App\Models\PdfPhrase;
+use App\Models\Product;
+use App\Models\Service;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class TaskController extends Controller
@@ -1165,5 +1167,91 @@ class TaskController extends Controller
 
         return $pdf->stream("checklist_tarea_{$task->id}.pdf", array("Attachment" => false));
     }//.downloadChecklistPdf()
+
+    /**
+     * POST /api/auth/tasks/{id}/checklist
+     * Agregar item al checklist
+     */
+    public function addChecklistItem(Request $request, $id){
+        $request->validate([
+            'text' => 'required|string|max:500',
+        ]);
+
+        $user = $request->user();
+        $shop = $user->shop;
+
+        $task = Task::where('shop_id', $shop->id)->findOrFail($id);
+
+        $maxOrder = $task->checklistItems()->max('sort_order') ?? -1;
+
+        $item = TaskChecklistItem::create([
+            'task_id' => $task->id,
+            'text' => $request->text,
+            'is_completed' => false,
+            'sort_order' => $maxOrder + 1,
+        ]);
+
+        return response()->json([
+            'ok' => true,
+            'item' => $item,
+            'message' => 'Item agregado.'
+        ]);
+    }//.addChecklistItem()
+
+    /**
+     * DELETE /api/auth/tasks/{id}/checklist/{itemId}
+     * Eliminar item del checklist
+     */
+    public function deleteChecklistItem(Request $request, $id, $itemId){
+        $user = $request->user();
+        $shop = $user->shop;
+
+        $task = Task::where('shop_id', $shop->id)->findOrFail($id);
+        $item = TaskChecklistItem::where('task_id', $task->id)->findOrFail($itemId);
+
+        $item->delete();
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Item eliminado.'
+        ]);
+    }//.deleteChecklistItem()
+
+    /**
+     * GET /api/auth/tasks/checklist/search-catalog?q=texto
+     * Buscar productos y servicios para agregar al checklist
+     */
+    public function searchChecklistCatalog(Request $request){
+        $user = $request->user();
+        $shop = $user->shop;
+        $q = $request->q ?? '';
+
+        if (strlen($q) < 2) {
+            return response()->json(['ok' => true, 'results' => []]);
+        }
+
+        $products = Product::where('shop_id', $shop->id)
+            ->where('active', 1)
+            ->where(function($query) use ($q) {
+                $query->where('name', 'like', "%{$q}%")
+                      ->orWhere('key', 'like', "%{$q}%");
+            })
+            ->select('id', 'name', 'key as code', 'retail as price')
+            ->limit(10)
+            ->get()
+            ->map(fn($p) => ['id' => $p->id, 'type' => 'producto', 'name' => $p->name, 'code' => $p->code, 'price' => $p->price]);
+
+        $services = Service::where('shop_id', $shop->id)
+            ->where('active', 1)
+            ->where('name', 'like', "%{$q}%")
+            ->select('id', 'name', 'price')
+            ->limit(10)
+            ->get()
+            ->map(fn($s) => ['id' => $s->id, 'type' => 'servicio', 'name' => $s->name, 'code' => null, 'price' => $s->price]);
+
+        $results = $products->concat($services)->sortBy('name')->values();
+
+        return response()->json(['ok' => true, 'results' => $results]);
+    }//.searchChecklistCatalog()
 
 }

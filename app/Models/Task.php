@@ -52,4 +52,19 @@ class Task extends Model
     public function checklistItems(){
         return $this->hasMany(TaskChecklistItem::class)->orderBy('sort_order');
     }
+
+    // Relación con paso actual de service tracking
+    public function currentServiceStep(){
+        return $this->belongsTo(ServiceTrackingStep::class, 'current_service_step_id');
+    }
+
+    // Historial de service tracking
+    public function serviceTrackingHistory(){
+        return $this->hasMany(TaskServiceTracking::class)->orderBy('created_at', 'asc');
+    }
+
+    // Verificar si la tarea tiene service tracking activo
+    public function hasServiceTracking(){
+        return !is_null($this->current_service_step_id);
+    }
 }

@@ -71,6 +71,14 @@
                     <span class="badge bg-warning text-dark rounded-pill px-3 py-2">{{ data.tareas.semana.pendiente }} Pendiente</span>
                     <span class="badge bg-success rounded-pill px-3 py-2">{{ data.tareas.semana.atendido }} Atendido</span>
                 </div>
+                <div class="summary-card__header mt-3" v-if="data.tareas.anteriores">
+                    <i class="fa fa-history"></i>
+                    <span>ANTERIORES AL MES</span>
+                </div>
+                <div class="d-flex gap-2 mt-2" v-if="data.tareas.anteriores">
+                    <span class="badge bg-primary rounded-pill px-3 py-2">{{ data.tareas.anteriores.nuevo }} Nuevo</span>
+                    <span class="badge bg-warning text-dark rounded-pill px-3 py-2">{{ data.tareas.anteriores.pendiente }} Pendiente</span>
+                </div>
             </div>
 
             <!-- Usuarios -->

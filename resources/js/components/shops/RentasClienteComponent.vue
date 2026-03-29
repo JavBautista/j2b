@@ -267,11 +267,21 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Telefono</label>
-                            <input type="text" class="form-control" v-model="formRenta.location_phone">
+                            <input type="tel" class="form-control" v-model="formRenta.location_phone"
+                                   minlength="7" maxlength="15" placeholder="Ej: 4421234567"
+                                   @input="formRenta.location_phone = formRenta.location_phone.replace(/[^0-9]/g, '')">
+                            <small v-if="formRenta.location_phone && (formRenta.location_phone.length < 7 || formRenta.location_phone.length > 15)" class="text-danger">
+                                Entre 7 y 15 digitos
+                            </small>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Email</label>
-                            <input type="email" class="form-control" v-model="formRenta.location_email">
+                            <input type="email" class="form-control" v-model="formRenta.location_email"
+                                   placeholder="correo@ejemplo.com"
+                                   @blur="validarEmailRenta">
+                            <small v-if="errorEmailRenta" class="text-danger">
+                                Email no valido
+                            </small>
                         </div>
                     </div>
                 </div>
@@ -572,6 +582,7 @@ export default {
             modalFormRenta: 0,
             editandoRenta: false,
             guardandoRenta: false,
+            errorEmailRenta: false,
             formRenta: {
                 id: null,
                 client_id: null,
@@ -666,7 +677,27 @@ export default {
             this.modalFormRenta = 1;
         },
         cerrarModalFormRenta() { this.modalFormRenta = 0; },
+        validarEmailRenta() {
+            if (!this.formRenta.location_email) {
+                this.errorEmailRenta = false;
+                return true;
+            }
+            const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            this.errorEmailRenta = !re.test(this.formRenta.location_email);
+            return !this.errorEmailRenta;
+        },
+
         guardarRenta() {
+            // Validar telefono
+            if (this.formRenta.location_phone && (this.formRenta.location_phone.length < 7 || this.formRenta.location_phone.length > 15)) {
+                Swal.fire('Error', 'El telefono debe tener entre 7 y 15 digitos', 'error');
+                return;
+            }
+            // Validar email
+            if (!this.validarEmailRenta()) {
+                Swal.fire('Error', 'El email no es valido', 'error');
+                return;
+            }
             this.guardandoRenta = true;
             let url = this.editandoRenta ? '/admin/rents/update' : '/admin/rents/store';
             let method = this.editandoRenta ? 'put' : 'post';

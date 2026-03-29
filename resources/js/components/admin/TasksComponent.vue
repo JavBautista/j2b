@@ -2,71 +2,69 @@
 <div>
     <div class="container-fluid">
         <!-- Resumen de tareas -->
-        <div class="row mb-4">
-            <div class="col-md-4">
-                <div class="card text-white bg-success">
-                    <div class="card-body text-center">
-                        <h3>{{ numStatus.numNuevo || 0 }}</h3>
-                        <p class="mb-0">Nuevas</p>
-                    </div>
+        <div class="j2b-stat-grid mb-4">
+            <div class="j2b-stat j2b-stat-success">
+                <div class="j2b-stat-content">
+                    <div class="j2b-stat-value">{{ numStatus.numNuevo || 0 }}</div>
+                    <div class="j2b-stat-label">Nuevas</div>
                 </div>
             </div>
-            <div class="col-md-4">
-                <div class="card text-white bg-warning">
-                    <div class="card-body text-center">
-                        <h3>{{ numStatus.numPendiente || 0 }}</h3>
-                        <p class="mb-0">Pendientes</p>
-                    </div>
+            <div class="j2b-stat j2b-stat-warning">
+                <div class="j2b-stat-content">
+                    <div class="j2b-stat-value">{{ numStatus.numPendiente || 0 }}</div>
+                    <div class="j2b-stat-label">Pendientes</div>
                 </div>
             </div>
-            <div class="col-md-4">
-                <div class="card text-white bg-info">
-                    <div class="card-body text-center">
-                        <h3>{{ numStatus.numAtendido || 0 }}</h3>
-                        <p class="mb-0">Atendidas</p>
-                    </div>
+            <div class="j2b-stat j2b-stat-primary">
+                <div class="j2b-stat-content">
+                    <div class="j2b-stat-value">{{ numStatus.numAtendido || 0 }}</div>
+                    <div class="j2b-stat-label">Atendidas</div>
                 </div>
             </div>
         </div>
 
         <!-- Card principal de tareas -->
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <span><i class="fa fa-tasks"></i> Tareas de {{ shop.name }}</span>
-                <div>
+        <div class="j2b-card">
+            <div class="j2b-card-header d-flex justify-content-between align-items-center">
+                <h5 class="j2b-card-title mb-0"><i class="fa fa-tasks" style="color: var(--j2b-primary);"></i> Tareas de {{ shop.name }}</h5>
+                <div class="d-flex gap-2">
                     <!-- Toggle Vista -->
-                    <div class="btn-group mr-2">
-                        <button type="button" class="btn btn-sm" :class="vistaActual === 'cards' ? 'btn-secondary' : 'btn-outline-secondary'" @click="vistaActual = 'cards'" title="Vista Cards">
+                    <div class="btn-group">
+                        <button type="button" class="j2b-btn j2b-btn-sm" :class="vistaActual === 'cards' ? 'j2b-btn-primary' : 'j2b-btn-outline'" @click="vistaActual = 'cards'" title="Vista Cards">
                             <i class="fa fa-th-large"></i>
                         </button>
-                        <button type="button" class="btn btn-sm" :class="vistaActual === 'tabla' ? 'btn-secondary' : 'btn-outline-secondary'" @click="vistaActual = 'tabla'" title="Vista Tabla">
+                        <button type="button" class="j2b-btn j2b-btn-sm" :class="vistaActual === 'tabla' ? 'j2b-btn-primary' : 'j2b-btn-outline'" @click="vistaActual = 'tabla'" title="Vista Tabla">
                             <i class="fa fa-list"></i>
                         </button>
                     </div>
-                    <button v-if="!userLimited" type="button" @click="abrirModal('crear')" class="btn btn-primary">
-                        <i class="fa fa-plus"></i>&nbsp;Nueva Tarea
+                    <button v-if="!userLimited" type="button" @click="abrirModal('crear')" class="j2b-btn j2b-btn-primary">
+                        <i class="fa fa-plus"></i> Nueva Tarea
                     </button>
                 </div>
             </div>
-            <div class="card-body">
+            <div class="j2b-card-body">
                 <!-- Filtros y búsqueda -->
-                <div class="form-group row mb-3">
-                    <div class="col-md-8">
-                        <div class="input-group">
-                            <input type="text" v-model="buscar" class="form-control" placeholder="Buscar por título, descripción o ID..." @keyup.enter="loadTasks(1)">
-                            <select class="form-control col-md-2" v-model="filtroStatus">
+                <div class="row mb-4">
+                    <div class="col-md-10">
+                        <div class="d-flex gap-2 flex-wrap">
+                            <select class="j2b-select" v-model="filtroStatus" style="width: 140px;">
                                 <option value="TODOS">TODOS</option>
                                 <option value="NUEVO">NUEVOS</option>
                                 <option value="PENDIENTE">PENDIENTES</option>
                                 <option value="ATENDIDO">ATENDIDOS</option>
                             </select>
-                            <select class="form-control col-md-2" v-model="filtroOrdenar">
-                                <option value="ID_DESC">Más recientes</option>
-                                <option value="ID_ASC">Más antiguos</option>
+                            <select class="j2b-select" v-model="filtroOrdenar" style="width: 150px;">
+                                <option value="ID_DESC">Mas recientes</option>
+                                <option value="ID_ASC">Mas antiguos</option>
                                 <option value="PRD_DESC">Mayor prioridad</option>
                                 <option value="PRD_ASC">Menor prioridad</option>
                             </select>
-                            <button type="submit" @click="loadTasks(1)" class="btn btn-primary"><i class="fa fa-search"></i> Buscar</button>
+                            <div class="d-flex" style="flex: 1; min-width: 200px;">
+                                <input type="text" v-model="buscar" class="j2b-input" placeholder="Buscar por titulo, descripcion o ID..." @keyup.enter="loadTasks(1)" style="border-radius: var(--j2b-radius-md) 0 0 var(--j2b-radius-md);">
+                                <button @click="loadTasks(1)" class="j2b-btn j2b-btn-primary" style="border-radius: 0 var(--j2b-radius-md) var(--j2b-radius-md) 0;">
+                                    <i class="fa fa-search"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -78,7 +76,7 @@
                             <div class="card-header d-flex justify-content-between align-items-center">
                                 <div>
                                     <span class="task-id">#{{ task.id }}</span>
-                                    <span class="badge ml-2" :class="getBadgeClass(task.status)">{{ task.status }}</span>
+                                    <span class="task-status-badge ml-2">{{ task.status }}</span>
                                 </div>
                                 <div class="dropdown">
                                     <button class="btn btn-sm btn-outline-dark dropdown-toggle"
@@ -88,7 +86,7 @@
                                         <i class="fa fa-ellipsis-v"></i>
                                     </button>
                                     <ul class="dropdown-menu dropdown-menu-end">
-                                        <li><a class="dropdown-item" href="#" @click.prevent="abrirModal('ver', task)">
+                                        <li><a class="dropdown-item" :href="'/admin/tasks/detail/' + task.id">
                                             <i class="fa fa-eye text-info"></i> Ver Detalle
                                         </a></li>
                                         <li v-if="!userLimited"><a class="dropdown-item" href="#" @click.prevent="abrirModal('editar', task)">
@@ -119,19 +117,19 @@
                                     </ul>
                                 </div>
                             </div>
-                            <div class="card-body" @click="abrirModal('ver', task)" style="cursor: pointer;">
+                            <div class="card-body" @click="irAlDetalle(task.id)" style="cursor: pointer;">
                                 <h5 class="card-title task-name">
                                     <i class="fa fa-clipboard text-primary"></i>
                                     {{ task.title }}
                                 </h5>
                                 <div class="task-info">
                                     <div class="info-item">
-                                        <span v-if="task.active" class="badge badge-success">Activo</span>
-                                        <span v-else class="badge badge-danger">Inactivo</span>
-                                        <span v-if="task.origin === 'client'" class="badge badge-warning ml-1">
+                                        <span v-if="task.active" class="j2b-badge j2b-badge-success">Activo</span>
+                                        <span v-else class="j2b-badge j2b-badge-danger">Inactivo</span>
+                                        <span v-if="task.origin === 'client'" class="j2b-badge j2b-badge-warning ml-1">
                                             <i class="fa fa-user"></i> Cliente
                                         </span>
-                                        <span class="badge badge-secondary ml-1">P{{ task.priority }}</span>
+                                        <span class="j2b-badge j2b-badge-outline ml-1">P{{ task.priority }}</span>
                                     </div>
                                     <div class="info-item">
                                         <i class="fa fa-user-circle text-muted"></i>
@@ -158,9 +156,9 @@
                 </div>
 
                 <!-- VISTA TABLA -->
-                <div class="table-responsive" v-if="vistaActual === 'tabla'">
-                    <table class="table table-hover table-striped">
-                        <thead class="thead-dark">
+                <div class="j2b-table-responsive" v-if="vistaActual === 'tabla'">
+                    <table class="j2b-table">
+                        <thead>
                             <tr>
                                 <th>#</th>
                                 <th>Título</th>
@@ -176,23 +174,23 @@
                             <tr v-for="task in arrayTasks" :key="task.id" :class="{'table-secondary': !task.active}">
                                 <td><strong>{{ task.id }}</strong></td>
                                 <td>
-                                    <a href="#" @click.prevent="abrirModal('ver', task)" class="text-dark">
+                                    <a :href="'/admin/tasks/detail/' + task.id" class="text-dark">
                                         {{ task.title }}
                                     </a>
-                                    <span v-if="task.origin === 'client'" class="badge badge-warning ml-1">
+                                    <span v-if="task.origin === 'client'" class="j2b-badge j2b-badge-warning ml-1">
                                         <i class="fa fa-user"></i>
                                     </span>
                                 </td>
                                 <td><span class="badge" :class="getBadgeClass(task.status)">{{ task.status }}</span></td>
-                                <td><span class="badge badge-secondary">P{{ task.priority }}</span></td>
+                                <td><span class="j2b-badge j2b-badge-outline">P{{ task.priority }}</span></td>
                                 <td>{{ task.assigned_user ? task.assigned_user.name : '-' }}</td>
                                 <td>{{ task.client ? task.client.name : '-' }}</td>
                                 <td>{{ formatDate(task.created_at) }}</td>
                                 <td>
                                     <div class="btn-group btn-group-sm">
-                                        <button class="btn btn-info btn-sm" @click="abrirModal('ver', task)" title="Ver">
+                                        <a class="btn btn-info btn-sm" :href="'/admin/tasks/detail/' + task.id" title="Ver">
                                             <i class="fa fa-eye"></i>
-                                        </button>
+                                        </a>
                                         <button v-if="!userLimited" class="btn btn-primary btn-sm" @click="abrirModal('editar', task)" title="Editar">
                                             <i class="fa fa-edit"></i>
                                         </button>
@@ -211,417 +209,42 @@
 
                 <!-- Mensaje si no hay tareas -->
                 <div v-if="arrayTasks.length === 0 && !loading" class="text-center py-5">
-                    <i class="fa fa-tasks fa-3x text-muted mb-3"></i>
-                    <p class="text-muted">No se encontraron tareas con los criterios de búsqueda.</p>
+                    <i class="fa fa-tasks fa-3x mb-3" style="color: var(--j2b-gray-300);"></i>
+                    <p style="color: var(--j2b-gray-500);">No se encontraron tareas con los criterios de busqueda.</p>
                 </div>
 
-                <!-- Paginación -->
-                <nav>
-                    <ul class="pagination">
-                        <li class="page-item" v-if="pagination.current_page > 1">
-                            <a class="page-link" href="#" @click.prevent="cambiarPagina(pagination.current_page-1)">Ant</a>
-                        </li>
-                        <li class="page-item" v-for="page in pagesNumber" :key="page" :class="[page==isActived ? 'active':'']">
-                            <a class="page-link" href="#" @click.prevent="cambiarPagina(page)" v-text="page"></a>
-                        </li>
-                        <li class="page-item" v-if="pagination.current_page < pagination.last_page">
-                            <a class="page-link" href="#" @click.prevent="cambiarPagina(pagination.current_page+1)">Sig</a>
-                        </li>
-                    </ul>
-                </nav>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal Ver Detalle -->
-    <div class="modal fade modal-ver-detalle" tabindex="-1" :class="{'mostrar': modalVer}" role="dialog" style="display: none;">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header bg-primary text-white">
-                    <h4 class="modal-title">
-                        <i class="fa fa-clipboard mr-2"></i>
-                        Tarea #{{ taskSeleccionada.id }} - {{ taskSeleccionada.title }}
-                    </h4>
-                    <button type="button" class="close text-white" @click="cerrarModal()" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body" v-if="taskSeleccionada.id">
-                    <div class="row">
-                        <!-- Columna izquierda -->
-                        <div class="col-lg-6">
-                            <!-- Info básica -->
-                            <div class="card">
-                                <div class="card-header">
-                                    <i class="fa fa-info-circle mr-2"></i>Información General
-                                </div>
-                                <div class="card-body">
-                                    <div class="row mb-3">
-                                        <div class="col-6">
-                                            <label class="text-muted small mb-1">Estatus</label>
-                                            <div>
-                                                <span class="badge badge-lg" :class="getBadgeClass(taskSeleccionada.status)">{{ taskSeleccionada.status }}</span>
-                                                <span v-if="taskSeleccionada.active" class="badge badge-success ml-1">Activo</span>
-                                                <span v-else class="badge badge-danger ml-1">Inactivo</span>
-                                            </div>
-                                        </div>
-                                        <div class="col-6">
-                                            <label class="text-muted small mb-1">Prioridad</label>
-                                            <div>
-                                                <span class="badge badge-secondary badge-lg">P{{ taskSeleccionada.priority }}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="text-muted small mb-1">Título</label>
-                                        <p class="font-weight-bold mb-0">{{ taskSeleccionada.title }}</p>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="text-muted small mb-1">Descripción</label>
-                                        <p class="mb-0">{{ taskSeleccionada.description || 'Sin descripción' }}</p>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="text-muted small mb-1">Solución</label>
-                                        <p class="mb-0">{{ taskSeleccionada.solution || 'Sin solución' }}</p>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="text-muted small mb-1">Reseña</label>
-                                        <p class="mb-0">{{ taskSeleccionada.review || 'Sin reseña' }}</p>
-                                    </div>
-                                    <div class="row">
-                                        <div class="col-6">
-                                            <label class="text-muted small mb-1">Fecha expiración</label>
-                                            <p class="mb-0">{{ taskSeleccionada.expiration || 'Sin fecha' }}</p>
-                                        </div>
-                                        <div class="col-6">
-                                            <label class="text-muted small mb-1">Creada</label>
-                                            <p class="mb-0">{{ formatDateTime(taskSeleccionada.created_at) }}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Cliente -->
-                            <div class="card" v-if="taskSeleccionada.client">
-                                <div class="card-header">
-                                    <i class="fa fa-user mr-2"></i>Cliente
-                                </div>
-                                <div class="card-body">
-                                    <div class="row">
-                                        <div class="col-12 mb-2">
-                                            <label class="text-muted small mb-1">Nombre</label>
-                                            <p class="font-weight-bold mb-0">{{ taskSeleccionada.client.name }}</p>
-                                        </div>
-                                        <div class="col-6" v-if="taskSeleccionada.client.email">
-                                            <label class="text-muted small mb-1">Email</label>
-                                            <p class="mb-0">{{ taskSeleccionada.client.email }}</p>
-                                        </div>
-                                        <div class="col-6" v-if="taskSeleccionada.client.movil">
-                                            <label class="text-muted small mb-1">Teléfono</label>
-                                            <p class="mb-0">{{ taskSeleccionada.client.movil }}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Columna derecha -->
-                        <div class="col-lg-6">
-                            <!-- Asignación (Solo Admin) -->
-                            <div class="card">
-                                <div class="card-header">
-                                    <i class="fa fa-user-plus mr-2"></i>Asignación
-                                </div>
-                                <div class="card-body">
-                                    <div v-if="taskSeleccionada.assigned_user">
-                                        <div class="d-flex align-items-center justify-content-between">
-                                            <div>
-                                                <label class="text-muted small mb-1">Asignado a</label>
-                                                <p class="font-weight-bold mb-0">
-                                                    <i class="fa fa-user-circle text-primary mr-1"></i>
-                                                    {{ taskSeleccionada.assigned_user.name }}
-                                                </p>
-                                            </div>
-                                            <button class="btn btn-outline-danger" @click="desasignarTarea(taskSeleccionada.id)">
-                                                <i class="fa fa-user-times"></i> Desasignar
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div v-else>
-                                        <p class="text-muted mb-2">
-                                            <i class="fa fa-exclamation-circle mr-1"></i>
-                                            Sin asignar
-                                        </p>
-                                        <div class="input-group">
-                                            <select class="form-control form-control-lg" v-model="colaboradorSeleccionado">
-                                                <option value="">Seleccionar usuario...</option>
-                                                <option v-for="colab in colaboradores" :key="colab.id" :value="colab.id">
-                                                    {{ colab.name }}
-                                                </option>
-                                            </select>
-                                            <button class="btn btn-primary btn-lg" @click="asignarTarea(taskSeleccionada.id)" :disabled="!colaboradorSeleccionado">
-                                                <i class="fa fa-user-plus"></i> Asignar
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Productos/Refacciones Asignados -->
-                            <div class="card">
-                                <div class="card-header d-flex justify-content-between align-items-center">
-                                    <span><i class="fa fa-cubes mr-2"></i>Productos / Refacciones</span>
-                                    <button class="btn btn-sm btn-success" @click="abrirModalProductos()">
-                                        <i class="fa fa-plus mr-1"></i> Agregar
-                                    </button>
-                                </div>
-                                <div class="card-body">
-                                    <div v-if="taskSeleccionada.products && taskSeleccionada.products.length > 0">
-                                        <div class="table-responsive">
-                                            <table class="table table-sm table-hover">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Producto</th>
-                                                        <th class="text-center">Entregados</th>
-                                                        <th class="text-center">Usados</th>
-                                                        <th class="text-center">Devueltos</th>
-                                                        <th class="text-center">Pendientes</th>
-                                                        <th></th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    <tr v-for="tp in taskSeleccionada.products" :key="tp.id">
-                                                        <td>
-                                                            <strong>{{ tp.product ? tp.product.name : 'Producto eliminado' }}</strong>
-                                                            <span v-if="tp.receipt_id" class="badge badge-success ml-2">
-                                                                <i class="fa fa-file-invoice-dollar"></i> Facturado
-                                                            </span>
-                                                            <br><small class="text-muted">{{ tp.product ? tp.product.key : '' }}</small>
-                                                            <br><small class="text-info" v-if="tp.notes">{{ tp.notes }}</small>
-                                                        </td>
-                                                        <td class="text-center">{{ tp.qty_delivered }}</td>
-                                                        <td class="text-center">
-                                                            <span :class="tp.qty_used > 0 ? 'text-danger' : ''">{{ tp.qty_used }}</span>
-                                                        </td>
-                                                        <td class="text-center">
-                                                            <span :class="tp.qty_returned > 0 ? 'text-success' : ''">{{ tp.qty_returned }}</span>
-                                                        </td>
-                                                        <td class="text-center">
-                                                            <span class="badge" :class="getPendientesBadge(tp)">
-                                                                {{ tp.qty_delivered - tp.qty_used - tp.qty_returned }}
-                                                            </span>
-                                                        </td>
-                                                        <td class="text-center">
-                                                            <button class="btn btn-sm btn-outline-secondary"
-                                                                    @click="editarProductoTarea(tp)"
-                                                                    :disabled="tp.receipt_id"
-                                                                    :title="tp.receipt_id ? 'Producto ya facturado' : 'Actualizar cantidades'">
-                                                                <i class="fa fa-cog"></i>
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                        <div class="mt-2 p-2 bg-light rounded">
-                                            <small>
-                                                <strong>Resumen:</strong>
-                                                Total entregados: {{ getTotalEntregados() }} |
-                                                Usados: {{ getTotalUsados() }} |
-                                                Devueltos: {{ getTotalDevueltos() }} |
-                                                <span :class="getTotalPendientes() > 0 ? 'text-warning' : 'text-success'">
-                                                    Pendientes: {{ getTotalPendientes() }}
-                                                </span>
-                                            </small>
-                                        </div>
-                                        <!-- Botón Generar Nota de Venta -->
-                                        <div class="mt-3" v-if="getProductosSinFacturar() > 0">
-                                            <button class="btn btn-success btn-block" @click="generarNotaDesdeProductos()">
-                                                <i class="fa fa-file-invoice-dollar mr-2"></i>
-                                                Generar Nota de Venta ({{ getProductosSinFacturar() }} productos)
-                                            </button>
-                                        </div>
-                                        <div class="mt-3" v-else-if="getTotalUsados() > 0">
-                                            <span class="text-success">
-                                                <i class="fa fa-check-circle mr-1"></i>
-                                                Todos los productos usados ya fueron facturados
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div v-else class="text-center text-muted py-3">
-                                        <i class="fa fa-box-open fa-2x mb-2"></i>
-                                        <p class="mb-0">No hay productos asignados a esta tarea</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Checklist -->
-                            <div class="card">
-                                <div class="card-header d-flex justify-content-between align-items-center">
-                                    <span>
-                                        <i class="fa fa-check-square-o mr-2"></i>Checklist
-                                        <span class="badge badge-secondary ml-1" v-if="taskSeleccionada.checklist_items && taskSeleccionada.checklist_items.length > 0">
-                                            {{ getChecklistCompleted() }}/{{ taskSeleccionada.checklist_items.length }}
-                                        </span>
-                                    </span>
-                                </div>
-                                <div class="card-body">
-                                    <!-- Lista de items -->
-                                    <div v-if="taskSeleccionada.checklist_items && taskSeleccionada.checklist_items.length > 0">
-                                        <!-- Barra de progreso -->
-                                        <div class="progress mb-3" style="height: 6px;">
-                                            <div class="progress-bar bg-success" :style="{ width: getChecklistPercent() + '%' }"></div>
-                                        </div>
-
-                                        <div v-for="(item, index) in taskSeleccionada.checklist_items" :key="item.id"
-                                             class="checklist-item d-flex align-items-center py-1 px-2 mb-1 rounded"
-                                             :class="{ 'bg-light': dragOverIndex === index }"
-                                             draggable="true"
-                                             @dragstart="onDragStart(index, $event)"
-                                             @dragover.prevent="onDragOver(index)"
-                                             @dragleave="dragOverIndex = null"
-                                             @drop.prevent="onDrop(index)"
-                                             @dragend="dragOverIndex = null">
-                                            <!-- Handle drag -->
-                                            <span class="text-muted mr-2" style="cursor: grab;"><i class="fa fa-bars"></i></span>
-                                            <!-- Checkbox -->
-                                            <input type="checkbox" class="mr-2" :checked="item.is_completed"
-                                                   @change="toggleChecklistItem(item)" style="cursor: pointer; width: 16px; height: 16px;">
-                                            <!-- Texto (editable inline) -->
-                                            <span v-if="editandoChecklistId !== item.id"
-                                                  class="flex-grow-1"
-                                                  :class="{ 'text-decoration-line-through text-muted': item.is_completed }"
-                                                  @dblclick="iniciarEdicionChecklist(item)"
-                                                  style="cursor: text;">
-                                                {{ item.text }}
-                                            </span>
-                                            <input v-else type="text" class="form-control form-control-sm flex-grow-1"
-                                                   v-model="editandoChecklistTexto"
-                                                   @keyup.enter="guardarEdicionChecklist(item)"
-                                                   @keyup.esc="editandoChecklistId = null"
-                                                   @blur="guardarEdicionChecklist(item)"
-                                                   ref="inputEditChecklist">
-                                            <!-- Eliminar -->
-                                            <button class="btn btn-sm text-danger ml-2 p-0" @click="eliminarChecklistItem(item)"
-                                                    style="line-height: 1;" title="Eliminar">
-                                                <i class="fa fa-times"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div v-else class="text-center text-muted py-2 mb-2">
-                                        <small>Sin items en el checklist</small>
-                                    </div>
-
-                                    <!-- Agregar nuevo item -->
-                                    <div class="position-relative mt-2">
-                                        <div class="input-group input-group-sm">
-                                            <input type="text" class="form-control" v-model="nuevoChecklistTexto"
-                                                   placeholder="Escribir o buscar producto/servicio..."
-                                                   @input="buscarCatalogoChecklist"
-                                                   @keyup.enter="agregarChecklistItem"
-                                                   @focus="mostrarDropdownChecklist = true">
-                                            <button class="btn btn-success btn-sm" @click="agregarChecklistItem"
-                                                    :disabled="!nuevoChecklistTexto.trim()" title="Agregar texto libre">
-                                                <i class="fa fa-plus"></i>
-                                            </button>
-                                        </div>
-                                        <!-- Dropdown de resultados del catálogo -->
-                                        <div v-if="mostrarDropdownChecklist && catalogoChecklistResultados.length > 0"
-                                             class="dropdown-menu show w-100" style="max-height: 200px; overflow-y: auto; z-index: 1050;">
-                                            <a class="dropdown-item" href="#"
-                                               v-for="item in catalogoChecklistResultados" :key="item.type + '-' + item.id"
-                                               @click.prevent="seleccionarCatalogoChecklist(item)">
-                                                <div class="d-flex justify-content-between align-items-center">
-                                                    <div>
-                                                        <strong>{{ item.name }}</strong>
-                                                        <br><small class="text-muted">
-                                                            <span class="badge" :class="item.type === 'producto' ? 'badge-primary' : 'badge-info'">
-                                                                {{ item.type === 'producto' ? 'Producto' : 'Servicio' }}
-                                                            </span>
-                                                            <span v-if="item.code" class="ml-1">{{ item.code }}</span>
-                                                        </small>
-                                                    </div>
-                                                    <small v-if="item.price">${{ item.price }}</small>
-                                                </div>
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Imágenes -->
-                            <div class="card" v-if="(taskSeleccionada.images && taskSeleccionada.images.length > 0) || taskSeleccionada.image">
-                                <div class="card-header d-flex justify-content-between align-items-center">
-                                    <span><i class="fa fa-image mr-2"></i>Imágenes</span>
-                                    <button v-if="!userLimited" class="btn btn-sm btn-outline-primary" @click="abrirModalImagenes(taskSeleccionada)">
-                                        <i class="fa fa-cog"></i> Gestionar
-                                    </button>
-                                </div>
-                                <div class="card-body">
-                                    <div class="row">
-                                        <div class="col-4 col-md-3 mb-3" v-if="taskSeleccionada.image">
-                                            <img :src="getImageUrl(taskSeleccionada.image)" class="img-fluid img-thumbnail rounded" style="max-height: 120px; cursor: pointer; object-fit: cover;" @click="verGaleriaTarea(0)">
-                                        </div>
-                                        <div class="col-4 col-md-3 mb-3" v-for="(img, index) in taskSeleccionada.images" :key="img.id">
-                                            <img :src="getImageUrl(img.image)" class="img-fluid img-thumbnail rounded" style="max-height: 120px; cursor: pointer; object-fit: cover;" @click="verGaleriaTarea(taskSeleccionada.image ? index + 1 : index)">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Botón agregar imágenes si no tiene -->
-                            <div class="card" v-else-if="!userLimited">
-                                <div class="card-header">
-                                    <i class="fa fa-image mr-2"></i>Imágenes
-                                </div>
-                                <div class="card-body text-center">
-                                    <p class="text-muted mb-2">Sin imágenes</p>
-                                    <button class="btn btn-outline-primary btn-sm" @click="abrirModalImagenes(taskSeleccionada)">
-                                        <i class="fa fa-plus"></i> Agregar Imágenes
-                                    </button>
-                                </div>
-                            </div>
-
-                            <!-- Firma Digital (Solo visualización) -->
-                            <div class="card" v-if="taskSeleccionada.signature_path">
-                                <div class="card-header">
-                                    <i class="fa fa-pencil-square-o mr-2"></i>Firma Digital
-                                </div>
-                                <div class="card-body text-center">
-                                    <img :src="getImageUrl(taskSeleccionada.signature_path)" class="img-fluid rounded" style="max-height: 180px; border: 2px solid #dee2e6; padding: 15px; background: #fff; cursor: pointer;" @click="$viewImage(taskSeleccionada.signature_path)">
-                                </div>
-                            </div>
-
-                            <!-- Logs / Historial -->
-                            <div class="card" v-if="taskSeleccionada.logs && taskSeleccionada.logs.length > 0">
-                                <div class="card-header">
-                                    <i class="fa fa-history mr-2"></i>Historial de Cambios
-                                </div>
-                                <div class="card-body" style="max-height: 250px; overflow-y: auto;">
-                                    <ul class="list-unstyled mb-0">
-                                        <li v-for="log in taskSeleccionada.logs" :key="log.id" class="mb-3 pb-2 border-bottom">
-                                            <div class="d-flex justify-content-between">
-                                                <strong class="text-primary">{{ log.user }}</strong>
-                                                <small class="text-muted">{{ formatDateTime(log.created_at) }}</small>
-                                            </div>
-                                            <p class="mb-0 mt-1">{{ log.description }}</p>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
+                <!-- Paginacion -->
+                <div v-if="pagination.last_page > 1" class="d-flex justify-content-between align-items-center mt-4">
+                    <div>
+                        <small style="color: var(--j2b-gray-500);">
+                            Mostrando {{ pagination.from }} a {{ pagination.to }} de {{ pagination.total }} registros
+                        </small>
                     </div>
-                </div>
-                <div class="modal-footer bg-light">
-                    <button type="button" class="btn btn-lg btn-secondary" @click="cerrarModal()">
-                        <i class="fa fa-times mr-1"></i> Cerrar
-                    </button>
-                    <button type="button" class="btn btn-lg btn-warning" @click="abrirModal('estatus', taskSeleccionada)">
-                        <i class="fa fa-exchange mr-1"></i> Cambiar Estatus
-                    </button>
-                    <button v-if="!userLimited" type="button" class="btn btn-lg btn-primary" @click="abrirModal('editar', taskSeleccionada)">
-                        <i class="fa fa-edit mr-1"></i> Editar
-                    </button>
+                    <nav>
+                        <ul class="pagination mb-0" style="gap: 4px; list-style: none; display: flex;">
+                            <li>
+                                <a class="j2b-btn j2b-btn-sm j2b-btn-outline" href="#"
+                                   @click.prevent="cambiarPagina(pagination.current_page - 1)"
+                                   :style="pagination.current_page <= 1 ? 'opacity: 0.5; pointer-events: none;' : ''">
+                                    <i class="fa fa-chevron-left"></i>
+                                </a>
+                            </li>
+                            <li v-for="page in pagesNumber" :key="page">
+                                <a class="j2b-btn j2b-btn-sm"
+                                   :class="page == pagination.current_page ? 'j2b-btn-primary' : 'j2b-btn-outline'"
+                                   href="#" @click.prevent="cambiarPagina(page)">
+                                    {{ page }}
+                                </a>
+                            </li>
+                            <li>
+                                <a class="j2b-btn j2b-btn-sm j2b-btn-outline" href="#"
+                                   @click.prevent="cambiarPagina(pagination.current_page + 1)"
+                                   :style="pagination.current_page >= pagination.last_page ? 'opacity: 0.5; pointer-events: none;' : ''">
+                                    <i class="fa fa-chevron-right"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
                 </div>
             </div>
         </div>
@@ -630,14 +253,12 @@
     <!-- Modal Crear/Editar -->
     <div class="modal fade" tabindex="-1" :class="{'mostrar': modalEditar}" role="dialog" style="display: none;">
         <div class="modal-dialog modal-lg" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h4 class="modal-title">{{ modoEdicion ? 'Editar Tarea #' + formTask.id : 'Nueva Tarea' }}</h4>
-                    <button type="button" class="close" @click="cerrarModal()" aria-label="Close">
-                        <span aria-hidden="true">×</span>
-                    </button>
+            <div class="modal-content j2b-modal-content">
+                <div class="modal-header j2b-modal-header">
+                    <h5 class="modal-title"><i class="fa fa-clipboard" style="color: var(--j2b-primary);"></i> {{ modoEdicion ? 'Editar Tarea #' + formTask.id : 'Nueva Tarea' }}</h5>
+                    <button type="button" class="j2b-modal-close" @click="cerrarModal()"><i class="fa fa-times"></i></button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body j2b-modal-body">
                     <div v-if="errorForm" class="alert alert-danger">
                         <div v-for="error in erroresForm" :key="error">{{ error }}</div>
                     </div>
@@ -722,9 +343,9 @@
                         </div>
                     </form>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @click="cerrarModal()">Cancelar</button>
-                    <button type="button" class="btn btn-primary" @click="guardarTarea" :disabled="guardando">
+                <div class="modal-footer j2b-modal-footer">
+                    <button type="button" class="j2b-btn j2b-btn-secondary" @click="cerrarModal()">Cancelar</button>
+                    <button type="button" class="j2b-btn j2b-btn-primary" @click="guardarTarea" :disabled="guardando">
                         <i class="fa fa-spinner fa-spin" v-if="guardando"></i>
                         <i class="fa fa-save" v-else></i>
                         {{ guardando ? 'Guardando...' : 'Guardar' }}
@@ -737,293 +358,55 @@
     <!-- Modal Cambiar Estatus -->
     <div class="modal fade" tabindex="-1" :class="{'mostrar': modalEstatus}" role="dialog" style="display: none;">
         <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h4 class="modal-title">Cambiar Estatus</h4>
-                    <button type="button" class="close" @click="cerrarModal()" aria-label="Close">
-                        <span aria-hidden="true">×</span>
-                    </button>
+            <div class="modal-content j2b-modal-content">
+                <div class="modal-header j2b-modal-header">
+                    <h5 class="modal-title"><i class="fa fa-exchange" style="color: var(--j2b-primary);"></i> Cambiar Estatus</h5>
+                    <button type="button" class="j2b-modal-close" @click="cerrarModal()"><i class="fa fa-times"></i></button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body j2b-modal-body">
                     <p>Tarea: <strong>{{ taskSeleccionada.title }}</strong></p>
-                    <p>Estatus actual: <span class="badge" :class="getBadgeClass(taskSeleccionada.status)">{{ taskSeleccionada.status }}</span></p>
-                    <div class="form-group">
-                        <label>Nuevo estatus:</label>
-                        <select class="form-control" v-model="nuevoEstatus">
+                    <p>Estatus actual: <span class="j2b-badge" :class="getBadgeClass(taskSeleccionada.status)">{{ taskSeleccionada.status }}</span></p>
+                    <div class="j2b-form-group">
+                        <label class="j2b-label">Nuevo estatus:</label>
+                        <select class="j2b-select" v-model="nuevoEstatus">
                             <option value="NUEVO">NUEVO</option>
                             <option value="PENDIENTE">PENDIENTE</option>
                             <option value="ATENDIDO">ATENDIDO</option>
                         </select>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @click="cerrarModal()">Cancelar</button>
-                    <button type="button" class="btn btn-primary" @click="cambiarEstatus">Guardar</button>
+                <div class="modal-footer j2b-modal-footer">
+                    <button type="button" class="j2b-btn j2b-btn-secondary" @click="cerrarModal()">Cancelar</button>
+                    <button type="button" class="j2b-btn j2b-btn-primary" @click="cambiarEstatus">Guardar</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Modal Reseña -->
+    <!-- Modal Resena -->
     <div class="modal fade" tabindex="-1" :class="{'mostrar': modalResena}" role="dialog" style="display: none;">
         <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h4 class="modal-title">Agregar Reseña</h4>
-                    <button type="button" class="close" @click="cerrarModal()" aria-label="Close">
-                        <span aria-hidden="true">×</span>
-                    </button>
+            <div class="modal-content j2b-modal-content">
+                <div class="modal-header j2b-modal-header">
+                    <h5 class="modal-title"><i class="fa fa-comment" style="color: var(--j2b-primary);"></i> Agregar Resena</h5>
+                    <button type="button" class="j2b-modal-close" @click="cerrarModal()"><i class="fa fa-times"></i></button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body j2b-modal-body">
                     <p>Tarea: <strong>{{ taskSeleccionada.title }}</strong></p>
-                    <div class="form-group">
-                        <label>Reseña:</label>
-                        <textarea class="form-control" v-model="nuevaResena" rows="4" placeholder="Escribe la reseña..."></textarea>
+                    <div class="j2b-form-group">
+                        <label class="j2b-label">Resena:</label>
+                        <textarea class="j2b-input" v-model="nuevaResena" rows="4" placeholder="Escribe la resena..."></textarea>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @click="cerrarModal()">Cancelar</button>
-                    <button type="button" class="btn btn-primary" @click="guardarResena">Guardar</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal Agregar Producto -->
-    <div class="modal fade" tabindex="-1" :class="{'mostrar': modalProductos}" role="dialog" style="display: none;">
-        <div class="modal-dialog modal-lg" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h4 class="modal-title">Agregar Producto/Refacción</h4>
-                    <button type="button" class="close" @click="cerrarModalProductos()" aria-label="Close">
-                        <span aria-hidden="true">×</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <p>Tarea: <strong>#{{ taskSeleccionada.id }} - {{ taskSeleccionada.title }}</strong></p>
-
-                    <!-- Buscador de productos -->
-                    <div class="form-group">
-                        <label>Buscar producto:</label>
-                        <div class="input-group">
-                            <input type="text" class="form-control" v-model="buscarProducto"
-                                   placeholder="Nombre, código o código de barras..."
-                                   @input="buscarProductosDebounce">
-                        </div>
-                    </div>
-
-                    <!-- Lista de productos encontrados -->
-                    <div v-if="productosDisponibles.length > 0 && !productoSeleccionado" class="list-group mb-3" style="max-height: 200px; overflow-y: auto;">
-                        <a href="#" class="list-group-item list-group-item-action"
-                           v-for="prod in productosDisponibles" :key="prod.id"
-                           @click.prevent="seleccionarProducto(prod)">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <strong>{{ prod.name }}</strong>
-                                    <br><small class="text-muted">{{ prod.key }}</small>
-                                </div>
-                                <div class="text-right">
-                                    <span class="badge badge-info">Stock: {{ prod.stock }}</span>
-                                    <br><small>${{ prod.retail }}</small>
-                                </div>
-                            </div>
-                        </a>
-                    </div>
-
-                    <!-- Producto seleccionado -->
-                    <div v-if="productoSeleccionado" class="card mb-3 border-success">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div>
-                                    <h5 class="mb-1">{{ productoSeleccionado.name }}</h5>
-                                    <small class="text-muted">Código: {{ productoSeleccionado.key }}</small>
-                                    <br><small>Stock disponible: <strong class="text-success">{{ productoSeleccionado.stock }}</strong></small>
-                                    <br><small>Costo: ${{ productoSeleccionado.cost }} | Precio: ${{ productoSeleccionado.retail }}</small>
-                                </div>
-                                <button class="btn btn-sm btn-outline-secondary" @click="productoSeleccionado = null">
-                                    <i class="fa fa-times"></i> Cambiar
-                                </button>
-                            </div>
-
-                            <hr>
-
-                            <div class="form-group row">
-                                <label class="col-md-4 col-form-label">Cantidad a entregar:</label>
-                                <div class="col-md-4">
-                                    <input type="number" class="form-control" v-model.number="formProducto.qty_delivered"
-                                           min="1" :max="productoSeleccionado.stock">
-                                </div>
-                                <div class="col-md-4">
-                                    <small class="text-muted">Máx: {{ productoSeleccionado.stock }}</small>
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label>Notas (opcional):</label>
-                                <input type="text" class="form-control" v-model="formProducto.notes"
-                                       placeholder="Ej: Para reparación de cabezal">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @click="cerrarModalProductos()">Cancelar</button>
-                    <button type="button" class="btn btn-success" @click="agregarProductoTarea"
-                            :disabled="!productoSeleccionado || formProducto.qty_delivered < 1 || guardando">
-                        <i class="fa fa-spinner fa-spin" v-if="guardando"></i>
-                        <i class="fa fa-plus" v-else></i>
-                        Agregar Producto
-                    </button>
+                <div class="modal-footer j2b-modal-footer">
+                    <button type="button" class="j2b-btn j2b-btn-secondary" @click="cerrarModal()">Cancelar</button>
+                    <button type="button" class="j2b-btn j2b-btn-primary" @click="guardarResena">Guardar</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Modal Actualizar Cantidades de Producto -->
-    <div class="modal fade modal-cantidades" tabindex="-1" :class="{'mostrar': editandoProducto !== null}" role="dialog" style="display: none;">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header bg-secondary text-white">
-                    <h5 class="modal-title">
-                        <i class="fa fa-cog mr-2"></i>Actualizar Cantidades
-                    </h5>
-                    <button type="button" class="close text-white" @click="editandoProducto = null" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body" v-if="editandoProducto">
-                    <!-- Info del producto -->
-                    <div class="bg-light p-3 rounded mb-4">
-                        <h6 class="mb-1">{{ editandoProducto.product ? editandoProducto.product.name : 'N/A' }}</h6>
-                        <small class="text-muted">{{ editandoProducto.product ? editandoProducto.product.key : '' }}</small>
-                        <div class="mt-2">
-                            <span class="badge badge-primary badge-lg">
-                                Entregados: {{ editandoProducto.qty_delivered }}
-                            </span>
-                        </div>
-                    </div>
-
-                    <!-- Slider visual de distribución -->
-                    <div class="mb-4">
-                        <label class="font-weight-bold">¿Cuántos se devuelven al inventario?</label>
-                        <input type="range" class="form-control-range slider-devolucion"
-                               v-model.number="formEditProducto.qty_returned"
-                               min="0" :max="editandoProducto.qty_delivered"
-                               @input="syncUsadosDesdeDevueltos">
-
-                        <!-- Indicadores visuales -->
-                        <div class="d-flex justify-content-between mt-3">
-                            <div class="text-center flex-fill">
-                                <div class="h3 mb-0 text-danger">{{ formEditProducto.qty_used }}</div>
-                                <small class="text-muted">Usados</small>
-                                <br><small class="text-danger">(No regresan)</small>
-                            </div>
-                            <div class="text-center flex-fill">
-                                <div class="h3 mb-0 text-success">{{ formEditProducto.qty_returned }}</div>
-                                <small class="text-muted">Devueltos</small>
-                                <br><small class="text-success">(Regresan al stock)</small>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Resumen -->
-                    <div class="alert alert-light border">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span>
-                                <i class="fa fa-check-circle text-success mr-1"></i>
-                                <strong>Total:</strong> {{ formEditProducto.qty_used }} usados + {{ formEditProducto.qty_returned }} devueltos = {{ formEditProducto.qty_used + formEditProducto.qty_returned }}
-                            </span>
-                            <span class="badge badge-success" v-if="formEditProducto.qty_used + formEditProducto.qty_returned === editandoProducto.qty_delivered">
-                                <i class="fa fa-check"></i> OK
-                            </span>
-                        </div>
-                    </div>
-
-                    <!-- Notas opcionales -->
-                    <div class="form-group mb-0">
-                        <label>Notas (opcional):</label>
-                        <input type="text" class="form-control" v-model="formEditProducto.notes" placeholder="Ej: 2 fusibles quemados, 1 sobrante...">
-                    </div>
-                </div>
-                <div class="modal-footer" v-if="editandoProducto">
-                    <button type="button" class="btn btn-secondary" @click="editandoProducto = null">Cancelar</button>
-                    <button type="button" class="btn btn-primary" @click="actualizarProductoTarea"
-                            :disabled="formEditProducto.qty_used + formEditProducto.qty_returned !== editandoProducto.qty_delivered || guardando">
-                        <i class="fa fa-spinner fa-spin" v-if="guardando"></i>
-                        <i class="fa fa-save" v-else></i>
-                        Guardar
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal Gestión de Imágenes -->
-    <div class="modal fade" id="modalImagenesTarea" tabindex="-1" role="dialog" aria-hidden="true">
-        <div class="modal-dialog modal-lg" role="document">
-            <div class="modal-content" v-if="tareaImagenes">
-                <div class="modal-header bg-info text-white">
-                    <h5 class="modal-title">
-                        <i class="fa fa-image mr-2"></i>Gestionar Imágenes - #{{ tareaImagenes.id }}
-                    </h5>
-                    <button type="button" class="close text-white" @click="modalImagenes = false" aria-label="Cerrar">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <!-- Subir imagen -->
-                    <div class="mb-4">
-                        <h6>Subir Nueva Imagen</h6>
-                        <div class="input-group">
-                            <input type="file" class="form-control" @change="seleccionarImagenTarea" accept="image/*" ref="inputImagenTarea">
-                            <button class="btn btn-primary" @click="subirImagenTarea" :disabled="!imagenTareaSeleccionada || subiendoImagenTarea">
-                                <i class="fa fa-spinner fa-spin" v-if="subiendoImagenTarea"></i>
-                                <i class="fa fa-upload" v-else></i>
-                                Subir
-                            </button>
-                        </div>
-                        <small class="text-muted">Formatos: JPG, PNG, GIF, WebP. Máximo 2MB.</small>
-                    </div>
-
-                    <!-- Imagen Principal -->
-                    <div class="mb-4">
-                        <h6>Imagen Principal</h6>
-                        <div v-if="tareaImagenes.image" class="position-relative d-inline-block">
-                            <img :src="getImageUrl(tareaImagenes.image)" class="img-thumbnail" style="max-width: 200px; max-height: 200px; cursor: pointer;" @click="$viewImage(tareaImagenes.image)">
-                            <button class="btn btn-danger btn-sm position-absolute" style="top: 5px; right: 5px;" @click="eliminarImagenPrincipalTarea" :disabled="eliminandoImagenTarea">
-                                <i class="fa fa-trash"></i>
-                            </button>
-                        </div>
-                        <div v-else class="text-muted">
-                            <i class="fa fa-image fa-3x"></i>
-                            <p>Sin imagen principal</p>
-                        </div>
-                    </div>
-
-                    <!-- Imágenes Alternativas -->
-                    <div>
-                        <h6>Imágenes Alternativas ({{ tareaImagenes.images ? tareaImagenes.images.length : 0 }})</h6>
-                        <div class="row" v-if="tareaImagenes.images && tareaImagenes.images.length > 0">
-                            <div class="col-md-3 mb-3" v-for="(img, index) in tareaImagenes.images" :key="img.id">
-                                <div class="position-relative">
-                                    <img :src="getImageUrl(img.image)" class="img-thumbnail" style="width: 100%; height: 120px; object-fit: cover; cursor: pointer;" @click="verGaleriaModalImagenes(index)">
-                                    <button class="btn btn-danger btn-sm position-absolute" style="top: 5px; right: 5px;" @click="eliminarImagenAlternativaTarea(img.id)" :disabled="eliminandoImagenTarea">
-                                        <i class="fa fa-trash"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        <div v-else class="text-muted">
-                            <p>Sin imágenes alternativas</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @click="modalImagenes = false">Cerrar</button>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- Modales de Producto, Cantidades e Imágenes movidos a TaskDetailComponent -->
 
 </div>
 </template>
@@ -1050,7 +433,6 @@ export default {
             numStatus: {},
 
             // Modales
-            modalVer: false,
             modalEditar: false,
             modalEstatus: false,
             modalResena: false,
@@ -1068,9 +450,7 @@ export default {
             },
 
             // Listas
-            colaboradores: [],
             clientes: [],
-            colaboradorSeleccionado: '',
 
             // Búsqueda de clientes
             buscarCliente: '',
@@ -1089,49 +469,11 @@ export default {
             erroresForm: [],
             vistaActual: localStorage.getItem('admin_vista') || 'cards', // 'cards' o 'tabla'
 
-            // Productos de tarea
-            modalProductos: false,
-            productosDisponibles: [],
-            buscarProducto: '',
-            formProducto: {
-                product_id: '',
-                qty_delivered: 1,
-                notes: ''
-            },
-            productoSeleccionado: null,
-            editandoProducto: null,
-            formEditProducto: {
-                qty_used: 0,
-                qty_returned: 0,
-                notes: ''
-            },
-
-            // Checklist
-            nuevoChecklistTexto: '',
-            editandoChecklistId: null,
-            editandoChecklistTexto: '',
-            dragIndex: null,
-            dragOverIndex: null,
-            catalogoChecklistResultados: [],
-            mostrarDropdownChecklist: false,
-            buscarCatalogoTimeout: null,
-
-            // Imágenes de tarea
-            modalImagenes: false,
-            tareaImagenes: null,
-            imagenTareaSeleccionada: null,
-            subiendoImagenTarea: false,
-            eliminandoImagenTarea: false
         }
     },
     watch: {
         vistaActual(newVal) {
             localStorage.setItem('admin_vista', newVal);
-        },
-        modalImagenes(newVal) {
-            if (!newVal) {
-                $('#modalImagenesTarea').modal('hide');
-            }
         }
     },
     computed: {
@@ -1161,7 +503,6 @@ export default {
     mounted() {
         this.loadTasks(1);
         this.loadNumStatus();
-        this.loadColaboradores();
         this.loadClientes();
     },
     methods: {
@@ -1191,17 +532,6 @@ export default {
             let me = this;
             axios.get('/admin/tasks/get-num-status').then(function(response) {
                 me.numStatus = response.data;
-            }).catch(function(error) {
-                console.log(error);
-            });
-        },
-
-        loadColaboradores() {
-            let me = this;
-            axios.get('/admin/tasks/collaborators').then(function(response) {
-                if (response.data.ok) {
-                    me.colaboradores = response.data.collaborators;
-                }
             }).catch(function(error) {
                 console.log(error);
             });
@@ -1257,15 +587,15 @@ export default {
             me.loadTasks(page);
         },
 
+        irAlDetalle(taskId) {
+            window.location.href = '/admin/tasks/detail/' + taskId;
+        },
+
         // Modales
         abrirModal(tipo, task = null) {
             this.cerrarModal();
 
-            if (tipo === 'ver' && task) {
-                this.taskSeleccionada = { ...task };
-                this.colaboradorSeleccionado = '';
-                this.modalVer = true;
-            } else if (tipo === 'crear') {
+            if (tipo === 'crear') {
                 this.modoEdicion = false;
                 this.formTask = {
                     id: null,
@@ -1314,7 +644,6 @@ export default {
         },
 
         cerrarModal() {
-            this.modalVer = false;
             this.modalEditar = false;
             this.modalEstatus = false;
             this.modalResena = false;
@@ -1414,37 +743,6 @@ export default {
             });
         },
 
-        asignarTarea(taskId) {
-            let me = this;
-            if (!me.colaboradorSeleccionado) return;
-
-            axios.post(`/admin/tasks/${taskId}/assign`, {
-                user_id: me.colaboradorSeleccionado
-            }).then(function(response) {
-                if (response.data.ok) {
-                    me.taskSeleccionada = response.data.task;
-                    me.colaboradorSeleccionado = '';
-                    me.loadTasks(me.pagination.current_page || 1);
-                    Swal.fire('Éxito', response.data.message, 'success');
-                }
-            }).catch(function(error) {
-                Swal.fire('Error', 'Error al asignar tarea', 'error');
-            });
-        },
-
-        desasignarTarea(taskId) {
-            let me = this;
-            axios.post(`/admin/tasks/${taskId}/unassign`).then(function(response) {
-                if (response.data.ok) {
-                    me.taskSeleccionada = response.data.task;
-                    me.loadTasks(me.pagination.current_page || 1);
-                    Swal.fire('Éxito', response.data.message, 'success');
-                }
-            }).catch(function(error) {
-                Swal.fire('Error', 'Error al desasignar tarea', 'error');
-            });
-        },
-
         activarTarea(taskId) {
             let me = this;
             Swal.fire({
@@ -1492,10 +790,10 @@ export default {
         // Helpers
         getBadgeClass(status) {
             switch (status) {
-                case 'NUEVO': return 'badge-success';
-                case 'PENDIENTE': return 'badge-warning';
-                case 'ATENDIDO': return 'badge-info';
-                default: return 'badge-secondary';
+                case 'NUEVO': return 'j2b-badge-success';
+                case 'PENDIENTE': return 'j2b-badge-warning';
+                case 'ATENDIDO': return 'j2b-badge-info';
+                default: return 'j2b-badge-outline';
             }
         },
 
@@ -1513,494 +811,6 @@ export default {
             return new Date(date).toLocaleString('es-MX');
         },
 
-        // ==========================================
-        // MÉTODOS PARA PRODUCTOS DE TAREA
-        // ==========================================
-
-        abrirModalProductos() {
-            this.modalProductos = true;
-            this.buscarProducto = '';
-            this.productosDisponibles = [];
-            this.productoSeleccionado = null;
-            this.formProducto = {
-                product_id: '',
-                qty_delivered: 1,
-                notes: ''
-            };
-        },
-
-        cerrarModalProductos() {
-            this.modalProductos = false;
-            this.buscarProducto = '';
-            this.productosDisponibles = [];
-            this.productoSeleccionado = null;
-        },
-
-        buscarProductosDebounce() {
-            let me = this;
-            clearTimeout(me.searchTimeout);
-            me.searchTimeout = setTimeout(() => {
-                me.buscarProductos();
-            }, 300);
-        },
-
-        buscarProductos() {
-            let me = this;
-            if (me.buscarProducto.length < 2) {
-                me.productosDisponibles = [];
-                return;
-            }
-            axios.get(`/admin/tasks/products?q=${me.buscarProducto}`).then(function(response) {
-                if (response.data.ok) {
-                    me.productosDisponibles = response.data.products;
-                }
-            }).catch(function(error) {
-                console.log(error);
-            });
-        },
-
-        seleccionarProducto(producto) {
-            this.productoSeleccionado = producto;
-            this.formProducto.product_id = producto.id;
-            this.formProducto.qty_delivered = 1;
-            this.productosDisponibles = [];
-        },
-
-        agregarProductoTarea() {
-            let me = this;
-            me.guardando = true;
-
-            axios.post(`/admin/tasks/${me.taskSeleccionada.id}/products`, {
-                product_id: me.formProducto.product_id,
-                qty_delivered: me.formProducto.qty_delivered,
-                notes: me.formProducto.notes
-            }).then(function(response) {
-                if (response.data.ok) {
-                    // Agregar producto a la lista local
-                    if (!me.taskSeleccionada.products) {
-                        me.taskSeleccionada.products = [];
-                    }
-                    me.taskSeleccionada.products.push(response.data.taskProduct);
-                    me.cerrarModalProductos();
-                    Swal.fire('Éxito', response.data.message, 'success');
-                }
-            }).catch(function(error) {
-                let msg = 'Error al agregar producto';
-                if (error.response && error.response.data && error.response.data.message) {
-                    msg = error.response.data.message;
-                }
-                Swal.fire('Error', msg, 'error');
-            }).finally(function() {
-                me.guardando = false;
-            });
-        },
-
-        editarProductoTarea(taskProduct) {
-            this.editandoProducto = taskProduct;
-
-            // Si nunca se ha actualizado (ambos en 0), por defecto usados = entregados
-            let usados = taskProduct.qty_used;
-            let devueltos = taskProduct.qty_returned;
-
-            if (usados === 0 && devueltos === 0) {
-                usados = taskProduct.qty_delivered;
-                devueltos = 0;
-            }
-
-            this.formEditProducto = {
-                qty_used: usados,
-                qty_returned: devueltos,
-                notes: taskProduct.notes || ''
-            };
-        },
-
-        // Sincroniza usados cuando cambia devueltos (slider)
-        syncUsadosDesdeDevueltos() {
-            if (this.editandoProducto) {
-                this.formEditProducto.qty_used = this.editandoProducto.qty_delivered - this.formEditProducto.qty_returned;
-            }
-        },
-
-        actualizarProductoTarea() {
-            let me = this;
-            me.guardando = true;
-
-            axios.put(`/admin/tasks/${me.taskSeleccionada.id}/products/${me.editandoProducto.id}`, {
-                qty_used: me.formEditProducto.qty_used,
-                qty_returned: me.formEditProducto.qty_returned,
-                notes: me.formEditProducto.notes
-            }).then(function(response) {
-                if (response.data.ok) {
-                    // Actualizar en la lista local
-                    let idx = me.taskSeleccionada.products.findIndex(p => p.id === me.editandoProducto.id);
-                    if (idx !== -1) {
-                        me.taskSeleccionada.products[idx] = response.data.taskProduct;
-                    }
-                    me.editandoProducto = null;
-                    Swal.fire('Éxito', response.data.message, 'success');
-                }
-            }).catch(function(error) {
-                let msg = 'Error al actualizar producto';
-                if (error.response && error.response.data && error.response.data.message) {
-                    msg = error.response.data.message;
-                }
-                Swal.fire('Error', msg, 'error');
-            }).finally(function() {
-                me.guardando = false;
-            });
-        },
-
-        // Helpers para productos
-        getPendientesBadge(tp) {
-            let pendientes = tp.qty_delivered - tp.qty_used - tp.qty_returned;
-            if (pendientes === 0) return 'badge-success';
-            if (pendientes === tp.qty_delivered) return 'badge-secondary';
-            return 'badge-warning';
-        },
-
-        getTotalEntregados() {
-            if (!this.taskSeleccionada.products) return 0;
-            return this.taskSeleccionada.products.reduce((sum, p) => sum + p.qty_delivered, 0);
-        },
-
-        getTotalUsados() {
-            if (!this.taskSeleccionada.products) return 0;
-            return this.taskSeleccionada.products.reduce((sum, p) => sum + p.qty_used, 0);
-        },
-
-        getTotalDevueltos() {
-            if (!this.taskSeleccionada.products) return 0;
-            return this.taskSeleccionada.products.reduce((sum, p) => sum + p.qty_returned, 0);
-        },
-
-        getTotalPendientes() {
-            return this.getTotalEntregados() - this.getTotalUsados() - this.getTotalDevueltos();
-        },
-
-        // Obtener productos usados sin facturar
-        getProductosSinFacturar() {
-            if (!this.taskSeleccionada.products) return 0;
-            return this.taskSeleccionada.products.filter(p => p.qty_used > 0 && !p.receipt_id).length;
-        },
-
-        // Generar nota de venta desde productos de tarea
-        generarNotaDesdeProductos() {
-            window.location.href = `/admin/receipts/create?from_task=${this.taskSeleccionada.id}`;
-        },
-
-        // ==========================================
-        // MÉTODOS PARA CHECKLIST
-        // ==========================================
-
-        agregarChecklistItem() {
-            let me = this;
-            let text = me.nuevoChecklistTexto.trim();
-            if (!text) return;
-
-            me.catalogoChecklistResultados = [];
-            me.mostrarDropdownChecklist = false;
-
-            axios.post(`/admin/tasks/${me.taskSeleccionada.id}/checklist`, { text: text })
-                .then(function(response) {
-                    if (response.data.ok) {
-                        if (!me.taskSeleccionada.checklist_items) {
-                            me.taskSeleccionada.checklist_items = [];
-                        }
-                        me.taskSeleccionada.checklist_items.push(response.data.item);
-                        me.nuevoChecklistTexto = '';
-                    }
-                }).catch(function(error) {
-                    Swal.fire('Error', 'Error al agregar item', 'error');
-                });
-        },
-
-        toggleChecklistItem(item) {
-            let me = this;
-            axios.put(`/admin/tasks/${me.taskSeleccionada.id}/checklist/${item.id}/toggle`)
-                .then(function(response) {
-                    if (response.data.ok) {
-                        item.is_completed = response.data.item.is_completed;
-                    }
-                }).catch(function(error) {
-                    console.error(error);
-                });
-        },
-
-        iniciarEdicionChecklist(item) {
-            this.editandoChecklistId = item.id;
-            this.editandoChecklistTexto = item.text;
-            this.$nextTick(() => {
-                if (this.$refs.inputEditChecklist) {
-                    let inputs = this.$refs.inputEditChecklist;
-                    let input = Array.isArray(inputs) ? inputs[0] : inputs;
-                    if (input) input.focus();
-                }
-            });
-        },
-
-        guardarEdicionChecklist(item) {
-            let me = this;
-            let text = me.editandoChecklistTexto.trim();
-            if (!text || text === item.text) {
-                me.editandoChecklistId = null;
-                return;
-            }
-
-            axios.put(`/admin/tasks/${me.taskSeleccionada.id}/checklist/${item.id}`, { text: text })
-                .then(function(response) {
-                    if (response.data.ok) {
-                        item.text = response.data.item.text;
-                    }
-                }).catch(function(error) {
-                    Swal.fire('Error', 'Error al actualizar item', 'error');
-                }).finally(function() {
-                    me.editandoChecklistId = null;
-                });
-        },
-
-        eliminarChecklistItem(item) {
-            let me = this;
-            axios.delete(`/admin/tasks/${me.taskSeleccionada.id}/checklist/${item.id}`)
-                .then(function(response) {
-                    if (response.data.ok) {
-                        let idx = me.taskSeleccionada.checklist_items.findIndex(i => i.id === item.id);
-                        if (idx !== -1) {
-                            me.taskSeleccionada.checklist_items.splice(idx, 1);
-                        }
-                    }
-                }).catch(function(error) {
-                    Swal.fire('Error', 'Error al eliminar item', 'error');
-                });
-        },
-
-        // Drag & Drop
-        onDragStart(index, event) {
-            this.dragIndex = index;
-            event.dataTransfer.effectAllowed = 'move';
-        },
-
-        onDragOver(index) {
-            this.dragOverIndex = index;
-        },
-
-        onDrop(index) {
-            let me = this;
-            let items = me.taskSeleccionada.checklist_items;
-            if (me.dragIndex === null || me.dragIndex === index) return;
-
-            let moved = items.splice(me.dragIndex, 1)[0];
-            items.splice(index, 0, moved);
-
-            me.dragIndex = null;
-            me.dragOverIndex = null;
-
-            // Guardar nuevo orden
-            let orderedIds = items.map(i => i.id);
-            axios.put(`/admin/tasks/${me.taskSeleccionada.id}/checklist/reorder`, { items: orderedIds })
-                .catch(function(error) {
-                    console.error('Error al reordenar:', error);
-                });
-        },
-
-        buscarCatalogoChecklist() {
-            clearTimeout(this.buscarCatalogoTimeout);
-            if (this.nuevoChecklistTexto.length < 2) {
-                this.catalogoChecklistResultados = [];
-                return;
-            }
-            this.buscarCatalogoTimeout = setTimeout(() => {
-                axios.get('/admin/tasks/checklist/search-catalog', { params: { q: this.nuevoChecklistTexto } })
-                    .then(response => {
-                        if (response.data.ok) {
-                            this.catalogoChecklistResultados = response.data.results;
-                            this.mostrarDropdownChecklist = true;
-                        }
-                    })
-                    .catch(error => console.error(error));
-            }, 300);
-        },
-
-        seleccionarCatalogoChecklist(item) {
-            this.nuevoChecklistTexto = item.name;
-            this.catalogoChecklistResultados = [];
-            this.mostrarDropdownChecklist = false;
-            this.agregarChecklistItem();
-        },
-
-        getChecklistCompleted() {
-            if (!this.taskSeleccionada.checklist_items) return 0;
-            return this.taskSeleccionada.checklist_items.filter(i => i.is_completed).length;
-        },
-
-        getChecklistPercent() {
-            if (!this.taskSeleccionada.checklist_items || this.taskSeleccionada.checklist_items.length === 0) return 0;
-            return Math.round((this.getChecklistCompleted() / this.taskSeleccionada.checklist_items.length) * 100);
-        },
-
-        // ==========================================
-        // MÉTODOS PARA IMÁGENES DE TAREA
-        // ==========================================
-
-        // Abrir modal de gestión de imágenes
-        abrirModalImagenes(task) {
-            this.tareaImagenes = JSON.parse(JSON.stringify(task));
-            this.imagenTareaSeleccionada = null;
-            if (this.$refs.inputImagenTarea) {
-                this.$refs.inputImagenTarea.value = '';
-            }
-            this.modalImagenes = true;
-            this.$nextTick(() => {
-                $('#modalImagenesTarea').modal('show');
-            });
-        },
-
-        // Ver galería de imágenes de tarea (desde modal de detalle)
-        verGaleriaTarea(index) {
-            let imagenes = [];
-
-            if (this.taskSeleccionada.image) {
-                imagenes.push(this.taskSeleccionada.image);
-            }
-
-            if (this.taskSeleccionada.images && this.taskSeleccionada.images.length > 0) {
-                this.taskSeleccionada.images.forEach(img => {
-                    imagenes.push(img.image);
-                });
-            }
-
-            this.$viewImages(imagenes, index);
-        },
-
-        // Ver galería desde modal de gestión de imágenes
-        verGaleriaModalImagenes(indexAlternativa) {
-            let imagenes = [];
-
-            if (this.tareaImagenes.image) {
-                imagenes.push(this.tareaImagenes.image);
-            }
-
-            if (this.tareaImagenes.images && this.tareaImagenes.images.length > 0) {
-                this.tareaImagenes.images.forEach(img => {
-                    imagenes.push(img.image);
-                });
-            }
-
-            let startIndex = this.tareaImagenes.image ? indexAlternativa + 1 : indexAlternativa;
-            this.$viewImages(imagenes, startIndex);
-        },
-
-        // Seleccionar imagen desde input file
-        seleccionarImagenTarea(event) {
-            const file = event.target.files[0];
-            if (file) {
-                this.imagenTareaSeleccionada = file;
-            }
-        },
-
-        // Subir imagen
-        subirImagenTarea() {
-            if (!this.imagenTareaSeleccionada || !this.tareaImagenes) return;
-
-            let me = this;
-            me.subiendoImagenTarea = true;
-
-            const formData = new FormData();
-            formData.append('image', this.imagenTareaSeleccionada);
-
-            axios.post(`/admin/tasks/${this.tareaImagenes.id}/upload-image`, formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            }).then(function(response) {
-                if (response.data.ok) {
-                    me.tareaImagenes = response.data.task;
-                    me.actualizarTaskEnLista(response.data.task);
-                    // También actualizar taskSeleccionada si es la misma
-                    if (me.taskSeleccionada && me.taskSeleccionada.id === response.data.task.id) {
-                        me.taskSeleccionada = response.data.task;
-                    }
-                    me.imagenTareaSeleccionada = null;
-                    if (me.$refs.inputImagenTarea) {
-                        me.$refs.inputImagenTarea.value = '';
-                    }
-                    Swal.fire('Subida', response.data.message, 'success');
-                }
-            }).catch(function(error) {
-                Swal.fire('Error', 'Error al subir la imagen', 'error');
-            }).finally(function() {
-                me.subiendoImagenTarea = false;
-            });
-        },
-
-        // Eliminar imagen principal
-        eliminarImagenPrincipalTarea() {
-            let me = this;
-            Swal.fire({
-                title: '¿Eliminar imagen principal?',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#3085d6',
-                confirmButtonText: 'Sí, eliminar',
-                cancelButtonText: 'Cancelar'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    me.eliminandoImagenTarea = true;
-                    axios.delete(`/admin/tasks/${me.tareaImagenes.id}/delete-main-image`).then(function(response) {
-                        if (response.data.ok) {
-                            me.tareaImagenes = response.data.task;
-                            me.actualizarTaskEnLista(response.data.task);
-                            if (me.taskSeleccionada && me.taskSeleccionada.id === response.data.task.id) {
-                                me.taskSeleccionada = response.data.task;
-                            }
-                            Swal.fire('Eliminada', response.data.message, 'success');
-                        }
-                    }).catch(function(error) {
-                        Swal.fire('Error', 'Error al eliminar imagen', 'error');
-                    }).finally(function() {
-                        me.eliminandoImagenTarea = false;
-                    });
-                }
-            });
-        },
-
-        // Eliminar imagen alternativa
-        eliminarImagenAlternativaTarea(imageId) {
-            let me = this;
-            Swal.fire({
-                title: '¿Eliminar esta imagen?',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#3085d6',
-                confirmButtonText: 'Sí, eliminar',
-                cancelButtonText: 'Cancelar'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    me.eliminandoImagenTarea = true;
-                    axios.delete(`/admin/tasks/delete-alt-image/${imageId}`).then(function(response) {
-                        if (response.data.ok) {
-                            me.tareaImagenes = response.data.task;
-                            me.actualizarTaskEnLista(response.data.task);
-                            if (me.taskSeleccionada && me.taskSeleccionada.id === response.data.task.id) {
-                                me.taskSeleccionada = response.data.task;
-                            }
-                            Swal.fire('Eliminada', response.data.message, 'success');
-                        }
-                    }).catch(function(error) {
-                        Swal.fire('Error', 'Error al eliminar imagen', 'error');
-                    }).finally(function() {
-                        me.eliminandoImagenTarea = false;
-                    });
-                }
-            });
-        },
-
-        // Actualizar tarea en la lista sin recargar todo
-        actualizarTaskEnLista(task) {
-            const index = this.arrayTasks.findIndex(t => t.id === task.id);
-            if (index !== -1) {
-                this.arrayTasks.splice(index, 1, task);
-            }
-        }
     }
 }
 </script>
@@ -2011,16 +821,27 @@ export default {
         position: absolute !important;
     }
     .mostrar{
-        display: list-item !important;
+        display: block !important;
         opacity: 1 !important;
         position: fixed !important;
-        background-color: #3c29297a !important;
-        overflow: scroll;
+        background-color: rgba(26, 26, 46, 0.8) !important;
+        overflow-y: auto;
+        z-index: 1050;
     }
 
     .div-error{
         display: flex;
         justify-content: center;
+    }
+
+    /* Badge de status dentro del header del card (fondo blanco para contraste) */
+    .task-status-badge {
+        background: rgba(255, 255, 255, 0.9);
+        color: var(--j2b-dark);
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 0.2rem 0.6rem;
+        border-radius: var(--j2b-radius-sm);
     }
 
     /* Estilos para Cards de Tareas - igual que Clientes */
@@ -2094,130 +915,4 @@ export default {
         padding: 0.75rem 1rem;
     }
 
-    /* Modal Ver Detalle - Grande y espacioso */
-    .modal-ver-detalle .modal-dialog {
-        max-width: 1400px;
-        margin: 1rem auto;
-    }
-
-    .modal-ver-detalle .modal-content {
-        min-height: 85vh;
-    }
-
-    .modal-ver-detalle .modal-body {
-        padding: 1.5rem;
-    }
-
-    /* Cards dentro del modal con mejor espaciado */
-    .modal-ver-detalle .card {
-        margin-bottom: 1.25rem;
-        border-radius: 8px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-
-    .modal-ver-detalle .card-header {
-        padding: 0.75rem 1rem;
-        font-size: 1rem;
-        font-weight: 600;
-        background-color: #f8f9fa;
-        border-bottom: 1px solid #dee2e6;
-    }
-
-    .modal-ver-detalle .card-body {
-        padding: 1rem 1.25rem;
-        font-size: 0.95rem;
-    }
-
-    .modal-ver-detalle .card-body p {
-        margin-bottom: 0.6rem;
-        line-height: 1.5;
-    }
-
-    /* Tabla de productos legible */
-    .modal-ver-detalle .table-sm td,
-    .modal-ver-detalle .table-sm th {
-        padding: 0.5rem 0.6rem;
-        font-size: 0.9rem;
-        vertical-align: middle;
-    }
-
-    /* Botón extra pequeño */
-    .btn-xs {
-        padding: 0.2rem 0.4rem;
-        font-size: 0.75rem;
-        line-height: 1.2;
-    }
-
-    /* Badge más grande */
-    .badge-lg {
-        font-size: 0.95rem;
-        padding: 0.5rem 0.75rem;
-    }
-
-    /* Modal header mejorado */
-    .modal-ver-detalle .modal-header {
-        padding: 1rem 1.5rem;
-    }
-
-    .modal-ver-detalle .modal-header .modal-title {
-        font-size: 1.25rem;
-        font-weight: 600;
-    }
-
-    .modal-ver-detalle .modal-footer {
-        padding: 1rem 1.5rem;
-        border-top: 2px solid #dee2e6;
-    }
-
-    /* Labels en el modal */
-    .modal-ver-detalle label.small {
-        font-size: 0.8rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    /* Resumen de productos */
-    .modal-ver-detalle .bg-light.rounded {
-        border: 1px solid #dee2e6;
-    }
-
-    /* Modal de cantidades sobre el modal principal */
-    .modal-cantidades.mostrar {
-        z-index: 1060 !important;
-    }
-
-    .modal-cantidades .modal-dialog {
-        margin-top: 10vh;
-    }
-
-    /* Slider de devolución */
-    .slider-devolucion {
-        width: 100%;
-        height: 12px;
-        -webkit-appearance: none;
-        background: linear-gradient(to right, #dc3545 0%, #28a745 100%);
-        border-radius: 6px;
-        outline: none;
-    }
-
-    .slider-devolucion::-webkit-slider-thumb {
-        -webkit-appearance: none;
-        width: 28px;
-        height: 28px;
-        background: #fff;
-        border: 3px solid #007bff;
-        border-radius: 50%;
-        cursor: pointer;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-    }
-
-    .slider-devolucion::-moz-range-thumb {
-        width: 28px;
-        height: 28px;
-        background: #fff;
-        border: 3px solid #007bff;
-        border-radius: 50%;
-        cursor: pointer;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-    }
 </style>

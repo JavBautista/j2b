@@ -128,10 +128,13 @@
                                     </div>
                                 </div>
                                 <!-- Indicadores visuales -->
-                                <div class="client-indicators mt-2" v-if="client.location_latitude || client.user_id || client.location_image || client.rents_count > 0">
+                                <div class="client-indicators mt-2">
                                     <a v-if="client.rents_count > 0" :href="`/admin/clients/${client.id}/rentas`" class="badge bg-warning text-dark me-1 text-decoration-none" title="Ver rentas">
-                                        <i class="fa fa-list"></i> {{ client.rents_count }}
+                                        <i class="fa fa-list"></i> {{ client.rents_count }} {{ client.rents_count === 1 ? 'renta' : 'rentas' }}
                                     </a>
+                                    <span v-else class="badge bg-secondary me-1">
+                                        <i class="fa fa-list"></i> 0 rentas
+                                    </span>
                                     <span v-if="client.location_latitude" class="badge bg-success me-1" title="Tiene ubicación GPS">
                                         <i class="fa fa-map-marker"></i>
                                     </span>
@@ -174,6 +177,7 @@
                                 <td>
                                     {{ client.name }}
                                     <a v-if="client.rents_count > 0" :href="`/admin/clients/${client.id}/rentas`" class="badge bg-warning text-dark ms-1 text-decoration-none" :title="client.rents_count + ' rentas'"><i class="fa fa-list"></i> {{ client.rents_count }}</a>
+                                    <span v-else class="badge bg-secondary ms-1">0</span>
                                     <span v-if="client.location_latitude" class="badge bg-success ms-1" title="GPS"><i class="fa fa-map-marker"></i></span>
                                     <span v-if="client.user_id" class="badge bg-primary ms-1" title="Usuario APP"><i class="fa fa-mobile"></i></span>
                                 </td>

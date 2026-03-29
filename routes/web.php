@@ -14,6 +14,7 @@ use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\ShopController;
 use App\Http\Controllers\ExtraFieldsShopController;
 use App\Http\Controllers\ContractController;
+use App\Http\Controllers\TaskController;
 use App\Http\Controllers\ContractTemplateController;
 use App\Http\Controllers\SuperadminPagesController;
 use App\Http\Controllers\SuperAdminController;
@@ -79,6 +80,7 @@ Route::get('/print-receipt-rent', [ReceiptController::class, 'printReceiptRent']
 Route::get('/print-purchase-order', [PurchaseOrderController::class, 'printPurchaseOrder']);
 Route::get('/print-contract', [ContractController::class, 'printContract']);
 Route::get('/print-cfdi/{id}/{formato}', [\App\Http\Controllers\CfdiInvoiceController::class, 'descargarPublic']);
+Route::get('/print-task-checklist', [TaskController::class, 'printChecklistPdf']);
 
 
 Auth::routes([
@@ -287,6 +289,17 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
             Route::get('/admin/configurations/receipt-settings/get', [App\Http\Controllers\Admin\ReceiptSettingsController::class, 'get']);
             Route::post('/admin/configurations/receipt-settings/save', [App\Http\Controllers\Admin\ReceiptSettingsController::class, 'save']);
             Route::get('/admin/configurations/receipt-settings/qr-preview', [App\Http\Controllers\Admin\ReceiptSettingsController::class, 'qrPreview']);
+
+            // Seguimiento de Servicio (Service Tracking)
+            Route::get('/admin/configurations/service-tracking', [App\Http\Controllers\Admin\ServiceTrackingConfigController::class, 'index'])->name('admin.configurations.service_tracking');
+            Route::get('/admin/configurations/service-tracking/get', [App\Http\Controllers\Admin\ServiceTrackingConfigController::class, 'get']);
+            Route::post('/admin/configurations/service-tracking/store', [App\Http\Controllers\Admin\ServiceTrackingConfigController::class, 'store']);
+            Route::put('/admin/configurations/service-tracking/reorder/steps', [App\Http\Controllers\Admin\ServiceTrackingConfigController::class, 'reorder']);
+            Route::put('/admin/configurations/service-tracking/{id}', [App\Http\Controllers\Admin\ServiceTrackingConfigController::class, 'update']);
+            Route::put('/admin/configurations/service-tracking/{id}/toggle', [App\Http\Controllers\Admin\ServiceTrackingConfigController::class, 'toggleActive']);
+            Route::put('/admin/configurations/service-tracking/{id}/set-initial', [App\Http\Controllers\Admin\ServiceTrackingConfigController::class, 'setInitial']);
+            Route::put('/admin/configurations/service-tracking/{id}/set-final', [App\Http\Controllers\Admin\ServiceTrackingConfigController::class, 'setFinal']);
+            Route::delete('/admin/configurations/service-tracking/{id}', [App\Http\Controllers\Admin\ServiceTrackingConfigController::class, 'delete']);
         }); // ./Configuraciones (full.admin)
 
         // Facturación CFDI - Configuración Emisor
@@ -451,6 +464,8 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         // Rutas para recibos de Tareas(admin web)
         Route::get('/admin/tasks', [TasksController::class, 'index'])->name('admin.tasks');
         Route::get('/admin/tasks/get', [TasksController::class, 'get'])->name('admin.tasks.get');
+        Route::get('/admin/tasks/detail/{id}', [TasksController::class, 'show'])->name('admin.tasks.show');
+        Route::get('/admin/tasks/{id}/checklist-pdf', [TasksController::class, 'checklistPdf'])->name('admin.tasks.checklist-pdf');
         Route::get('/admin/tasks/get-num-status', [TasksController::class, 'getNumStatus'])->name('admin.tasks.get-num-status');
         Route::get('/admin/tasks/collaborators', [TasksController::class, 'getCollaborators'])->name('admin.tasks.collaborators');
 

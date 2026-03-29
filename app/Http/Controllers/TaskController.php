@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use App\Models\Task;
 use App\Models\TaskImage;
 use App\Models\TaskLog;
+use App\Models\TaskChecklistItem;
 use App\Models\Notification;
 use App\Models\User;
 use App\Services\NotificationFcmService;
@@ -15,6 +16,8 @@ use App\Services\FirebaseService;
 use App\Services\ImageService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
+use App\Models\PdfPhrase;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class TaskController extends Controller
 {
@@ -31,6 +34,7 @@ class TaskController extends Controller
                         ->with('logs')
                         ->with('assignedUser')
                         ->with('trackingHistory')
+                        ->with('checklistItems')
                         ->where('shop_id', $shop->id);
 
         if ($buscar != '') {
@@ -926,6 +930,7 @@ class TaskController extends Controller
                     ->with('images')
                     ->with('logs')
                     ->with('assignedUser')
+                    ->with('checklistItems')
                     ->where('shop_id', $shop->id)
                     ->where('client_id', $client->id)
                     ->where('origin', 'client');
@@ -1094,5 +1099,71 @@ class TaskController extends Controller
             'task' => $task
         ]);
     }//.updateFromClient()
+
+    /**
+     * PUT /api/auth/tasks/{id}/checklist/{itemId}/toggle
+     * Toggle completado de un item del checklist
+     */
+    public function toggleChecklistItem(Request $request, $id, $itemId){
+        $user = $request->user();
+        $shop = $user->shop;
+
+        $task = Task::where('shop_id', $shop->id)->findOrFail($id);
+        $item = TaskChecklistItem::where('task_id', $task->id)->findOrFail($itemId);
+
+        $item->is_completed = !$item->is_completed;
+        $item->save();
+
+        return response()->json([
+            'ok' => true,
+            'item' => $item,
+        ]);
+    }//.toggleChecklistItem()
+
+    /**
+     * GET /print-task-checklist?id={id}
+     * Ruta pública para exportar PDF del checklist (Browser.open)
+     */
+    public function printChecklistPdf(Request $request){
+        $id = $request->id;
+        $task = Task::with(['client', 'assignedUser', 'checklistItems'])->findOrFail($id);
+        $task->shop = $task->shop_id ? \App\Models\Shop::find($task->shop_id) : null;
+
+        $pdfPhraseData = PdfPhrase::getRandom();
+
+        $pdf = Pdf::loadView('task_checklist_pdf', [
+            'task' => $task,
+            'pdfPhrase' => $pdfPhraseData['phrase'],
+            'pdfPhraseUrl' => $pdfPhraseData['link_url'],
+        ]);
+
+        $name_file = $request->name_file ?? "checklist_tarea_{$task->id}";
+        return $pdf->stream("{$name_file}.pdf", array("Attachment" => false));
+    }//.printChecklistPdf()
+
+    /**
+     * GET /api/auth/tasks/{id}/checklist-pdf
+     * Ruta API autenticada para descargar PDF del checklist (compartir)
+     */
+    public function downloadChecklistPdf(Request $request, $id){
+        $user = $request->user();
+        $shop = $user->shop;
+
+        $task = Task::with(['client', 'assignedUser', 'checklistItems'])
+            ->where('shop_id', $shop->id)
+            ->findOrFail($id);
+
+        $task->shop = $shop;
+
+        $pdfPhraseData = PdfPhrase::getRandom();
+
+        $pdf = Pdf::loadView('task_checklist_pdf', [
+            'task' => $task,
+            'pdfPhrase' => $pdfPhraseData['phrase'],
+            'pdfPhraseUrl' => $pdfPhraseData['link_url'],
+        ]);
+
+        return $pdf->stream("checklist_tarea_{$task->id}.pdf", array("Attachment" => false));
+    }//.downloadChecklistPdf()
 
 }

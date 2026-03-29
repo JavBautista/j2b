@@ -15,6 +15,8 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use App\Models\Service;
 use App\Services\ImageService;
+use App\Models\PdfPhrase;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class TasksController extends Controller
 {
@@ -27,6 +29,46 @@ class TasksController extends Controller
         $shop = $user->shop;
 
         return view('admin.tasks.index', compact('shop'));
+    }
+
+    /**
+     * Página de detalle de una tarea individual
+     */
+    public function show($id)
+    {
+        $user = auth()->user();
+        $shop = $user->shop;
+
+        $task = Task::with(['client.addresses', 'images', 'logs', 'assignedUser', 'trackingHistory', 'products.product', 'products.deliveredBy', 'checklistItems'])
+            ->where('shop_id', $shop->id)
+            ->findOrFail($id);
+
+        return view('admin.tasks.show', compact('shop', 'task'));
+    }
+
+    /**
+     * Descargar PDF del checklist de una tarea
+     */
+    public function checklistPdf($id)
+    {
+        $user = auth()->user();
+        $shop = $user->shop;
+
+        $task = Task::with(['client', 'assignedUser', 'checklistItems'])
+            ->where('shop_id', $shop->id)
+            ->findOrFail($id);
+
+        $task->shop = $shop;
+
+        $pdfPhraseData = PdfPhrase::getRandom();
+
+        $pdf = Pdf::loadView('task_checklist_pdf', [
+            'task' => $task,
+            'pdfPhrase' => $pdfPhraseData['phrase'],
+            'pdfPhraseUrl' => $pdfPhraseData['link_url'],
+        ]);
+
+        return $pdf->stream("checklist_tarea_{$task->id}.pdf");
     }
 
     /**

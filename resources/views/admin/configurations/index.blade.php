@@ -110,6 +110,27 @@
             </div>
         </div>
 
+        <!-- Seguimiento de Servicio -->
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card shadow-sm border-0 hover-config-card h-100">
+                <div class="card-body text-center p-4">
+                    <div class="config-icon mb-3">
+                        <i class="fas fa-route fa-3x text-info"></i>
+                    </div>
+                    <h5 class="card-title mb-2">Seguimiento de Servicio</h5>
+                    <p class="card-text text-muted mb-3">Define los pasos de seguimiento para que tus clientes vean el avance de su servicio</p>
+                    <div class="d-flex justify-content-center">
+                        <a href="{{ route('admin.configurations.service_tracking') }}" class="btn btn-outline-info">
+                            <i class="fas fa-arrow-right me-1"></i>Configurar
+                        </a>
+                    </div>
+                </div>
+                <div class="card-footer bg-light text-center border-0">
+                    <small class="text-muted"><i class="fas fa-check-circle text-success me-1"></i>Disponible</small>
+                </div>
+            </div>
+        </div>
+
         <!-- Configuraciones Futuras -->
         <div class="col-md-6 col-lg-4 mb-4">
             <div class="card shadow-sm border-0 hover-config-card h-100 opacity-75">

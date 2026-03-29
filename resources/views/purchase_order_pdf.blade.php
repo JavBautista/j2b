@@ -5,14 +5,17 @@
         <title>Document</title>
     <style>
         body{
-            /*font-family: "Lucida Console", Monaco, monospace;*/
             font-family: Verdana, Arial, sans-serif;
-            font-size: 12px;
+            font-size: 11px;
         }
-
+        h1 { font-size: 16px; margin: 0 0 3px 0; }
+        h2 { font-size: 13px; margin: 0 0 3px 0; }
+        h3 { font-size: 11px; margin: 0 0 2px 0; }
+        p { margin: 2px 0; line-height: 1.3; }
         pre{
             font-family: Verdana, Arial, sans-serif !important;
             font-size: 9px;
+            margin: 0;
         }
     </style>
     </head>
@@ -27,7 +30,7 @@
                 </td>
                 <td width="50%" align="right">
                     @if(trim($purchase_order->shop->logo) != null)
-                        <img src="{{ public_path('storage/'.$purchase_order->shop->logo) }}" style="max-height: 80px; max-width: 100%; width: auto;">
+                        <img src="{{ public_path('storage/'.$purchase_order->shop->logo) }}" style="max-height: 60px; max-width: 100%; width: auto;">
                     @endif
                 </td>
             </tr>

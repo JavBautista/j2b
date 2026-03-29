@@ -75,6 +75,11 @@ class Shop extends Model
         return $this->hasOne(ShopReceiptSetting::class);
     }
 
+    public function serviceTrackingSteps()
+    {
+        return $this->hasMany(ServiceTrackingStep::class)->orderBy('sort_order');
+    }
+
     public function planFeatures()
     {
         return $this->hasOneThrough(

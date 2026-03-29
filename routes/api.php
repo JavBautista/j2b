@@ -491,6 +491,10 @@ Route::group([
         /*TASK PRODUCTS - Productos asignados a tareas*/
         Route::get('tasks/{id}/products', [TaskController::class, 'getProducts']);
 
+        /*TASK CHECKLIST*/
+        Route::put('tasks/{id}/checklist/{itemId}/toggle', [TaskController::class, 'toggleChecklistItem']);
+        Route::get('tasks/{id}/checklist-pdf', [TaskController::class, 'downloadChecklistPdf']);
+
         /*COLLABORATORS*/
         Route::get('collaborators','App\Http\Controllers\CollaboratorController@index');
         Route::get('collaborator/verify-user-email','App\Http\Controllers\CollaboratorController@verifyUserEmail');

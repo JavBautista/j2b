@@ -52,7 +52,7 @@ class DashboardController extends Controller
                 ->where('receipts.quotation', 0)
                 ->whereNotIn('receipts.status', ['CANCELADA', 'DEVOLUCION'])
                 ->whereBetween('partial_payments.created_at', [$hoy, $finHoy])
-                ->selectRaw('COALESCE(SUM(partial_payments.amount), 0) as total_cobrado')
+                ->selectRaw('COALESCE(SUM(partial_payments.amount), 0) as total_cobrado, COUNT(*) as num_pagos')
                 ->first();
 
             $cantidad = (int) $notas->cantidad;
@@ -61,10 +61,11 @@ class DashboardController extends Controller
                 'notas_cantidad' => $cantidad,
                 'notas_total' => round((float) $notas->total_notas, 2),
                 'ingresos' => round((float) $ingresos->total_cobrado, 2),
+                'num_pagos' => (int) $ingresos->num_pagos,
                 'ticket_promedio' => $cantidad > 0 ? round((float) $notas->total_notas / $cantidad, 2) : 0,
             ];
         } catch (\Exception $e) {
-            return ['notas_cantidad' => 0, 'notas_total' => 0, 'ingresos' => 0, 'ticket_promedio' => 0];
+            return ['notas_cantidad' => 0, 'notas_total' => 0, 'ingresos' => 0, 'num_pagos' => 0, 'ticket_promedio' => 0];
         }
     }
 
@@ -90,16 +91,17 @@ class DashboardController extends Controller
                 ->where('receipts.quotation', 0)
                 ->whereNotIn('receipts.status', ['CANCELADA', 'DEVOLUCION'])
                 ->whereBetween('partial_payments.created_at', [$inicio, $fin])
-                ->selectRaw('COALESCE(SUM(partial_payments.amount), 0) as total_cobrado')
+                ->selectRaw('COALESCE(SUM(partial_payments.amount), 0) as total_cobrado, COUNT(*) as num_pagos')
                 ->first();
 
             return [
                 'notas_cantidad' => (int) $notas->cantidad,
                 'notas_total' => round((float) $notas->total_notas, 2),
                 'ingresos' => round((float) $ingresos->total_cobrado, 2),
+                'num_pagos' => (int) $ingresos->num_pagos,
             ];
         } catch (\Exception $e) {
-            return ['notas_cantidad' => 0, 'notas_total' => 0, 'ingresos' => 0];
+            return ['notas_cantidad' => 0, 'notas_total' => 0, 'ingresos' => 0, 'num_pagos' => 0];
         }
     }
 

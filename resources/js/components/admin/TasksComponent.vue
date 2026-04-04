@@ -75,7 +75,7 @@
                         <div class="card task-card h-100" :class="{'inactive-card': !task.active}">
                             <div class="card-header d-flex justify-content-between align-items-center">
                                 <div>
-                                    <span class="task-id">#{{ task.id }}</span>
+                                    <span class="task-id">#{{ task.folio || task.id }}</span>
                                     <span class="task-status-badge ml-2">{{ task.status }}</span>
                                 </div>
                                 <div class="dropdown">
@@ -148,7 +148,7 @@
                             <div class="card-footer bg-transparent">
                                 <small class="text-muted">
                                     <i class="fa fa-hashtag"></i>
-                                    Tarea #{{ task.id }}
+                                    Tarea #{{ task.folio || task.id }}
                                 </small>
                             </div>
                         </div>
@@ -172,7 +172,7 @@
                         </thead>
                         <tbody>
                             <tr v-for="task in arrayTasks" :key="task.id" :class="{'table-secondary': !task.active}">
-                                <td><strong>{{ task.id }}</strong></td>
+                                <td><strong>{{ task.folio || task.id }}</strong></td>
                                 <td>
                                     <a :href="'/admin/tasks/detail/' + task.id" class="text-dark">
                                         {{ task.title }}
@@ -716,7 +716,7 @@ export default {
             let me = this;
             Swal.fire({
                 title: '¿Eliminar tarea?',
-                text: `#${task.id} - ${task.title}`,
+                text: `#${task.folio || task.id} - ${task.title}`,
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#d33',

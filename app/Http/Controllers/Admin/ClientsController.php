@@ -79,8 +79,13 @@ class ClientsController extends Controller
         $user = Auth::user();
         $shop = $user->shop;
 
+        // Generar folio consecutivo por tienda
+        $ultimo_folio = Client::where('shop_id', $shop->id)->max('folio');
+        $nuevo_folio = $ultimo_folio ? $ultimo_folio + 1 : 1;
+
         $client = new Client();
         $client->shop_id = $shop->id;
+        $client->folio = $nuevo_folio;
         $client->active = 1;
         $client->name = $request->name;
         $client->company = $request->company;
@@ -257,8 +262,14 @@ class ClientsController extends Controller
                                    ->where('shop_id', $shop->id)
                                    ->firstOrFail();
 
+        // Generar folio consecutivo por tienda
+        $ultimo_folio = Contract::where('shop_id', $shop->id)->max('folio');
+        $nuevo_folio = $ultimo_folio ? $ultimo_folio + 1 : 1;
+
         // Crear contrato con contenido personalizado desde el editor Quill
         $contract = Contract::create([
+            'shop_id' => $shop->id,
+            'folio' => $nuevo_folio,
             'client_id' => $client->id,
             'contract_template_id' => $template->id,
             'contract_data' => [], // Array vacío para cumplir con la BD

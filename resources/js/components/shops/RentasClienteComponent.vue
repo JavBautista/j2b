@@ -64,7 +64,7 @@
                            @click.prevent="seleccionarRenta(renta)">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div>
-                                    <strong>#{{ renta.id }}</strong>
+                                    <strong>#{{ renta.folio || renta.id }}</strong>
                                     <span v-if="renta.location_descripcion" class="ms-2">{{ renta.location_descripcion }}</span>
                                 </div>
                                 <div>
@@ -98,7 +98,7 @@
                 <div class="card mb-3">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">
-                            <i class="fa fa-file-contract"></i> Renta #{{ rentaSeleccionada.id }}
+                            <i class="fa fa-file-contract"></i> Renta #{{ rentaSeleccionada.folio || rentaSeleccionada.id }}
                             <span v-if="rentaSeleccionada.active" class="badge bg-success ms-2">Activa</span>
                             <span v-else class="badge bg-danger ms-2">Inactiva</span>
                         </h5>

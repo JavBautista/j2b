@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Contract extends Model
 {
     protected $fillable = [
-        'client_id', 'contract_template_id', 'contract_data', 'contract_content', 'pdf_path', 'signature_path', 'status', 'start_date', 'expiration_date', 'cancelled_at', 'cancellation_reason', 'cancelled_by'
+        'shop_id', 'folio', 'client_id', 'contract_template_id', 'contract_data', 'contract_content', 'pdf_path', 'signature_path', 'status', 'start_date', 'expiration_date', 'cancelled_at', 'cancellation_reason', 'cancelled_by'
     ];
 
     protected $casts = [
@@ -16,6 +16,11 @@ class Contract extends Model
         'expiration_date' => 'date',
         'cancelled_at' => 'datetime'
     ];
+
+    public function shop()
+    {
+        return $this->belongsTo(Shop::class);
+    }
 
     public function client()
     {

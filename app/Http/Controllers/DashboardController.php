@@ -47,7 +47,7 @@ class DashboardController extends Controller
                 ->selectRaw('
                     COALESCE(SUM(receipts.total), 0) as total,
                     COUNT(*) as cantidad,
-                    COALESCE(SUM(CASE WHEN receipts.status = \'PAGADA\' THEN receipts.total ELSE COALESCE(pp.total_pagado, 0) END), 0) as cobrado
+                    COALESCE(SUM(pp.total_pagado), 0) as cobrado
                 ')
                 ->first();
 
@@ -82,7 +82,7 @@ class DashboardController extends Controller
                 ->selectRaw('
                     COALESCE(SUM(receipts.total), 0) as total,
                     COUNT(*) as cantidad,
-                    COALESCE(SUM(CASE WHEN receipts.status = \'PAGADA\' THEN receipts.total ELSE COALESCE(pp.total_pagado, 0) END), 0) as cobrado
+                    COALESCE(SUM(pp.total_pagado), 0) as cobrado
                 ')
                 ->first();
 

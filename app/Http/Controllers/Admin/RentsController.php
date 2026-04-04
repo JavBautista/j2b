@@ -85,8 +85,14 @@ class RentsController extends Controller
         $client = \App\Models\Client::where('shop_id', $shop->id)
             ->findOrFail($request->client_id);
 
+        // Generar folio consecutivo por tienda
+        $ultimo_folio = Rent::where('shop_id', $shop->id)->max('folio');
+        $nuevo_folio = $ultimo_folio ? $ultimo_folio + 1 : 1;
+
         $rent = new Rent();
+        $rent->shop_id = $shop->id;
         $rent->client_id = $request->client_id;
+        $rent->folio = $nuevo_folio;
         $rent->active = 1;
         $rent->cutoff = $request->cutoff;
         $rent->location_descripcion = $request->location_descripcion;

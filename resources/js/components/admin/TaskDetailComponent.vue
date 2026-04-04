@@ -7,7 +7,7 @@
                 <div>
                     <h4 class="mb-1" style="color: var(--j2b-dark); font-weight: 600;">
                         <i class="fa fa-clipboard" style="color: var(--j2b-primary);"></i>
-                        Tarea #{{ task.id }} - {{ task.title }}
+                        Tarea #{{ task.folio || task.id }} - {{ task.title }}
                     </h4>
                     <p class="mb-0" style="color: var(--j2b-gray-500);">Detalle de la tarea</p>
                 </div>
@@ -425,7 +425,7 @@
         <div class="modal-dialog modal-lg" role="document">
             <div class="modal-content j2b-modal-content">
                 <div class="modal-header j2b-modal-header">
-                    <h5 class="modal-title"><i class="fa fa-edit" style="color: var(--j2b-primary);"></i> Editar Tarea #{{ task.id }}</h5>
+                    <h5 class="modal-title"><i class="fa fa-edit" style="color: var(--j2b-primary);"></i> Editar Tarea #{{ task.folio || task.id }}</h5>
                     <button type="button" class="j2b-modal-close" @click="modalEditar = false"><i class="fa fa-times"></i></button>
                 </div>
                 <div class="modal-body j2b-modal-body">
@@ -514,7 +514,7 @@
                     <button type="button" class="j2b-modal-close" @click="modalProductos = false"><i class="fa fa-times"></i></button>
                 </div>
                 <div class="modal-body">
-                    <p>Tarea: <strong>#{{ task.id }} - {{ task.title }}</strong></p>
+                    <p>Tarea: <strong>#{{ task.folio || task.id }} - {{ task.title }}</strong></p>
                     <div class="form-group">
                         <label>Buscar producto:</label>
                         <div class="input-group">
@@ -658,7 +658,7 @@
             <div class="modal-content">
                 <div class="modal-header j2b-modal-header">
                     <h5 class="modal-title">
-                        <i class="fa fa-image" style="color: var(--j2b-primary);"></i> Gestionar Imagenes - #{{ task.id }}
+                        <i class="fa fa-image" style="color: var(--j2b-primary);"></i> Gestionar Imagenes - #{{ task.folio || task.id }}
                     </h5>
                     <button type="button" class="j2b-modal-close" @click="modalImagenes = false"><i class="fa fa-times"></i></button>
                 </div>
@@ -970,7 +970,7 @@ export default {
         confirmarEliminar() {
             Swal.fire({
                 title: 'Eliminar tarea?',
-                text: `#${this.task.id} - ${this.task.title}`,
+                text: `#${this.task.folio || this.task.id} - ${this.task.title}`,
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#ff4757',

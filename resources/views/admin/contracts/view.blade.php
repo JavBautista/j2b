@@ -7,7 +7,7 @@
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h4 class="mb-0">
-                        <i class="fa fa-file-text"></i> Contrato #{{ $contract->id }}
+                        <i class="fa fa-file-text"></i> Contrato #{{ $contract->folio ?: $contract->id }}
                     </h4>
                     <div>
                         <a href="{{ route('contracts.generate-pdf', $contract) }}"

@@ -156,14 +156,20 @@ class ClientImportController extends Controller
             $created = 0;
             $errors = [];
 
+            // Obtener ultimo folio para asignar consecutivos durante la importacion
+            $ultimo_folio = Client::where('shop_id', $shop->id)->max('folio') ?? 0;
+
             foreach ($clients as $index => $clientData) {
                 try {
                     if (isset($clientData['valid']) && !$clientData['valid']) {
                         continue;
                     }
 
+                    $ultimo_folio++;
+
                     $client = new Client();
                     $client->shop_id = $shop->id;
+                    $client->folio = $ultimo_folio;
                     $client->active = 1;
                     $client->name = $clientData['name'];
                     $client->company = $clientData['company'] ?? null;

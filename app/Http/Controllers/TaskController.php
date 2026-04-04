@@ -101,8 +101,13 @@ class TaskController extends Controller
 
         $now = now();
 
+        // Generar folio consecutivo por tienda
+        $ultimo_folio = Task::where('shop_id', $shop->id)->max('folio');
+        $nuevo_folio = $ultimo_folio ? $ultimo_folio + 1 : 1;
+
         $task = new Task();
         $task->shop_id = $shop->id;
+        $task->folio = $nuevo_folio;
         $task->client_id = $request->client_id;
         $task->active    = 1;
         $task->status    = 'NUEVO';
@@ -789,8 +794,13 @@ class TaskController extends Controller
                 ], 403);
             }
 
+            // Generar folio consecutivo por tienda
+            $ultimo_folio = Task::where('shop_id', $shop->id)->max('folio');
+            $nuevo_folio = $ultimo_folio ? $ultimo_folio + 1 : 1;
+
             $task = new Task();
             $task->shop_id = $shop->id;
+            $task->folio = $nuevo_folio;
             $task->client_id = $client->id;
             $task->origin = 'client';
             $task->requested_by_user_id = $user->id;

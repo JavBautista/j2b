@@ -27,6 +27,7 @@ import ExampleComponent from './components/ExampleComponent.vue';
 //Componenetes de tiendas
 import ClientsComponent from './components/shops/ClientsComponent.vue';
 import RentasClienteComponent from './components/shops/RentasClienteComponent.vue';
+import CobrarRentaModal from './components/shops/CobrarRentaModal.vue';
 import TemplateCreatorComponent from './components/shops/TemplateCreator.vue';
 //Componentes de admin
 import ReceiptsComponent from './components/admin/ReceiptsComponent.vue';
@@ -81,6 +82,7 @@ app.component('pdf-phrases-component', PdfPhrasesComponent);
 app.component('shop-template-creator-component', TemplateCreatorComponent);
 app.component('shop-clients-component', ClientsComponent);
 app.component('rentas-cliente-component', RentasClienteComponent);
+app.component('cobrar-renta-modal', CobrarRentaModal);
 //Admin
 app.component('receipts-component', ReceiptsComponent);
 app.component('admin-chat-ai-component', AdminChatAIComponent);

@@ -53,7 +53,7 @@
                         <div class="card client-card h-100" :class="{'inactive-card': !client.active}">
                             <div class="card-header d-flex justify-content-between align-items-center">
                                 <div>
-                                    <span class="client-id">#{{ client.id }}</span>
+                                    <span class="client-id">#{{ client.folio || client.id }}</span>
                                     <span v-if="client.active" class="badge badge-success ml-2">Activo</span>
                                     <span v-else class="badge badge-danger ml-2">Inactivo</span>
                                     <span v-if="client.level" class="badge badge-info ml-1">Nv{{ client.level }}</span>
@@ -83,10 +83,13 @@
                                             <i class="fa fa-plus text-success"></i> Crear Contrato
                                         </a></li>
                                         <li><a class="dropdown-item" :href="`/admin/clients/${client.id}/receipts`">
-                                            <i class="fa fa-receipt text-info"></i> Ver Recibos
+                                            <i class="fa fa-file-text-o text-info"></i> Ver Recibos
                                         </a></li>
                                         <li><a class="dropdown-item" :href="`/admin/clients/${client.id}/rentas`">
                                             <i class="fa fa-list text-secondary"></i> Ver Rentas
+                                        </a></li>
+                                        <li v-if="client.rents_count > 0"><a class="dropdown-item" href="#" @click.prevent="cobrarRenta(client)">
+                                            <i class="fa fa-pencil-square-o text-success"></i> Generar Recibo
                                         </a></li>
                                         <li><hr class="dropdown-divider"></li>
                                         <template v-if="!isLimitedUser">
@@ -149,7 +152,7 @@
                             <div class="card-footer bg-transparent">
                                 <small class="text-muted">
                                     <i class="fa fa-clock-o"></i>
-                                    Cliente #{{ client.id }}
+                                    Cliente #{{ client.folio || client.id }}
                                 </small>
                             </div>
                         </div>
@@ -173,7 +176,7 @@
                         </thead>
                         <tbody>
                             <tr v-for="client in arrayClients" :key="client.id" :class="{'table-secondary': !client.active}">
-                                <td><strong>{{ client.id }}</strong></td>
+                                <td><strong>{{ client.folio || client.id }}</strong></td>
                                 <td>
                                     {{ client.name }}
                                     <a v-if="client.rents_count > 0" :href="`/admin/clients/${client.id}/rentas`" class="badge bg-warning text-dark ms-1 text-decoration-none" :title="client.rents_count + ' rentas'"><i class="fa fa-list"></i> {{ client.rents_count }}</a>
@@ -1305,6 +1308,9 @@
         </div>
     </div>
 
+    <!-- Modal Cobrar Renta -->
+    <cobrar-renta-modal ref="cobrarRentaModal" @created="onReciboRentaCreado" />
+
 </div>
 </template>
 
@@ -1589,6 +1595,12 @@ export default {
                         });
                     }
                 })
+            },
+            cobrarRenta(client) {
+                this.$refs.cobrarRentaModal.abrir(client.id);
+            },
+            onReciboRentaCreado(receipt) {
+                Swal.fire('Recibo de Renta', `Nota #${receipt.folio} generada.`, 'success');
             },
             registrar(){
                 if(this.validarDatos('registrar')){

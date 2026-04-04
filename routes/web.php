@@ -415,6 +415,11 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::get('/admin/rents/details/{detail}/consumables', [RentsController::class, 'getConsumables'])->name('admin.rents.consumables');
         Route::post('/admin/rents/details/{detail}/consumables/store', [RentsController::class, 'storeConsumable'])->name('admin.rents.consumables.store');
 
+        // Cobrar Renta (generar recibo de renta desde web)
+        Route::get('/admin/rent-receipt/{client}/data', [App\Http\Controllers\Admin\RentReceiptController::class, 'getClientRentas'])->name('admin.rent-receipt.data');
+        Route::get('/admin/rent-receipt/rent/{rent}/details', [App\Http\Controllers\Admin\RentReceiptController::class, 'getRentDetails'])->name('admin.rent-receipt.rent-details');
+        Route::post('/admin/rent-receipt/store', [App\Http\Controllers\Admin\RentReceiptController::class, 'store'])->name('admin.rent-receipt.store');
+
         // Rutas para recibos de clientes (admin web)
         Route::get('/admin/clients/{client}/receipts', [App\Http\Controllers\Admin\ReceiptsController::class, 'index'])->name('admin.clients.receipts');
         Route::get('/admin/clients/receipts/get', [App\Http\Controllers\Admin\ReceiptsController::class, 'getReceipts'])->name('admin.clients.receipts.get');

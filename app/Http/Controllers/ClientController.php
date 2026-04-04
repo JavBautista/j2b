@@ -192,8 +192,13 @@ class ClientController extends Controller
         $user = $request->user();
         $shop = $user->shop;
 
+        // Generar folio consecutivo por tienda
+        $ultimo_folio = Client::where('shop_id', $shop->id)->max('folio');
+        $nuevo_folio = $ultimo_folio ? $ultimo_folio + 1 : 1;
+
         $client = new Client;
         $client->shop_id=$shop->id;
+        $client->folio=$nuevo_folio;
         $client->active=1;
         $client->name=$request->name;
         $client->company=$request->company;

@@ -7,7 +7,7 @@
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h4 class="mb-0">
-                        <i class="fa fa-history"></i> Historial de Cambios - Contrato #{{ $contract->id }}
+                        <i class="fa fa-history"></i> Historial de Cambios - Contrato #{{ $contract->folio ?: $contract->id }}
                     </h4>
                     <div>
                         <a href="{{ route('admin.contracts.view', $contract) }}" class="btn btn-info">

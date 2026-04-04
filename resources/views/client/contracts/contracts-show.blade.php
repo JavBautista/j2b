@@ -6,7 +6,7 @@
         <div class="col-md-12">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h4 class="mb-0">Contrato #{{ $contract->id }}</h4>
+                    <h4 class="mb-0">Contrato #{{ $contract->folio ?: $contract->id }}</h4>
                     <div>
                         <a href="{{ route('contracts.index') }}" class="btn btn-secondary me-2">
                             <i class="fas fa-arrow-left"></i> Volver

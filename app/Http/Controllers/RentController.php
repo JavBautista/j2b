@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use App\Models\Rent;
 use App\Models\RentDetail;
+use App\Models\Client;
 
 class RentController extends Controller
 {
@@ -62,8 +63,16 @@ class RentController extends Controller
 
     public function store(Request $request)
     {
+        // Generar folio consecutivo por tienda (shop_id se obtiene del cliente)
+        $client = Client::findOrFail($request->client_id);
+        $shop_id = $client->shop_id;
+        $ultimo_folio = Rent::where('shop_id', $shop_id)->max('folio');
+        $nuevo_folio = $ultimo_folio ? $ultimo_folio + 1 : 1;
+
         $rent =new Rent();
+        $rent->shop_id = $shop_id;
         $rent->active = 1;
+        $rent->folio = $nuevo_folio;
         $rent->client_id = $request->client_id;
         $rent->cutoff    = $request->cutoff;
         $rent->location_phone   = $request->location_phone;

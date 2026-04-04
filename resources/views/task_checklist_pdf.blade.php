@@ -2,7 +2,7 @@
 <html lang="es">
     <head>
         <meta charset="UTF-8">
-        <title>Checklist Tarea #{{ $task->id }}</title>
+        <title>Checklist Tarea #{{ $task->folio ?: $task->id }}</title>
     <style>
         body{
             font-family: Verdana, Arial, sans-serif;
@@ -64,7 +64,7 @@
                     <img src="{{ public_path('img/j2b_qr.png') }}" alt="QR" width="60">
                 </td>
                 <td width="40%" valign="top">
-                    <h2>TAREA #{{ $task->id }}</h2>
+                    <h2>TAREA #{{ $task->folio ?: $task->id }}</h2>
                     <h3>{{ $task->title }}</h3>
                     <p style="font-size: 10px;">
                         Estatus: {{ $task->status }}<br>

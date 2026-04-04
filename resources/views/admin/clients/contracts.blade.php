@@ -53,7 +53,7 @@
                                 <tbody>
                                     @foreach($contracts as $contract)
                                     <tr>
-                                        <td>#{{ $contract->id }}</td>
+                                        <td>#{{ $contract->folio ?: $contract->id }}</td>
                                         <td>
                                             <i class="fa fa-file-text-o text-primary"></i>
                                             {{ $contract->template->name }}
@@ -191,7 +191,7 @@
                                     <div class="modal-content">
                                         <div class="modal-header">
                                             <h5 class="modal-title" id="cancelModalLabel{{ $contract->id }}">
-                                                <i class="fa fa-ban text-danger"></i> Cancelar Contrato #{{ $contract->id }}
+                                                <i class="fa fa-ban text-danger"></i> Cancelar Contrato #{{ $contract->folio ?: $contract->id }}
                                             </h5>
                                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                         </div>

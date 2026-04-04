@@ -33,7 +33,7 @@
                                 <tbody>
                                     @foreach($contracts as $contract)
                                     <tr>
-                                        <td><strong>#{{ $contract->id }}</strong></td>
+                                        <td><strong>#{{ $contract->folio ?: $contract->id }}</strong></td>
                                         <td>
                                             {{ $contract->client->name }}<br>
                                             <small class="text-muted">{{ $contract->client->email }}</small>

@@ -7,7 +7,7 @@
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h4 class="mb-0">
-                        <i class="fas fa-edit text-warning"></i> Editar Contrato #{{ $contract->id }} - {{ $client->name }}
+                        <i class="fas fa-edit text-warning"></i> Editar Contrato #{{ $contract->folio ?: $contract->id }} - {{ $client->name }}
                     </h4>
                     <div>
                         <a href="{{ route('admin.clients.contracts', $client) }}" class="btn btn-secondary me-2">

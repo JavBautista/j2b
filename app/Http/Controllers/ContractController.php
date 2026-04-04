@@ -64,7 +64,13 @@ class ContractController extends Controller
                                    ->where('shop_id', $shop->id)
                                    ->firstOrFail();
 
+        // Generar folio consecutivo por tienda
+        $ultimo_folio = Contract::where('shop_id', $shop->id)->max('folio');
+        $nuevo_folio = $ultimo_folio ? $ultimo_folio + 1 : 1;
+
         $contract = Contract::create([
+            'shop_id' => $shop->id,
+            'folio' => $nuevo_folio,
             'client_id' => $client->id,
             'contract_template_id' => $template->id,
             'contract_data' => $request->contract_data,

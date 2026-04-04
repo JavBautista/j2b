@@ -163,7 +163,19 @@
                                         </thead>
                                         <tbody>
                                             <tr v-for="(item, idx) in conceptosSat" :key="item.detail_id">
-                                                <td>{{ item.descripcion }}</td>
+                                                <td>
+                                                    <div v-if="!item.editingDesc" class="d-flex align-items-center">
+                                                        <span>{{ item.descripcion }}</span>
+                                                        <i class="fa fa-pencil ms-2 text-muted" style="cursor: pointer; font-size: 0.75rem;"
+                                                            @click="item.editingDesc = true" title="Editar descripción"></i>
+                                                    </div>
+                                                    <input v-else type="text" class="form-control form-control-sm"
+                                                        v-model="item.descripcion"
+                                                        @blur="item.editingDesc = false"
+                                                        @keyup.enter="item.editingDesc = false"
+                                                        v-focus
+                                                        style="font-size: 0.85rem; min-width: 180px;">
+                                                </td>
                                                 <td>
                                                     <div class="position-relative">
                                                         <input type="text" class="form-control form-control-sm"
@@ -291,6 +303,9 @@
 <script>
 export default {
     name: 'CfdiInvoiceModal',
+    directives: {
+        focus: { mounted(el) { el.focus(); } },
+    },
     props: {
         receiptId: { type: Number, default: null },
     },
@@ -516,6 +531,7 @@ export default {
                         detail_id: c.detail_id,
                         clave_prod_serv: c.clave_prod_serv,
                         clave_unidad: c.clave_unidad,
+                        descripcion: c.descripcion,
                     })),
                 });
 
@@ -573,6 +589,7 @@ export default {
                 subtotal: extraerIva ? Math.round(item.subtotal / this.$taxDivisor * 100) / 100 : item.subtotal,
                 clave_prod_serv: item.product?.sat_product_code || '01010101',
                 clave_unidad: item.product?.sat_unit_code || 'E48',
+                editingDesc: false,
                 productSearch: '',
                 unitSearch: '',
                 showProductResults: false,

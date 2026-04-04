@@ -34,33 +34,37 @@ class DashboardController extends Controller
     {
         try {
             $hoy = Carbon::today();
+            $finHoy = Carbon::today()->endOfDay();
 
-            $result = DB::table('receipts')
-                ->leftJoin(
-                    DB::raw('(SELECT receipt_id, COALESCE(SUM(amount), 0) as total_pagado FROM partial_payments GROUP BY receipt_id) as pp'),
-                    'receipts.id', '=', 'pp.receipt_id'
-                )
+            // Notas creadas hoy
+            $notas = DB::table('receipts')
+                ->where('shop_id', $shop_id)
+                ->where('quotation', 0)
+                ->whereNotIn('status', ['CANCELADA', 'DEVOLUCION'])
+                ->whereDate('created_at', $hoy)
+                ->selectRaw('COUNT(*) as cantidad, COALESCE(SUM(total), 0) as total_notas')
+                ->first();
+
+            // Ingresos reales: pagos recibidos hoy (misma lógica que reporte de ingresos)
+            $ingresos = DB::table('partial_payments')
+                ->join('receipts', 'partial_payments.receipt_id', '=', 'receipts.id')
                 ->where('receipts.shop_id', $shop_id)
                 ->where('receipts.quotation', 0)
                 ->whereNotIn('receipts.status', ['CANCELADA', 'DEVOLUCION'])
-                ->whereDate('receipts.created_at', $hoy)
-                ->selectRaw('
-                    COALESCE(SUM(receipts.total), 0) as total,
-                    COUNT(*) as cantidad,
-                    COALESCE(SUM(pp.total_pagado), 0) as cobrado
-                ')
+                ->whereBetween('partial_payments.created_at', [$hoy, $finHoy])
+                ->selectRaw('COALESCE(SUM(partial_payments.amount), 0) as total_cobrado')
                 ->first();
 
-            $cantidad = (int) $result->cantidad;
+            $cantidad = (int) $notas->cantidad;
 
             return [
-                'total' => round((float) $result->total, 2),
-                'cobrado' => round((float) $result->cobrado, 2),
-                'cantidad' => $cantidad,
-                'ticket_promedio' => $cantidad > 0 ? round((float) $result->total / $cantidad, 2) : 0,
+                'notas_cantidad' => $cantidad,
+                'notas_total' => round((float) $notas->total_notas, 2),
+                'ingresos' => round((float) $ingresos->total_cobrado, 2),
+                'ticket_promedio' => $cantidad > 0 ? round((float) $notas->total_notas / $cantidad, 2) : 0,
             ];
         } catch (\Exception $e) {
-            return ['total' => 0, 'cobrado' => 0, 'cantidad' => 0, 'ticket_promedio' => 0];
+            return ['notas_cantidad' => 0, 'notas_total' => 0, 'ingresos' => 0, 'ticket_promedio' => 0];
         }
     }
 
@@ -70,29 +74,32 @@ class DashboardController extends Controller
             $inicio = Carbon::now()->startOfMonth();
             $fin = Carbon::now()->endOfMonth();
 
-            $result = DB::table('receipts')
-                ->leftJoin(
-                    DB::raw('(SELECT receipt_id, COALESCE(SUM(amount), 0) as total_pagado FROM partial_payments GROUP BY receipt_id) as pp'),
-                    'receipts.id', '=', 'pp.receipt_id'
-                )
+            // Notas creadas en el mes
+            $notas = DB::table('receipts')
+                ->where('shop_id', $shop_id)
+                ->where('quotation', 0)
+                ->whereNotIn('status', ['CANCELADA', 'DEVOLUCION'])
+                ->whereBetween('created_at', [$inicio, $fin])
+                ->selectRaw('COUNT(*) as cantidad, COALESCE(SUM(total), 0) as total_notas')
+                ->first();
+
+            // Ingresos reales: pagos recibidos en el mes (misma lógica que reporte de ingresos)
+            $ingresos = DB::table('partial_payments')
+                ->join('receipts', 'partial_payments.receipt_id', '=', 'receipts.id')
                 ->where('receipts.shop_id', $shop_id)
                 ->where('receipts.quotation', 0)
                 ->whereNotIn('receipts.status', ['CANCELADA', 'DEVOLUCION'])
-                ->whereBetween('receipts.created_at', [$inicio, $fin])
-                ->selectRaw('
-                    COALESCE(SUM(receipts.total), 0) as total,
-                    COUNT(*) as cantidad,
-                    COALESCE(SUM(pp.total_pagado), 0) as cobrado
-                ')
+                ->whereBetween('partial_payments.created_at', [$inicio, $fin])
+                ->selectRaw('COALESCE(SUM(partial_payments.amount), 0) as total_cobrado')
                 ->first();
 
             return [
-                'total' => round((float) $result->total, 2),
-                'cobrado' => round((float) $result->cobrado, 2),
-                'cantidad' => (int) $result->cantidad,
+                'notas_cantidad' => (int) $notas->cantidad,
+                'notas_total' => round((float) $notas->total_notas, 2),
+                'ingresos' => round((float) $ingresos->total_cobrado, 2),
             ];
         } catch (\Exception $e) {
-            return ['total' => 0, 'cobrado' => 0, 'cantidad' => 0];
+            return ['notas_cantidad' => 0, 'notas_total' => 0, 'ingresos' => 0];
         }
     }
 

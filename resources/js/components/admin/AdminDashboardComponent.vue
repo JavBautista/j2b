@@ -32,10 +32,10 @@
                             <i class="fa fa-calendar-check-o"></i>
                             <span>HOY</span>
                         </div>
-                        <div class="summary-card__value">{{ currencySymbol }}{{ formatMoney(data.ventas_hoy.cobrado) }}</div>
-                        <div class="summary-card__sub">{{ data.ventas_hoy.cantidad }} ventas</div>
-                        <div class="summary-card__sub">Ticket prom: {{ currencySymbol }}{{ formatMoney(data.ventas_hoy.ticket_promedio) }}</div>
-                        <div class="summary-card__sub" v-if="data.ventas_hoy.total > data.ventas_hoy.cobrado">Notas: {{ currencySymbol }}{{ formatMoney(data.ventas_hoy.total) }}</div>
+                        <div class="summary-card__value">{{ currencySymbol }}{{ formatMoney(data.ventas_hoy.ingresos) }}</div>
+                        <div class="summary-card__sub text-success">Cobrado ({{ data.ventas_hoy.num_pagos }} pagos)</div>
+                        <div class="summary-card__sub">{{ data.ventas_hoy.notas_cantidad }} notas creadas</div>
+                        <div class="summary-card__sub">Facturado: {{ currencySymbol }}{{ formatMoney(data.ventas_hoy.notas_total) }}</div>
                     </div>
                 </div>
                 <div class="col-6">
@@ -44,9 +44,10 @@
                             <i class="fa fa-calendar"></i>
                             <span>MES</span>
                         </div>
-                        <div class="summary-card__value">{{ currencySymbol }}{{ formatMoney(data.ventas_mes.cobrado) }}</div>
-                        <div class="summary-card__sub">{{ data.ventas_mes.cantidad }} ventas</div>
-                        <div class="summary-card__sub" v-if="data.ventas_mes.total > data.ventas_mes.cobrado">Notas: {{ currencySymbol }}{{ formatMoney(data.ventas_mes.total) }}</div>
+                        <div class="summary-card__value">{{ currencySymbol }}{{ formatMoney(data.ventas_mes.ingresos) }}</div>
+                        <div class="summary-card__sub text-success">Cobrado ({{ data.ventas_mes.num_pagos }} pagos)</div>
+                        <div class="summary-card__sub">{{ data.ventas_mes.notas_cantidad }} notas creadas</div>
+                        <div class="summary-card__sub">Facturado: {{ currencySymbol }}{{ formatMoney(data.ventas_mes.notas_total) }}</div>
                     </div>
                 </div>
             </div>

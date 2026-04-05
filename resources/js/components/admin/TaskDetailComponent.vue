@@ -18,6 +18,9 @@
                     <button type="button" class="j2b-btn j2b-btn-dark" @click="abrirModalResena()">
                         <i class="fa fa-comment"></i> Resena
                     </button>
+                    <a :href="'/admin/tasks/' + task.id + '/reception-pdf'" target="_blank" class="j2b-btn j2b-btn-dark">
+                        <i class="fa fa-print"></i> Comprobante
+                    </a>
                     <button v-if="!userLimited" type="button" class="j2b-btn j2b-btn-primary" @click="abrirModalEditar()">
                         <i class="fa fa-edit"></i> Editar
                     </button>
@@ -28,6 +31,57 @@
                     <button v-if="!userLimited" type="button" class="j2b-btn j2b-btn-sm" style="background: var(--j2b-danger); color: #fff;" @click="confirmarEliminar()">
                         <i class="fa fa-trash"></i> Eliminar
                     </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Service Tracking -->
+        <div class="col-12 mb-3" v-if="serviceSteps.length > 0">
+            <div class="j2b-card">
+                <div class="j2b-card-header d-flex justify-content-between align-items-center">
+                    <span><i class="fa fa-route mr-2"></i>Seguimiento de Servicio</span>
+                    <span v-if="task.tracking_code" class="small" style="opacity: 0.8;">
+                        <i class="fa fa-qrcode mr-1"></i>{{ task.tracking_code }}
+                    </span>
+                </div>
+                <div class="j2b-card-body">
+                    <!-- Barra de progreso visual -->
+                    <div class="tracking-flow">
+                        <div v-for="(step, index) in serviceSteps" :key="'st-'+step.id" class="tracking-step"
+                            :class="{
+                                'tracking-step-completed': isStepCompleted(step),
+                                'tracking-step-current': task.current_service_step_id === step.id,
+                                'tracking-step-pending': !isStepCompleted(step) && task.current_service_step_id !== step.id
+                            }">
+                            <div class="tracking-circle"
+                                :style="getStepCircleStyle(step)"
+                                @click="!userLimited ? abrirModalTracking(step) : null"
+                                :title="step.name + (task.current_service_step_id === step.id ? ' (actual)' : '')">
+                                <i v-if="isStepCompleted(step) && task.current_service_step_id !== step.id" class="fa fa-check"></i>
+                                <i v-else :class="step.icon || 'fa fa-circle'" style="font-size: 12px;"></i>
+                            </div>
+                            <div class="tracking-label" :class="{ 'fw-bold': task.current_service_step_id === step.id }">
+                                {{ step.name }}
+                            </div>
+                            <div v-if="task.current_service_step_id === step.id" class="tracking-badge">Actual</div>
+                            <div v-if="index < serviceSteps.length - 1" class="tracking-line"
+                                :class="{ 'tracking-line-completed': isStepCompleted(step) }"></div>
+                        </div>
+                    </div>
+
+                    <!-- Historial compacto -->
+                    <div v-if="task.service_tracking_history && task.service_tracking_history.length > 0" class="mt-3 pt-3 border-top">
+                        <small class="text-muted d-block mb-2"><i class="fa fa-history mr-1"></i>Historial:</small>
+                        <div v-for="entry in task.service_tracking_history" :key="entry.id" class="d-flex align-items-start mb-2">
+                            <span class="tracking-history-dot" :style="{ backgroundColor: entry.step ? entry.step.color : '#6c757d' }"></span>
+                            <div class="small">
+                                <strong>{{ entry.step ? entry.step.name : '?' }}</strong>
+                                <span class="text-muted ml-1">{{ formatDateTime(entry.created_at) }}</span>
+                                <span v-if="entry.changed_by" class="text-muted"> — {{ entry.changed_by.name }}</span>
+                                <div v-if="entry.notes" class="text-muted fst-italic">{{ entry.notes }}</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -712,12 +766,46 @@
         </div>
     </div>
 
+    <!-- Modal Cambiar Paso Tracking -->
+    <div class="modal fade" tabindex="-1" :class="{'mostrar': modalTracking}" role="dialog" style="display: none;">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content j2b-modal-content">
+                <div class="modal-header j2b-modal-header">
+                    <h5 class="modal-title"><i class="fa fa-route" style="color: var(--j2b-primary);"></i> Cambiar Paso de Seguimiento</h5>
+                    <button type="button" class="j2b-modal-close" @click="modalTracking = false"><i class="fa fa-times"></i></button>
+                </div>
+                <div class="modal-body j2b-modal-body">
+                    <div class="mb-3" v-if="trackingStepSeleccionado">
+                        <label class="form-label text-muted small">Cambiar a:</label>
+                        <div class="d-flex align-items-center gap-2 p-2 rounded" style="background: #f8f9fa;">
+                            <span class="step-color-dot-sm" :style="{ backgroundColor: trackingStepSeleccionado.color || '#6c757d' }">
+                                <i :class="trackingStepSeleccionado.icon || 'fa fa-circle'" class="text-white" style="font-size: 10px;"></i>
+                            </span>
+                            <strong>{{ trackingStepSeleccionado.name }}</strong>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Nota (opcional)</label>
+                        <textarea class="form-control" v-model="trackingNota" rows="2" maxlength="500" placeholder="Agregar nota sobre este cambio..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer j2b-modal-footer">
+                    <button type="button" class="j2b-btn j2b-btn-dark" @click="modalTracking = false">Cancelar</button>
+                    <button type="button" class="j2b-btn j2b-btn-primary" @click="guardarCambioTracking()" :disabled="guardandoTracking">
+                        <i class="fa" :class="guardandoTracking ? 'fa-spinner fa-spin' : 'fa-save'"></i>
+                        {{ guardandoTracking ? 'Guardando...' : 'Confirmar' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
 </template>
 
 <script>
 export default {
-    props: ['taskInitial', 'shop', 'userLimited'],
+    props: ['taskInitial', 'shop', 'userLimited', 'serviceStepsInitial'],
     data() {
         return {
             task: JSON.parse(JSON.stringify(this.taskInitial)),
@@ -772,7 +860,14 @@ export default {
             // Imagenes
             imagenTareaSeleccionada: null,
             subiendoImagenTarea: false,
-            eliminandoImagenTarea: false
+            eliminandoImagenTarea: false,
+
+            // Service Tracking
+            serviceSteps: this.serviceStepsInitial || [],
+            modalTracking: false,
+            trackingStepSeleccionado: null,
+            trackingNota: '',
+            guardandoTracking: false
         }
     },
     mounted() {
@@ -1310,6 +1405,52 @@ export default {
             });
         },
 
+        // Service Tracking
+        isStepCompleted(step) {
+            if (!this.task.service_tracking_history || !this.task.current_service_step_id) return false;
+            const currentStepIndex = this.serviceSteps.findIndex(s => s.id === this.task.current_service_step_id);
+            const stepIndex = this.serviceSteps.findIndex(s => s.id === step.id);
+            return stepIndex <= currentStepIndex;
+        },
+
+        getStepCircleStyle(step) {
+            const isCurrent = this.task.current_service_step_id === step.id;
+            const isCompleted = this.isStepCompleted(step);
+            if (isCurrent) {
+                return { backgroundColor: step.color || '#0d6efd', boxShadow: '0 0 0 4px ' + (step.color || '#0d6efd') + '40' };
+            }
+            if (isCompleted) {
+                return { backgroundColor: step.color || '#28a745' };
+            }
+            return { backgroundColor: '#dee2e6' };
+        },
+
+        abrirModalTracking(step) {
+            if (step.id === this.task.current_service_step_id) return;
+            this.trackingStepSeleccionado = step;
+            this.trackingNota = '';
+            this.modalTracking = true;
+        },
+
+        guardarCambioTracking() {
+            if (!this.trackingStepSeleccionado) return;
+            this.guardandoTracking = true;
+
+            axios.put(`/admin/tasks/${this.task.id}/service-tracking`, {
+                step_id: this.trackingStepSeleccionado.id,
+                notes: this.trackingNota || null,
+            }).then(response => {
+                if (response.data.ok) {
+                    this.modalTracking = false;
+                    this.reloadTask();
+                }
+            }).catch(error => {
+                Swal.fire('Error', 'Error al actualizar el seguimiento', 'error');
+            }).finally(() => {
+                this.guardandoTracking = false;
+            });
+        },
+
         eliminarImagenAlternativaTarea(imageId) {
             Swal.fire({
                 title: 'Eliminar esta imagen?',
@@ -1382,5 +1523,87 @@ export default {
         border-radius: 50%;
         cursor: pointer;
         box-shadow: var(--j2b-shadow-sm);
+    }
+
+    /* Service Tracking */
+    .tracking-flow {
+        display: flex;
+        align-items: flex-start;
+        overflow-x: auto;
+        padding: 10px 0;
+    }
+    .tracking-step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: relative;
+        min-width: 90px;
+        flex-shrink: 0;
+    }
+    .tracking-circle {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        z-index: 1;
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .tracking-circle:hover {
+        transform: scale(1.15);
+    }
+    .tracking-step-current .tracking-circle {
+        animation: pulse-tracking 2s infinite;
+    }
+    @keyframes pulse-tracking {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(13, 110, 253, 0.4); }
+        50% { box-shadow: 0 0 0 8px rgba(13, 110, 253, 0); }
+    }
+    .tracking-label {
+        margin-top: 6px;
+        font-size: 11px;
+        text-align: center;
+        max-width: 85px;
+        color: #495057;
+    }
+    .tracking-badge {
+        font-size: 9px;
+        padding: 1px 6px;
+        border-radius: 10px;
+        background: var(--j2b-primary, #0d6efd);
+        color: #fff;
+        margin-top: 3px;
+    }
+    .tracking-line {
+        position: absolute;
+        top: 18px;
+        left: 63px;
+        width: calc(100% - 36px);
+        height: 3px;
+        background: #dee2e6;
+        z-index: 0;
+    }
+    .tracking-line-completed {
+        background: #28a745;
+    }
+    .tracking-history-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        margin-top: 4px;
+        margin-right: 8px;
+    }
+    .step-color-dot-sm {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
     }
 </style>

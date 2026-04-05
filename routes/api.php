@@ -491,6 +491,12 @@ Route::group([
         /*TASK PRODUCTS - Productos asignados a tareas*/
         Route::get('tasks/{id}/products', [TaskController::class, 'getProducts']);
 
+        /*SERVICE TRACKING*/
+        Route::get('tasks/service-tracking/steps', [TaskController::class, 'getServiceTrackingSteps']);
+        Route::get('tasks/{id}/service-tracking', [TaskController::class, 'getServiceTracking']);
+        Route::put('tasks/{id}/service-tracking', [TaskController::class, 'updateServiceStep']);
+        Route::get('tasks/{id}/reception-pdf', [TaskController::class, 'receptionPdf']);
+
         /*TASK CHECKLIST*/
         Route::get('tasks/checklist/search-catalog', [TaskController::class, 'searchChecklistCatalog']);
         Route::post('tasks/{id}/checklist', [TaskController::class, 'addChecklistItem']);

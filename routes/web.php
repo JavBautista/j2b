@@ -81,6 +81,8 @@ Route::get('/print-purchase-order', [PurchaseOrderController::class, 'printPurch
 Route::get('/print-contract', [ContractController::class, 'printContract']);
 Route::get('/print-cfdi/{id}/{formato}', [\App\Http\Controllers\CfdiInvoiceController::class, 'descargarPublic']);
 Route::get('/print-task-checklist', [TaskController::class, 'printChecklistPdf']);
+Route::get('/print-task-reception', [TaskController::class, 'printReceptionPdf']);
+Route::get('/service-tracking/{trackingCode}', [\App\Http\Controllers\PublicServiceTrackingController::class, 'show'])->name('public.service-tracking');
 
 
 Auth::routes([
@@ -300,6 +302,7 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
             Route::put('/admin/configurations/service-tracking/{id}/set-initial', [App\Http\Controllers\Admin\ServiceTrackingConfigController::class, 'setInitial']);
             Route::put('/admin/configurations/service-tracking/{id}/set-final', [App\Http\Controllers\Admin\ServiceTrackingConfigController::class, 'setFinal']);
             Route::delete('/admin/configurations/service-tracking/{id}', [App\Http\Controllers\Admin\ServiceTrackingConfigController::class, 'delete']);
+            Route::put('/admin/configurations/service-tracking/disclaimer', [App\Http\Controllers\Admin\ServiceTrackingConfigController::class, 'updateDisclaimer']);
         }); // ./Configuraciones (full.admin)
 
         // Facturación CFDI - Configuración Emisor
@@ -471,6 +474,7 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::get('/admin/tasks/get', [TasksController::class, 'get'])->name('admin.tasks.get');
         Route::get('/admin/tasks/detail/{id}', [TasksController::class, 'show'])->name('admin.tasks.show');
         Route::get('/admin/tasks/{id}/checklist-pdf', [TasksController::class, 'checklistPdf'])->name('admin.tasks.checklist-pdf');
+        Route::get('/admin/tasks/{id}/reception-pdf', [TasksController::class, 'receptionPdf'])->name('admin.tasks.reception-pdf');
         Route::get('/admin/tasks/get-num-status', [TasksController::class, 'getNumStatus'])->name('admin.tasks.get-num-status');
         Route::get('/admin/tasks/collaborators', [TasksController::class, 'getCollaborators'])->name('admin.tasks.collaborators');
 
@@ -509,6 +513,10 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::put('/admin/tasks/{id}/checklist/{itemId}', [TasksController::class, 'updateChecklistItem'])->name('admin.tasks.checklist.update');
         Route::put('/admin/tasks/{id}/checklist/{itemId}/toggle', [TasksController::class, 'toggleChecklistItem'])->name('admin.tasks.checklist.toggle');
         Route::delete('/admin/tasks/{id}/checklist/{itemId}', [TasksController::class, 'deleteChecklistItem'])->name('admin.tasks.checklist.delete');
+
+        // Service Tracking de tareas
+        Route::get('/admin/tasks/{id}/service-tracking', [TasksController::class, 'getServiceTracking'])->name('admin.tasks.service-tracking');
+        Route::put('/admin/tasks/{id}/service-tracking', [TasksController::class, 'updateServiceStep'])->name('admin.tasks.service-tracking.update');
 
         // Rutas para Productos (CRUD admin)
         Route::get('/admin/products', [\App\Http\Controllers\Admin\ProductsController::class, 'index'])->name('admin.products');

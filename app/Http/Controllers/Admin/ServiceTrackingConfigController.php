@@ -18,7 +18,23 @@ class ServiceTrackingConfigController extends Controller
         $shop = auth()->user()->shop;
         $steps = $shop->serviceTrackingSteps()->orderBy('sort_order')->get();
 
-        return response()->json(['steps' => $steps]);
+        return response()->json([
+            'steps' => $steps,
+            'receipt_disclaimer' => $shop->receipt_disclaimer,
+        ]);
+    }
+
+    public function updateDisclaimer(Request $request)
+    {
+        $request->validate([
+            'receipt_disclaimer' => 'nullable|string|max:1000',
+        ]);
+
+        $shop = auth()->user()->shop;
+        $shop->receipt_disclaimer = $request->receipt_disclaimer;
+        $shop->save();
+
+        return response()->json(['message' => 'Aviso legal actualizado']);
     }
 
     public function store(Request $request)

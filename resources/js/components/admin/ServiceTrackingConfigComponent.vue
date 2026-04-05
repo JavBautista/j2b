@@ -152,7 +152,7 @@
                 </div>
             </div>
 
-            <div class="j2b-card">
+            <div class="j2b-card mb-3">
                 <div class="j2b-card-header">
                     <i class="fa fa-lightbulb mr-2"></i>Ejemplos por giro
                 </div>
@@ -168,6 +168,24 @@
                     <div class="mb-0">
                         <strong class="small">Servicio tecnico (impresoras):</strong>
                         <p class="small text-muted mb-0">Solicitud recibida &rarr; Tecnico asignado &rarr; En camino &rarr; En sitio &rarr; Resuelto</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Aviso legal para comprobante -->
+            <div class="j2b-card">
+                <div class="j2b-card-header">
+                    <i class="fa fa-file-contract mr-2"></i>Aviso legal del comprobante
+                </div>
+                <div class="j2b-card-body">
+                    <p class="small text-muted mb-2">Este texto aparecera en el comprobante de recepcion que se imprime para el cliente.</p>
+                    <textarea class="form-control mb-2" v-model="receiptDisclaimer" rows="3" maxlength="1000" placeholder="Ej: No nos hacemos responsables por equipos no reclamados despues de 15 dias..."></textarea>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted">{{ (receiptDisclaimer || '').length }}/1000</small>
+                        <button class="j2b-btn j2b-btn-primary j2b-btn-sm" @click="guardarDisclaimer()" :disabled="savingDisclaimer">
+                            <i class="fa" :class="savingDisclaimer ? 'fa-spinner fa-spin' : 'fa-save'"></i>
+                            {{ savingDisclaimer ? 'Guardando...' : 'Guardar aviso' }}
+                        </button>
                     </div>
                 </div>
             </div>
@@ -288,6 +306,8 @@ export default {
                 { value: 'fa fa-laptop', label: 'Computadora' },
                 { value: 'fa fa-star', label: 'Estrella' },
             ],
+            receiptDisclaimer: '',
+            savingDisclaimer: false,
         };
     },
     computed: {
@@ -304,6 +324,7 @@ export default {
             axios.get('/admin/configurations/service-tracking/get')
                 .then(res => {
                     this.steps = res.data.steps;
+                    this.receiptDisclaimer = res.data.receipt_disclaimer || '';
                 })
                 .catch(err => {
                     alert('Error al cargar los pasos');
@@ -413,11 +434,98 @@ export default {
                     this.loadSteps();
                 });
         },
+
+        guardarDisclaimer() {
+            this.savingDisclaimer = true;
+            axios.put('/admin/configurations/service-tracking/disclaimer', {
+                receipt_disclaimer: this.receiptDisclaimer || null,
+            })
+                .then(() => {
+                    alert('Aviso legal guardado');
+                })
+                .catch(() => {
+                    alert('Error al guardar');
+                })
+                .finally(() => {
+                    this.savingDisclaimer = false;
+                });
+        },
     }
 };
 </script>
 
 <style scoped>
+/* Modal overlay */
+.j2b-modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1050;
+    overflow-y: auto;
+    background-color: rgba(26, 26, 46, 0.8);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.j2b-modal-overlay.mostrar {
+    display: flex !important;
+    opacity: 1 !important;
+    align-items: center;
+    justify-content: center;
+}
+
+.j2b-modal {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    width: 100%;
+    margin: 1rem;
+}
+
+.j2b-modal-header {
+    background: var(--j2b-gradient-dark, linear-gradient(135deg, #1a1a2e, #16213e));
+    color: #fff;
+    border-radius: 12px 12px 0 0;
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.j2b-modal-close {
+    background: rgba(255,255,255,0.1);
+    border: none;
+    color: #fff;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 1.2rem;
+    transition: background 0.2s;
+}
+
+.j2b-modal-close:hover {
+    background: rgba(255,255,255,0.2);
+}
+
+.j2b-modal-body {
+    padding: 1.5rem;
+}
+
+.j2b-modal-footer {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #dee2e6;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
 .step-color-dot {
     width: 28px;
     height: 28px;

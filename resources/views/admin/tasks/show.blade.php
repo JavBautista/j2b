@@ -15,6 +15,7 @@
                     :task-initial="{{ json_encode($task) }}"
                     :shop="{{ json_encode($shop) }}"
                     :user-limited="{{ auth()->user()->limited ? 'true' : 'false' }}"
+                    :service-steps-initial="{{ json_encode($serviceSteps) }}"
                 ></task-detail-component>
             </div>
         </div>

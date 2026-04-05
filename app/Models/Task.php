@@ -16,6 +16,10 @@ class Task extends Model
         'tracking_finished_at' => 'datetime',
     ];
 
+    public function shop(){
+        return $this->belongsTo(Shop::class);
+    }
+
     public function client(){
         return $this->belongsTo(Client::class);
     }

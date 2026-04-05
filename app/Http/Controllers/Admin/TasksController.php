@@ -14,9 +14,12 @@ use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use App\Models\Service;
+use App\Models\ServiceTrackingStep;
+use App\Models\TaskServiceTracking;
 use App\Services\ImageService;
 use App\Models\PdfPhrase;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Str;
 
 class TasksController extends Controller
 {
@@ -39,11 +42,17 @@ class TasksController extends Controller
         $user = auth()->user();
         $shop = $user->shop;
 
-        $task = Task::with(['client.addresses', 'images', 'logs', 'assignedUser', 'trackingHistory', 'products.product', 'products.deliveredBy', 'checklistItems'])
+        $task = Task::with(['client.addresses', 'images', 'logs', 'assignedUser', 'trackingHistory', 'products.product', 'products.deliveredBy', 'checklistItems', 'currentServiceStep', 'serviceTrackingHistory.step', 'serviceTrackingHistory.changedBy'])
             ->where('shop_id', $shop->id)
             ->findOrFail($id);
 
-        return view('admin.tasks.show', compact('shop', 'task'));
+        // Pasos de tracking de la tienda (para el componente Vue)
+        $serviceSteps = ServiceTrackingStep::where('shop_id', $shop->id)
+            ->where('active', true)
+            ->orderBy('sort_order')
+            ->get();
+
+        return view('admin.tasks.show', compact('shop', 'task', 'serviceSteps'));
     }
 
     /**
@@ -72,6 +81,47 @@ class TasksController extends Controller
     }
 
     /**
+     * Descargar PDF del comprobante de recepcion
+     */
+    public function receptionPdf($id)
+    {
+        $user = auth()->user();
+        $shop = $user->shop;
+
+        $task = Task::with(['client.addresses', 'assignedUser', 'currentServiceStep'])
+            ->where('shop_id', $shop->id)
+            ->findOrFail($id);
+
+        $task->shop = $shop;
+
+        $steps = ServiceTrackingStep::where('shop_id', $shop->id)
+            ->where('active', true)
+            ->orderBy('sort_order')
+            ->get();
+
+        // Generar QR code si tiene tracking_code
+        $qrImage = null;
+        if ($task->tracking_code) {
+            $trackingUrl = url('/service-tracking/' . $task->tracking_code);
+            $qrImage = 'data:image/svg+xml;base64,' . base64_encode(
+                \SimpleSoftwareIO\QrCode\Facades\QrCode::size(120)->generate($trackingUrl)
+            );
+        }
+
+        $pdfPhraseData = PdfPhrase::getRandom();
+
+        $pdf = Pdf::loadView('task_reception_pdf', [
+            'task' => $task,
+            'steps' => $steps,
+            'qrImage' => $qrImage,
+            'pdfPhrase' => $pdfPhraseData['phrase'],
+            'pdfPhraseUrl' => $pdfPhraseData['link_url'],
+        ]);
+
+        return $pdf->stream("comprobante_recepcion_{$task->folio}.pdf");
+    }
+
+    /**
      * Obtener tareas paginadas con filtros (JSON para Vue)
      */
     public function get(Request $request)
@@ -83,7 +133,7 @@ class TasksController extends Controller
         $ordenar = $request->filtro_ordenar ?? 'ID_DESC';
         $status = $request->filtro_status ?? 'TODOS';
 
-        $query = Task::with(['client.addresses', 'images', 'logs', 'assignedUser', 'trackingHistory', 'products.product', 'products.deliveredBy', 'checklistItems'])
+        $query = Task::with(['client.addresses', 'images', 'logs', 'assignedUser', 'trackingHistory', 'products.product', 'products.deliveredBy', 'checklistItems', 'currentServiceStep', 'serviceTrackingHistory.step', 'serviceTrackingHistory.changedBy'])
                     ->where('shop_id', $shop->id);
 
         // Búsqueda por título o descripción
@@ -174,12 +224,33 @@ class TasksController extends Controller
             $task->expiration = Carbon::parse($request->expiration)->format('Y-m-d');
         }
 
+        // Asignar paso inicial de service tracking si la tienda tiene pasos configurados
+        $pasoInicial = ServiceTrackingStep::where('shop_id', $shop->id)
+            ->where('is_initial', true)
+            ->where('active', true)
+            ->first();
+
+        if ($pasoInicial) {
+            $task->current_service_step_id = $pasoInicial->id;
+            $task->tracking_code = $this->generateTrackingCode();
+        }
+
         $task->save();
+
+        // Registrar entrada en historial de tracking
+        if ($pasoInicial) {
+            TaskServiceTracking::create([
+                'task_id' => $task->id,
+                'step_id' => $pasoInicial->id,
+                'changed_by_user_id' => $user->id,
+                'notes' => 'Paso inicial asignado automáticamente.',
+            ]);
+        }
 
         // Log de creación
         $this->storeTaskLog($task->id, $user->name, 'Creación del registro.');
 
-        $task->load(['client.addresses', 'images', 'logs', 'assignedUser']);
+        $task->load(['client.addresses', 'images', 'logs', 'assignedUser', 'currentServiceStep']);
 
         return response()->json([
             'ok' => true,
@@ -489,6 +560,100 @@ class TasksController extends Controller
     /**
      * Helper: Guardar log de tarea
      */
+    // ==========================================
+    // MÉTODOS PARA SERVICE TRACKING
+    // ==========================================
+
+    /**
+     * Obtener historial de tracking + pasos de la tienda
+     */
+    public function getServiceTracking($id)
+    {
+        $user = auth()->user();
+        $shop = $user->shop;
+
+        $task = Task::where('shop_id', $shop->id)->findOrFail($id);
+
+        $steps = ServiceTrackingStep::where('shop_id', $shop->id)
+            ->where('active', true)
+            ->orderBy('sort_order')
+            ->get();
+
+        $history = TaskServiceTracking::where('task_id', $task->id)
+            ->with(['step', 'changedBy'])
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        return response()->json([
+            'ok' => true,
+            'steps' => $steps,
+            'history' => $history,
+            'current_step_id' => $task->current_service_step_id,
+            'tracking_code' => $task->tracking_code,
+        ]);
+    }
+
+    /**
+     * Cambiar el paso actual de tracking de una tarea
+     */
+    public function updateServiceStep(Request $request, $id)
+    {
+        $request->validate([
+            'step_id' => 'required|exists:service_tracking_steps,id',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        $user = auth()->user();
+        $shop = $user->shop;
+
+        $task = Task::where('shop_id', $shop->id)->findOrFail($id);
+
+        // Verificar que el paso pertenece a la tienda
+        $step = ServiceTrackingStep::where('shop_id', $shop->id)
+            ->where('id', $request->step_id)
+            ->firstOrFail();
+
+        $task->current_service_step_id = $step->id;
+
+        // Generar tracking_code si no tiene
+        if (!$task->tracking_code) {
+            $task->tracking_code = $this->generateTrackingCode();
+        }
+
+        $task->save();
+
+        // Registrar en historial
+        TaskServiceTracking::create([
+            'task_id' => $task->id,
+            'step_id' => $step->id,
+            'changed_by_user_id' => $user->id,
+            'notes' => $request->notes,
+        ]);
+
+        // Log
+        $this->storeTaskLog($task->id, $user->name, 'Seguimiento actualizado a: ' . $step->name);
+
+        $task->load('currentServiceStep');
+
+        return response()->json([
+            'ok' => true,
+            'task' => $task,
+            'message' => 'Paso de seguimiento actualizado.',
+        ]);
+    }
+
+    /**
+     * Generar tracking code único TRK-XXXXXX
+     */
+    private function generateTrackingCode()
+    {
+        do {
+            $code = 'TRK-' . strtoupper(Str::random(6));
+        } while (Task::where('tracking_code', $code)->exists());
+
+        return $code;
+    }
+
     private function storeTaskLog($taskId, $userName, $description)
     {
         TaskLog::create([

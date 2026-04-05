@@ -19,7 +19,10 @@ use Illuminate\Support\Facades\Storage;
 use App\Models\PdfPhrase;
 use App\Models\Product;
 use App\Models\Service;
+use App\Models\ServiceTrackingStep;
+use App\Models\TaskServiceTracking;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Str;
 
 class TaskController extends Controller
 {
@@ -37,6 +40,9 @@ class TaskController extends Controller
                         ->with('assignedUser')
                         ->with('trackingHistory')
                         ->with('checklistItems')
+                        ->with('currentServiceStep')
+                        ->with('serviceTrackingHistory.step')
+                        ->with('serviceTrackingHistory.changedBy')
                         ->where('shop_id', $shop->id);
 
         if ($buscar != '') {
@@ -123,7 +129,28 @@ class TaskController extends Controller
             $task->image = $imageService->processAndStore($request->file('image'), 'tasks');
         }
 
+        // Asignar paso inicial de service tracking si la tienda tiene pasos configurados
+        $pasoInicial = ServiceTrackingStep::where('shop_id', $shop->id)
+            ->where('is_initial', true)
+            ->where('active', true)
+            ->first();
+
+        if ($pasoInicial) {
+            $task->current_service_step_id = $pasoInicial->id;
+            $task->tracking_code = $this->generateTrackingCode();
+        }
+
         $task->save();
+
+        // Registrar entrada en historial de tracking
+        if ($pasoInicial) {
+            TaskServiceTracking::create([
+                'task_id' => $task->id,
+                'step_id' => $pasoInicial->id,
+                'changed_by_user_id' => $user->id,
+                'notes' => 'Paso inicial asignado automáticamente.',
+            ]);
+        }
 
         //Una ves creado el task, insertamos un log-history
         $this->storeTaskLog($task->id,$user->name,'Creación del registro.');
@@ -132,6 +159,7 @@ class TaskController extends Controller
         $task->load('client.addresses');
         $task->load('images');
         $task->load('logs');
+        $task->load('currentServiceStep');
 
         return response()->json([
             'ok'=>true,
@@ -378,6 +406,15 @@ class TaskController extends Controller
             'ok'=>true,
             'task' => $task,
         ]);
+    }
+
+    private function generateTrackingCode()
+    {
+        do {
+            $code = 'TRK-' . strtoupper(Str::random(6));
+        } while (Task::where('tracking_code', $code)->exists());
+
+        return $code;
     }
 
     private function storeTaskLog($task_id, $user, $description){
@@ -943,6 +980,9 @@ class TaskController extends Controller
                     ->with('logs')
                     ->with('assignedUser')
                     ->with('checklistItems')
+                    ->with('currentServiceStep')
+                    ->with('serviceTrackingHistory.step')
+                    ->with('serviceTrackingHistory.changedBy')
                     ->where('shop_id', $shop->id)
                     ->where('client_id', $client->id)
                     ->where('origin', 'client');
@@ -1154,6 +1194,42 @@ class TaskController extends Controller
     }//.printChecklistPdf()
 
     /**
+     * GET /print-task-reception?id={id}
+     * Ruta pública para imprimir comprobante de recepción (Browser.open)
+     */
+    public function printReceptionPdf(Request $request){
+        $id = $request->id;
+        $task = Task::with(['client.addresses', 'assignedUser', 'currentServiceStep'])->findOrFail($id);
+        $task->shop = $task->shop_id ? \App\Models\Shop::find($task->shop_id) : null;
+
+        $steps = ServiceTrackingStep::where('shop_id', $task->shop_id)
+            ->where('active', true)
+            ->orderBy('sort_order')
+            ->get();
+
+        $qrImage = null;
+        if ($task->tracking_code) {
+            $trackingUrl = url('/service-tracking/' . $task->tracking_code);
+            $qrImage = 'data:image/svg+xml;base64,' . base64_encode(
+                \SimpleSoftwareIO\QrCode\Facades\QrCode::size(120)->generate($trackingUrl)
+            );
+        }
+
+        $pdfPhraseData = PdfPhrase::getRandom();
+
+        $pdf = Pdf::loadView('task_reception_pdf', [
+            'task' => $task,
+            'steps' => $steps,
+            'qrImage' => $qrImage,
+            'pdfPhrase' => $pdfPhraseData['phrase'],
+            'pdfPhraseUrl' => $pdfPhraseData['link_url'],
+        ]);
+
+        $name_file = $request->name_file ?? "comprobante_recepcion_{$task->folio}";
+        return $pdf->stream("{$name_file}.pdf", array("Attachment" => false));
+    }//.printReceptionPdf()
+
+    /**
      * GET /api/auth/tasks/{id}/checklist-pdf
      * Ruta API autenticada para descargar PDF del checklist (compartir)
      */
@@ -1263,5 +1339,142 @@ class TaskController extends Controller
 
         return response()->json(['ok' => true, 'results' => $results]);
     }//.searchChecklistCatalog()
+
+    // ==========================================
+    // SERVICE TRACKING (API)
+    // ==========================================
+
+    /**
+     * Obtener pasos de tracking de la tienda
+     */
+    public function getServiceTrackingSteps(Request $request)
+    {
+        $user = $request->user();
+        $shop = $user->shop;
+
+        $steps = ServiceTrackingStep::where('shop_id', $shop->id)
+            ->where('active', true)
+            ->orderBy('sort_order')
+            ->get();
+
+        return response()->json([
+            'ok' => true,
+            'steps' => $steps,
+        ]);
+    }
+
+    /**
+     * Obtener historial de tracking de una tarea
+     */
+    public function getServiceTracking(Request $request, $id)
+    {
+        $user = $request->user();
+        $shop = $user->shop;
+
+        $task = Task::where('shop_id', $shop->id)->findOrFail($id);
+
+        $steps = ServiceTrackingStep::where('shop_id', $shop->id)
+            ->where('active', true)
+            ->orderBy('sort_order')
+            ->get();
+
+        $history = TaskServiceTracking::where('task_id', $task->id)
+            ->with(['step', 'changedBy'])
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        return response()->json([
+            'ok' => true,
+            'current_step_id' => $task->current_service_step_id,
+            'tracking_code' => $task->tracking_code,
+            'steps' => $steps,
+            'history' => $history,
+        ]);
+    }
+
+    /**
+     * Descargar PDF del comprobante de recepcion
+     */
+    public function receptionPdf(Request $request, $id)
+    {
+        $user = $request->user();
+        $shop = $user->shop;
+
+        $task = Task::with(['client.addresses', 'assignedUser', 'currentServiceStep'])
+            ->where('shop_id', $shop->id)
+            ->findOrFail($id);
+
+        $task->shop = $shop;
+
+        $steps = ServiceTrackingStep::where('shop_id', $shop->id)
+            ->where('active', true)
+            ->orderBy('sort_order')
+            ->get();
+
+        $qrImage = null;
+        if ($task->tracking_code) {
+            $trackingUrl = url('/service-tracking/' . $task->tracking_code);
+            $qrImage = 'data:image/svg+xml;base64,' . base64_encode(
+                \SimpleSoftwareIO\QrCode\Facades\QrCode::size(120)->generate($trackingUrl)
+            );
+        }
+
+        $pdfPhraseData = PdfPhrase::getRandom();
+
+        $pdf = Pdf::loadView('task_reception_pdf', [
+            'task' => $task,
+            'steps' => $steps,
+            'qrImage' => $qrImage,
+            'pdfPhrase' => $pdfPhraseData['phrase'],
+            'pdfPhraseUrl' => $pdfPhraseData['link_url'],
+        ]);
+
+        return $pdf->stream("comprobante_recepcion_{$task->folio}.pdf");
+    }
+
+    /**
+     * Cambiar el paso actual de tracking de una tarea
+     */
+    public function updateServiceStep(Request $request, $id)
+    {
+        $request->validate([
+            'step_id' => 'required|exists:service_tracking_steps,id',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        $user = $request->user();
+        $shop = $user->shop;
+
+        $task = Task::where('shop_id', $shop->id)->findOrFail($id);
+
+        $step = ServiceTrackingStep::where('shop_id', $shop->id)
+            ->where('id', $request->step_id)
+            ->firstOrFail();
+
+        $task->current_service_step_id = $step->id;
+
+        if (!$task->tracking_code) {
+            $task->tracking_code = $this->generateTrackingCode();
+        }
+
+        $task->save();
+
+        TaskServiceTracking::create([
+            'task_id' => $task->id,
+            'step_id' => $step->id,
+            'changed_by_user_id' => $user->id,
+            'notes' => $request->notes,
+        ]);
+
+        $this->storeTaskLog($task->id, $user->name, 'Seguimiento actualizado a: ' . $step->name);
+
+        $task->load('currentServiceStep');
+
+        return response()->json([
+            'ok' => true,
+            'task' => $task,
+            'message' => 'Paso de seguimiento actualizado.',
+        ]);
+    }
 
 }

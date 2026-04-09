@@ -6,6 +6,7 @@ use App\Models\Shop;
 use App\Models\User;
 use App\Models\Plan;
 use App\Models\Subscription;
+use App\Models\CfdiTimbreTransaction;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
@@ -42,11 +43,18 @@ class SuperadminPagesController extends Controller
             ->with(['plan', 'owner'])
             ->get();
 
-        // Ingresos del mes actual
+        // Ingresos del mes actual (suscripciones)
         $monthlyRevenue = Subscription::whereMonth('created_at', now()->month)
             ->whereYear('created_at', now()->year)
             ->where('status', 'active')
             ->sum('total_amount');
+
+        // Ingresos del mes actual (timbres CFDI)
+        $monthlyTimbresRevenue = CfdiTimbreTransaction::whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
+            ->sum('total');
+
+        $monthlyTotal = $monthlyRevenue + $monthlyTimbresRevenue;
 
         // Últimas tiendas registradas
         $recentShops = Shop::with(['plan', 'owner'])
@@ -63,6 +71,8 @@ class SuperadminPagesController extends Controller
             'activeSubscriptions',
             'expiringSubscriptions',
             'monthlyRevenue',
+            'monthlyTimbresRevenue',
+            'monthlyTotal',
             'recentShops'
         ));
     }

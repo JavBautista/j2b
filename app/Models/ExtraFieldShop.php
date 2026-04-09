@@ -13,8 +13,25 @@ class ExtraFieldShop extends Model
 
     protected $guarded=[];
 
+    protected $casts = [
+        'active' => 'boolean',
+        'filterable' => 'boolean',
+        'apply_to_receipts' => 'boolean',
+        'apply_to_tasks' => 'boolean',
+    ];
+
     public function shop()
     {
         return $this->belongsTo(Shop::class);
+    }
+
+    public function scopeForReceipts($query)
+    {
+        return $query->where('apply_to_receipts', true);
+    }
+
+    public function scopeForTasks($query)
+    {
+        return $query->where('apply_to_tasks', true);
     }
 }

@@ -341,6 +341,16 @@
                                 <textarea class="form-control" v-model="formTask.solution" rows="2"></textarea>
                             </div>
                         </div>
+                        <!-- Campos extra dinámicos -->
+                        <div v-if="extraFields.length > 0" class="mt-3 pt-3" style="border-top: 1px solid #eee;">
+                            <p class="text-muted mb-2"><i class="fa fa-plus-square me-1"></i> <strong>Información Adicional</strong></p>
+                            <div class="row">
+                                <div class="col-md-6 mb-2" v-for="field in extraFields" :key="field.id">
+                                    <label class="form-label small text-muted mb-0">{{ field.field_name }}</label>
+                                    <input type="text" class="form-control form-control-sm" v-model="fieldValueMap[field.field_name]" :placeholder="field.field_name">
+                                </div>
+                            </div>
+                        </div>
                     </form>
                 </div>
                 <div class="modal-footer j2b-modal-footer">
@@ -463,6 +473,10 @@ export default {
             nuevoEstatus: '',
             nuevaResena: '',
 
+            // Campos extra
+            extraFields: [],
+            fieldValueMap: {},
+
             // UI
             guardando: false,
             errorForm: false,
@@ -504,6 +518,7 @@ export default {
         this.loadTasks(1);
         this.loadNumStatus();
         this.loadClientes();
+        this.loadExtraFields();
     },
     methods: {
         loadTasks(page) {
@@ -540,6 +555,14 @@ export default {
         loadClientes() {
             // Se mantiene para carga inicial vacía
             // Los clientes se buscan dinámicamente con buscarClientes()
+        },
+
+        loadExtraFields() {
+            axios.get('/admin/tasks/extra-fields').then(response => {
+                if (response.data.ok) {
+                    this.extraFields = response.data.extra_fields;
+                }
+            }).catch(() => {});
         },
 
         buscarClientes() {
@@ -607,6 +630,7 @@ export default {
                     client_id: ''
                 };
                 this.limpiarCliente();
+                this.fieldValueMap = {};
                 this.errorForm = false;
                 this.erroresForm = [];
                 this.modalEditar = true;
@@ -629,6 +653,13 @@ export default {
                 }
                 this.buscarCliente = '';
                 this.clientes = [];
+                // Cargar valores de campos extra existentes
+                this.fieldValueMap = {};
+                if (task.info_extra && task.info_extra.length > 0) {
+                    task.info_extra.forEach(ie => {
+                        this.fieldValueMap[ie.field_name] = ie.value;
+                    });
+                }
                 this.errorForm = false;
                 this.erroresForm = [];
                 this.modalEditar = true;
@@ -660,7 +691,12 @@ export default {
             let url = me.modoEdicion ? '/admin/tasks/update' : '/admin/tasks/store';
             let method = me.modoEdicion ? axios.put : axios.post;
 
-            method(url, me.formTask).then(function(response) {
+            let payload = { ...me.formTask };
+            if (me.extraFields.length > 0) {
+                payload.info_extra = JSON.stringify(me.fieldValueMap);
+            }
+
+            method(url, payload).then(function(response) {
                 if (response.data.ok) {
                     me.cerrarModal();
                     me.loadTasks(me.pagination.current_page || 1);

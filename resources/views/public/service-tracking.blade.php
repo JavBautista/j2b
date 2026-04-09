@@ -181,6 +181,54 @@
             color: #6c757d;
             text-decoration: none;
         }
+
+        /* Evidencia */
+        .evidence-gallery {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .evidence-gallery img {
+            width: 64px;
+            height: 64px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .evidence-gallery img:hover {
+            transform: scale(1.08);
+        }
+        /* Lightbox */
+        .lightbox-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.85);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+        .lightbox-overlay.active {
+            display: flex;
+        }
+        .lightbox-overlay img {
+            max-width: 90vw;
+            max-height: 90vh;
+            border-radius: 8px;
+        }
+        .lightbox-close {
+            position: absolute;
+            top: 16px; right: 20px;
+            color: #fff;
+            font-size: 2rem;
+            cursor: pointer;
+            background: none;
+            border: none;
+            line-height: 1;
+        }
     </style>
 </head>
 <body>
@@ -246,6 +294,13 @@
                             @if($entry->notes)
                                 <div class="step-note">{{ $entry->notes }}</div>
                             @endif
+                            @if($entry->evidence && $entry->evidence->count() > 0)
+                                <div class="evidence-gallery">
+                                    @foreach($entry->evidence as $ev)
+                                        <img src="{{ asset('storage/' . $ev->image) }}" alt="{{ $ev->caption ?? 'Evidencia' }}" onclick="openLightbox(this.src)">
+                                    @endforeach
+                                </div>
+                            @endif
                         @endif
                     </div>
                 </div>
@@ -256,6 +311,21 @@
     <div class="footer">
         Powered by <a href="https://j2biznes.com" target="_blank">J2Biznes</a>
     </div>
+
+    <!-- Lightbox -->
+    <div class="lightbox-overlay" id="lightbox" onclick="closeLightbox()">
+        <button class="lightbox-close" onclick="closeLightbox()">&times;</button>
+        <img id="lightbox-img" src="" alt="Evidencia">
+    </div>
+    <script>
+        function openLightbox(src) {
+            document.getElementById('lightbox-img').src = src;
+            document.getElementById('lightbox').classList.add('active');
+        }
+        function closeLightbox() {
+            document.getElementById('lightbox').classList.remove('active');
+        }
+    </script>
 
 </body>
 </html>

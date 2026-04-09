@@ -109,6 +109,7 @@
                 <td width="50%">
                     <p style="font-size: 10px;">
                         <strong>FECHA:</strong> {{ $task->created_at->format('d / M / Y') }}
+                        &nbsp;&nbsp;<strong>HORA:</strong> {{ $task->created_at->format('H:i') }}
                     </p>
                 </td>
                 <td width="50%" align="right">
@@ -174,7 +175,50 @@
                 <td class="label" style="width: 25%;">Fecha estimada:</td>
                 <td>{{ $task->expiration ? \Carbon\Carbon::parse($task->expiration)->format('d/m/Y') : 'Por definir' }}</td>
             </tr>
+            @if($task->assignedUser)
+            <tr>
+                <td class="label">Recibido por:</td>
+                <td colspan="3">{{ $task->assignedUser->name }}</td>
+            </tr>
+            @endif
         </table>
+
+        {{-- INFORMACION ADICIONAL (campos extra) --}}
+        @if($task->infoExtra && $task->infoExtra->count() > 0)
+        <div class="section-title">INFORMACION ADICIONAL</div>
+        <table class="data-table">
+            @foreach($task->infoExtra->chunk(2) as $chunk)
+            <tr>
+                @foreach($chunk as $extra)
+                <td class="label" style="width: 20%;">{{ $extra->field_name }}:</td>
+                <td>{{ $extra->value }}</td>
+                @endforeach
+                @if($chunk->count() == 1)
+                <td></td><td></td>
+                @endif
+            </tr>
+            @endforeach
+        </table>
+        @endif
+
+        {{-- MATERIALES / REFACCIONES --}}
+        @if($task->products && $task->products->count() > 0)
+        <div class="section-title">MATERIALES / REFACCIONES</div>
+        <table class="data-table">
+            <tr style="background: #f0f0f0;">
+                <td class="label" style="width: 15%; text-align: center;">Cantidad</td>
+                <td class="label">Producto</td>
+                <td class="label" style="width: 30%;">Notas</td>
+            </tr>
+            @foreach($task->products as $tp)
+            <tr>
+                <td style="text-align: center;">{{ $tp->qty_delivered }}</td>
+                <td>{{ $tp->product->name ?? 'Producto' }}</td>
+                <td>{{ $tp->notes ?? '-' }}</td>
+            </tr>
+            @endforeach
+        </table>
+        @endif
 
         {{-- SEGUIMIENTO (solo si tiene tracking) --}}
         @if($task->tracking_code && $steps && $steps->count() > 0)
@@ -203,7 +247,10 @@
                 </td>
                 <td width="30%" align="center" valign="top" style="padding: 6px;">
                     @if(!empty($qrImage))
+                        @php $trackingUrl = url('/service-tracking/' . $task->tracking_code); @endphp
                         <img src="{{ $qrImage }}" alt="QR" width="120">
+                        <br>
+                        <a href="{{ $trackingUrl }}" style="font-size: 8px; color: #0d6efd; word-break: break-all;">{{ $trackingUrl }}</a>
                     @endif
                 </td>
             </tr>

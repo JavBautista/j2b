@@ -446,6 +446,7 @@ class ReceiptsController extends Controller
 
         $extraFields = ExtraFieldShop::where('shop_id', $shop->id)
                                        ->where('active', 1)
+                                       ->forReceipts()
                                        ->get();
 
         return response()->json([
@@ -465,6 +466,7 @@ class ReceiptsController extends Controller
         $extraFields = ExtraFieldShop::where('shop_id', $shop->id)
                                        ->where('active', 1)
                                        ->where('filterable', 1)
+                                       ->forReceipts()
                                        ->get(['id', 'field_name']);
 
         return response()->json([

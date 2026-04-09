@@ -31,4 +31,9 @@ class TaskServiceTracking extends Model
     {
         return $this->belongsTo(User::class, 'changed_by_user_id');
     }
+
+    public function evidence()
+    {
+        return $this->hasMany(ServiceTrackingEvidence::class, 'tracking_id');
+    }
 }

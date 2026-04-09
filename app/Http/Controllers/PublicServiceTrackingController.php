@@ -22,7 +22,7 @@ class PublicServiceTrackingController extends Controller
             ->get();
 
         $history = TaskServiceTracking::where('task_id', $task->id)
-            ->with(['step', 'changedBy'])
+            ->with(['step', 'changedBy', 'evidence'])
             ->orderBy('created_at', 'asc')
             ->get();
 

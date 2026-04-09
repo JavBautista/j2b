@@ -495,7 +495,20 @@ Route::group([
         Route::get('tasks/service-tracking/steps', [TaskController::class, 'getServiceTrackingSteps']);
         Route::get('tasks/{id}/service-tracking', [TaskController::class, 'getServiceTracking']);
         Route::put('tasks/{id}/service-tracking', [TaskController::class, 'updateServiceStep']);
+        Route::post('tasks/{taskId}/tracking/{trackingId}/evidence', [TaskController::class, 'uploadTrackingEvidence']);
+        Route::delete('tasks/{taskId}/tracking-evidence/{evidenceId}', [TaskController::class, 'deleteTrackingEvidence']);
         Route::get('tasks/{id}/reception-pdf', [TaskController::class, 'receptionPdf']);
+
+        /*SERVICE TRACKING CONFIG (CRUD de pasos)*/
+        Route::get('service-tracking-config', [\App\Http\Controllers\ServiceTrackingConfigApiController::class, 'get']);
+        Route::post('service-tracking-config', [\App\Http\Controllers\ServiceTrackingConfigApiController::class, 'store']);
+        Route::put('service-tracking-config/{id}', [\App\Http\Controllers\ServiceTrackingConfigApiController::class, 'update']);
+        Route::put('service-tracking-config/reorder/steps', [\App\Http\Controllers\ServiceTrackingConfigApiController::class, 'reorder']);
+        Route::put('service-tracking-config/{id}/toggle', [\App\Http\Controllers\ServiceTrackingConfigApiController::class, 'toggleActive']);
+        Route::put('service-tracking-config/{id}/set-initial', [\App\Http\Controllers\ServiceTrackingConfigApiController::class, 'setInitial']);
+        Route::put('service-tracking-config/{id}/set-final', [\App\Http\Controllers\ServiceTrackingConfigApiController::class, 'setFinal']);
+        Route::delete('service-tracking-config/{id}', [\App\Http\Controllers\ServiceTrackingConfigApiController::class, 'delete']);
+        Route::put('service-tracking-config/disclaimer', [\App\Http\Controllers\ServiceTrackingConfigApiController::class, 'updateDisclaimer']);
 
         /*TASK CHECKLIST*/
         Route::get('tasks/checklist/search-catalog', [TaskController::class, 'searchChecklistCatalog']);
@@ -642,6 +655,13 @@ Route::group([
         Route::get('cfdi/facturas', [\App\Http\Controllers\CfdiInvoiceController::class, 'getFacturas']);
         Route::get('cfdi/facturas/export', [\App\Http\Controllers\CfdiInvoiceController::class, 'exportFacturas']);
         Route::get('cfdi/facturas/{id}/download/{formato}', [\App\Http\Controllers\CfdiInvoiceController::class, 'descargar']);
+
+        /* CFDI CONFIGURACION - Datos fiscales, CSD y registro de emisor */
+        Route::get('cfdi/config/get', [\App\Http\Controllers\CfdiConfigApiController::class, 'get']);
+        Route::post('cfdi/config/save', [\App\Http\Controllers\CfdiConfigApiController::class, 'save']);
+        Route::post('cfdi/config/upload-csd', [\App\Http\Controllers\CfdiConfigApiController::class, 'uploadCsd']);
+        Route::post('cfdi/config/registrar', [\App\Http\Controllers\CfdiConfigApiController::class, 'registrar']);
+        Route::get('cfdi/config/timbre-transactions', [\App\Http\Controllers\CfdiConfigApiController::class, 'getTimbreTransactions']);
 
     });
 });

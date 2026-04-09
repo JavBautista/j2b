@@ -3,103 +3,115 @@
 @section('content')
 <div class="container-fluid">
     <!-- Header -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h3 class="mb-1"><i class="fas fa-plus-circle me-2 text-success"></i>Agregar Nuevo Campo Extra</h3>
-                    <p class="text-muted mb-0">Crea un campo personalizado para tus formularios</p>
-                </div>
-                <div>
-                    <a href="{{ route('admin.configurations.extra_fields') }}" class="btn btn-outline-secondary">
-                        <i class="fas fa-arrow-left me-1"></i> Volver a Lista
-                    </a>
-                </div>
-            </div>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="mb-1" style="color: var(--j2b-dark); font-weight: 600;">
+                <i class="fa fa-plus-circle" style="color: var(--j2b-primary);"></i>
+                Nuevo Campo Extra
+            </h4>
+            <p class="mb-0" style="color: var(--j2b-gray-500);">
+                Crea un campo personalizado para tus formularios
+            </p>
         </div>
+        <a href="{{ route('admin.configurations.extra_fields') }}" class="j2b-btn j2b-btn-outline">
+            <i class="fa fa-arrow-left"></i> Volver
+        </a>
     </div>
 
     <div class="row justify-content-center">
         <div class="col-md-8">
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-success text-white">
-                    <h6 class="mb-0"><i class="fas fa-plus-square me-2"></i>Nuevo Campo Personalizado</h6>
+            <div class="j2b-card">
+                <div class="j2b-card-header">
+                    <h6 class="mb-0">
+                        <i class="fa fa-plus-square" style="color: var(--j2b-primary);"></i>
+                        Nuevo Campo Personalizado
+                    </h6>
                 </div>
-                <div class="card-body">
+                <div class="j2b-card-body">
                     <form action="{{ route('admin.configurations.extra-fields.store') }}" method="POST">
                         @csrf
-                        <div class="mb-4">
-                            <label for="field_name" class="form-label fw-bold">
-                                <i class="fas fa-tag text-primary me-1"></i>Nombre del Campo *
-                            </label>
-                            <input type="text" 
-                                   class="form-control @error('field_name') is-invalid @enderror" 
-                                   id="field_name" 
-                                   name="field_name" 
+
+                        <!-- Nombre -->
+                        <div class="j2b-form-group mb-3">
+                            <label class="j2b-label"><strong class="text-danger">*</strong> Nombre del Campo</label>
+                            <input type="text"
+                                   class="j2b-input @error('field_name') is-invalid @enderror"
+                                   name="field_name"
                                    value="{{ old('field_name') }}"
-                                   placeholder="Ej. Campo especial, Información adicional..."
+                                   placeholder="Ej: Marca, Modelo, Color, Placas..."
                                    required>
                             @error('field_name')
-                                <div class="invalid-feedback">
-                                    {{ $message }}
-                                </div>
+                                <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
-                            <div class="form-text">
-                                <i class="fas fa-info-circle me-1"></i>
-                                Este será el nombre que se mostrará en los formularios.
+                            <small style="color: var(--j2b-gray-500);">
+                                Este nombre se mostrara en los formularios.
+                            </small>
+                        </div>
+
+                        <!-- Opciones -->
+                        <div class="j2b-form-section mb-3">
+                            <h6 class="j2b-form-section-title">
+                                <i class="fa fa-cog"></i> Opciones
+                            </h6>
+                            <div class="row">
+                                <div class="col-md-6 mb-2">
+                                    <div class="form-check form-switch">
+                                        <input type="checkbox" class="form-check-input" id="active" name="active" value="1"
+                                               {{ old('active', true) ? 'checked' : '' }}>
+                                        <label class="form-check-label" for="active">
+                                            <strong>Campo Activo</strong>
+                                        </label>
+                                    </div>
+                                    <small style="color: var(--j2b-gray-500);">Disponible para usar en formularios.</small>
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <div class="form-check form-switch">
+                                        <input type="checkbox" class="form-check-input" id="filterable" name="filterable" value="1"
+                                               {{ old('filterable') ? 'checked' : '' }}>
+                                        <label class="form-check-label" for="filterable">
+                                            <strong>Filtrable en ventas</strong>
+                                        </label>
+                                    </div>
+                                    <small style="color: var(--j2b-gray-500);">Aparecera como filtro de busqueda en ventas.</small>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="mb-4">
-                            <div class="form-check form-switch">
-                                <input type="checkbox" 
-                                       class="form-check-input" 
-                                       id="active" 
-                                       name="active" 
-                                       value="1"
-                                       {{ old('active', true) ? 'checked' : '' }}>
-                                <label class="form-check-label fw-bold" for="active">
-                                    <i class="fas fa-toggle-on text-success me-1"></i>
-                                    Campo Activo
-                                </label>
-                            </div>
-                            <div class="form-text">
-                                <i class="fas fa-lightbulb me-1"></i>
-                                Los campos activos estarán disponibles para usar en los formularios.
-                            </div>
-                        </div>
-
-                        <div class="mb-4">
-                            <div class="form-check form-switch">
-                                <input type="checkbox"
-                                       class="form-check-input"
-                                       id="filterable"
-                                       name="filterable"
-                                       value="1"
-                                       {{ old('filterable') ? 'checked' : '' }}>
-                                <label class="form-check-label fw-bold" for="filterable">
-                                    <i class="fas fa-filter text-info me-1"></i>
-                                    Usar como filtro en ventas
-                                </label>
-                            </div>
-                            <div class="form-text">
-                                <i class="fas fa-search me-1"></i>
-                                Si se activa, este campo aparecerá como opción de búsqueda en el listado de ventas.
+                        <!-- Modulos -->
+                        <div class="j2b-form-section mb-3">
+                            <h6 class="j2b-form-section-title">
+                                <i class="fa fa-th-large"></i> Usar en modulos
+                            </h6>
+                            <div class="row">
+                                <div class="col-md-6 mb-2">
+                                    <div class="form-check form-switch">
+                                        <input type="checkbox" class="form-check-input" id="apply_to_receipts" name="apply_to_receipts" value="1"
+                                               {{ old('apply_to_receipts', true) ? 'checked' : '' }}>
+                                        <label class="form-check-label" for="apply_to_receipts">
+                                            <strong><i class="fa fa-file-text" style="color: var(--j2b-primary);"></i> Notas de Venta</strong>
+                                        </label>
+                                    </div>
+                                    <small style="color: var(--j2b-gray-500);">Aparecera al crear/editar notas de venta.</small>
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <div class="form-check form-switch">
+                                        <input type="checkbox" class="form-check-input" id="apply_to_tasks" name="apply_to_tasks" value="1"
+                                               {{ old('apply_to_tasks') ? 'checked' : '' }}>
+                                        <label class="form-check-label" for="apply_to_tasks">
+                                            <strong><i class="fa fa-wrench" style="color: #ffc107;"></i> Tareas / Servicios</strong>
+                                        </label>
+                                    </div>
+                                    <small style="color: var(--j2b-gray-500);">Aparecera al crear/editar tareas de servicio.</small>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle me-2"></i>
-                            <strong>¿Qué son los campos extras?</strong><br>
-                            Los campos extras te permiten agregar información personalizada a tus formularios, adaptándolos a las necesidades específicas de tu negocio.
-                        </div>
-
-                        <div class="d-flex justify-content-end gap-2">
-                            <a href="{{ route('admin.configurations.extra_fields') }}" class="btn btn-secondary">
-                                <i class="fas fa-times me-1"></i>Cancelar
+                        <div class="d-flex justify-content-end gap-2 mt-4">
+                            <a href="{{ route('admin.configurations.extra_fields') }}" class="j2b-btn j2b-btn-secondary">
+                                <i class="fa fa-times"></i> Cancelar
                             </a>
-                            <button type="submit" class="btn btn-success">
-                                <i class="fas fa-save me-1"></i>Crear Campo
+                            <button type="submit" class="j2b-btn j2b-btn-primary">
+                                <i class="fa fa-check"></i> Crear Campo
                             </button>
                         </div>
                     </form>
@@ -107,34 +119,5 @@
             </div>
         </div>
     </div>
-
-    <!-- Información adicional -->
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="card border-0" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
-                <div class="card-body text-center py-3">
-                    <small class="text-muted">
-                        <i class="fas fa-question-circle me-1"></i>
-                        Una vez creado, podrás editar el nombre del campo y cambiar su estado en cualquier momento.
-                    </small>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
-
-<style>
-.form-label.fw-bold {
-    color: #495057;
-    font-size: 0.9rem;
-}
-.form-control:focus {
-    border-color: #28a745;
-    box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
-}
-.form-check-input:checked {
-    background-color: #28a745;
-    border-color: #28a745;
-}
-</style>
 @endsection

@@ -71,4 +71,9 @@ class Task extends Model
     public function hasServiceTracking(){
         return !is_null($this->current_service_step_id);
     }
+
+    // Campos extra dinámicos
+    public function infoExtra(){
+        return $this->hasMany(TaskInfoExtra::class, 'task_id');
+    }
 }

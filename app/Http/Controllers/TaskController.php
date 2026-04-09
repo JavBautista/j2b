@@ -21,6 +21,9 @@ use App\Models\Product;
 use App\Models\Service;
 use App\Models\ServiceTrackingStep;
 use App\Models\TaskServiceTracking;
+use App\Models\ServiceTrackingEvidence;
+use App\Models\TaskInfoExtra;
+use App\Models\ExtraFieldShop;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Str;
 
@@ -31,8 +34,11 @@ class TaskController extends Controller
         $shop = $user->shop;
 
         $buscar = $request->buscar;
+        $buscar_folio = $request->buscar_folio ? trim($request->buscar_folio) : '';
+        $buscar_cliente = $request->buscar_cliente ? trim($request->buscar_cliente) : '';
         $ordenar = $request->filtro_ordenar;
         $status = $request->filtro_status;
+        $extra_filters = $request->extra_filters ? json_decode($request->extra_filters, true) : [];
 
         $query = Task::with('client.addresses')
                         ->with('images')
@@ -43,6 +49,7 @@ class TaskController extends Controller
                         ->with('currentServiceStep')
                         ->with('serviceTrackingHistory.step')
                         ->with('serviceTrackingHistory.changedBy')
+                        ->with('infoExtra')
                         ->where('shop_id', $shop->id);
 
         if ($buscar != '') {
@@ -52,8 +59,31 @@ class TaskController extends Controller
             });
         }
 
+        if ($buscar_folio != '') {
+            $query->where('folio', $buscar_folio);
+        }
+
+        if ($buscar_cliente != '') {
+            $query->whereHas('client', function ($q) use ($buscar_cliente) {
+                $q->where('name', 'like', '%' . $buscar_cliente . '%');
+            });
+        }
+
         if (!empty($status) && $status !== 'TODOS') {
             $query->where('status', $status);
+        }
+
+        if (!empty($extra_filters) && is_array($extra_filters)) {
+            foreach ($extra_filters as $filter) {
+                $fieldName = $filter['field_name'] ?? null;
+                $value = $filter['value'] ?? null;
+                if ($fieldName && $value) {
+                    $query->whereHas('infoExtra', function ($q) use ($fieldName, $value) {
+                        $q->where('field_name', $fieldName)
+                          ->where('value', 'like', '%' . $value . '%');
+                    });
+                }
+            }
         }
 
 
@@ -152,6 +182,22 @@ class TaskController extends Controller
             ]);
         }
 
+        // Guardar campos extra
+        if ($request->info_extra) {
+            $infoExtra = is_string($request->info_extra) ? json_decode($request->info_extra, true) : $request->info_extra;
+            if (is_array($infoExtra)) {
+                foreach ($infoExtra as $fieldName => $value) {
+                    if ($value !== null && $value !== '') {
+                        TaskInfoExtra::create([
+                            'task_id' => $task->id,
+                            'field_name' => $fieldName,
+                            'value' => $value,
+                        ]);
+                    }
+                }
+            }
+        }
+
         //Una ves creado el task, insertamos un log-history
         $this->storeTaskLog($task->id,$user->name,'Creación del registro.');
 
@@ -160,6 +206,7 @@ class TaskController extends Controller
         $task->load('images');
         $task->load('logs');
         $task->load('currentServiceStep');
+        $task->load('infoExtra');
 
         return response()->json([
             'ok'=>true,
@@ -176,12 +223,30 @@ class TaskController extends Controller
         $task->solution = $request->solution;
         $task->save();
 
+        // Actualizar campos extra
+        if ($request->has('info_extra')) {
+            TaskInfoExtra::where('task_id', $task->id)->delete();
+            $infoExtra = is_string($request->info_extra) ? json_decode($request->info_extra, true) : $request->info_extra;
+            if (is_array($infoExtra)) {
+                foreach ($infoExtra as $fieldName => $value) {
+                    if ($value !== null && $value !== '') {
+                        TaskInfoExtra::create([
+                            'task_id' => $task->id,
+                            'field_name' => $fieldName,
+                            'value' => $value,
+                        ]);
+                    }
+                }
+            }
+        }
+
         //Una ves guardado el task, insertamos un log-history
         $this->storeTaskLog($task->id,$user->name,'Edición del registro.');
 
         $task->load('client.addresses');
         $task->load('images');
         $task->load('logs');
+        $task->load('infoExtra');
 
         return response()->json([
             'ok' => true,
@@ -1379,7 +1444,7 @@ class TaskController extends Controller
             ->get();
 
         $history = TaskServiceTracking::where('task_id', $task->id)
-            ->with(['step', 'changedBy'])
+            ->with(['step', 'changedBy', 'evidence'])
             ->orderBy('created_at', 'asc')
             ->get();
 
@@ -1440,6 +1505,8 @@ class TaskController extends Controller
         $request->validate([
             'step_id' => 'required|exists:service_tracking_steps,id',
             'notes' => 'nullable|string|max:500',
+            'images' => 'nullable|array|max:5',
+            'images.*' => 'image|mimes:jpeg,png,jpg,webp|max:2048',
         ]);
 
         $user = $request->user();
@@ -1459,12 +1526,24 @@ class TaskController extends Controller
 
         $task->save();
 
-        TaskServiceTracking::create([
+        $trackingEntry = TaskServiceTracking::create([
             'task_id' => $task->id,
             'step_id' => $step->id,
             'changed_by_user_id' => $user->id,
             'notes' => $request->notes,
         ]);
+
+        // Procesar imágenes de evidencia si vienen
+        if ($request->hasFile('images')) {
+            $imageService = new ImageService();
+            foreach ($request->file('images') as $file) {
+                $imagePath = $imageService->processAndStore($file, 'tracking-evidence');
+                ServiceTrackingEvidence::create([
+                    'tracking_id' => $trackingEntry->id,
+                    'image' => $imagePath,
+                ]);
+            }
+        }
 
         $this->storeTaskLog($task->id, $user->name, 'Seguimiento actualizado a: ' . $step->name);
 
@@ -1474,6 +1553,82 @@ class TaskController extends Controller
             'ok' => true,
             'task' => $task,
             'message' => 'Paso de seguimiento actualizado.',
+        ]);
+    }
+
+    /**
+     * Subir evidencia a un registro de tracking existente
+     */
+    public function uploadTrackingEvidence(Request $request, $taskId, $trackingId)
+    {
+        $request->validate([
+            'image' => 'required|image|mimes:jpeg,png,jpg,webp|max:2048',
+            'caption' => 'nullable|string|max:255',
+        ]);
+
+        $user = $request->user();
+        $shop = $user->shop;
+
+        $task = Task::where('shop_id', $shop->id)->findOrFail($taskId);
+
+        $tracking = TaskServiceTracking::where('id', $trackingId)
+            ->where('task_id', $task->id)
+            ->firstOrFail();
+
+        if ($tracking->evidence()->count() >= 5) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Máximo 5 fotos por paso.',
+            ], 422);
+        }
+
+        $imageService = new ImageService();
+        $imagePath = $imageService->processAndStore($request->file('image'), 'tracking-evidence');
+
+        $evidence = ServiceTrackingEvidence::create([
+            'tracking_id' => $tracking->id,
+            'image' => $imagePath,
+            'caption' => $request->caption,
+        ]);
+
+        $stepName = $tracking->step->name ?? 'paso';
+        $this->storeTaskLog($task->id, $user->name, "Evidencia agregada al paso: {$stepName}");
+
+        return response()->json([
+            'ok' => true,
+            'evidence' => $evidence,
+            'message' => 'Evidencia subida correctamente.',
+        ]);
+    }
+
+    /**
+     * Eliminar una evidencia de tracking
+     */
+    public function deleteTrackingEvidence(Request $request, $taskId, $evidenceId)
+    {
+        $user = $request->user();
+        $shop = $user->shop;
+
+        $task = Task::where('shop_id', $shop->id)->findOrFail($taskId);
+
+        $evidence = ServiceTrackingEvidence::where('id', $evidenceId)
+            ->whereHas('tracking', function ($q) use ($task) {
+                $q->where('task_id', $task->id);
+            })
+            ->firstOrFail();
+
+        $fullPath = storage_path("app/public/{$evidence->image}");
+        if (file_exists($fullPath)) {
+            unlink($fullPath);
+        }
+
+        $evidence->delete();
+
+        $this->storeTaskLog($task->id, $user->name, 'Evidencia eliminada.');
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Evidencia eliminada.',
         ]);
     }
 

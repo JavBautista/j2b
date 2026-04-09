@@ -42,6 +42,8 @@ class ExtraFieldsShopController extends Controller
             $extraField->field_name = $request->field_name;
             $extraField->active = $request->has('active'); // Asignar true si el checkbox está marcado
             $extraField->filterable = $request->has('filterable');
+            $extraField->apply_to_receipts = $request->has('apply_to_receipts');
+            $extraField->apply_to_tasks = $request->has('apply_to_tasks');
             $extraField->save();
             // Redireccionar con un mensaje de éxito
             return redirect()->route('admin.configurations.extra_fields')->with('success', '¡Campo extra creado exitosamente!');
@@ -85,6 +87,8 @@ class ExtraFieldsShopController extends Controller
         $extraField->field_name = $request->field_name;
         $extraField->active = $request->has('active') ? true : false;
         $extraField->filterable = $request->has('filterable') ? true : false;
+        $extraField->apply_to_receipts = $request->has('apply_to_receipts') ? true : false;
+        $extraField->apply_to_tasks = $request->has('apply_to_tasks') ? true : false;
         $extraField->save();
 
         // Redireccionar con un mensaje de éxito
@@ -112,6 +116,8 @@ class ExtraFieldsShopController extends Controller
         $extra_field->field_name = $request->field_name;
         $extra_field->active     = 1;
         $extra_field->filterable = $request->filterable ?? false;
+        $extra_field->apply_to_receipts = $request->apply_to_receipts ?? true;
+        $extra_field->apply_to_tasks = $request->apply_to_tasks ?? false;
         $extra_field->save();
 
         return response()->json([
@@ -126,6 +132,12 @@ class ExtraFieldsShopController extends Controller
         $extra_field->field_name = $request->field_name;
         if ($request->has('filterable')) {
             $extra_field->filterable = $request->filterable;
+        }
+        if ($request->has('apply_to_receipts')) {
+            $extra_field->apply_to_receipts = $request->apply_to_receipts;
+        }
+        if ($request->has('apply_to_tasks')) {
+            $extra_field->apply_to_tasks = $request->apply_to_tasks;
         }
         $extra_field->save();
         return response()->json([

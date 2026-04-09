@@ -199,6 +199,9 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::get('/superadmin/cfdi/shops', [CfdiController::class, 'getShops']);
         Route::post('/superadmin/cfdi/toggle', [CfdiController::class, 'toggleCfdi']);
         Route::post('/superadmin/cfdi/asignar-timbres-shop', [CfdiController::class, 'asignarTimbresShop']);
+        Route::get('/superadmin/cfdi/precio-timbre', [CfdiController::class, 'getPrecioTimbre']);
+        Route::get('/superadmin/cfdi/timbre-transactions', [CfdiController::class, 'getTimbreTransactions']);
+        Route::put('/superadmin/cfdi/precio-timbre', [CfdiController::class, 'updatePrecioTimbre']);
         Route::get('/superadmin/cfdi/get', [CfdiController::class, 'get']);
         Route::get('/superadmin/cfdi/timbres-globales', [CfdiController::class, 'getTimbresGlobales']);
         Route::get('/superadmin/cfdi/sincronizar', [CfdiController::class, 'sincronizarTimbres']);
@@ -311,6 +314,7 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::post('/admin/facturacion/configuracion/save', [App\Http\Controllers\Admin\CfdiConfigController::class, 'save']);
         Route::post('/admin/facturacion/configuracion/upload-csd', [App\Http\Controllers\Admin\CfdiConfigController::class, 'uploadCsd']);
         Route::post('/admin/facturacion/configuracion/registrar', [App\Http\Controllers\Admin\CfdiConfigController::class, 'registrar']);
+        Route::get('/admin/facturacion/configuracion/timbre-transactions', [App\Http\Controllers\Admin\CfdiConfigController::class, 'getTimbreTransactions']);
 
         // Facturación CFDI - Facturas Emitidas
         Route::get('/admin/facturacion/facturas', [App\Http\Controllers\Admin\CfdiInvoiceController::class, 'indexFacturas'])->name('admin.cfdi.facturas');
@@ -477,6 +481,7 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::get('/admin/tasks/{id}/reception-pdf', [TasksController::class, 'receptionPdf'])->name('admin.tasks.reception-pdf');
         Route::get('/admin/tasks/get-num-status', [TasksController::class, 'getNumStatus'])->name('admin.tasks.get-num-status');
         Route::get('/admin/tasks/collaborators', [TasksController::class, 'getCollaborators'])->name('admin.tasks.collaborators');
+        Route::get('/admin/tasks/extra-fields', [TasksController::class, 'getExtraFields'])->name('admin.tasks.extra-fields');
 
         Route::get('/admin/tasks/clients', [TasksController::class, 'getClients'])->name('admin.tasks.clients');
 
@@ -517,6 +522,8 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         // Service Tracking de tareas
         Route::get('/admin/tasks/{id}/service-tracking', [TasksController::class, 'getServiceTracking'])->name('admin.tasks.service-tracking');
         Route::put('/admin/tasks/{id}/service-tracking', [TasksController::class, 'updateServiceStep'])->name('admin.tasks.service-tracking.update');
+        Route::post('/admin/tasks/{taskId}/tracking/{trackingId}/evidence', [TasksController::class, 'uploadTrackingEvidence'])->name('admin.tasks.tracking.evidence.upload');
+        Route::delete('/admin/tasks/{taskId}/tracking-evidence/{evidenceId}', [TasksController::class, 'deleteTrackingEvidence'])->name('admin.tasks.tracking.evidence.delete');
 
         // Rutas para Productos (CRUD admin)
         Route::get('/admin/products', [\App\Http\Controllers\Admin\ProductsController::class, 'index'])->name('admin.products');

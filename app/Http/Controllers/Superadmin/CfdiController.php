@@ -9,6 +9,8 @@ use App\Models\Shop;
 use App\Models\CfdiEmisor;
 use App\Models\CfdiInvoice;
 use App\Services\Facturacion\HubCfdiService;
+use App\Models\CfdiTimbreTransaction;
+use App\Models\SubscriptionSetting;
 use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Facades\Excel;
 use Carbon\Carbon;
@@ -135,17 +137,71 @@ class CfdiController extends Controller
         $shop->cfdiEmisor->timbres_asignados = $shop->cfdi_timbres_contratados;
         $shop->cfdiEmisor->save();
 
+        // Registrar transaccion de ingresos (usa precio del request si viene, sino el global)
+        $precioUnitario = $request->precio_unitario ?? SubscriptionSetting::get('cfdi_precio_por_timbre', 2.00);
+        CfdiTimbreTransaction::create([
+            'shop_id' => $shop->id,
+            'cantidad' => $request->cantidad,
+            'precio_unitario' => $precioUnitario,
+            'total' => $request->cantidad * $precioUnitario,
+            'assigned_by_user_id' => auth()->id(),
+            'notes' => $request->notes,
+        ]);
+
         Log::info('Timbres asignados exitosamente', [
             'shop_id' => $shop->id,
             'rfc' => $shop->cfdiEmisor->rfc,
             'cantidad' => $request->cantidad,
             'total_contratados' => $shop->cfdi_timbres_contratados,
+            'ingreso' => $request->cantidad * $precioUnitario,
         ]);
 
         return response()->json([
             'ok' => true,
-            'message' => "Se asignaron {$request->cantidad} timbres a {$shop->name}",
+            'message' => "Se asignaron {$request->cantidad} timbres a {$shop->name} ($ " . number_format($request->cantidad * $precioUnitario, 2) . ")",
             'cfdi_timbres_contratados' => $shop->cfdi_timbres_contratados,
+        ]);
+    }
+
+    /**
+     * Historial de transacciones de timbres por tienda
+     */
+    public function getTimbreTransactions(Request $request)
+    {
+        $query = CfdiTimbreTransaction::with(['shop:id,name', 'assignedBy:id,name'])
+            ->orderBy('created_at', 'desc');
+
+        if ($request->shop_id) {
+            $query->where('shop_id', $request->shop_id);
+        }
+
+        return response()->json([
+            'ok' => true,
+            'transactions' => $query->get(),
+        ]);
+    }
+
+    /**
+     * Obtener precio por timbre actual
+     */
+    public function getPrecioTimbre()
+    {
+        return response()->json([
+            'ok' => true,
+            'precio' => SubscriptionSetting::get('cfdi_precio_por_timbre', 2.00),
+        ]);
+    }
+
+    /**
+     * Actualizar precio por timbre
+     */
+    public function updatePrecioTimbre(Request $request)
+    {
+        $request->validate(['precio' => 'required|numeric|min:0']);
+        SubscriptionSetting::set('cfdi_precio_por_timbre', $request->precio);
+        return response()->json([
+            'ok' => true,
+            'message' => 'Precio actualizado a $' . number_format($request->precio, 2),
         ]);
     }
 

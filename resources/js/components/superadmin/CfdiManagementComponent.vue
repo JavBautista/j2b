@@ -19,11 +19,30 @@
                     <h6 class="mb-0" style="font-weight: 600; color: var(--j2b-dark);">
                         <i class="fa fa-ticket" style="color: var(--j2b-primary);"></i> Timbres Globales (HUB CFDI)
                     </h6>
-                    <div class="d-flex gap-2">
-                        <button type="button" class="j2b-btn j2b-btn-sm j2b-btn-outline" @click="sincronizar()" :disabled="syncLoading">
+                    <div class="d-flex align-items-center gap-2">
+                        <!-- Precio por timbre inline -->
+                        <div v-if="!editandoPrecio" class="d-flex align-items-center gap-1 me-2" style="background: #fff; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--j2b-gray-300);">
+                            <i class="fa fa-tag" style="color: var(--j2b-primary); font-size: 11px;"></i>
+                            <small style="color: var(--j2b-gray-500);">Timbre:</small>
+                            <strong style="color: var(--j2b-dark);">${{ precioTimbre.toFixed(2) }}</strong>
+                            <a href="#" @click.prevent="editandoPrecio = true; precioTimbreEdit = precioTimbre" style="color: var(--j2b-gray-500); margin-left: 4px;" title="Editar precio">
+                                <i class="fa fa-pencil" style="font-size: 11px;"></i>
+                            </a>
+                        </div>
+                        <div v-else class="d-flex align-items-center gap-1 me-2">
+                            <span style="font-size: 12px;">$</span>
+                            <input type="number" class="form-control form-control-sm" v-model.number="precioTimbreEdit" min="0" step="0.50" style="width: 70px; font-weight: 600;">
+                            <button class="j2b-btn j2b-btn-sm j2b-btn-primary" @click="guardarPrecio()" :disabled="guardandoPrecio" style="padding: 2px 8px;">
+                                <i class="fa" :class="guardandoPrecio ? 'fa-spinner fa-spin' : 'fa-check'"></i>
+                            </button>
+                            <button class="j2b-btn j2b-btn-sm j2b-btn-outline" @click="editandoPrecio = false" style="padding: 2px 8px;">
+                                <i class="fa fa-times"></i>
+                            </button>
+                        </div>
+                        <button type="button" class="j2b-btn j2b-btn-sm j2b-btn-dark" @click="sincronizar()" :disabled="syncLoading">
                             <i class="fa" :class="syncLoading ? 'fa-spinner fa-spin' : 'fa-exchange'"></i> Sincronizar
                         </button>
-                        <button type="button" class="j2b-btn j2b-btn-sm j2b-btn-outline" @click="loadTimbresGlobales()" :disabled="timbresLoading">
+                        <button type="button" class="j2b-btn j2b-btn-sm j2b-btn-dark" @click="loadTimbresGlobales()" :disabled="timbresLoading">
                             <i class="fa" :class="timbresLoading ? 'fa-spinner fa-spin' : 'fa-refresh'"></i> Actualizar
                         </button>
                     </div>
@@ -269,6 +288,49 @@
                             </div>
                         </div>
                     </div>
+                    <!-- Historial de asignaciones -->
+                    <div class="j2b-form-section mt-3">
+                        <h6 class="j2b-form-section-title">
+                            <i class="fa fa-history"></i> Historial de Asignaciones
+                        </h6>
+                        <div v-if="loadingTransactions" class="text-center py-3">
+                            <i class="fa fa-spinner fa-spin" style="color: var(--j2b-primary);"></i>
+                        </div>
+                        <div v-else-if="shopTransactions.length === 0" class="text-center py-3">
+                            <small style="color: var(--j2b-gray-500);">Sin registros de asignaciones</small>
+                        </div>
+                        <div v-else>
+                            <table class="j2b-table" style="font-size: 13px;">
+                                <thead>
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th class="text-center">Cantidad</th>
+                                        <th class="text-right">Precio/u</th>
+                                        <th class="text-right">Total</th>
+                                        <th>Notas</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="tx in shopTransactions" :key="tx.id">
+                                        <td>{{ new Date(tx.created_at).toLocaleDateString('es-MX', {day:'2-digit', month:'short', year:'numeric'}) }}</td>
+                                        <td class="text-center"><strong>{{ tx.cantidad }}</strong></td>
+                                        <td class="text-right">${{ parseFloat(tx.precio_unitario).toFixed(2) }}</td>
+                                        <td class="text-right"><strong>${{ parseFloat(tx.total).toFixed(2) }}</strong></td>
+                                        <td><small style="color: var(--j2b-gray-500);">{{ tx.notes || '-' }}</small></td>
+                                    </tr>
+                                </tbody>
+                                <tfoot>
+                                    <tr style="border-top: 2px solid var(--j2b-gray-300);">
+                                        <td><strong>Total</strong></td>
+                                        <td class="text-center"><strong>{{ shopTransactions.reduce((s,t) => s + t.cantidad, 0) }}</strong></td>
+                                        <td></td>
+                                        <td class="text-right"><strong style="color: var(--j2b-primary);">${{ shopTransactions.reduce((s,t) => s + parseFloat(t.total), 0).toFixed(2) }}</strong></td>
+                                        <td></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer j2b-modal-footer">
                     <button type="button" class="j2b-btn j2b-btn-secondary" @click="cerrarModalDetalle()">
@@ -312,6 +374,20 @@
                         <label class="j2b-label"><span style="color: var(--j2b-danger);">*</span> Cantidad de timbres a agregar</label>
                         <input type="number" class="j2b-input" v-model.number="cantidadTimbres" min="1" placeholder="Ej: 10">
                         <small style="color: var(--j2b-gray-500);">Se sumaran a los {{ shopAsignar.cfdi_timbres_contratados }} timbres actuales</small>
+                    </div>
+                    <!-- Precio y total -->
+                    <div v-if="cantidadTimbres > 0" class="mt-3 p-3" style="background: rgba(0,245,160,0.1); border: 1px solid var(--j2b-primary); border-radius: 8px;">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span style="color: var(--j2b-gray-500);">Precio por timbre:</span>
+                            <div class="d-flex align-items-center gap-1">
+                                <span>$</span>
+                                <input type="number" class="form-control form-control-sm" v-model.number="precioAsignacion" min="0" step="0.50" style="width: 80px; text-align: right; font-weight: 600;">
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mt-2 pt-2" style="border-top: 1px dashed var(--j2b-gray-300);">
+                            <span style="color: var(--j2b-gray-500);">Total:</span>
+                            <strong style="font-size: 18px; color: var(--j2b-dark);">${{ (cantidadTimbres * precioAsignacion).toFixed(2) }}</strong>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer j2b-modal-footer">
@@ -482,8 +558,15 @@ export default {
             // Modal detalle
             modalDetalle: 0,
             shopDetalle: null,
+            shopTransactions: [],
+            loadingTransactions: false,
 
             // Modal asignar
+            precioTimbre: 2.00,
+            precioTimbreEdit: 2.00,
+            editandoPrecio: false,
+            guardandoPrecio: false,
+            precioAsignacion: 2.00,
             modalAsignar: 0,
             shopAsignar: null,
             cantidadTimbres: null,
@@ -536,6 +619,31 @@ export default {
                 console.log(error);
             });
         },
+        loadPrecioTimbre() {
+            axios.get('/superadmin/cfdi/precio-timbre').then(response => {
+                if (response.data.ok) {
+                    this.precioTimbre = parseFloat(response.data.precio);
+                }
+            }).catch(() => {});
+        },
+
+        guardarPrecio() {
+            this.guardandoPrecio = true;
+            axios.put('/superadmin/cfdi/precio-timbre', { precio: this.precioTimbreEdit }).then(response => {
+                if (response.data.ok) {
+                    this.precioTimbre = this.precioTimbreEdit;
+                    this.editandoPrecio = false;
+                    Swal.fire('Exito', response.data.message, 'success');
+                }
+            }).catch(error => {
+                let msg = 'Error al guardar';
+                if (error.response && error.response.data && error.response.data.message) msg = error.response.data.message;
+                Swal.fire('Error', msg, 'error');
+            }).finally(() => {
+                this.guardandoPrecio = false;
+            });
+        },
+
         loadTimbresGlobales() {
             let me = this;
             me.timbresLoading = true;
@@ -583,15 +691,26 @@ export default {
         },
         verDetalle(shop) {
             this.shopDetalle = shop;
+            this.shopTransactions = [];
             this.modalDetalle = 1;
+            this.loadingTransactions = true;
+            axios.get('/superadmin/cfdi/timbre-transactions?shop_id=' + shop.id).then(response => {
+                if (response.data.ok) {
+                    this.shopTransactions = response.data.transactions;
+                }
+            }).catch(() => {}).finally(() => {
+                this.loadingTransactions = false;
+            });
         },
         cerrarModalDetalle() {
             this.modalDetalle = 0;
             this.shopDetalle = null;
+            this.shopTransactions = [];
         },
         abrirModalAsignar(shop) {
             this.shopAsignar = shop;
             this.cantidadTimbres = null;
+            this.precioAsignacion = this.precioTimbre;
             this.modalAsignar = 1;
         },
         cerrarModalAsignar() {
@@ -611,6 +730,7 @@ export default {
             axios.post('/superadmin/cfdi/asignar-timbres-shop', {
                 shop_id: me.shopAsignar.id,
                 cantidad: me.cantidadTimbres,
+                precio_unitario: me.precioAsignacion,
             }).then(function(response) {
                 me.asignando = false;
                 if (response.data.ok) {
@@ -690,6 +810,7 @@ export default {
     mounted() {
         this.loadShops(1);
         this.loadTimbresGlobales();
+        this.loadPrecioTimbre();
     }
 }
 </script>

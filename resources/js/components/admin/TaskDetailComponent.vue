@@ -3,7 +3,7 @@
     <div class="row">
         <!-- Header -->
         <div class="col-12 mb-4">
-            <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
                 <div>
                     <h4 class="mb-1" style="color: var(--j2b-dark); font-weight: 600;">
                         <i class="fa fa-clipboard" style="color: var(--j2b-primary);"></i>
@@ -11,26 +11,29 @@
                     </h4>
                     <p class="mb-0" style="color: var(--j2b-gray-500);">Detalle de la tarea</p>
                 </div>
-                <div class="d-flex gap-2 flex-wrap">
-                    <button type="button" class="j2b-btn j2b-btn-dark" @click="abrirModalEstatus()">
-                        <i class="fa fa-exchange"></i> Cambiar Estatus
-                    </button>
-                    <button type="button" class="j2b-btn j2b-btn-dark" @click="abrirModalResena()">
-                        <i class="fa fa-comment"></i> Resena
-                    </button>
-                    <a :href="'/admin/tasks/' + task.id + '/reception-pdf'" target="_blank" class="j2b-btn j2b-btn-dark">
-                        <i class="fa fa-print"></i> Comprobante
-                    </a>
-                    <button v-if="!userLimited" type="button" class="j2b-btn j2b-btn-primary" @click="abrirModalEditar()">
-                        <i class="fa fa-edit"></i> Editar
-                    </button>
-                    <button v-if="!userLimited" type="button" class="j2b-btn j2b-btn-dark" @click="task.active ? desactivarTarea() : activarTarea()">
-                        <i class="fa" :class="task.active ? 'fa-toggle-off' : 'fa-toggle-on'"></i>
-                        {{ task.active ? 'Desactivar' : 'Activar' }}
-                    </button>
-                    <button v-if="!userLimited" type="button" class="j2b-btn j2b-btn-sm" style="background: var(--j2b-danger); color: #fff;" @click="confirmarEliminar()">
-                        <i class="fa fa-trash"></i> Eliminar
-                    </button>
+                <div class="task-actions">
+                    <div class="task-actions-main">
+                        <button type="button" class="j2b-btn j2b-btn-dark" @click="abrirModalEstatus()">
+                            <i class="fa fa-exchange"></i> Estatus
+                        </button>
+                        <button type="button" class="j2b-btn j2b-btn-dark" @click="abrirModalResena()">
+                            <i class="fa fa-comment"></i> Resena
+                        </button>
+                        <a :href="'/admin/tasks/' + task.id + '/reception-pdf'" target="_blank" class="j2b-btn j2b-btn-dark">
+                            <i class="fa fa-print"></i> Comprobante
+                        </a>
+                        <button v-if="!userLimited" type="button" class="j2b-btn j2b-btn-primary" @click="abrirModalEditar()">
+                            <i class="fa fa-edit"></i> Editar
+                        </button>
+                    </div>
+                    <div v-if="!userLimited" class="task-actions-secondary">
+                        <button type="button" class="j2b-btn j2b-btn-sm j2b-btn-dark" @click="task.active ? desactivarTarea() : activarTarea()" :title="task.active ? 'Desactivar' : 'Activar'">
+                            <i class="fa" :class="task.active ? 'fa-toggle-off' : 'fa-toggle-on'"></i>
+                        </button>
+                        <button type="button" class="j2b-btn j2b-btn-sm" style="background: var(--j2b-danger); color: #fff;" @click="confirmarEliminar()" title="Eliminar">
+                            <i class="fa fa-trash"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -51,15 +54,20 @@
                             :class="{
                                 'tracking-step-completed': isStepCompleted(step),
                                 'tracking-step-current': task.current_service_step_id === step.id,
-                                'tracking-step-pending': !isStepCompleted(step) && task.current_service_step_id !== step.id
+                                'tracking-step-pending': !isStepCompleted(step) && task.current_service_step_id !== step.id,
+                                'tracking-step-selected': trackingStepDetalle && trackingStepDetalle.id === step.id
                             }">
                             <div class="tracking-circle"
                                 :style="getStepCircleStyle(step)"
-                                @click="!userLimited ? abrirModalTracking(step) : null"
+                                @click="onStepClick(step)"
                                 :title="step.name + (task.current_service_step_id === step.id ? ' (actual)' : '')">
                                 <i v-if="isStepCompleted(step) && task.current_service_step_id !== step.id" class="fa fa-check"></i>
                                 <i v-else :class="step.icon || 'fa fa-circle'" style="font-size: 12px;"></i>
                             </div>
+                            <!-- Badge de fotos -->
+                            <span v-if="getStepEvidenceCount(step) > 0" class="tracking-photo-badge">
+                                <i class="fa fa-camera" style="font-size: 8px;"></i> {{ getStepEvidenceCount(step) }}
+                            </span>
                             <div class="tracking-label" :class="{ 'fw-bold': task.current_service_step_id === step.id }">
                                 {{ step.name }}
                             </div>
@@ -69,18 +77,42 @@
                         </div>
                     </div>
 
-                    <!-- Historial compacto -->
-                    <div v-if="task.service_tracking_history && task.service_tracking_history.length > 0" class="mt-3 pt-3 border-top">
-                        <small class="text-muted d-block mb-2"><i class="fa fa-history mr-1"></i>Historial:</small>
-                        <div v-for="entry in task.service_tracking_history" :key="entry.id" class="d-flex align-items-start mb-2">
-                            <span class="tracking-history-dot" :style="{ backgroundColor: entry.step ? entry.step.color : '#6c757d' }"></span>
-                            <div class="small">
-                                <strong>{{ entry.step ? entry.step.name : '?' }}</strong>
-                                <span class="text-muted ml-1">{{ formatDateTime(entry.created_at) }}</span>
-                                <span v-if="entry.changed_by" class="text-muted"> — {{ entry.changed_by.name }}</span>
-                                <div v-if="entry.notes" class="text-muted fst-italic">{{ entry.notes }}</div>
+                    <!-- Panel de detalle del paso seleccionado -->
+                    <div v-if="trackingStepDetalle && trackingEntryDetalle" class="tracking-detail-panel mt-3 pt-3 border-top">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="tracking-history-dot" :style="{ backgroundColor: trackingStepDetalle.color || '#6c757d' }"></span>
+                                <strong class="small">{{ trackingStepDetalle.name }}</strong>
+                                <span class="text-muted small">{{ formatDateTime(trackingEntryDetalle.created_at) }}</span>
+                                <span v-if="trackingEntryDetalle.changed_by" class="text-muted small">— {{ trackingEntryDetalle.changed_by.name }}</span>
                             </div>
+                            <button class="btn btn-sm p-0 text-muted" @click="trackingStepDetalle = null" title="Cerrar">&times;</button>
                         </div>
+                        <div v-if="trackingEntryDetalle.notes" class="text-muted fst-italic small mb-2">{{ trackingEntryDetalle.notes }}</div>
+                        <!-- Evidencia -->
+                        <div class="d-flex align-items-center flex-wrap gap-2">
+                            <div v-for="(ev, evIdx) in trackingEntryDetalle.evidence" :key="ev.id" class="position-relative evidence-thumb-wrapper">
+                                <img :src="'/storage/' + ev.image" class="evidence-thumb" @click="verEvidencia(trackingEntryDetalle, evIdx)" :title="ev.caption || 'Ver imagen'">
+                                <button v-if="!userLimited" class="evidence-delete-btn" @click="eliminarEvidencia(ev.id)" title="Eliminar">&times;</button>
+                            </div>
+                            <!-- Botón agregar -->
+                            <label v-if="!userLimited" :for="'evidence-panel-' + trackingEntryDetalle.id" class="evidence-add-btn" title="Agregar evidencia">
+                                <i class="fa fa-plus"></i>
+                                <input type="file" :id="'evidence-panel-' + trackingEntryDetalle.id" accept="image/*" style="display:none;" @change="subirEvidenciaDirecta(trackingEntryDetalle, $event)">
+                            </label>
+                        </div>
+                        <div v-if="!trackingEntryDetalle.evidence || trackingEntryDetalle.evidence.length === 0" class="small text-muted">
+                            Sin evidencia fotográfica
+                            <label v-if="!userLimited" :for="'evidence-panel-empty-' + trackingEntryDetalle.id" class="text-primary ms-1" style="cursor:pointer; text-decoration: underline;">
+                                agregar
+                                <input type="file" :id="'evidence-panel-empty-' + trackingEntryDetalle.id" accept="image/*" style="display:none;" @change="subirEvidenciaDirecta(trackingEntryDetalle, $event)">
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Mensaje cuando no hay paso seleccionado pero hay historial -->
+                    <div v-else-if="task.service_tracking_history && task.service_tracking_history.length > 0" class="mt-3 pt-3 border-top">
+                        <small class="text-muted"><i class="fa fa-info-circle mr-1"></i>Click en un paso para ver su detalle y evidencia</small>
                     </div>
                 </div>
             </div>
@@ -134,6 +166,16 @@
                         <div class="col-6">
                             <label class="text-muted small mb-1">Creada</label>
                             <p class="mb-0">{{ formatDateTime(task.created_at) }}</p>
+                        </div>
+                    </div>
+                    <!-- Campos extra dinámicos -->
+                    <div v-if="task.info_extra && task.info_extra.length > 0" class="mt-3 pt-3" style="border-top: 1px solid var(--j2b-gray-300);">
+                        <label class="text-muted small mb-2"><i class="fa fa-plus-square me-1"></i> Informacion Adicional</label>
+                        <div class="row">
+                            <div class="col-6 mb-2" v-for="extra in task.info_extra" :key="extra.id">
+                                <label class="text-muted small mb-0">{{ extra.field_name }}</label>
+                                <p class="font-weight-bold mb-0">{{ extra.value }}</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -522,6 +564,16 @@
                                 <textarea class="j2b-input" v-model="formTask.solution" rows="2"></textarea>
                             </div>
                         </div>
+                        <!-- Campos extra dinámicos -->
+                        <div v-if="extraFields.length > 0" class="mt-3 pt-3" style="border-top: 1px solid #eee;">
+                            <p class="text-muted mb-2"><i class="fa fa-plus-square me-1"></i> <strong>Informacion Adicional</strong></p>
+                            <div class="row">
+                                <div class="col-md-6 mb-2" v-for="field in extraFields" :key="field.id">
+                                    <label class="form-label small text-muted mb-0">{{ field.field_name }}</label>
+                                    <input type="text" class="form-control form-control-sm" v-model="fieldValueMap[field.field_name]" :placeholder="field.field_name">
+                                </div>
+                            </div>
+                        </div>
                     </form>
                 </div>
                 <div class="modal-footer j2b-modal-footer">
@@ -788,6 +840,16 @@
                         <label class="form-label text-muted small">Nota (opcional)</label>
                         <textarea class="form-control" v-model="trackingNota" rows="2" maxlength="500" placeholder="Agregar nota sobre este cambio..."></textarea>
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Evidencia fotográfica (opcional, máx. 5)</label>
+                        <input type="file" class="form-control form-control-sm" ref="trackingEvidenceInput" accept="image/*" multiple @change="onTrackingEvidenceSelected">
+                        <div v-if="trackingEvidencePreview.length > 0" class="d-flex flex-wrap gap-2 mt-2">
+                            <div v-for="(preview, idx) in trackingEvidencePreview" :key="idx" class="position-relative evidence-thumb-wrapper">
+                                <img :src="preview" class="evidence-thumb">
+                                <button class="evidence-delete-btn" @click="quitarEvidenciaPreview(idx)" title="Quitar">&times;</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer j2b-modal-footer">
                     <button type="button" class="j2b-btn j2b-btn-dark" @click="modalTracking = false">Cancelar</button>
@@ -827,6 +889,8 @@ export default {
 
             // Editar
             formTask: {},
+            extraFields: [],
+            fieldValueMap: {},
             guardando: false,
             errorForm: false,
             erroresForm: [],
@@ -866,14 +930,35 @@ export default {
             serviceSteps: this.serviceStepsInitial || [],
             modalTracking: false,
             trackingStepSeleccionado: null,
+            trackingStepDetalle: null,
             trackingNota: '',
-            guardandoTracking: false
+            guardandoTracking: false,
+            trackingEvidenceFiles: [],
+            trackingEvidencePreview: [],
+            evidenciaGrandeUrl: null
+        }
+    },
+    computed: {
+        trackingEntryDetalle() {
+            if (!this.trackingStepDetalle || !this.task.service_tracking_history) return null;
+            // Buscar la última entrada del historial para este paso
+            const entries = this.task.service_tracking_history.filter(e => e.step_id === this.trackingStepDetalle.id);
+            return entries.length > 0 ? entries[entries.length - 1] : null;
         }
     },
     mounted() {
         this.loadColaboradores();
+        this.loadExtraFields();
     },
     methods: {
+        loadExtraFields() {
+            axios.get('/admin/tasks/extra-fields').then(response => {
+                if (response.data.ok) {
+                    this.extraFields = response.data.extra_fields;
+                }
+            }).catch(() => {});
+        },
+
         loadColaboradores() {
             axios.get('/admin/tasks/collaborators').then(response => {
                 if (response.data.ok) {
@@ -942,6 +1027,13 @@ export default {
                 expiration: this.task.expiration || '',
                 client_id: this.task.client_id || ''
             };
+            // Cargar valores de campos extra
+            this.fieldValueMap = {};
+            if (this.task.info_extra && this.task.info_extra.length > 0) {
+                this.task.info_extra.forEach(ie => {
+                    this.fieldValueMap[ie.field_name] = ie.value;
+                });
+            }
             this.errorForm = false;
             this.erroresForm = [];
             this.modalEditar = true;
@@ -952,7 +1044,12 @@ export default {
             this.errorForm = false;
             this.erroresForm = [];
 
-            axios.put('/admin/tasks/update', this.formTask).then(response => {
+            let payload = { ...this.formTask };
+            if (this.extraFields.length > 0) {
+                payload.info_extra = JSON.stringify(this.fieldValueMap);
+            }
+
+            axios.put('/admin/tasks/update', payload).then(response => {
                 if (response.data.ok) {
                     this.modalEditar = false;
                     this.reloadTask();
@@ -1406,6 +1503,34 @@ export default {
         },
 
         // Service Tracking
+        onStepClick(step) {
+            const isCompleted = this.isStepCompleted(step);
+            const isCurrent = this.task.current_service_step_id === step.id;
+
+            if (isCompleted || isCurrent) {
+                // Mostrar/ocultar detalle del paso
+                if (this.trackingStepDetalle && this.trackingStepDetalle.id === step.id) {
+                    this.trackingStepDetalle = null;
+                } else {
+                    this.trackingStepDetalle = step;
+                }
+            } else if (!this.userLimited) {
+                // Paso pendiente → abrir modal para cambiar
+                this.abrirModalTracking(step);
+            }
+        },
+
+        getStepEvidenceCount(step) {
+            if (!this.task.service_tracking_history) return 0;
+            let count = 0;
+            this.task.service_tracking_history.forEach(entry => {
+                if (entry.step_id === step.id && entry.evidence) {
+                    count += entry.evidence.length;
+                }
+            });
+            return count;
+        },
+
         isStepCompleted(step) {
             if (!this.task.service_tracking_history || !this.task.current_service_step_id) return false;
             const currentStepIndex = this.serviceSteps.findIndex(s => s.id === this.task.current_service_step_id);
@@ -1429,25 +1554,98 @@ export default {
             if (step.id === this.task.current_service_step_id) return;
             this.trackingStepSeleccionado = step;
             this.trackingNota = '';
+            this.trackingEvidenceFiles = [];
+            this.trackingEvidencePreview = [];
+            if (this.$refs.trackingEvidenceInput) this.$refs.trackingEvidenceInput.value = '';
             this.modalTracking = true;
+        },
+
+        onTrackingEvidenceSelected(event) {
+            const files = Array.from(event.target.files).slice(0, 5);
+            this.trackingEvidenceFiles = files;
+            this.trackingEvidencePreview = [];
+            files.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => this.trackingEvidencePreview.push(e.target.result);
+                reader.readAsDataURL(file);
+            });
+        },
+
+        quitarEvidenciaPreview(idx) {
+            this.trackingEvidenceFiles.splice(idx, 1);
+            this.trackingEvidencePreview.splice(idx, 1);
         },
 
         guardarCambioTracking() {
             if (!this.trackingStepSeleccionado) return;
             this.guardandoTracking = true;
 
-            axios.put(`/admin/tasks/${this.task.id}/service-tracking`, {
-                step_id: this.trackingStepSeleccionado.id,
-                notes: this.trackingNota || null,
+            const formData = new FormData();
+            formData.append('step_id', this.trackingStepSeleccionado.id);
+            formData.append('_method', 'PUT');
+            if (this.trackingNota) formData.append('notes', this.trackingNota);
+            this.trackingEvidenceFiles.forEach(file => {
+                formData.append('images[]', file);
+            });
+
+            axios.post(`/admin/tasks/${this.task.id}/service-tracking`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
             }).then(response => {
                 if (response.data.ok) {
                     this.modalTracking = false;
                     this.reloadTask();
                 }
-            }).catch(error => {
+            }).catch(() => {
                 Swal.fire('Error', 'Error al actualizar el seguimiento', 'error');
             }).finally(() => {
                 this.guardandoTracking = false;
+            });
+        },
+
+        subirEvidenciaDirecta(entry, event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const formData = new FormData();
+            formData.append('image', file);
+
+            axios.post(`/admin/tasks/${this.task.id}/tracking/${entry.id}/evidence`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            }).then(response => {
+                if (response.data.ok) {
+                    this.reloadTask();
+                    Swal.fire('Subida', response.data.message, 'success');
+                }
+            }).catch(err => {
+                const msg = err.response && err.response.data ? err.response.data.message : 'Error al subir evidencia';
+                Swal.fire('Error', msg, 'error');
+            });
+            event.target.value = '';
+        },
+
+        verEvidencia(entry, evIndex) {
+            const imagenes = entry.evidence.map(e => e.image);
+            this.$viewImages(imagenes, evIndex);
+        },
+
+        eliminarEvidencia(evidenceId) {
+            Swal.fire({
+                title: 'Eliminar esta evidencia?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                confirmButtonText: 'Si, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    axios.delete(`/admin/tasks/${this.task.id}/tracking-evidence/${evidenceId}`).then(response => {
+                        if (response.data.ok) {
+                            this.reloadTask();
+                            Swal.fire('Eliminada', response.data.message, 'success');
+                        }
+                    }).catch(() => {
+                        Swal.fire('Error', 'Error al eliminar evidencia', 'error');
+                    });
+                }
             });
         },
 
@@ -1478,6 +1676,39 @@ export default {
 </script>
 
 <style scoped>
+    /* Header actions */
+    .task-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .task-actions-main {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+    .task-actions-secondary {
+        display: flex;
+        gap: 4px;
+        border-left: 1px solid #dee2e6;
+        padding-left: 8px;
+        margin-left: 2px;
+    }
+    @media (max-width: 768px) {
+        .task-actions {
+            width: 100%;
+            flex-wrap: wrap;
+        }
+        .task-actions-main {
+            width: 100%;
+        }
+        .task-actions-secondary {
+            border-left: none;
+            padding-left: 0;
+            margin-left: 0;
+        }
+    }
+
     .modal-content {
         width: 100% !important;
         position: absolute !important;
@@ -1529,6 +1760,7 @@ export default {
     .tracking-flow {
         display: flex;
         align-items: flex-start;
+        justify-content: center;
         overflow-x: auto;
         padding: 10px 0;
     }
@@ -1605,5 +1837,73 @@ export default {
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
+    }
+    /* Paso seleccionado */
+    .tracking-step-selected .tracking-circle {
+        outline: 3px solid rgba(13, 110, 253, 0.4);
+        outline-offset: 2px;
+    }
+    .tracking-photo-badge {
+        font-size: 9px;
+        color: #6c757d;
+        margin-top: 2px;
+    }
+    .tracking-detail-panel {
+        animation: fadeIn 0.2s ease;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-5px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .evidence-add-btn {
+        width: 60px;
+        height: 60px;
+        border: 2px dashed #dee2e6;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        color: #adb5bd;
+        transition: all 0.2s;
+    }
+    .evidence-add-btn:hover {
+        border-color: #0d6efd;
+        color: #0d6efd;
+    }
+    /* Evidencia thumbnails */
+    .evidence-thumb-wrapper {
+        position: relative;
+        display: inline-block;
+    }
+    .evidence-thumb {
+        width: 60px;
+        height: 60px;
+        object-fit: cover;
+        border-radius: 6px;
+        cursor: pointer;
+        border: 1px solid #dee2e6;
+        transition: transform 0.2s;
+    }
+    .evidence-thumb:hover {
+        transform: scale(1.1);
+    }
+    .evidence-delete-btn {
+        position: absolute;
+        top: -6px;
+        right: -6px;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: #dc3545;
+        color: #fff;
+        border: none;
+        font-size: 12px;
+        line-height: 18px;
+        padding: 0;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 </style>

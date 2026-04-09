@@ -82,6 +82,41 @@
             </div>
         </div>
 
+        <!-- Historial de Timbres -->
+        <div v-if="timbreTransactions.length > 0" class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-bottom">
+                <h5 class="mb-0"><i class="fa fa-history text-primary"></i> Historial de Timbres</h5>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0" style="font-size: 13px;">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Fecha</th>
+                            <th class="text-center">Cantidad</th>
+                            <th class="text-end">Precio/u</th>
+                            <th class="text-end">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="tx in timbreTransactions" :key="tx.id">
+                            <td>{{ new Date(tx.created_at).toLocaleDateString('es-MX', {day:'2-digit', month:'short', year:'numeric'}) }}</td>
+                            <td class="text-center"><strong>{{ tx.cantidad }}</strong></td>
+                            <td class="text-end">${{ parseFloat(tx.precio_unitario).toFixed(2) }}</td>
+                            <td class="text-end"><strong>${{ parseFloat(tx.total).toFixed(2) }}</strong></td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr style="border-top: 2px solid #dee2e6;">
+                            <td><strong>Total</strong></td>
+                            <td class="text-center"><strong>{{ timbreTransactions.reduce((s,t) => s + t.cantidad, 0) }}</strong></td>
+                            <td></td>
+                            <td class="text-end"><strong class="text-primary">${{ timbreTransactions.reduce((s,t) => s + parseFloat(t.total), 0).toFixed(2) }}</strong></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
         <!-- Card 2: Datos Fiscales (Paso 1) -->
         <div class="card border-0 shadow-sm mb-4">
             <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
@@ -285,6 +320,7 @@ export default {
             editingCsd: false,
             emisor: null,
             timbresContratados: 0,
+            timbreTransactions: [],
             hasCer: false,
             hasKey: false,
             form: {
@@ -347,6 +383,11 @@ export default {
                         this.form.codigo_postal = this.emisor.codigo_postal || '';
                         this.form.serie = this.emisor.serie || 'A';
                     }
+                }
+                // Cargar historial de timbres
+                const txResp = await axios.get('/admin/facturacion/configuracion/timbre-transactions');
+                if (txResp.data.ok) {
+                    this.timbreTransactions = txResp.data.transactions;
                 }
             } catch (error) {
                 console.error('Error cargando datos CFDI:', error);

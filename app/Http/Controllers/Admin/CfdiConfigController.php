@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\CfdiEmisor;
+use App\Models\CfdiTimbreTransaction;
 use App\Models\Shop;
 use App\Services\Facturacion\HubCfdiService;
 use Illuminate\Http\Request;
@@ -232,5 +233,22 @@ class CfdiConfigController extends Controller
                 'message' => 'Error al conectar con HUB CFDI: ' . $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * Historial de timbres asignados a esta tienda
+     */
+    public function getTimbreTransactions()
+    {
+        $shop = auth()->user()->shop;
+
+        $transactions = CfdiTimbreTransaction::where('shop_id', $shop->id)
+            ->orderBy('created_at', 'desc')
+            ->get(['id', 'cantidad', 'precio_unitario', 'total', 'created_at']);
+
+        return response()->json([
+            'ok' => true,
+            'transactions' => $transactions,
+        ]);
     }
 }

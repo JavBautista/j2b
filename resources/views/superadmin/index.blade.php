@@ -75,10 +75,12 @@
                 <i class="fa fa-dollar"></i>
             </div>
             <div class="j2b-stat-content">
-                <div class="j2b-stat-value">${{ number_format($monthlyRevenue, 0) }}</div>
+                <div class="j2b-stat-value">${{ number_format($monthlyTotal, 0) }}</div>
                 <div class="j2b-stat-label">Ingresos del Mes</div>
                 <div class="j2b-stat-trend">
-                    <i class="fa fa-calendar"></i> {{ now()->format('F Y') }}
+                    <i class="fa fa-credit-card"></i> Suscripciones: ${{ number_format($monthlyRevenue, 0) }}
+                    &nbsp;|&nbsp;
+                    <i class="fa fa-ticket"></i> Timbres: ${{ number_format($monthlyTimbresRevenue, 0) }}
                 </div>
             </div>
         </div>

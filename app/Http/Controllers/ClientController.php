@@ -19,31 +19,81 @@ class ClientController extends Controller
         $user = $request->user();
         $shop = $user->shop;
 
-        $buscar = $request->buscar;
-        if($buscar==''){
-            $clients = Client::with('addresses')->with(['rents' => function ($query) {
-                        $query->where('active', 1);
-                    }])
-                    ->where('shop_id',$shop->id)
-                    ->where('active',1)
-                    ->orderBy('id','desc')
-                    ->paginate(10);
-        }else{
-            $clients = Client::with('addresses')->with(['rents' => function ($query) {
-                        $query->where('active', 1);
-                    }])
-                    ->where('shop_id',$shop->id)
-                    ->where('active',1)
-                    ->where('name', 'like', '%'.$buscar.'%')
-                    ->orderBy('id','desc')
-                    ->paginate(10);
+        $buscar          = $request->buscar;
+        $filtro_rentas   = $request->filtro_rentas;   // 'CON_RENTAS', 'SIN_RENTAS'
+        $filtro_level    = $request->filtro_level;     // número de nivel
+        $filtro_user_app = $request->filtro_user_app;  // 'CON_APP', 'SIN_APP'
+        $filtro_ordenar  = $request->filtro_ordenar;   // 'ID_DESC','ID_ASC','NAME_ASC','LEVEL_DESC','LEVEL_ASC'
+
+        $query = Client::with('addresses')->with(['rents' => function ($q) {
+                    $q->where('active', 1);
+                }])
+                ->where('shop_id', $shop->id)
+                ->where('active', 1);
+
+        // Búsqueda por nombre
+        if ($buscar != '') {
+            $query->where('name', 'like', '%'.$buscar.'%');
         }
-        
-        //return $clients;
+
+        // Filtro por rentas activas
+        if ($filtro_rentas == 'CON_RENTAS') {
+            $query->whereHas('rents', function ($q) {
+                $q->where('active', 1);
+            });
+        } elseif ($filtro_rentas == 'SIN_RENTAS') {
+            $query->whereDoesntHave('rents', function ($q) {
+                $q->where('active', 1);
+            });
+        }
+
+        // Filtro por nivel
+        if ($filtro_level != '' && $filtro_level !== null) {
+            $query->where('level', $filtro_level);
+        }
+
+        // Filtro por usuario APP
+        if ($filtro_user_app == 'CON_APP') {
+            $query->whereNotNull('user_id');
+        } elseif ($filtro_user_app == 'SIN_APP') {
+            $query->whereNull('user_id');
+        }
+
+        // Ordenamiento
+        switch ($filtro_ordenar) {
+            case 'ID_ASC':
+                $query->orderBy('id', 'asc');
+                break;
+            case 'NAME_ASC':
+                $query->orderBy('name', 'asc');
+                break;
+            case 'LEVEL_DESC':
+                $query->orderBy('level', 'desc');
+                break;
+            case 'LEVEL_ASC':
+                $query->orderBy('level', 'asc');
+                break;
+            default: // ID_DESC
+                $query->orderBy('id', 'desc');
+                break;
+        }
+
+        $clients = $query->paginate(10);
 
         $response = $clients->toArray();
-        
-        $response['total_bd']  = Client::where('shop_id',$shop->id)->where('active',1)->count();
+
+        $response['total_bd'] = Client::where('shop_id', $shop->id)->where('active', 1)->count();
+
+        // Conteos para chips de filtro
+        $baseQuery = Client::where('shop_id', $shop->id)->where('active', 1);
+        $response['counts'] = [
+            'con_rentas' => (clone $baseQuery)->whereHas('rents', function ($q) {
+                $q->where('active', 1);
+            })->count(),
+            'sin_rentas' => (clone $baseQuery)->whereDoesntHave('rents', function ($q) {
+                $q->where('active', 1);
+            })->count(),
+        ];
 
         return response()->json($response);
 

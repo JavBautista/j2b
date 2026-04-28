@@ -4,9 +4,12 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Log;
 
 use App\Models\Receipt;
 use App\Models\PartialPayments;
+use App\Models\CfdiPagoComplemento;
+use App\Services\Facturacion\CfdiComplementoPagoService;
 
 class PartialPaymentsController extends Controller
 {
@@ -40,7 +43,7 @@ class PartialPaymentsController extends Controller
         $receipt->received = $nueva_suma;
         if($nueva_suma >= $receipt->total){
             $receipt->finished = 1;
-            $receipt->status = 'PAGADA';
+            $receipt->status = Receipt::STATUS_PAGADA;
             if($receipt->credit){
                 $receipt->credit = 0;
                 $receipt->credit_completed = 1;
@@ -48,19 +51,71 @@ class PartialPaymentsController extends Controller
         }
         $receipt->save();
 
+        // Hook PPD: emitir complemento de pago si la nota tiene factura PPD vigente.
+        $complementoResult = $this->emitirComplementoSiAplica($receipt, $payment);
+
         // Recargar para devolver con todos los pagos
         $receipt->load('partialPayments');
 
         return response()->json([
             'ok' => true,
-            'receipt' => $receipt
+            'receipt' => $receipt,
+            'complemento' => $complementoResult,
         ]);
+    }
+
+    protected function emitirComplementoSiAplica(Receipt $receipt, PartialPayments $abono): ?array
+    {
+        $invoice = $receipt->cfdiInvoice()->first();
+
+        if (!$invoice) return null;
+
+        if ($invoice->metodo_pago === 'PUE') {
+            Log::warning('Abono registrado en nota facturada como PUE — sin complemento', [
+                'receipt_id' => $receipt->id,
+                'partial_payment_id' => $abono->id,
+                'invoice_uuid' => $invoice->uuid,
+            ]);
+            return null;
+        }
+
+        if ($invoice->metodo_pago !== 'PPD' || $invoice->status !== 'vigente') {
+            return null;
+        }
+
+        $numParcialidad = $invoice->complementos()
+            ->where('status', CfdiPagoComplemento::STATUS_VIGENTE)
+            ->count() + 1;
+
+        $service = new CfdiComplementoPagoService();
+        $result = $service->emitir($receipt, $abono, $numParcialidad);
+
+        if (!$result['ok']) {
+            Log::warning('Complemento de pago falló al registrar abono', [
+                'receipt_id' => $receipt->id,
+                'partial_payment_id' => $abono->id,
+                'invoice_uuid' => $invoice->uuid,
+                'error' => $result['message'],
+            ]);
+        }
+
+        return ['ok' => $result['ok'], 'message' => $result['message']];
     }
 
     public function delete(Request $request)
     {
         $payment = PartialPayments::findOrFail($request->id);
         $receipt_id=$payment->receipt_id;
+
+        // Guard: no se puede eliminar pagos de una nota con CFDI vigente
+        $receipt_check = Receipt::findOrFail($receipt_id);
+        if($receipt_check->is_tax_invoiced){
+            return response()->json([
+                'ok'=>false,
+                'message'=>'No se puede eliminar pagos de una nota facturada (CFDI vigente).'
+            ], 422);
+        }
+
         $payment->delete();
 
         //Una vez eliminado el pago, volvemos a sumar todos los pagos actuales que quedaron para actualizar el total de la nota
@@ -74,10 +129,10 @@ class PartialPaymentsController extends Controller
         $receipt->received = $suma_pagos;
         if($suma_pagos >= $receipt->total){
             $receipt->finished=1;
-            $receipt->status='PAGADA';
+            $receipt->status=Receipt::STATUS_PAGADA;
         }else{
             $receipt->finished=0;
-            $receipt->status='POR COBRAR';
+            $receipt->status=Receipt::STATUS_POR_COBRAR;
         }
         $receipt->save();
 

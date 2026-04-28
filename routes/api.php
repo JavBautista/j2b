@@ -656,6 +656,14 @@ Route::group([
         Route::get('cfdi/facturas/export', [\App\Http\Controllers\CfdiInvoiceController::class, 'exportFacturas']);
         Route::get('cfdi/facturas/{id}/download/{formato}', [\App\Http\Controllers\CfdiInvoiceController::class, 'descargar']);
 
+        /* CFDI TIMBRADO - Preparar y emitir factura desde una nota (Ionic) */
+        Route::get('cfdi/receipt/{id}/data', [\App\Http\Controllers\CfdiInvoiceController::class, 'getReceiptData']);
+        Route::post('cfdi/timbrar', [\App\Http\Controllers\CfdiInvoiceController::class, 'timbrar']);
+
+        /* CFDI CATALOGOS SAT - Búsqueda de claves producto/unidad (autocompletado en modal móvil) */
+        Route::get('cfdi/sat/product-codes', [\App\Http\Controllers\Admin\SatCatalogController::class, 'productCodes']);
+        Route::get('cfdi/sat/unit-codes', [\App\Http\Controllers\Admin\SatCatalogController::class, 'unitCodes']);
+
         /* CFDI CONFIGURACION - Datos fiscales, CSD y registro de emisor */
         Route::get('cfdi/config/get', [\App\Http\Controllers\CfdiConfigApiController::class, 'get']);
         Route::post('cfdi/config/save', [\App\Http\Controllers\CfdiConfigApiController::class, 'save']);

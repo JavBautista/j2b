@@ -187,15 +187,30 @@
                                         <span v-if="item.from_task_product_id" class="badge bg-secondary ms-1" title="Stock ya descontado desde tarea">
                                             <i class="fa fa-clipboard"></i> De tarea
                                         </span>
+                                        <span v-if="item.is_complimentary" class="badge bg-warning text-dark ms-1" title="No se incluirá en la factura CFDI">
+                                            <i class="fa fa-gift me-1"></i>Cortesía
+                                        </span>
                                         <span v-if="item.type === 'product' && !item.from_task_product_id" class="text-muted ms-2">
                                             Stock: {{ item.stock }}
                                         </span>
                                     </div>
                                 </div>
                                 <div class="item-subtotal">
-                                    <strong>{{ formatCurrency(item.subtotal) }}</strong>
+                                    <template v-if="item.is_complimentary">
+                                        <del class="text-muted small">{{ formatCurrency((parseFloat(item.price) || 0) * (parseInt(item.qty) || 0)) }}</del>
+                                        <strong class="text-warning d-block">{{ formatCurrency(0) }}</strong>
+                                    </template>
+                                    <strong v-else>{{ formatCurrency(item.subtotal) }}</strong>
                                 </div>
-                                <div v-if="!isViewMode" class="item-delete">
+                                <div v-if="!isViewMode" class="item-delete d-flex gap-1">
+                                    <button
+                                        class="btn btn-sm"
+                                        :class="item.is_complimentary ? 'btn-warning' : 'btn-outline-warning'"
+                                        @click="toggleComplimentary(item)"
+                                        :title="item.is_complimentary ? 'Quitar cortesía' : 'Marcar como cortesía (no se facturará)'"
+                                    >
+                                        <i class="fa fa-gift"></i>
+                                    </button>
                                     <button
                                         class="btn btn-outline-danger btn-sm"
                                         @click="removeItem(index)"
@@ -208,7 +223,7 @@
                             </div>
 
                             <!-- Fila 2: Controles (Precio, Cantidad, Descuento) -->
-                            <div class="item-row-bottom">
+                            <div class="item-row-bottom" :class="{ 'item-complimentary': item.is_complimentary }">
                                 <!-- Precio -->
                                 <div class="item-control">
                                     <label>Precio</label>
@@ -218,6 +233,7 @@
                                         class="form-control form-control-sm"
                                         v-model.number="item.price"
                                         @input="calcularSubtotalItem(item)"
+                                        :disabled="item.is_complimentary"
                                         min="0"
                                         step="0.01"
                                     >
@@ -235,7 +251,7 @@
                                         </span>
                                     </div>
                                     <div v-else-if="!isViewMode" class="qty-control">
-                                        <button class="btn btn-outline-secondary btn-sm" @click="decrementQty(item)">
+                                        <button class="btn btn-outline-secondary btn-sm" @click="decrementQty(item)" :disabled="item.is_complimentary">
                                             <i class="fa fa-minus"></i>
                                         </button>
                                         <input
@@ -243,9 +259,10 @@
                                             class="form-control form-control-sm text-center"
                                             v-model.number="item.qty"
                                             @input="onQtyChange(item)"
+                                            :disabled="item.is_complimentary"
                                             min="1"
                                         >
-                                        <button class="btn btn-outline-secondary btn-sm" @click="incrementQty(item)">
+                                        <button class="btn btn-outline-secondary btn-sm" @click="incrementQty(item)" :disabled="item.is_complimentary">
                                             <i class="fa fa-plus"></i>
                                         </button>
                                     </div>
@@ -261,6 +278,7 @@
                                             class="form-control form-control-sm"
                                             v-model.number="item.discount"
                                             @input="calcularSubtotalItem(item)"
+                                            :disabled="item.is_complimentary"
                                             min="0"
                                             placeholder="0"
                                         >
@@ -268,12 +286,13 @@
                                             class="form-select form-select-sm"
                                             v-model="item.discount_concept"
                                             @change="calcularSubtotalItem(item)"
+                                            :disabled="item.is_complimentary"
                                         >
                                             <option value="$">$</option>
                                             <option value="%">%</option>
                                         </select>
                                         <button
-                                            v-if="item.discount > 0"
+                                            v-if="item.discount > 0 && !item.is_complimentary"
                                             class="btn btn-outline-danger btn-sm"
                                             @click="removeItemDiscount(item)"
                                             title="Quitar"
@@ -632,8 +651,8 @@
                         </ul>
                     </div>
 
-                    <!-- Acciones rápidas (solo notas existentes) -->
-                    <div v-if="!isCreateMode && receiptOriginal" class="mt-3">
+                    <!-- Acciones rápidas (solo notas existentes, no en modo solo lectura) -->
+                    <div v-if="!isCreateMode && !readOnly && receiptOriginal" class="mt-3">
                         <hr>
                         <h6 class="mb-2"><i class="fa fa-cogs me-2"></i>Acciones</h6>
 
@@ -1200,6 +1219,7 @@ export default {
                 stock: stock,
                 discount: detail.discount || 0,
                 discount_concept: detail.discount_concept || '$',
+                is_complimentary: !!detail.is_complimentary,
                 subtotal: detail.subtotal,
                 image: detail.image || null, // Usar imagen del detalle (viene del backend)
                 isFromOriginal: true,
@@ -1271,6 +1291,7 @@ export default {
                 stock: producto.stock,
                 discount: 0,
                 discount_concept: '$',
+                is_complimentary: false,
                 subtotal: precio,
                 image: producto.image,
                 originalProduct: producto
@@ -1309,6 +1330,7 @@ export default {
                 stock: 999,
                 discount: 0,
                 discount_concept: '$',
+                is_complimentary: false,
                 subtotal: servicio.price,
                 image: null
             };
@@ -1354,6 +1376,7 @@ export default {
                 stock: 1,
                 discount: 0,
                 discount_concept: '$',
+                is_complimentary: false,
                 subtotal: precio || 0,
                 image: equipo.images && equipo.images.length > 0 ? equipo.images[0].image : null,
                 equipmentData: equipo
@@ -1461,6 +1484,13 @@ export default {
             return true;
         },
         calcularSubtotalItem(item) {
+            // Ítem cortesía: siempre subtotal 0 (no suma al total de la nota)
+            if (item.is_complimentary) {
+                item.subtotal = 0;
+                this.calcularTotales();
+                return;
+            }
+
             const price = parseFloat(item.price) || 0;
             const qty = parseInt(item.qty) || 1;
             const discount = parseFloat(item.discount) || 0;
@@ -1476,6 +1506,15 @@ export default {
             item.subtotal = Math.max(0, subtotal);
             // Recalcular totales generales
             this.calcularTotales();
+        },
+        toggleComplimentary(item) {
+            item.is_complimentary = !item.is_complimentary;
+            if (item.is_complimentary) {
+                // Al marcar: limpiar descuento por ítem (ya no aplica)
+                item.discount = 0;
+                item.discount_concept = '$';
+            }
+            this.calcularSubtotalItem(item);
         },
 
         // ==================== TOTALES ====================
@@ -1606,6 +1645,7 @@ export default {
                 qty: item.qty,
                 discount: item.discount,
                 discount_concept: item.discount_concept,
+                is_complimentary: !!item.is_complimentary,
                 subtotal: item.subtotal,
                 from_task_product_id: item.from_task_product_id || null
             }));
@@ -2251,5 +2291,14 @@ export default {
         position: relative !important;
         top: 0 !important;
     }
+}
+
+/* Ítem marcado como cortesía: inputs con apariencia tachada/atenuada */
+.item-row-bottom.item-complimentary input,
+.item-row-bottom.item-complimentary select {
+    text-decoration: line-through;
+    color: #999 !important;
+    background-color: #f8f9fa !important;
+    opacity: 0.8;
 }
 </style>

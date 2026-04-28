@@ -106,6 +106,10 @@ class PurchaseOrderController extends Controller
         $purchase_order->observation = $po['observation'];
         $purchase_order->payment     = $po['payment'];
         $purchase_order->total       = $po['total'];
+        $purchase_order->subtotal         = $po['subtotal']         ?? 0;
+        $purchase_order->discount         = $po['discount']         ?? 0;
+        $purchase_order->discount_concept = $po['discount_concept'] ?? null;
+        $purchase_order->iva              = $po['iva']              ?? 0;
         $purchase_order->payable     = $po['payable'];
         $purchase_order->save();
 
@@ -150,6 +154,10 @@ class PurchaseOrderController extends Controller
         $purchase_order->observation = $po['observation'];
         $purchase_order->payment     = $po['payment'];
         $purchase_order->total       = $po['total'];
+        $purchase_order->subtotal         = $po['subtotal']         ?? 0;
+        $purchase_order->discount         = $po['discount']         ?? 0;
+        $purchase_order->discount_concept = $po['discount_concept'] ?? null;
+        $purchase_order->iva              = $po['iva']              ?? 0;
         $purchase_order->payable       = $po['payable'];
         $purchase_order->save();
 

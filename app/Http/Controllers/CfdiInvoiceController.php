@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CfdiEmisor;
 use App\Models\CfdiInvoice;
+use App\Models\Receipt;
+use App\Services\Facturacion\CfdiTimbradoService;
 use App\Exports\FacturasEmitidasExport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -263,5 +266,180 @@ class CfdiInvoiceController extends Controller
             ]);
             abort(500, 'Error al descargar');
         }
+    }
+
+    /**
+     * Datos del receipt para preparar timbrado CFDI (Ionic).
+     * Mirror del endpoint web /admin/facturacion/receipt/{id}/data.
+     *
+     * GET /api/auth/cfdi/receipt/{id}/data
+     * Retorna: receipt (con detail.product y client.fiscalData), emisor, timbres disponibles.
+     */
+    public function getReceiptData($id)
+    {
+        $shop = auth()->user()->shop;
+
+        if (!$shop || !$shop->cfdi_enabled) {
+            return response()->json(['ok' => false, 'message' => 'CFDI no habilitado'], 403);
+        }
+
+        $emisor = CfdiEmisor::where('shop_id', $shop->id)->where('is_registered', true)->first();
+
+        if (!$emisor) {
+            return response()->json(['ok' => false, 'message' => 'No hay emisor CFDI registrado'], 422);
+        }
+
+        $receipt = Receipt::with(['detail.product', 'client.fiscalData'])
+            ->where('id', $id)
+            ->where('shop_id', $shop->id)
+            ->first();
+
+        if (!$receipt) {
+            return response()->json(['ok' => false, 'message' => 'Nota no encontrada'], 404);
+        }
+
+        if ($receipt->quotation) {
+            return response()->json(['ok' => false, 'message' => 'Las cotizaciones no se pueden facturar'], 422);
+        }
+
+        if ($receipt->is_tax_invoiced) {
+            return response()->json(['ok' => false, 'message' => 'Esta nota ya fue facturada'], 422);
+        }
+
+        $statusPermitidos = [Receipt::STATUS_PAGADA, Receipt::STATUS_POR_FACTURAR];
+        if ($receipt->credit) {
+            $statusPermitidos[] = Receipt::STATUS_POR_COBRAR;
+        }
+        if (!in_array($receipt->status, $statusPermitidos)) {
+            return response()->json(['ok' => false, 'message' => 'Esta nota no se puede facturar en su estado actual'], 422);
+        }
+
+        // T11: bloquear timbrado si total <= 0 (cortesías totales no se facturan al SAT)
+        if ($receipt->total <= 0) {
+            return response()->json(['ok' => false, 'message' => 'No se puede facturar una nota con total $0 (cortesía total).'], 422);
+        }
+
+        return response()->json([
+            'ok' => true,
+            'receipt' => $receipt,
+            'emisor' => [
+                'rfc' => $emisor->rfc,
+                'razon_social' => $emisor->razon_social,
+                'regimen_fiscal' => $emisor->regimen_fiscal,
+                'codigo_postal' => $emisor->codigo_postal,
+                'serie' => $emisor->serie,
+                'timbres_disponibles' => $emisor->timbresDisponibles(),
+            ],
+        ]);
+    }
+
+    /**
+     * Timbrar CFDI desde API (Ionic). Reusa CfdiTimbradoService (mismo algoritmo que web admin).
+     *
+     * POST /api/auth/cfdi/timbrar
+     *   receipt_id                 int
+     *   receptor_rfc               string (13)
+     *   receptor_razon_social      string
+     *   receptor_regimen_fiscal    string (3)
+     *   receptor_uso_cfdi          string (3)
+     *   receptor_codigo_postal     string (5)
+     *   forma_pago                 string (2)     ej. '01'
+     *   metodo_pago                string (3)     ej. 'PUE'
+     *   conceptos_sat              array?         [{detail_id, clave_prod_serv, clave_unidad, descripcion}]
+     *   guardar_datos_cliente      bool?
+     */
+    public function timbrar(Request $request)
+    {
+        $shop = auth()->user()->shop;
+
+        if (!$shop || !$shop->cfdi_enabled) {
+            return response()->json(['ok' => false, 'message' => 'CFDI no habilitado'], 403);
+        }
+
+        $emisor = CfdiEmisor::where('shop_id', $shop->id)->where('is_registered', true)->first();
+
+        if (!$emisor) {
+            return response()->json(['ok' => false, 'message' => 'No hay emisor CFDI registrado'], 422);
+        }
+
+        if ($emisor->timbresDisponibles() <= 0) {
+            return response()->json(['ok' => false, 'message' => 'No hay timbres disponibles'], 422);
+        }
+
+        $request->validate([
+            'receipt_id' => 'required|integer',
+            'receptor_rfc' => 'required|string|max:13',
+            'receptor_razon_social' => 'required|string|max:255',
+            'receptor_regimen_fiscal' => 'required|string|max:3',
+            'receptor_uso_cfdi' => 'required|string|max:3',
+            'receptor_codigo_postal' => 'required|string|max:5',
+            'forma_pago' => 'required|string|max:2',
+            'metodo_pago' => 'required|string|max:3',
+        ]);
+
+        $receipt = Receipt::with('detail.product')
+            ->where('id', $request->receipt_id)
+            ->where('shop_id', $shop->id)
+            ->first();
+
+        if (!$receipt) {
+            return response()->json(['ok' => false, 'message' => 'Nota no encontrada'], 404);
+        }
+
+        if ($receipt->quotation || $receipt->is_tax_invoiced) {
+            return response()->json(['ok' => false, 'message' => 'Esta nota no se puede facturar'], 422);
+        }
+
+        if (!in_array($receipt->status, [Receipt::STATUS_PAGADA, Receipt::STATUS_POR_FACTURAR])) {
+            return response()->json(['ok' => false, 'message' => 'Solo se pueden facturar notas PAGADA o POR FACTURAR'], 422);
+        }
+
+        // T11: bloquear timbrado si total <= 0 (cortesías totales no se facturan al SAT)
+        if ($receipt->total <= 0) {
+            return response()->json(['ok' => false, 'message' => 'No se puede facturar una nota con total $0 (cortesía total).'], 422);
+        }
+
+        $service = new CfdiTimbradoService();
+        $result = $service->emitir($receipt, $shop, $emisor, [
+            'receptor_rfc' => $request->receptor_rfc,
+            'receptor_razon_social' => $request->receptor_razon_social,
+            'receptor_regimen_fiscal' => $request->receptor_regimen_fiscal,
+            'receptor_uso_cfdi' => $request->receptor_uso_cfdi,
+            'receptor_codigo_postal' => $request->receptor_codigo_postal,
+            'forma_pago' => $request->forma_pago,
+            'metodo_pago' => $request->metodo_pago,
+            'conceptos_sat' => $request->conceptos_sat ?? [],
+            'guardar_datos_cliente' => (bool) $request->guardar_datos_cliente,
+        ]);
+
+        if (!$result['ok']) {
+            return response()->json([
+                'ok' => false,
+                'message' => $result['message'],
+            ], $result['status'] ?? 500);
+        }
+
+        $invoice = $result['invoice'];
+
+        // Guardar XML local (el PDF se genera on-demand en /download/{formato})
+        $service->guardarArchivosLocales(
+            $result['hub_service'],
+            $invoice,
+            $shop->id,
+            null
+        );
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Factura timbrada exitosamente',
+            'uuid' => $invoice->uuid,
+            'invoice_id' => $invoice->id,
+            'serie' => $invoice->serie,
+            'folio' => $invoice->folio,
+            'subtotal' => $invoice->subtotal,
+            'total_impuestos' => $invoice->total_impuestos,
+            'total' => $invoice->total,
+            'conceptos_cortesia_excluidos' => $result['conceptos_cortesia_excluidos'],
+        ]);
     }
 }

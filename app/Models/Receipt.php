@@ -10,6 +10,25 @@ class Receipt extends Model
     use HasFactory;
     protected $guarded=[];
 
+    const STATUS_POR_COBRAR    = 'POR COBRAR';
+    const STATUS_PAGADA        = 'PAGADA';
+    const STATUS_POR_FACTURAR  = 'POR FACTURAR';
+    const STATUS_CANCELADA     = 'CANCELADA';
+    const STATUS_DEVOLUCION    = 'DEVOLUCION';
+    const STATUS_NUEVA_COMPRA  = 'NUEVA COMPRA';
+
+    public static function statusesValidos(): array
+    {
+        return [
+            self::STATUS_POR_COBRAR,
+            self::STATUS_PAGADA,
+            self::STATUS_POR_FACTURAR,
+            self::STATUS_CANCELADA,
+            self::STATUS_DEVOLUCION,
+            self::STATUS_NUEVA_COMPRA,
+        ];
+    }
+
     public function detail(){
         return $this->hasMany(ReceiptDetail::class);
     }

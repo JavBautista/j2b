@@ -7,6 +7,7 @@ use App\Models\CfdiEmisor;
 use App\Models\CfdiInvoice;
 use App\Models\ClientFiscalData;
 use App\Models\Receipt;
+use App\Services\Facturacion\CfdiTimbradoService;
 use App\Services\Facturacion\HubCfdiService;
 use App\Exports\FacturasEmitidasExport;
 use Illuminate\Http\Request;
@@ -153,8 +154,17 @@ class CfdiInvoiceController extends Controller
             return response()->json(['ok' => false, 'message' => 'Esta nota ya fue facturada'], 422);
         }
 
-        if (!in_array($receipt->status, ['PAGADA', 'POR FACTURAR'])) {
-            return response()->json(['ok' => false, 'message' => 'Solo se pueden facturar notas con status PAGADA o POR FACTURAR'], 422);
+        $statusPermitidos = [Receipt::STATUS_PAGADA, Receipt::STATUS_POR_FACTURAR];
+        if ($receipt->credit) {
+            $statusPermitidos[] = Receipt::STATUS_POR_COBRAR;
+        }
+        if (!in_array($receipt->status, $statusPermitidos)) {
+            return response()->json(['ok' => false, 'message' => 'Esta nota no se puede facturar en su estado actual'], 422);
+        }
+
+        // T11: bloquear timbrado si total <= 0 (cortesías totales no se facturan al SAT)
+        if ($receipt->total <= 0) {
+            return response()->json(['ok' => false, 'message' => 'No se puede facturar una nota con total $0 (cortesía total).'], 422);
         }
 
         return response()->json([
@@ -218,261 +228,55 @@ class CfdiInvoiceController extends Controller
             return response()->json(['ok' => false, 'message' => 'Esta nota no se puede facturar'], 422);
         }
 
-        if (!in_array($receipt->status, ['PAGADA', 'POR FACTURAR'])) {
+        if (!in_array($receipt->status, [Receipt::STATUS_PAGADA, Receipt::STATUS_POR_FACTURAR])) {
             return response()->json(['ok' => false, 'message' => 'Solo se pueden facturar notas PAGADA o POR FACTURAR'], 422);
         }
 
-        try {
-            // Armar JSON CFDI (folio se revierte si el timbrado falla)
-            $folio = $emisor->siguienteFolio();
-            $fechaEmision = Carbon::now('America/Mexico_City')->format('Y-m-d H:i:s');
+        // T11: bloquear timbrado si total <= 0 (cortesías totales no se facturan al SAT)
+        if ($receipt->total <= 0) {
+            return response()->json(['ok' => false, 'message' => 'No se puede facturar una nota con total $0 (cortesía total).'], 422);
+        }
 
-            $receptorRfc = strtoupper($request->receptor_rfc);
-            $esPublicoGeneral = ($receptorRfc === 'XAXX010101000');
+        // Delegar al servicio compartido (misma lógica para web admin y API Ionic)
+        $service = new CfdiTimbradoService();
+        $result = $service->emitir($receipt, $shop, $emisor, [
+            'receptor_rfc' => $request->receptor_rfc,
+            'receptor_razon_social' => $request->receptor_razon_social,
+            'receptor_regimen_fiscal' => $request->receptor_regimen_fiscal,
+            'receptor_uso_cfdi' => $request->receptor_uso_cfdi,
+            'receptor_codigo_postal' => $request->receptor_codigo_postal,
+            'forma_pago' => $request->forma_pago,
+            'metodo_pago' => $request->metodo_pago,
+            'conceptos_sat' => $request->conceptos_sat ?? [],
+            'guardar_datos_cliente' => (bool) $request->guardar_datos_cliente,
+        ]);
 
-            // Indexar claves SAT enviadas desde el modal (override del admin)
-            $conceptosSatMap = [];
-            if ($request->has('conceptos_sat')) {
-                foreach ($request->conceptos_sat as $cs) {
-                    $conceptosSatMap[$cs['detail_id']] = $cs;
-                }
-            }
-
-            // Calcular conceptos e impuestos
-            $conceptos = [];
-            $subtotalTotal = 0;
-            $ivaTotal = 0;
-            $tieneIva = $receipt->iva > 0;
-
-            foreach ($receipt->detail as $item) {
-                // Saltar items con precio/subtotal = 0 (SAT no acepta valor_unitario ni base = 0)
-                if (round($item->subtotal, 2) <= 0) {
-                    continue;
-                }
-
-                if ($tieneIva) {
-                    // IVA ya separado en la nota
-                    $valorUnitario = round($item->price, 2);
-                    $subtotalItem = round($item->subtotal, 2);
-                    // SAT exige: importe traslado = round(base × tasa_cuota, 2)
-                    $ivaItem = round($subtotalItem * $shop->getTaxDecimal(), 2);
-                } else {
-                    // Extraer IVA de los precios (el precio ya incluye IVA)
-                    $valorUnitario = round($item->price / $shop->getTaxDivisor(), 2);
-                    $subtotalItem = round($item->subtotal / $shop->getTaxDivisor(), 2);
-                    $ivaItem = round($subtotalItem * $shop->getTaxDecimal(), 2);
-                }
-
-                // Prioridad: 1) Override del modal, 2) Del producto, 3) Genérico
-                $satOverride = $conceptosSatMap[$item->id] ?? null;
-                $claveProdServ = $satOverride['clave_prod_serv'] ?? $item->product?->sat_product_code ?? '01010101';
-                $claveUnidad = $satOverride['clave_unidad'] ?? $item->product?->sat_unit_code ?? 'E48';
-
-                // Prioridad descripción: 1) Override del modal, 2) Original de la nota
-                $descripcionRaw = $satOverride['descripcion'] ?? $item->descripcion;
-                // SAT pattern: no permite \n, \r, \t, | ni otros caracteres de control
-                $descripcionSat = str_replace(["\n", "\r", "\t", "|"], [' ', '', ' ', '-'], $descripcionRaw);
-                $descripcionSat = preg_replace('/\s+/', ' ', trim($descripcionSat));
-
-                $concepto = [
-                    'clave_prod_serv' => $claveProdServ,
-                    'descripcion' => $descripcionSat,
-                    'cantidad' => $item->qty,
-                    'clave_unidad' => $claveUnidad,
-                    'valor_unitario' => $valorUnitario,
-                    'subtotal' => $subtotalItem,
-                    'importe' => $subtotalItem,
-                    'objeto_impuesto' => '02',
-                    'impuestos' => [
-                        'traslados' => [
-                            [
-                                'base' => $subtotalItem,
-                                'impuesto' => '002',
-                                'tipo_factor' => 'Tasa',
-                                'tasa_cuota' => $shop->getTaxSatRate(),
-                                'importe' => $ivaItem,
-                            ]
-                        ]
-                    ],
-                ];
-
-                $conceptos[] = $concepto;
-                $subtotalTotal += $subtotalItem;
-                $ivaTotal += $ivaItem;
-            }
-
-            // Total CFDI = subtotal + IVA (calculado por item, SAT-compliant)
-            // Puede diferir por centavos del receipt.total debido a redondeo — esto es normal
-            $total = round($subtotalTotal + $ivaTotal, 2);
-
-            $cfdiPayload = [
-                'serie' => $emisor->serie ?? 'A',
-                'folio' => (string) $folio,
-                'fecha_emision' => $fechaEmision,
-                'forma_pago' => $request->forma_pago,
-                'metodo_pago' => $request->metodo_pago,
-                'tipo_comprobante' => 'I',
-                'exportacion' => '01',
-                'moneda' => $shop->getCurrencyCode(),
-                'lugar_expedicion' => $emisor->codigo_postal,
-                'subtotal' => $subtotalTotal,
-                'total' => $total,
-                'emisor' => [
-                    'rfc' => $emisor->rfc,
-                    'razon_social' => $emisor->razon_social,
-                    'regimen_fiscal' => $emisor->regimen_fiscal,
-                ],
-                'receptor' => [
-                    'rfc' => $receptorRfc,
-                    'razon_social' => strtoupper($request->receptor_razon_social),
-                    'uso_cfdi' => $request->receptor_uso_cfdi,
-                    'regimen_fiscal' => $request->receptor_regimen_fiscal,
-                    'codigo_postal' => $request->receptor_codigo_postal,
-                ],
-                'conceptos' => $conceptos,
-            ];
-
-            // Nodo informacion_global para Público en General
-            if ($esPublicoGeneral) {
-                $now = Carbon::now('America/Mexico_City');
-                $cfdiPayload['informacion_global'] = [
-                    'periodicidad' => '04',
-                    'meses' => str_pad($now->month, 2, '0', STR_PAD_LEFT),
-                    'anio' => (string) $now->year,
-                ];
-            }
-
-            // Nodo impuestos global (siempre, IVA se desglosa en todos los casos)
-            $cfdiPayload['impuestos'] = [
-                'total_impuestos_trasladados' => $ivaTotal,
-                'traslados' => [
-                    [
-                        'base' => $subtotalTotal,
-                        'impuesto' => '002',
-                        'tipo_factor' => 'Tasa',
-                        'tasa_cuota' => $shop->getTaxSatRate(),
-                        'importe' => $ivaTotal,
-                    ]
-                ]
-            ];
-
-            // Llamar API
-            $hubService = new HubCfdiService();
-            $result = $hubService->timbrar($cfdiPayload);
-
-            if (!$result['success']) {
-                // Revertir folio para no dejar huecos
-                $emisor->revertirFolio();
-
-                Log::error('CFDI Timbrado fallido', [
-                    'shop_id' => $shop->id,
-                    'receipt_id' => $receipt->id,
-                    'folio_revertido' => $folio,
-                    'error' => $result['error'],
-                ]);
-
-                return response()->json([
-                    'ok' => false,
-                    'message' => 'Error al timbrar: ' . ($result['error'] ?? 'Error desconocido'),
-                ]);
-            }
-
-            $responseData = $result['data'];
-            $uuid = $responseData['uuid'] ?? null;
-
-            // Crear registro de factura
-            $invoice = CfdiInvoice::create([
-                'shop_id' => $shop->id,
-                'cfdi_emisor_id' => $emisor->id,
-                'receipt_id' => $receipt->id,
-                'receptor_rfc' => $receptorRfc,
-                'receptor_nombre' => strtoupper($request->receptor_razon_social),
-                'receptor_regimen' => $request->receptor_regimen_fiscal,
-                'receptor_cp' => $request->receptor_codigo_postal,
-                'receptor_uso_cfdi' => $request->receptor_uso_cfdi,
-                'uuid' => $uuid,
-                'serie' => $emisor->serie ?? 'A',
-                'folio' => (string) $folio,
-                'fecha_emision' => $fechaEmision,
-                'fecha_timbrado' => $responseData['fecha_timbrado'] ?? null,
-                'tipo_comprobante' => 'I',
-                'forma_pago' => $request->forma_pago,
-                'metodo_pago' => $request->metodo_pago,
-                'subtotal' => $subtotalTotal,
-                'total_impuestos' => $ivaTotal,
-                'total' => $total,
-                'status' => 'vigente',
-                'request_json' => $cfdiPayload,
-                'response_json' => $responseData,
-            ]);
-
-            // Marcar receipt como facturado y cambiar status
-            $receipt->is_tax_invoiced = true;
-            $receipt->status = 'PAGADA';
-            $receipt->save();
-
-            // Incrementar timbres usados
-            $emisor->increment('timbres_usados');
-
-            // Guardar datos fiscales del cliente si se solicitó
-            if ($request->guardar_datos_cliente && $receipt->client_id && !$esPublicoGeneral) {
-                $existing = ClientFiscalData::where('client_id', $receipt->client_id)
-                    ->where('rfc', $receptorRfc)
-                    ->first();
-
-                if (!$existing) {
-                    // Si es el primer perfil fiscal, marcarlo como default
-                    $hasAny = ClientFiscalData::where('client_id', $receipt->client_id)->exists();
-
-                    ClientFiscalData::create([
-                        'client_id' => $receipt->client_id,
-                        'rfc' => $receptorRfc,
-                        'razon_social' => strtoupper($request->receptor_razon_social),
-                        'regimen_fiscal' => $request->receptor_regimen_fiscal,
-                        'uso_cfdi' => $request->receptor_uso_cfdi,
-                        'codigo_postal' => $request->receptor_codigo_postal,
-                        'is_default' => !$hasAny,
-                    ]);
-                }
-            }
-
-            // Guardar XML y PDF en storage local
-            $this->guardarArchivosLocales($hubService, $invoice, $shop->id);
-
-            Log::info('CFDI Timbrado exitoso', [
-                'shop_id' => $shop->id,
-                'receipt_id' => $receipt->id,
-                'uuid' => $uuid,
-                'invoice_id' => $invoice->id,
-            ]);
-
-            return response()->json([
-                'ok' => true,
-                'message' => 'Factura timbrada exitosamente',
-                'uuid' => $uuid,
-                'invoice_id' => $invoice->id,
-                'serie' => $invoice->serie,
-                'folio' => $invoice->folio,
-            ]);
-
-        } catch (\Exception $e) {
-            // Revertir folio si ya se había incrementado
-            if (isset($folio)) {
-                $emisor->revertirFolio();
-            }
-
-            Log::error('CFDI Timbrado exception', [
-                'shop_id' => $shop->id,
-                'receipt_id' => $receipt->id,
-                'folio_revertido' => $folio ?? null,
-                'error' => $e->getMessage(),
-            ]);
-
+        if (!$result['ok']) {
             return response()->json([
                 'ok' => false,
-                'message' => 'Error al timbrar: ' . $e->getMessage(),
-            ], 500);
+                'message' => $result['message'],
+            ], $result['status'] ?? 500);
         }
+
+        $invoice = $result['invoice'];
+
+        // Guardar XML + PDF local (sólo web admin pre-genera PDF, para tener vista previa rápida)
+        $service->guardarArchivosLocales(
+            $result['hub_service'],
+            $invoice,
+            $shop->id,
+            fn($inv) => $this->generarPdf($inv)
+        );
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Factura timbrada exitosamente',
+            'uuid' => $invoice->uuid,
+            'invoice_id' => $invoice->id,
+            'serie' => $invoice->serie,
+            'folio' => $invoice->folio,
+            'conceptos_cortesia_excluidos' => $result['conceptos_cortesia_excluidos'],
+        ]);
     }
 
     /**
@@ -662,55 +466,6 @@ class CfdiInvoiceController extends Controller
                 'ok' => false,
                 'message' => 'Error al descargar: ' . $e->getMessage(),
             ], 500);
-        }
-    }
-
-    /**
-     * Guardar XML y PDF de una factura en storage local.
-     * No lanza excepción si falla (el timbrado ya fue exitoso).
-     */
-    private function guardarArchivosLocales(HubCfdiService $hubService, CfdiInvoice $invoice, int $shopId): void
-    {
-        // 1. XML: seguir descargando de TBT (es el documento fiscal oficial)
-        try {
-            $result = $hubService->descargar($invoice->uuid, 'xml');
-
-            if ($result['success']) {
-                $base64 = $result['data']['archivo'] ?? $result['data']['base64'] ?? null;
-                if ($base64) {
-                    $path = "{$shopId}/{$invoice->uuid}.xml";
-                    Storage::disk('cfdi')->put($path, base64_decode($base64));
-                    $invoice->xml_path = $path;
-                }
-            } else {
-                Log::warning("CFDI: No se pudo descargar XML post-timbrado", [
-                    'invoice_id' => $invoice->id,
-                    'error' => $result['error'],
-                ]);
-            }
-        } catch (\Exception $e) {
-            Log::warning("CFDI: Excepción al guardar XML localmente", [
-                'invoice_id' => $invoice->id,
-                'error' => $e->getMessage(),
-            ]);
-        }
-
-        // 2. PDF: generar localmente con dompdf (incluye logo de la tienda)
-        try {
-            $pdfContent = $this->generarPdf($invoice);
-            $path = "{$shopId}/{$invoice->uuid}.pdf";
-            Storage::disk('cfdi')->put($path, $pdfContent);
-            $invoice->pdf_path = $path;
-        } catch (\Exception $e) {
-            Log::warning("CFDI: Excepción al generar PDF localmente", [
-                'invoice_id' => $invoice->id,
-                'error' => $e->getMessage(),
-            ]);
-        }
-
-        // Guardar paths en DB si se obtuvieron
-        if ($invoice->isDirty(['xml_path', 'pdf_path'])) {
-            $invoice->save();
         }
     }
 

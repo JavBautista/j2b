@@ -12,8 +12,10 @@ use App\Models\Product;
 use App\Models\Service;
 use App\Models\RentDetail;
 use App\Models\ExtraFieldShop;
+use App\Services\Facturacion\CfdiComplementoPagoService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Carbon;
 
 class ReceiptsController extends Controller
@@ -266,6 +268,33 @@ class ReceiptsController extends Controller
             return response()->json(['ok' => false, 'message' => 'Cliente no válido'], 422);
         }
 
+        // T9: PAGADA exige received >= total (escenario A: store, sin partial_payments aún)
+        $statusEnviado = $rcp['status'] ?? Receipt::STATUS_POR_COBRAR;
+        $receivedEnviado = $rcp['received'] ?? 0;
+        $totalEnviado = $rcp['total'] ?? 0;
+        if ($statusEnviado === Receipt::STATUS_PAGADA && $receivedEnviado < $totalEnviado) {
+            return response()->json(['ok' => false, 'message' => 'No se puede crear la nota como PAGADA si el monto recibido es menor al total.'], 422);
+        }
+
+        // T8: total >= 0 + regla cortesías
+        if ($totalEnviado < 0) {
+            return response()->json(['ok' => false, 'message' => 'No se puede guardar una nota con total negativo.'], 422);
+        }
+        $detailList = is_string($request->detail) ? json_decode($request->detail) : $request->detail;
+        $itemsValidar = is_array($detailList) ? $detailList : (is_object($detailList) ? (array) $detailList : []);
+        if (count($itemsValidar) > 0) {
+            $hayNoCortesia = false;
+            foreach ($itemsValidar as $d) {
+                if (empty($d->is_complimentary)) { $hayNoCortesia = true; break; }
+            }
+            if ($totalEnviado == 0 && $hayNoCortesia) {
+                return response()->json(['ok' => false, 'message' => 'Una nota con total $0 requiere que todos los ítems sean cortesía.'], 422);
+            }
+            if ($totalEnviado > 0 && !$hayNoCortesia) {
+                return response()->json(['ok' => false, 'message' => 'Una nota con total mayor a $0 debe incluir al menos un ítem que no sea cortesía.'], 422);
+            }
+        }
+
         $es_cotizacion = isset($rcp['quotation']) ? $rcp['quotation'] : 0;
         $es_credito = isset($rcp['credit']) ? $rcp['credit'] : 0;
 
@@ -298,7 +327,7 @@ class ReceiptsController extends Controller
         $receipt->total = $rcp['total'] ?? 0;
         $receipt->iva = $rcp['iva'] ?? 0;
         $receipt->finished = $finished;
-        $receipt->status = $rcp['status'] ?? 'POR COBRAR';
+        $receipt->status = $rcp['status'] ?? Receipt::STATUS_POR_COBRAR;
         $receipt->payment = $rcp['payment'] ?? 'EFECTIVO';
         $receipt->received = $rcp['received'] ?? 0;
         $receipt->origin = 'ADMIN';
@@ -314,6 +343,12 @@ class ReceiptsController extends Controller
             $c_ff = Carbon::parse($rcp['credit_date_notification'], 'America/Mexico_City');
             $receipt->credit_date_notification = $c_ff->format('Y-m-d');
             $receipt->credit_type = $rcp['credit_type'] ?? 'semanal';
+        }
+
+        // T12: Si pasa a PAGADA, forzar credit=0 + credit_completed=1
+        if ($receipt->status === Receipt::STATUS_PAGADA && $receipt->credit) {
+            $receipt->credit = 0;
+            $receipt->credit_completed = 1;
         }
 
         // Si viene de una tarea, guardar la referencia
@@ -400,6 +435,8 @@ class ReceiptsController extends Controller
                     }
                 }
 
+                $isComplimentary = !empty($data->is_complimentary);
+
                 $detail = new ReceiptDetail();
                 $detail->receipt_id = $receipt->id;
                 $detail->product_id = $data->id;
@@ -410,7 +447,8 @@ class ReceiptsController extends Controller
                 $detail->cost = $product_cost;
                 $detail->discount = $data->discount ?? 0;
                 $detail->discount_concept = $data->discount_concept ?? '';
-                $detail->subtotal = $data->subtotal ?? 0;
+                $detail->is_complimentary = $isComplimentary;
+                $detail->subtotal = $isComplimentary ? 0 : ($data->subtotal ?? 0);
                 $detail->from_task_product_id = $fromTaskProductId;
                 $detail->save();
 
@@ -543,6 +581,12 @@ class ReceiptsController extends Controller
                           ->where('shop_id', $shop->id)
                           ->firstOrFail();
 
+        // Guard: nota facturada no se puede editar (CFDI vigente)
+        if($receipt->is_tax_invoiced){
+            return redirect()->route('admin.receipts.show', $id)
+                ->with('error', 'Esta nota ya fue facturada y no puede editarse.');
+        }
+
         return view('admin.receipts.edit', ['receiptId' => $id]);
     }
 
@@ -633,6 +677,32 @@ class ReceiptsController extends Controller
             return response()->json(['ok' => false, 'message' => 'Cliente no válido'], 422);
         }
 
+        // T9: PAGADA exige received >= total (escenario B: update, fuente real $receipt->received de BD)
+        $statusEnviado = $rcp['status'] ?? $receipt->status;
+        $totalEnviado = $rcp['total'] ?? $receipt->total;
+        if ($statusEnviado === Receipt::STATUS_PAGADA && $receipt->received < $totalEnviado) {
+            return response()->json(['ok' => false, 'message' => 'No se puede marcar como PAGADA si el monto recibido es menor al total.'], 422);
+        }
+
+        // T8: total >= 0 + regla cortesías
+        if ($totalEnviado < 0) {
+            return response()->json(['ok' => false, 'message' => 'No se puede guardar una nota con total negativo.'], 422);
+        }
+        $detailList = is_string($request->detail) ? json_decode($request->detail) : $request->detail;
+        $itemsValidar = is_array($detailList) ? $detailList : (is_object($detailList) ? (array) $detailList : []);
+        if (count($itemsValidar) > 0) {
+            $hayNoCortesia = false;
+            foreach ($itemsValidar as $d) {
+                if (empty($d->is_complimentary)) { $hayNoCortesia = true; break; }
+            }
+            if ($totalEnviado == 0 && $hayNoCortesia) {
+                return response()->json(['ok' => false, 'message' => 'Una nota con total $0 requiere que todos los ítems sean cortesía.'], 422);
+            }
+            if ($totalEnviado > 0 && !$hayNoCortesia) {
+                return response()->json(['ok' => false, 'message' => 'Una nota con total mayor a $0 debe incluir al menos un ítem que no sea cortesía.'], 422);
+            }
+        }
+
         $es_cotizacion = isset($rcp['quotation']) ? $rcp['quotation'] : 0;
         $es_credito = isset($rcp['credit']) ? $rcp['credit'] : 0;
 
@@ -686,7 +756,7 @@ class ReceiptsController extends Controller
         $receipt->total = $rcp['total'] ?? 0;
         $receipt->iva = $rcp['iva'] ?? 0;
         $receipt->finished = $finished;
-        $receipt->status = $rcp['status'] ?? 'POR COBRAR';
+        $receipt->status = $rcp['status'] ?? Receipt::STATUS_POR_COBRAR;
         $receipt->payment = $rcp['payment'] ?? 'EFECTIVO';
         // No actualizamos received aquí para no perder el historial de pagos
         $receipt->quotation = $es_cotizacion;
@@ -706,6 +776,12 @@ class ReceiptsController extends Controller
         } else {
             $receipt->credit_date_notification = null;
             $receipt->credit_type = null;
+        }
+
+        // T12: Si pasa a PAGADA, forzar credit=0 + credit_completed=1
+        if ($receipt->status === Receipt::STATUS_PAGADA && $receipt->credit) {
+            $receipt->credit = 0;
+            $receipt->credit_completed = 1;
         }
 
         $receipt->save();
@@ -771,6 +847,8 @@ class ReceiptsController extends Controller
                     }
                 }
 
+                $isComplimentary = !empty($data->is_complimentary);
+
                 $detail = new ReceiptDetail();
                 $detail->receipt_id = $receipt->id;
                 $detail->product_id = $data->id;
@@ -781,7 +859,8 @@ class ReceiptsController extends Controller
                 $detail->cost = $product_cost;
                 $detail->discount = $data->discount ?? 0;
                 $detail->discount_concept = $data->discount_concept ?? '';
-                $detail->subtotal = $data->subtotal ?? 0;
+                $detail->is_complimentary = $isComplimentary;
+                $detail->subtotal = $isComplimentary ? 0 : ($data->subtotal ?? 0);
                 $detail->from_task_product_id = $data->from_task_product_id ?? null;
                 $detail->save();
             }
@@ -830,7 +909,7 @@ class ReceiptsController extends Controller
         $receipt->received = $nueva_suma;
         if ($nueva_suma >= $receipt->total) {
             $receipt->finished = 1;
-            $receipt->status = 'PAGADA';
+            $receipt->status = Receipt::STATUS_PAGADA;
             if ($receipt->credit) {
                 $receipt->credit = 0;
                 $receipt->credit_completed = 1;
@@ -838,12 +917,61 @@ class ReceiptsController extends Controller
         }
         $receipt->save();
 
+        // Hook PPD: si la nota tiene factura PPD vigente, emitir complemento de pago
+        // automáticamente por este abono. Si TBT falla, queda como 'failed' y se
+        // re-emite desde la UI; no rompe el flujo del abono.
+        $complementoResult = $this->emitirComplementoSiAplica($receipt, $payment);
+
         $receipt->load('partialPayments');
 
         return response()->json([
             'ok' => true,
-            'receipt' => $receipt
+            'receipt' => $receipt,
+            'complemento' => $complementoResult,
         ]);
+    }
+
+    /**
+     * Emite un complemento de pago contra la factura PPD si aplica.
+     * Retorna null si la nota no tiene factura PPD; ['ok'=>bool,'message'=>...] si la hubo.
+     */
+    protected function emitirComplementoSiAplica(Receipt $receipt, PartialPayments $abono): ?array
+    {
+        $invoice = $receipt->cfdiInvoice()->first();
+
+        if (!$invoice) return null;
+
+        // Decisión 3 confirmada: notas PUE legacy con abonos → ignorar + log warning
+        if ($invoice->metodo_pago === 'PUE') {
+            Log::warning('Abono registrado en nota facturada como PUE — sin complemento', [
+                'receipt_id' => $receipt->id,
+                'partial_payment_id' => $abono->id,
+                'invoice_uuid' => $invoice->uuid,
+            ]);
+            return null;
+        }
+
+        if ($invoice->metodo_pago !== 'PPD' || $invoice->status !== 'vigente') {
+            return null;
+        }
+
+        $numParcialidad = $invoice->complementos()
+            ->where('status', \App\Models\CfdiPagoComplemento::STATUS_VIGENTE)
+            ->count() + 1;
+
+        $service = new CfdiComplementoPagoService();
+        $result = $service->emitir($receipt, $abono, $numParcialidad);
+
+        if (!$result['ok']) {
+            Log::warning('Complemento de pago falló al registrar abono', [
+                'receipt_id' => $receipt->id,
+                'partial_payment_id' => $abono->id,
+                'invoice_uuid' => $invoice->uuid,
+                'error' => $result['message'],
+            ]);
+        }
+
+        return ['ok' => $result['ok'], 'message' => $result['message']];
     }
 
     /**
@@ -861,6 +989,14 @@ class ReceiptsController extends Controller
             ->where('id', $payment->receipt_id)
             ->firstOrFail();
 
+        // Guard: no se puede eliminar pagos de una nota con CFDI vigente
+        if($receipt->is_tax_invoiced){
+            return response()->json([
+                'ok'=>false,
+                'message'=>'No se puede eliminar pagos de una nota facturada (CFDI vigente).'
+            ], 422);
+        }
+
         $payment->delete();
 
         // Recalcular suma de pagos restantes
@@ -869,10 +1005,10 @@ class ReceiptsController extends Controller
         $receipt->received = $suma_pagos;
         if ($suma_pagos >= $receipt->total) {
             $receipt->finished = 1;
-            $receipt->status = 'PAGADA';
+            $receipt->status = Receipt::STATUS_PAGADA;
         } else {
             $receipt->finished = 0;
-            $receipt->status = 'POR COBRAR';
+            $receipt->status = Receipt::STATUS_POR_COBRAR;
         }
         $receipt->save();
 
@@ -893,7 +1029,7 @@ class ReceiptsController extends Controller
         $shop = $user->shop;
 
         $receipt = Receipt::where('shop_id', $shop->id)->findOrFail($id);
-        $receipt->status = 'CANCELADA';
+        $receipt->status = Receipt::STATUS_CANCELADA;
         $receipt->save();
 
         // Solo ajustar stock si es nota de venta (no cotización)

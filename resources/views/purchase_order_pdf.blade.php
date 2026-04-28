@@ -90,13 +90,27 @@
                     <td>{{$data->description}}</td>
                     <td>{{ $purchase_order->shop->getCurrencySymbol() }}{{ number_format($data->price,2) }}</td>
                     <td> {{ $purchase_order->shop->getCurrencySymbol() }}{{ number_format($data->price) }} x {{$data->qty}}</td>
-                    <td> {{ $purchase_order->shop->getCurrencySymbol() }}{{$data->subtotal}}</td>
+                    <td> {{ $purchase_order->shop->getCurrencySymbol() }}{{ number_format($data->subtotal, 2) }}</td>
                 </tr>
                 @endforeach
             </tbody>
         </table>
         <hr>
         <div align="right">
+
+            <p>Subtotal {{ $purchase_order->shop->getCurrencySymbol() }}{{ number_format($purchase_order->subtotal ?? 0,2) }}</p>
+
+            @if($purchase_order->discount_concept=='%')
+                @php $descuento_monto = (($purchase_order->subtotal ?? 0) * ($purchase_order->discount ?? 0)) / 100; @endphp
+                <p>Descuento {{ $purchase_order->discount ?? 0 }}% ({{ $purchase_order->shop->getCurrencySymbol() }}{{ number_format($descuento_monto, 2) }})</p>
+            @else
+                <p>Descuento {{ $purchase_order->shop->getCurrencySymbol() }}{{ number_format($purchase_order->discount ?? 0, 2) }}</p>
+            @endif
+
+            @if($purchase_order->iva)
+                <p>{{ $purchase_order->shop->tax_name ?? 'IVA' }} {{ $purchase_order->shop->tax_rate ?? 16 }}% {{ $purchase_order->shop->getCurrencySymbol() }}{{number_format($purchase_order->iva,2)}}</p>
+            @endif
+
             <p>Total a pagar <strong>{{ $purchase_order->shop->getCurrencySymbol() }}{{number_format($purchase_order->total,2)}}</strong></p>
         </div>
 

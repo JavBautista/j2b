@@ -153,7 +153,7 @@
                         <td> {{ $receipt->shop->getCurrencySymbol() }}{{ number_format($data->price - $data->discount) }} x{{$data->qty}}</td>
                     @endif
 
-                    <td> {{ $receipt->shop->getCurrencySymbol() }}{{$data->subtotal}}</td>
+                    <td> {{ $receipt->shop->getCurrencySymbol() }}{{ number_format($data->subtotal, 2) }}</td>
                 </tr>
                 @endforeach
             </tbody>
@@ -163,10 +163,11 @@
 
             <p>Subtotal {{ $receipt->shop->getCurrencySymbol() }}{{ number_format($receipt->subtotal,2) }}</p>
 
-            @if($receipt->discount_concept=='$')
-                <p>Descuento {{ $receipt->shop->getCurrencySymbol() }}{{ number_format($receipt->discount,2) }}</p>
+            @if($receipt->discount_concept=='%')
+                @php $descuento_monto = (($receipt->subtotal ?? 0) * ($receipt->discount ?? 0)) / 100; @endphp
+                <p>Descuento {{ $receipt->discount }}% ({{ $receipt->shop->getCurrencySymbol() }}{{ number_format($descuento_monto, 2) }})</p>
             @else
-                <p>Descuento % {{ $receipt->discount }}</p>
+                <p>Descuento {{ $receipt->shop->getCurrencySymbol() }}{{ number_format($receipt->discount, 2) }}</p>
             @endif
 
             @if($receipt->iva)

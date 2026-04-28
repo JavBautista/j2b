@@ -51,4 +51,21 @@ class CfdiEmisor extends Model
     {
         $this->decrement('folio_actual');
     }
+
+    /**
+     * Incrementa folio_complemento_actual atómicamente y retorna el siguiente folio de complemento
+     */
+    public function siguienteFolioComplemento(): int
+    {
+        $this->increment('folio_complemento_actual');
+        return $this->folio_complemento_actual;
+    }
+
+    /**
+     * Revierte el folio de complemento si el timbrado falló
+     */
+    public function revertirFolioComplemento(): void
+    {
+        $this->decrement('folio_complemento_actual');
+    }
 }

@@ -30,4 +30,20 @@ class CfdiInvoice extends Model
     {
         return $this->belongsTo(Receipt::class);
     }
+
+    public function complementos()
+    {
+        return $this->hasMany(CfdiPagoComplemento::class);
+    }
+
+    /**
+     * Saldo insoluto = total factura - suma de complementos vigentes
+     */
+    public function saldoInsoluto(): float
+    {
+        $pagado = $this->complementos()
+            ->where('status', CfdiPagoComplemento::STATUS_VIGENTE)
+            ->sum('imp_pagado');
+        return max(0, (float) $this->total - (float) $pagado);
+    }
 }

@@ -143,6 +143,37 @@
                             </div>
                         </div>
 
+                        <!-- Aviso de ítems de cortesía excluidos -->
+                        <div v-if="itemsCortesiaExcluidos.length > 0" class="alert alert-warning py-2 mb-3">
+                            <div class="d-flex align-items-start">
+                                <i class="fa fa-gift me-2 mt-1"></i>
+                                <div class="flex-grow-1">
+                                    <strong>{{ itemsCortesiaExcluidos.length }} ítem(s) de cortesía no se incluirán en la factura</strong>
+                                    <ul class="mb-0 mt-1 small">
+                                        <li v-for="item in itemsCortesiaExcluidos" :key="'cort-' + item.id">
+                                            {{ item.descripcion }}
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Aviso de descuento global prorrateado -->
+                        <div v-if="prorrateo.factor > 0" class="alert alert-info py-2 mb-3">
+                            <div class="d-flex align-items-start">
+                                <i class="fa fa-percent me-2 mt-1"></i>
+                                <div class="flex-grow-1">
+                                    <strong>Descuento global: ${{ formatNumber(descuentoDisplay) }}</strong>
+                                    distribuido entre {{ prorrateo.facturables.length }} concepto(s)
+                                    <br>
+                                    <small class="text-muted">
+                                        El SAT exige que el descuento se registre por concepto. El total a timbrar es exactamente
+                                        <strong>${{ formatNumber(totalDisplay) }}</strong>.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Conceptos -->
                         <div class="card mb-3">
                             <div class="card-header bg-light py-2">
@@ -158,7 +189,8 @@
                                                 <th style="min-width: 130px;">Unidad</th>
                                                 <th class="text-center">Cant.</th>
                                                 <th class="text-end">P. Unit.</th>
-                                                <th class="text-end">Subtotal</th>
+                                                <th class="text-end">Importe</th>
+                                                <th v-if="prorrateo.factor > 0" class="text-end text-danger">Descuento</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -178,19 +210,25 @@
                                                 </td>
                                                 <td>
                                                     <div class="position-relative">
-                                                        <input type="text" class="form-control form-control-sm"
-                                                            v-model="item.productSearch"
-                                                            placeholder="Buscar..."
-                                                            @input="buscarSatProduct(idx)"
-                                                            @focus="item.showProductResults = true"
-                                                            style="font-size: 0.75rem;">
-                                                        <div v-if="item.clave_prod_serv" class="mt-1">
-                                                            <small :class="item.clave_prod_serv !== '01010101' ? 'text-success' : 'text-warning'">
-                                                                <i class="fa fa-check" v-if="item.clave_prod_serv !== '01010101'"></i>
-                                                                <i class="fa fa-exclamation-triangle" v-else></i>
-                                                                {{ item.clave_prod_serv }}
-                                                            </small>
+                                                        <div class="input-group input-group-sm">
+                                                            <input type="text" class="form-control form-control-sm"
+                                                                v-model="item.productSearch"
+                                                                placeholder="Buscar..."
+                                                                @input="buscarSatProduct(idx)"
+                                                                @focus="handleSatFocus($event, idx, 'product')"
+                                                                @blur="handleSatBlur(idx, 'product')"
+                                                                style="font-size: 0.75rem;">
+                                                            <button v-if="item.productSearch"
+                                                                class="btn btn-outline-secondary btn-sm px-2"
+                                                                type="button"
+                                                                @mousedown.prevent="clearSatProduct(idx)"
+                                                                title="Limpiar">
+                                                                <i class="fa fa-times" style="font-size: 0.7rem;"></i>
+                                                            </button>
                                                         </div>
+                                                        <small v-if="item.clave_prod_serv === '01010101'" class="text-warning d-block mt-1" style="font-size: 0.7rem;">
+                                                            <i class="fa fa-exclamation-triangle me-1"></i>Codigo generico
+                                                        </small>
                                                         <ul v-if="item.showProductResults && satProductResults.length > 0 && activeSearchIdx === idx"
                                                             class="list-group position-absolute w-100" style="z-index: 1060; max-height: 180px; overflow-y: auto;">
                                                             <li v-for="r in satProductResults" :key="r.code"
@@ -204,14 +242,21 @@
                                                 </td>
                                                 <td>
                                                     <div class="position-relative">
-                                                        <input type="text" class="form-control form-control-sm"
-                                                            v-model="item.unitSearch"
-                                                            placeholder="Buscar..."
-                                                            @input="buscarSatUnit(idx)"
-                                                            @focus="item.showUnitResults = true"
-                                                            style="font-size: 0.75rem;">
-                                                        <div v-if="item.clave_unidad" class="mt-1">
-                                                            <small class="text-muted">{{ item.clave_unidad }}</small>
+                                                        <div class="input-group input-group-sm">
+                                                            <input type="text" class="form-control form-control-sm"
+                                                                v-model="item.unitSearch"
+                                                                placeholder="Buscar..."
+                                                                @input="buscarSatUnit(idx)"
+                                                                @focus="handleSatFocus($event, idx, 'unit')"
+                                                                @blur="handleSatBlur(idx, 'unit')"
+                                                                style="font-size: 0.75rem;">
+                                                            <button v-if="item.unitSearch"
+                                                                class="btn btn-outline-secondary btn-sm px-2"
+                                                                type="button"
+                                                                @mousedown.prevent="clearSatUnit(idx)"
+                                                                title="Limpiar">
+                                                                <i class="fa fa-times" style="font-size: 0.7rem;"></i>
+                                                            </button>
                                                         </div>
                                                         <ul v-if="item.showUnitResults && satUnitResults.length > 0 && activeSearchIdx === idx"
                                                             class="list-group position-absolute w-100" style="z-index: 1060; max-height: 180px; overflow-y: auto;">
@@ -227,20 +272,29 @@
                                                 <td class="text-center">{{ item.qty }}</td>
                                                 <td class="text-end">${{ formatNumber(item.precio) }}</td>
                                                 <td class="text-end">${{ formatNumber(item.subtotal) }}</td>
+                                                <td v-if="prorrateo.factor > 0" class="text-end text-danger">
+                                                    −${{ formatNumber(prorrateo.facturables[idx]?.descuento || 0) }}
+                                                </td>
                                             </tr>
                                         </tbody>
                                         <tfoot>
                                             <tr>
-                                                <td colspan="5" class="text-end"><strong>Subtotal:</strong></td>
+                                                <td :colspan="prorrateo.factor > 0 ? 6 : 5" class="text-end"><strong>Subtotal:</strong></td>
                                                 <td class="text-end">${{ formatNumber(subtotalDisplay) }}</td>
                                             </tr>
+                                            <tr v-if="prorrateo.factor > 0">
+                                                <td colspan="6" class="text-end text-danger">
+                                                    <strong>Descuento prorrateado:</strong>
+                                                </td>
+                                                <td class="text-end text-danger">−${{ formatNumber(descuentoDisplay) }}</td>
+                                            </tr>
                                             <tr>
-                                                <td colspan="5" class="text-end"><strong>{{ $shopTaxName || 'IVA' }} ({{ $shopTaxRate }}%):</strong></td>
+                                                <td :colspan="prorrateo.factor > 0 ? 6 : 5" class="text-end"><strong>{{ $shopTaxName || 'IVA' }} ({{ $shopTaxRate }}%):</strong></td>
                                                 <td class="text-end">${{ formatNumber(ivaDisplay) }}</td>
                                             </tr>
                                             <tr>
-                                                <td colspan="5" class="text-end"><strong>Total:</strong></td>
-                                                <td class="text-end"><strong>${{ formatNumber(receiptData.total) }}</strong></td>
+                                                <td :colspan="prorrateo.factor > 0 ? 6 : 5" class="text-end"><strong>Total:</strong></td>
+                                                <td class="text-end"><strong>${{ formatNumber(totalDisplay) }}</strong></td>
                                             </tr>
                                         </tfoot>
                                     </table>
@@ -372,29 +426,97 @@ export default {
                    this.formaPago &&
                    this.metodoPago;
         },
-        conceptosDisplay() {
+        itemsCortesiaExcluidos() {
             if (!this.receiptData) return [];
-            const extraerIva = !(this.receiptData.iva > 0);
-            return this.receiptData.detail.map(item => ({
-                id: item.id,
-                descripcion: item.descripcion,
-                qty: item.qty,
-                precio: extraerIva ? Math.round(item.price / this.$taxDivisor * 100) / 100 : item.price,
-                subtotal: extraerIva ? Math.round(item.subtotal / this.$taxDivisor * 100) / 100 : item.subtotal,
-                sat_product_code: item.product?.sat_product_code || null,
-                sat_unit_code: item.product?.sat_unit_code || null,
-            }));
+            return this.receiptData.detail.filter(item => item.is_complimentary);
         },
-        subtotalDisplay() {
-            if (!this.receiptData) return 0;
-            if (this.receiptData.iva > 0) return this.receiptData.subtotal;
-            return this.conceptosDisplay.reduce((sum, item) => sum + item.subtotal, 0);
+        // Prorrateo del descuento global (replica lógica del backend, mismo algoritmo)
+        prorrateo() {
+            if (!this.receiptData) {
+                return { facturables: [], subtotal: 0, descuento: 0, baseIva: 0, iva: 0, total: 0, factor: 0 };
+            }
+            const tieneIva = this.receiptData.iva > 0;
+            const divisor = this.$taxDivisor;
+            const decimal = divisor - 1;
+
+            // Pre-calcular items facturables (sin cortesías) con valores brutos sin IVA
+            const facturables = this.receiptData.detail
+                .filter(it => !it.is_complimentary)
+                .map(it => {
+                    const valorUnitario = tieneIva
+                        ? Math.round(it.price * 100) / 100
+                        : Math.round(it.price / divisor * 100) / 100;
+                    const importeBruto = Math.round(valorUnitario * it.qty * 100) / 100;
+                    return {
+                        detail_id: it.id,
+                        valor_unitario: valorUnitario,
+                        importe: importeBruto,
+                        descuento: 0,
+                        base: importeBruto,
+                        iva: 0,
+                    };
+                })
+                .filter(f => f.importe > 0);
+
+            const subtotal = facturables.reduce((s, f) => s + f.importe, 0);
+
+            // Calcular monto descuento global en unidad "sin IVA"
+            let descuentoGlobal = 0;
+            if (this.receiptData.discount > 0 && subtotal > 0) {
+                const raw = this.receiptData.discount_concept === '%'
+                    ? this.receiptData.subtotal * this.receiptData.discount / 100
+                    : parseFloat(this.receiptData.discount);
+                descuentoGlobal = tieneIva
+                    ? Math.round(raw * 100) / 100
+                    : Math.round(raw / divisor * 100) / 100;
+            }
+
+            const factor = descuentoGlobal > 0 ? descuentoGlobal / subtotal : 0;
+
+            // Prorratear
+            facturables.forEach(f => {
+                f.descuento = factor > 0 ? Math.round(f.importe * factor * 100) / 100 : 0;
+            });
+
+            // Ajuste de redondeo al último concepto
+            if (factor > 0 && facturables.length > 0) {
+                const suma = facturables.reduce((s, f) => s + f.descuento, 0);
+                const diff = Math.round((descuentoGlobal - suma) * 100) / 100;
+                if (Math.abs(diff) >= 0.01) {
+                    const last = facturables[facturables.length - 1];
+                    last.descuento = Math.round((last.descuento + diff) * 100) / 100;
+                }
+            }
+
+            // Calcular base e IVA por concepto
+            let descTotal = 0, ivaTotal = 0;
+            facturables.forEach(f => {
+                f.base = Math.round((f.importe - f.descuento) * 100) / 100;
+                f.iva = Math.round(f.base * decimal * 100) / 100;
+                descTotal += f.descuento;
+                ivaTotal += f.iva;
+            });
+
+            const subtotalR = Math.round(subtotal * 100) / 100;
+            const descR = Math.round(descTotal * 100) / 100;
+            const baseIvaR = Math.round((subtotalR - descR) * 100) / 100;
+            const ivaR = Math.round(ivaTotal * 100) / 100;
+            const totalR = Math.round((baseIvaR + ivaR) * 100) / 100;
+
+            return {
+                facturables,
+                subtotal: subtotalR,
+                descuento: descR,
+                baseIva: baseIvaR,
+                iva: ivaR,
+                total: totalR,
+                factor,
+            };
         },
-        ivaDisplay() {
-            if (!this.receiptData) return 0;
-            if (this.receiptData.iva > 0) return this.receiptData.iva;
-            return this.receiptData.total - this.subtotalDisplay;
-        },
+        subtotalDisplay() { return this.prorrateo.subtotal; },
+        descuentoDisplay() { return this.prorrateo.descuento; },
+        ivaDisplay() { return this.prorrateo.iva; },
+        totalDisplay() { return this.prorrateo.total; },
     },
     watch: {
         receiptId(newVal) {
@@ -504,7 +626,7 @@ export default {
                 title: 'Timbrar Factura',
                 html: `<p>Se generara la factura CFDI para la nota <strong>#${this.receiptData.folio}</strong>.</p>
                        <p><strong>Receptor:</strong> ${this.receptor.rfc} - ${this.receptor.razon_social}</p>
-                       <p><strong>Total:</strong> $${this.formatNumber(this.receiptData.total)}</p>
+                       <p><strong>Total:</strong> $${this.formatNumber(this.totalDisplay)}</p>
                        <p class="text-warning"><small>Esta accion consume 1 timbre y no se puede deshacer.</small></p>`,
                 icon: 'question',
                 showCancelButton: true,
@@ -514,6 +636,17 @@ export default {
             });
 
             if (!confirm.isConfirmed) return;
+
+            // Bloquear toda la pantalla con loader mientras se hace la petición al PAC
+            Swal.fire({
+                title: 'Timbrando factura...',
+                html: '<p class="mb-1">Conectando con el SAT a través del PAC.</p>' +
+                      '<p class="mb-0 small text-muted">Por favor no cierres esta ventana.</p>',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => Swal.showLoading(),
+            });
 
             this.timbrando = true;
             try {
@@ -535,6 +668,8 @@ export default {
                     })),
                 });
 
+                Swal.close();
+
                 if (res.data.ok) {
                     this.timbradoExitoso = true;
                     this.resultadoTimbrado = res.data;
@@ -542,6 +677,7 @@ export default {
                     Swal.fire('Error', res.data.message || 'Error al timbrar', 'error');
                 }
             } catch (e) {
+                Swal.close();
                 Swal.fire('Error', e.response?.data?.message || 'Error al timbrar factura', 'error');
             } finally {
                 this.timbrando = false;
@@ -580,21 +716,61 @@ export default {
         },
         initConceptosSat() {
             if (!this.receiptData) return;
-            const extraerIva = !(this.receiptData.iva > 0);
-            this.conceptosSat = this.receiptData.detail.map(item => ({
-                detail_id: item.id,
-                descripcion: item.descripcion,
-                qty: item.qty,
-                precio: extraerIva ? Math.round(item.price / this.$taxDivisor * 100) / 100 : item.price,
-                subtotal: extraerIva ? Math.round(item.subtotal / this.$taxDivisor * 100) / 100 : item.subtotal,
-                clave_prod_serv: item.product?.sat_product_code || '01010101',
-                clave_unidad: item.product?.sat_unit_code || 'E48',
-                editingDesc: false,
-                productSearch: '',
-                unitSearch: '',
-                showProductResults: false,
-                showUnitResults: false,
-            }));
+            // Índice por detail_id del prorrateo para jalar importe/descuento/base correctos
+            const byId = {};
+            this.prorrateo.facturables.forEach(f => { byId[f.detail_id] = f; });
+
+            this.conceptosSat = this.receiptData.detail
+                .filter(item => !item.is_complimentary)
+                .map(item => {
+                    const claveProd = item.product?.sat_product_code || '01010101';
+                    const claveUnidad = item.product?.sat_unit_code || 'E48';
+                    const f = byId[item.id] || { valor_unitario: 0, importe: 0, descuento: 0, base: 0 };
+                    return {
+                        detail_id: item.id,
+                        descripcion: item.descripcion,
+                        qty: item.qty,
+                        precio: f.valor_unitario,
+                        subtotal: f.importe,
+                        clave_prod_serv: claveProd,
+                        clave_unidad: claveUnidad,
+                        editingDesc: false,
+                        productSearch: claveProd,
+                        unitSearch: claveUnidad,
+                        showProductResults: false,
+                        showUnitResults: false,
+                    };
+                });
+        },
+        handleSatFocus(event, idx, type) {
+            if (type === 'product') {
+                this.conceptosSat[idx].showProductResults = true;
+            } else {
+                this.conceptosSat[idx].showUnitResults = true;
+            }
+            this.$nextTick(() => event.target.select());
+        },
+        handleSatBlur(idx, type) {
+            // delay para dar tiempo al mousedown del dropdown
+            setTimeout(() => {
+                if (type === 'product') {
+                    this.conceptosSat[idx].showProductResults = false;
+                } else {
+                    this.conceptosSat[idx].showUnitResults = false;
+                }
+            }, 150);
+        },
+        clearSatProduct(idx) {
+            this.conceptosSat[idx].productSearch = '';
+            this.conceptosSat[idx].clave_prod_serv = '01010101';
+            this.conceptosSat[idx].showProductResults = false;
+            this.satProductResults = [];
+        },
+        clearSatUnit(idx) {
+            this.conceptosSat[idx].unitSearch = '';
+            this.conceptosSat[idx].clave_unidad = 'E48';
+            this.conceptosSat[idx].showUnitResults = false;
+            this.satUnitResults = [];
         },
         buscarSatProduct(idx) {
             clearTimeout(this.satSearchTimer);
@@ -610,7 +786,7 @@ export default {
         },
         selectSatProduct(idx, item) {
             this.conceptosSat[idx].clave_prod_serv = item.code;
-            this.conceptosSat[idx].productSearch = '';
+            this.conceptosSat[idx].productSearch = `${item.code} — ${item.description}`;
             this.conceptosSat[idx].showProductResults = false;
             this.satProductResults = [];
         },
@@ -628,7 +804,7 @@ export default {
         },
         selectSatUnit(idx, item) {
             this.conceptosSat[idx].clave_unidad = item.code;
-            this.conceptosSat[idx].unitSearch = '';
+            this.conceptosSat[idx].unitSearch = `${item.code} — ${item.name}`;
             this.conceptosSat[idx].showUnitResults = false;
             this.satUnitResults = [];
         },

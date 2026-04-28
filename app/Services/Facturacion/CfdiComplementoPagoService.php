@@ -117,7 +117,22 @@ class CfdiComplementoPagoService
                 'status' => CfdiPagoComplemento::STATUS_PENDING,
             ]);
 
-            // === Armar payload tipo P ===
+            // === Calcular impuestos proporcionales del pago ===
+            // La factura original tiene IVA incluido si total_impuestos > 0.
+            // Para el complemento se desglosa el IVA proporcional al monto pagado.
+            $tieneIva = (float) $invoice->total_impuestos > 0;
+            $taxDecimal = $shop->getTaxDecimal();
+            $taxDivisor = $shop->getTaxDivisor();
+
+            if ($tieneIva) {
+                $baseDr = round($impPagado / $taxDivisor, 2);
+                $importeDr = round($impPagado - $baseDr, 2);
+            } else {
+                $baseDr = $impPagado;
+                $importeDr = 0;
+            }
+
+            // === Armar payload tipo P (estructura HUB CFDI: complementos.pagos_20) ===
             $payload = [
                 'serie' => $emisor->serie_complemento ?? 'CP',
                 'folio' => (string) $folio,
@@ -126,8 +141,8 @@ class CfdiComplementoPagoService
                 'exportacion' => '01',
                 'moneda' => 'XXX',
                 'lugar_expedicion' => $emisor->codigo_postal,
-                'subtotal' => '0',
-                'total' => '0',
+                'subtotal' => 0,
+                'total' => 0,
                 'emisor' => [
                     'rfc' => $emisor->rfc,
                     'razon_social' => $emisor->razon_social,
@@ -142,32 +157,61 @@ class CfdiComplementoPagoService
                 ],
                 'conceptos' => [[
                     'clave_prod_serv' => '84111506',
-                    'cantidad' => '1',
+                    'cantidad' => 1,
                     'clave_unidad' => 'ACT',
                     'descripcion' => 'Pago',
-                    'valor_unitario' => '0',
-                    'importe' => '0',
+                    'valor_unitario' => 0,
+                    'subtotal' => 0,
+                    'importe' => 0,
                     'objeto_impuesto' => '01',
                 ]],
-                'complemento_pago' => [
-                    'version' => '2.0',
-                    'pago' => [[
-                        'fecha_pago' => $fechaPago,
-                        'forma_pago' => $formaPago,
-                        'moneda_pago' => $monedaPago,
-                        'monto' => $fmt($impPagado),
-                        'docto_relacionado' => [[
-                            'id_documento' => $invoice->uuid,
-                            'serie' => $invoice->serie,
-                            'folio' => (string) $invoice->folio,
-                            'moneda_dr' => $monedaPago,
-                            'num_parcialidad' => $numParcialidad,
-                            'imp_saldo_ant' => $fmt($impSaldoAnt),
-                            'imp_pagado' => $fmt($impPagado),
-                            'imp_saldo_insoluto' => $fmt($impSaldoInsoluto),
-                            'objeto_imp_dr' => '02',
+                'complementos' => [
+                    'pagos_20' => [
+                        'version' => '2.0',
+                        'totales' => [
+                            'total_traslados_base_iva16' => $tieneIva ? $fmt($baseDr) : '0.00',
+                            'total_traslados_impuesto_iva16' => $tieneIva ? $fmt($importeDr) : '0.00',
+                            'monto_total_pagos' => $fmt($impPagado),
+                        ],
+                        'pago' => [[
+                            'fecha_pago' => $fechaPago,
+                            'forma_de_pago_p' => $formaPago,
+                            'moneda_p' => $monedaPago,
+                            'tipo_cambio_p' => 1,
+                            'monto' => $fmt($impPagado),
+                            'docto_relacionado' => [array_merge([
+                                'id_documento' => $invoice->uuid,
+                                'serie' => $invoice->serie,
+                                'folio' => (string) $invoice->folio,
+                                'moneda_dr' => $monedaPago,
+                                'equivalencia_dr' => 1,
+                                'num_parcialidad' => $numParcialidad,
+                                'imp_saldo_ant' => $fmt($impSaldoAnt),
+                                'imp_pagado' => $fmt($impPagado),
+                                'imp_saldo_insoluto' => $fmt($impSaldoInsoluto),
+                                'objeto_imp_dr' => $tieneIva ? '02' : '01',
+                            ], $tieneIva ? [
+                                'impuestos_dr' => [
+                                    'traslados_dr' => [[
+                                        'base_dr' => $fmt($baseDr),
+                                        'impuesto_dr' => '002',
+                                        'tipo_factor_dr' => 'Tasa',
+                                        'tasa_o_cuota_dr' => $shop->getTaxSatRate(),
+                                        'importe_dr' => $fmt($importeDr),
+                                    ]],
+                                ],
+                            ] : [])],
+                            ...($tieneIva ? ['impuestos_p' => [
+                                'traslados_p' => [[
+                                    'base_p' => $fmt($baseDr),
+                                    'impuesto_p' => '002',
+                                    'tipo_factor_p' => 'Tasa',
+                                    'tasa_o_cuota_p' => $shop->getTaxSatRate(),
+                                    'importe_p' => $fmt($importeDr),
+                                ]],
+                            ]] : []),
                         ]],
-                    ]],
+                    ],
                 ],
             ];
 

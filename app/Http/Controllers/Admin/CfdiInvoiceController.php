@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\CfdiEmisor;
 use App\Models\CfdiInvoice;
+use App\Models\CfdiPagoComplemento;
 use App\Models\ClientFiscalData;
 use App\Models\Receipt;
+use App\Services\Facturacion\CfdiComplementoPagoService;
 use App\Services\Facturacion\CfdiTimbradoService;
 use App\Services\Facturacion\HubCfdiService;
 use App\Exports\FacturasEmitidasExport;
@@ -170,6 +172,7 @@ class CfdiInvoiceController extends Controller
         return response()->json([
             'ok' => true,
             'receipt' => $receipt,
+            'metodo_pago_calculado' => (float) $receipt->received < (float) $receipt->total ? 'PPD' : 'PUE',
             'emisor' => [
                 'rfc' => $emisor->rfc,
                 'razon_social' => $emisor->razon_social,
@@ -228,8 +231,12 @@ class CfdiInvoiceController extends Controller
             return response()->json(['ok' => false, 'message' => 'Esta nota no se puede facturar'], 422);
         }
 
-        if (!in_array($receipt->status, [Receipt::STATUS_PAGADA, Receipt::STATUS_POR_FACTURAR])) {
-            return response()->json(['ok' => false, 'message' => 'Solo se pueden facturar notas PAGADA o POR FACTURAR'], 422);
+        $statusPermitidos = [Receipt::STATUS_PAGADA, Receipt::STATUS_POR_FACTURAR];
+        if ($receipt->credit) {
+            $statusPermitidos[] = Receipt::STATUS_POR_COBRAR;
+        }
+        if (!in_array($receipt->status, $statusPermitidos)) {
+            return response()->json(['ok' => false, 'message' => 'Esta nota no se puede facturar en su estado actual'], 422);
         }
 
         // T11: bloquear timbrado si total <= 0 (cortesías totales no se facturan al SAT)
@@ -688,5 +695,271 @@ class CfdiInvoiceController extends Controller
         }
 
         return $texto . ' PESOS ' . str_pad($centavos, 2, '0', STR_PAD_LEFT) . '/100';
+    }
+
+    /**
+     * Listar complementos de pago emitidos contra la factura PPD de una nota.
+     * GET /admin/facturacion/nota/{receiptId}/complementos
+     */
+    public function listarComplementos($receiptId)
+    {
+        $shop = auth()->user()->shop;
+
+        $receipt = Receipt::with('cfdiInvoice')->where('shop_id', $shop->id)->find($receiptId);
+        if (!$receipt) {
+            return response()->json(['ok' => false, 'message' => 'Nota no encontrada'], 404);
+        }
+
+        $invoice = $receipt->cfdiInvoice;
+        if (!$invoice) {
+            return response()->json([
+                'ok' => true,
+                'invoice' => null,
+                'saldo_insoluto' => 0,
+                'complementos' => [],
+            ]);
+        }
+
+        $complementos = $invoice->complementos()
+            ->orderBy('num_parcialidad')
+            ->orderBy('id')
+            ->get();
+
+        return response()->json([
+            'ok' => true,
+            'invoice' => [
+                'id' => $invoice->id,
+                'uuid' => $invoice->uuid,
+                'serie' => $invoice->serie,
+                'folio' => $invoice->folio,
+                'metodo_pago' => $invoice->metodo_pago,
+                'total' => (float) $invoice->total,
+                'status' => $invoice->status,
+            ],
+            'saldo_insoluto' => (float) $invoice->saldoInsoluto(),
+            'complementos' => $complementos,
+        ]);
+    }
+
+    /**
+     * Descargar XML de un complemento de pago.
+     * GET /admin/facturacion/complemento/{id}/descargar/xml
+     */
+    public function descargarComplemento($id, $formato = 'xml')
+    {
+        $shop = auth()->user()->shop;
+
+        $complemento = CfdiPagoComplemento::where('id', $id)->where('shop_id', $shop->id)->first();
+        if (!$complemento) {
+            return response()->json(['ok' => false, 'message' => 'Complemento no encontrado'], 404);
+        }
+
+        if (!in_array($formato, ['xml', 'pdf'])) {
+            return response()->json(['ok' => false, 'message' => 'Formato no válido'], 422);
+        }
+
+        if (!$complemento->uuid) {
+            return response()->json(['ok' => false, 'message' => 'El complemento no tiene UUID (no fue timbrado).'], 422);
+        }
+
+        $contentType = $formato === 'xml' ? 'application/xml' : 'application/pdf';
+        $filename = "complemento_{$complemento->serie}{$complemento->folio}.{$formato}";
+        $pathColumn = "{$formato}_path";
+
+        if ($complemento->$pathColumn && Storage::disk('cfdi')->exists($complemento->$pathColumn)) {
+            $content = Storage::disk('cfdi')->get($complemento->$pathColumn);
+            return response($content)
+                ->header('Content-Type', $contentType)
+                ->header('Content-Disposition', "attachment; filename=\"{$filename}\"");
+        }
+
+        try {
+            if ($formato === 'pdf') {
+                $content = $this->generarPdfComplemento($complemento);
+                $path = "{$shop->id}/complementos/{$complemento->uuid}.pdf";
+                try {
+                    Storage::disk('cfdi')->put($path, $content);
+                    $complemento->update(['pdf_path' => $path]);
+                } catch (\Exception $e) {
+                    Log::warning('No se pudo cachear PDF del complemento', [
+                        'complemento_id' => $id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            } else {
+                // XML: descargar de TBT
+                $hubService = new HubCfdiService();
+                $result = $hubService->descargar($complemento->uuid, 'xml');
+
+                if (!$result['success']) {
+                    return response()->json([
+                        'ok' => false,
+                        'message' => 'Error al descargar XML: ' . ($result['error'] ?? 'Error desconocido'),
+                    ]);
+                }
+
+                $base64 = $result['data']['archivo'] ?? $result['data']['base64'] ?? null;
+                if (!$base64) {
+                    return response()->json(['ok' => false, 'message' => 'No se recibió el XML de la API']);
+                }
+
+                $content = base64_decode($base64);
+
+                $path = "{$shop->id}/complementos/{$complemento->uuid}.xml";
+                try {
+                    Storage::disk('cfdi')->put($path, $content);
+                    $complemento->update(['xml_path' => $path]);
+                } catch (\Exception $e) {
+                    Log::warning('No se pudo cachear XML del complemento', [
+                        'complemento_id' => $id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            return response($content)
+                ->header('Content-Type', $contentType)
+                ->header('Content-Disposition', "attachment; filename=\"{$filename}\"");
+        } catch (\Exception $e) {
+            Log::error('Complemento Descarga error', [
+                'complemento_id' => $id,
+                'formato' => $formato,
+                'error' => $e->getMessage(),
+            ]);
+            return response()->json([
+                'ok' => false,
+                'message' => 'Error al descargar: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Genera el PDF de un complemento de pago tipo P.
+     */
+    public function generarPdfComplemento(CfdiPagoComplemento $complemento): string
+    {
+        $complemento->loadMissing('cfdiInvoice.emisor');
+        $invoice = $complemento->cfdiInvoice;
+        $emisor = $invoice->emisor;
+        $shop = \App\Models\Shop::find($complemento->shop_id);
+
+        $logoBase64 = null;
+        if ($shop && $shop->logo) {
+            $logoPath = storage_path('app/public/' . $shop->logo);
+            if (file_exists($logoPath)) {
+                $logoBase64 = base64_encode(file_get_contents($logoPath));
+            }
+        }
+
+        $responseData = $complemento->response_json ?? [];
+        $timbreFiscal = $responseData['timbre_fiscal'] ?? null;
+
+        // No. certificado del emisor (parsear del XML si está disponible)
+        $noCertificadoEmisor = null;
+        if ($complemento->xml_path && Storage::disk('cfdi')->exists($complemento->xml_path)) {
+            try {
+                $xml = Storage::disk('cfdi')->get($complemento->xml_path);
+                if (preg_match('/NoCertificado="([^"]+)"/', $xml, $matches)) {
+                    $noCertificadoEmisor = $matches[1];
+                }
+            } catch (\Exception $e) {}
+        }
+
+        $catalogos = [
+            'forma_pago' => [
+                '01' => 'Efectivo', '02' => 'Cheque nominativo', '03' => 'Transferencia electrónica',
+                '04' => 'Tarjeta de crédito', '28' => 'Tarjeta de débito', '99' => 'Por definir',
+            ],
+            'regimen' => [
+                '601' => 'General de Ley PM', '603' => 'PM con Fines no Lucrativos',
+                '612' => 'Personas Físicas con Act. Empresariales y Profesionales',
+                '616' => 'Sin obligaciones fiscales', '621' => 'Incorporación Fiscal',
+                '626' => 'Régimen Simplificado de Confianza',
+            ],
+        ];
+
+        // Datos del request_json para impuestos proporcionales
+        $requestData = $complemento->request_json ?? [];
+        $tieneIva = false;
+        $baseDr = 0;
+        $importeDr = 0;
+        $taxRate = 0.16;
+
+        $pago = $requestData['complementos']['pagos_20']['pago'][0] ?? null;
+        if ($pago && isset($pago['impuestos_p']['traslados_p'][0])) {
+            $tieneIva = true;
+            $traslado = $pago['impuestos_p']['traslados_p'][0];
+            $baseDr = (float) ($traslado['base_p'] ?? 0);
+            $importeDr = (float) ($traslado['importe_p'] ?? 0);
+            $taxRate = (float) ($traslado['tasa_o_cuota_p'] ?? 0.16);
+        }
+
+        $fechaPagoFmt = $pago['fecha_pago'] ?? null;
+        if ($fechaPagoFmt) {
+            try {
+                $fechaPagoFmt = \Carbon\Carbon::parse($fechaPagoFmt)->format('Y-m-d H:i:s');
+            } catch (\Exception $e) {}
+        }
+
+        // QR SAT (mismo formato que factura)
+        $qrBase64 = null;
+        if ($complemento->uuid && $emisor) {
+            $sello = $timbreFiscal['sello'] ?? $timbreFiscal['sello_cfd'] ?? '';
+            $fe = substr($sello, -8);
+            $totalFormatted = str_pad('0.000000', 24, '0', STR_PAD_LEFT);
+            $qrUrl = "https://verificacfdi.facturaelectronica.sat.gob.mx/default.aspx"
+                . "?id={$complemento->uuid}"
+                . "&re={$emisor->rfc}"
+                . "&rr={$invoice->receptor_rfc}"
+                . "&tt={$totalFormatted}"
+                . "&fe={$fe}";
+            try {
+                $qrPngData = base64_decode($this->generarQrPng($qrUrl));
+                $qrBase64 = base64_encode($qrPngData);
+            } catch (\Exception $e) {
+                Log::warning('Complemento PDF: error generando QR', ['error' => $e->getMessage()]);
+            }
+        }
+
+        $pdf = Pdf::loadView('cfdi.pdf-complemento', [
+            'complemento' => $complemento,
+            'invoice' => $invoice,
+            'emisor' => $emisor,
+            'logoBase64' => $logoBase64,
+            'noCertificadoEmisor' => $noCertificadoEmisor,
+            'timbreFiscal' => $timbreFiscal,
+            'catalogos' => $catalogos,
+            'tieneIva' => $tieneIva,
+            'baseDr' => $baseDr,
+            'importeDr' => $importeDr,
+            'taxRate' => $taxRate,
+            'fechaPagoFmt' => $fechaPagoFmt,
+            'qrBase64' => $qrBase64,
+        ])->setPaper('letter', 'portrait');
+
+        return $pdf->output();
+    }
+
+    /**
+     * Re-emitir un complemento que quedó en estado failed.
+     * POST /admin/facturacion/complemento/{id}/reemitir
+     */
+    public function reemitirComplemento($id)
+    {
+        $shop = auth()->user()->shop;
+
+        $complemento = CfdiPagoComplemento::where('id', $id)->where('shop_id', $shop->id)->first();
+        if (!$complemento) {
+            return response()->json(['ok' => false, 'message' => 'Complemento no encontrado'], 404);
+        }
+
+        $service = new CfdiComplementoPagoService();
+        $result = $service->reemitirPendiente($id);
+
+        return response()->json([
+            'ok' => $result['ok'],
+            'message' => $result['message'],
+            'complemento' => $result['complemento'] ?? null,
+        ], $result['ok'] ? 200 : 422);
     }
 }

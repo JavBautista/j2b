@@ -327,6 +327,11 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::post('/admin/facturacion/cancelar', [App\Http\Controllers\Admin\CfdiInvoiceController::class, 'cancelar']);
         Route::get('/admin/facturacion/descargar/{id}/{formato}', [App\Http\Controllers\Admin\CfdiInvoiceController::class, 'descargar']);
 
+        // Facturación CFDI - Complementos de pago (PPD)
+        Route::get('/admin/facturacion/nota/{receiptId}/complementos', [App\Http\Controllers\Admin\CfdiInvoiceController::class, 'listarComplementos']);
+        Route::get('/admin/facturacion/complemento/{id}/descargar/{formato}', [App\Http\Controllers\Admin\CfdiInvoiceController::class, 'descargarComplemento']);
+        Route::post('/admin/facturacion/complemento/{id}/reemitir', [App\Http\Controllers\Admin\CfdiInvoiceController::class, 'reemitirComplemento']);
+
         Route::get('/admin/sat/product-codes', [App\Http\Controllers\Admin\SatCatalogController::class, 'productCodes']);
         Route::get('/admin/sat/unit-codes', [App\Http\Controllers\Admin\SatCatalogController::class, 'unitCodes']);
 

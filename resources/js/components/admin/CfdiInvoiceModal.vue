@@ -311,19 +311,23 @@
                                 <div class="row g-2">
                                     <div class="col-md-6">
                                         <label class="form-label">Forma de Pago *</label>
-                                        <select class="form-select form-select-sm" v-model="formaPago">
+                                        <select class="form-select form-select-sm" v-model="formaPago" :disabled="metodoPago === 'PPD'">
                                             <option v-for="fp in catalogoFormaPago" :key="fp.clave" :value="fp.clave">
                                                 {{ fp.clave }} - {{ fp.nombre }}
                                             </option>
                                         </select>
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">Metodo de Pago *</label>
-                                        <select class="form-select form-select-sm" v-model="metodoPago">
-                                            <option value="PUE">PUE - Pago en Una sola Exhibicion</option>
-                                            <option value="PPD">PPD - Pago en Parcialidades o Diferido</option>
-                                        </select>
+                                        <label class="form-label">Metodo de Pago</label>
+                                        <input type="text" class="form-control form-control-sm" :value="metodoPagoLabel" readonly>
                                     </div>
+                                </div>
+                                <div v-if="metodoPago === 'PPD'" class="alert alert-warning mt-3 mb-0 py-2 small">
+                                    <i class="fa fa-info-circle me-1"></i>
+                                    <strong>Nota a credito (PPD).</strong>
+                                    Esta nota tiene saldo pendiente, por lo que se factura como Pago en Parcialidades.
+                                    La forma de pago queda fijada en <strong>99 - Por definir</strong> y cada abono que registres
+                                    despues generara automaticamente su complemento de pago al SAT.
                                 </div>
                             </div>
                         </div>
@@ -417,6 +421,11 @@ export default {
         };
     },
     computed: {
+        metodoPagoLabel() {
+            return this.metodoPago === 'PPD'
+                ? 'PPD - Pago en Parcialidades o Diferido'
+                : 'PUE - Pago en Una sola Exhibicion';
+        },
         formValido() {
             return this.receptor.rfc &&
                    this.receptor.razon_social &&
@@ -567,6 +576,7 @@ export default {
                 if (res.data.ok) {
                     this.receiptData = res.data.receipt;
                     this.emisorData = res.data.emisor;
+                    this.metodoPago = res.data.metodo_pago_calculado || 'PUE';
                     this.perfilesFiscales = res.data.receipt.client?.fiscal_data || [];
                     this.initConceptosSat();
 
@@ -576,6 +586,9 @@ export default {
                     }
 
                     this.mapearFormaPago(this.receiptData.payment);
+                    if (this.metodoPago === 'PPD') {
+                        this.formaPago = '99';
+                    }
                 } else {
                     this.error = res.data.message;
                 }
@@ -586,6 +599,10 @@ export default {
             }
         },
         mapearFormaPago(payment) {
+            if (this.metodoPago === 'PPD') {
+                this.formaPago = '99';
+                return;
+            }
             const map = {
                 'EFECTIVO': '01',
                 'TRANSFERENCIA': '03',

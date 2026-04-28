@@ -467,6 +467,14 @@
                         </div>
                     </div>
 
+                    <!-- Complementos de pago (solo si la nota está facturada como PPD) -->
+                    <div v-if="!isCreateMode && receiptOriginal && receiptOriginal.is_tax_invoiced" class="border rounded p-2 bg-light mt-3">
+                        <cfdi-complementos-list
+                            :ref="'complementosList'"
+                            :receipt-id="receiptId"
+                        ></cfdi-complementos-list>
+                    </div>
+
                     <!-- Modal Agregar Abono -->
                     <div v-if="showModalAbono" class="modal d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
                         <div class="modal-dialog modal-sm modal-dialog-centered">
@@ -790,8 +798,11 @@
 </template>
 
 <script>
+import CfdiComplementosList from './CfdiComplementosList.vue';
+
 export default {
     name: 'ReceiptFormComponent',
+    components: { CfdiComplementosList },
     props: {
         // null = crear, número = editar/ver
         receiptId: {
@@ -1820,7 +1831,21 @@ export default {
                     this.receiptOriginal = response.data.receipt;
                     this.receipt.received = response.data.receipt.received;
                     this.receipt.status = response.data.receipt.status;
-                    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Abono registrado', showConfirmButton: false, timer: 2000 });
+
+                    // Mensaje contextual según haya disparado complemento PPD
+                    const comp = response.data.complemento;
+                    if (comp && comp.ok) {
+                        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Abono y complemento de pago registrados', showConfirmButton: false, timer: 2500 });
+                    } else if (comp && !comp.ok) {
+                        Swal.fire('Abono registrado', 'El abono se guardo correctamente, pero el complemento de pago fallo: ' + comp.message + '. Puedes re-emitirlo desde la lista.', 'warning');
+                    } else {
+                        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Abono registrado', showConfirmButton: false, timer: 2000 });
+                    }
+
+                    // Refrescar lista de complementos si está montada
+                    if (this.$refs.complementosList) {
+                        this.$refs.complementosList.cargar();
+                    }
                 } else {
                     Swal.fire('Error', response.data.message || 'Error al agregar abono', 'error');
                 }

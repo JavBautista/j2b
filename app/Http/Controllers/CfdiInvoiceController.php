@@ -322,6 +322,7 @@ class CfdiInvoiceController extends Controller
         return response()->json([
             'ok' => true,
             'receipt' => $receipt,
+            'metodo_pago_calculado' => (float) $receipt->received < (float) $receipt->total ? 'PPD' : 'PUE',
             'emisor' => [
                 'rfc' => $emisor->rfc,
                 'razon_social' => $emisor->razon_social,
@@ -390,8 +391,12 @@ class CfdiInvoiceController extends Controller
             return response()->json(['ok' => false, 'message' => 'Esta nota no se puede facturar'], 422);
         }
 
-        if (!in_array($receipt->status, [Receipt::STATUS_PAGADA, Receipt::STATUS_POR_FACTURAR])) {
-            return response()->json(['ok' => false, 'message' => 'Solo se pueden facturar notas PAGADA o POR FACTURAR'], 422);
+        $statusPermitidos = [Receipt::STATUS_PAGADA, Receipt::STATUS_POR_FACTURAR];
+        if ($receipt->credit) {
+            $statusPermitidos[] = Receipt::STATUS_POR_COBRAR;
+        }
+        if (!in_array($receipt->status, $statusPermitidos)) {
+            return response()->json(['ok' => false, 'message' => 'Esta nota no se puede facturar en su estado actual'], 422);
         }
 
         // T11: bloquear timbrado si total <= 0 (cortesías totales no se facturan al SAT)

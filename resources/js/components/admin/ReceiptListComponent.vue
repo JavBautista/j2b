@@ -476,7 +476,10 @@ export default {
             if (!this.cfdiActivo) return false;
             if (receipt.quotation) return false;
             if (receipt.is_tax_invoiced) return false;
-            return ['PAGADA', 'POR FACTURAR'].includes(receipt.status);
+            if (parseFloat(receipt.total) <= 0) return false;
+            const statusOk = ['PAGADA', 'POR FACTURAR'].includes(receipt.status);
+            const creditoOk = receipt.credit && receipt.status === 'POR COBRAR';
+            return statusOk || creditoOk;
         },
         facturar(receipt) {
             this.facturarReceiptId = receipt.id;

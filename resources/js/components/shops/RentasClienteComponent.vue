@@ -234,6 +234,11 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Consignas de material a la renta -->
+                <div class="mt-3">
+                    <rent-consignments-list :rent-id="rentaSeleccionada.id" :key="rentaSeleccionada.id"></rent-consignments-list>
+                </div>
             </div>
         </div>
     </div>

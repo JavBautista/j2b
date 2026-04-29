@@ -47,6 +47,11 @@ return [
             'root' => storage_path('app/cfdi'),
         ],
 
+        'consignments' => [
+            'driver' => env('CONSIGNMENTS_DISK_DRIVER', 'local'),
+            'root' => storage_path('app/consignments'),
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

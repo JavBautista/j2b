@@ -208,4 +208,15 @@ class Shop extends Model
         }
         return null;
     }
+
+    public function siguienteFolioConsignacion(): int
+    {
+        $this->increment('consignment_folio_actual');
+        return $this->consignment_folio_actual;
+    }
+
+    public function revertirFolioConsignacion(): void
+    {
+        $this->decrement('consignment_folio_actual');
+    }
 }

@@ -665,6 +665,15 @@ Route::group([
         Route::get('cfdi/complemento/{id}/descargar/{formato}', [\App\Http\Controllers\CfdiInvoiceController::class, 'descargarComplemento']);
         Route::post('cfdi/complemento/{id}/reemitir', [\App\Http\Controllers\CfdiInvoiceController::class, 'reemitirComplemento']);
 
+        /* CONSIGNAS DE MATERIAL A RENTAS (Ionic) - Solo admin full (limited=0). El controller valida limited internamente. */
+        Route::get('rent/{rentId}/consignments', [\App\Http\Controllers\RentConsignmentController::class, 'index']);
+        Route::post('rent/{rentId}/consignments', [\App\Http\Controllers\RentConsignmentController::class, 'store']);
+        Route::get('consignments/{id}', [\App\Http\Controllers\RentConsignmentController::class, 'show']);
+        Route::post('consignments/{id}/cancel', [\App\Http\Controllers\RentConsignmentController::class, 'cancelar']);
+        Route::get('consignments/{id}/pdf', [\App\Http\Controllers\RentConsignmentController::class, 'descargarPdf']);
+        Route::post('consignments/{id}/signature', [\App\Http\Controllers\RentConsignmentController::class, 'subirFirma']);
+        Route::get('consignments/{id}/signature/image', [\App\Http\Controllers\RentConsignmentController::class, 'verFirma']);
+
         /* CFDI CATALOGOS SAT - Búsqueda de claves producto/unidad (autocompletado en modal móvil) */
         Route::get('cfdi/sat/product-codes', [\App\Http\Controllers\Admin\SatCatalogController::class, 'productCodes']);
         Route::get('cfdi/sat/unit-codes', [\App\Http\Controllers\Admin\SatCatalogController::class, 'unitCodes']);
@@ -675,6 +684,13 @@ Route::group([
         Route::post('cfdi/config/upload-csd', [\App\Http\Controllers\CfdiConfigApiController::class, 'uploadCsd']);
         Route::post('cfdi/config/registrar', [\App\Http\Controllers\CfdiConfigApiController::class, 'registrar']);
         Route::get('cfdi/config/timbre-transactions', [\App\Http\Controllers\CfdiConfigApiController::class, 'getTimbreTransactions']);
+
+        /* CLIENT FISCAL DATA - CRUD perfiles fiscales del cliente */
+        Route::get(   'clients/{clientId}/fiscal-data',  [\App\Http\Controllers\ClientFiscalDataController::class, 'index']);
+        Route::post(  'clients/{clientId}/fiscal-data',  [\App\Http\Controllers\ClientFiscalDataController::class, 'store']);
+        Route::put(   'fiscal-data/{id}',                [\App\Http\Controllers\ClientFiscalDataController::class, 'update']);
+        Route::delete('fiscal-data/{id}',                [\App\Http\Controllers\ClientFiscalDataController::class, 'destroy']);
+        Route::patch( 'fiscal-data/{id}/set-default',    [\App\Http\Controllers\ClientFiscalDataController::class, 'setDefault']);
 
     });
 });

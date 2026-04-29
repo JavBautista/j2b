@@ -367,6 +367,15 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
             Route::put('/admin/clients/active', [ClientsController::class, 'active'])->name('admin.clients.active');
         }); // ./Clientes escritura (full.admin)
 
+        // Datos fiscales del cliente — reusa ClientFiscalDataController (mismo controller que API/Ionic)
+        Route::get('/admin/clients/{clientId}/fiscal-data', [\App\Http\Controllers\ClientFiscalDataController::class, 'index'])->name('admin.clients.fiscal-data.index');
+        Route::group(['middleware' => ['full.admin']], function () {
+            Route::post('/admin/clients/{clientId}/fiscal-data', [\App\Http\Controllers\ClientFiscalDataController::class, 'store'])->name('admin.clients.fiscal-data.store');
+            Route::put('/admin/fiscal-data/{id}', [\App\Http\Controllers\ClientFiscalDataController::class, 'update'])->name('admin.fiscal-data.update');
+            Route::delete('/admin/fiscal-data/{id}', [\App\Http\Controllers\ClientFiscalDataController::class, 'destroy'])->name('admin.fiscal-data.destroy');
+            Route::patch('/admin/fiscal-data/{id}/set-default', [\App\Http\Controllers\ClientFiscalDataController::class, 'setDefault'])->name('admin.fiscal-data.set-default');
+        }); // ./Datos fiscales escritura (full.admin)
+
         // Rutas para contratos desde clientes
         Route::get('/admin/clients/{client}/assign-contract', [ClientsController::class, 'assignContractPage'])->name('admin.clients.assign-contract');
         Route::post('/admin/clients/{client}/create-contract', [ClientsController::class, 'createContract'])->name('admin.clients.create-contract');
@@ -426,6 +435,17 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         // Rutas para Consumibles - admin web
         Route::get('/admin/rents/details/{detail}/consumables', [RentsController::class, 'getConsumables'])->name('admin.rents.consumables');
         Route::post('/admin/rents/details/{detail}/consumables/store', [RentsController::class, 'storeConsumable'])->name('admin.rents.consumables.store');
+
+        // Consignas de material a renta — solo admin full
+        Route::group(['middleware' => ['full.admin']], function () {
+            Route::get('/admin/rents/{rentId}/consignments', [App\Http\Controllers\Admin\RentConsignmentController::class, 'index'])->name('admin.rents.consignments.index');
+            Route::post('/admin/rents/{rentId}/consignments', [App\Http\Controllers\Admin\RentConsignmentController::class, 'store'])->name('admin.rents.consignments.store');
+            Route::get('/admin/consignments/{id}', [App\Http\Controllers\Admin\RentConsignmentController::class, 'show'])->name('admin.consignments.show');
+            Route::post('/admin/consignments/{id}/cancel', [App\Http\Controllers\Admin\RentConsignmentController::class, 'cancelar'])->name('admin.consignments.cancel');
+            Route::get('/admin/consignments/{id}/pdf', [App\Http\Controllers\Admin\RentConsignmentController::class, 'descargarPdf'])->name('admin.consignments.pdf');
+            Route::post('/admin/consignments/{id}/signature', [App\Http\Controllers\Admin\RentConsignmentController::class, 'subirFirma'])->name('admin.consignments.signature.upload');
+            Route::get('/admin/consignments/{id}/signature/image', [App\Http\Controllers\Admin\RentConsignmentController::class, 'verFirma'])->name('admin.consignments.signature.image');
+        });
 
         // Cobrar Renta (generar recibo de renta desde web)
         Route::get('/admin/rent-receipt/{client}/data', [App\Http\Controllers\Admin\RentReceiptController::class, 'getClientRentas'])->name('admin.rent-receipt.data');

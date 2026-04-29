@@ -27,6 +27,7 @@ import ExampleComponent from './components/ExampleComponent.vue';
 //Componenetes de tiendas
 import ClientsComponent from './components/shops/ClientsComponent.vue';
 import RentasClienteComponent from './components/shops/RentasClienteComponent.vue';
+import RentConsignmentsList from './components/admin/rentas/RentConsignmentsList.vue';
 import CobrarRentaModal from './components/shops/CobrarRentaModal.vue';
 import TemplateCreatorComponent from './components/shops/TemplateCreator.vue';
 //Componentes de admin
@@ -82,6 +83,7 @@ app.component('pdf-phrases-component', PdfPhrasesComponent);
 app.component('shop-template-creator-component', TemplateCreatorComponent);
 app.component('shop-clients-component', ClientsComponent);
 app.component('rentas-cliente-component', RentasClienteComponent);
+app.component('rent-consignments-list', RentConsignmentsList);
 app.component('cobrar-renta-modal', CobrarRentaModal);
 //Admin
 app.component('receipts-component', ReceiptsComponent);

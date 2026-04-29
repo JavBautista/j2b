@@ -22,4 +22,9 @@ class Rent extends Model
     {
         return $this->belongsTo(Shop::class);
     }
+
+    public function consignments()
+    {
+        return $this->hasMany(RentConsignment::class);
+    }
 }

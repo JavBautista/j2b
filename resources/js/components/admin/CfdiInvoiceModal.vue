@@ -64,9 +64,14 @@
                             </div>
                             <div class="card-body">
                                 <!-- Perfiles fiscales guardados -->
-                                <div v-if="perfilesFiscales.length > 0" class="mb-3">
-                                    <label class="form-label fw-bold">Perfiles fiscales guardados</label>
-                                    <div class="list-group list-group-flush">
+                                <div v-if="receiptData.client_id" class="mb-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <label class="form-label fw-bold mb-0">Perfiles fiscales guardados</label>
+                                        <button type="button" class="btn btn-sm btn-outline-primary" @click="abrirGestionPerfiles()">
+                                            <i class="fa fa-cog me-1"></i> Gestionar perfiles
+                                        </button>
+                                    </div>
+                                    <div v-if="perfilesFiscales.length > 0" class="list-group list-group-flush">
                                         <button v-for="perfil in perfilesFiscales" :key="perfil.id"
                                             type="button" class="list-group-item list-group-item-action py-2 d-flex justify-content-between align-items-center"
                                             @click="usarPerfil(perfil)"
@@ -77,6 +82,9 @@
                                             </div>
                                             <i class="fa fa-check" v-if="perfilSeleccionado === perfil.id"></i>
                                         </button>
+                                    </div>
+                                    <div v-else class="text-muted small fst-italic">
+                                        Este cliente aún no tiene perfiles fiscales guardados.
                                     </div>
                                 </div>
 
@@ -355,12 +363,20 @@
                 </div>
             </div>
         </div>
+
+        <!-- Modal de gestión de perfiles fiscales (selección desde aquí) -->
+        <client-fiscal-data-modal ref="fiscalDataMgmt"
+            @seleccionado="onPerfilSeleccionado"
+            @closed="onGestionCerrada"></client-fiscal-data-modal>
     </div>
 </template>
 
 <script>
+import ClientFiscalDataModal from '../shops/ClientFiscalDataModal.vue';
+
 export default {
     name: 'CfdiInvoiceModal',
+    components: { ClientFiscalDataModal },
     directives: {
         focus: { mounted(el) { el.focus(); } },
     },
@@ -638,6 +654,27 @@ export default {
             this.esPublicoGeneral = false;
             this.receptor = { rfc: '', razon_social: '', regimen_fiscal: '', uso_cfdi: 'G03', codigo_postal: '' };
         },
+        abrirGestionPerfiles() {
+            const cliente = this.receiptData?.client || { id: this.receiptData?.client_id, name: this.receiptData?.client_name };
+            if (!cliente?.id) return;
+            this.$refs.fiscalDataMgmt.abrirModal(cliente, true);
+        },
+        onPerfilSeleccionado(perfil) {
+            this.usarPerfil(perfil);
+            this.recargarPerfiles();
+        },
+        onGestionCerrada() {
+            this.recargarPerfiles();
+        },
+        async recargarPerfiles() {
+            if (!this.receiptData?.client_id) return;
+            try {
+                const res = await axios.get(`/admin/clients/${this.receiptData.client_id}/fiscal-data`);
+                this.perfilesFiscales = res.data || [];
+            } catch (e) {
+                // silencioso: el modal de gestión ya muestra sus propios errores
+            }
+        },
         async timbrarFactura() {
             const confirm = await Swal.fire({
                 title: 'Timbrar Factura',
@@ -677,6 +714,7 @@ export default {
                     forma_pago: this.formaPago,
                     metodo_pago: this.metodoPago,
                     guardar_datos_cliente: this.guardarDatosCliente,
+                    client_fiscal_data_id: this.perfilSeleccionado || null,
                     conceptos_sat: this.conceptosSat.map(c => ({
                         detail_id: c.detail_id,
                         clave_prod_serv: c.clave_prod_serv,

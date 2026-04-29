@@ -75,6 +75,9 @@
                                         <li><a class="dropdown-item" href="#" @click.prevent="abrirModalDirecciones(client)">
                                             <i class="fa fa-map-marker text-warning"></i> Gestionar Direcciones
                                         </a></li>
+                                        <li><a class="dropdown-item" href="#" @click.prevent="abrirModalDatosFiscales(client)">
+                                            <i class="fa fa-file-text-o text-success"></i> Datos Fiscales
+                                        </a></li>
                                         <li><hr class="dropdown-divider"></li>
                                         <li><a class="dropdown-item" :href="`/admin/clients/${client.id}/contracts`">
                                             <i class="fa fa-folder-open text-primary"></i> Ver Contratos
@@ -203,6 +206,9 @@
                                         <button class="btn btn-warning btn-sm" @click="abrirModalDirecciones(client)" title="Direcciones">
                                             <i class="fa fa-map-marker"></i>
                                         </button>
+                                        <button class="btn btn-success btn-sm" @click="abrirModalDatosFiscales(client)" title="Datos Fiscales">
+                                            <i class="fa fa-file-text-o"></i>
+                                        </button>
                                         <a class="btn btn-secondary btn-sm" :href="`/admin/clients/${client.id}/contracts`" title="Contratos">
                                             <i class="fa fa-folder-open"></i>
                                         </a>
@@ -245,6 +251,9 @@
 
     <!-- Componente de direcciones -->
     <client-addresses-component ref="clientAddresses"></client-addresses-component>
+
+    <!-- Componente de datos fiscales -->
+    <client-fiscal-data-modal ref="clientFiscalData"></client-fiscal-data-modal>
 
     <!-- Modal Ver Detalle Cliente -->
     <div class="modal fade" tabindex="-1" :class="{'mostrar':modalDetalle}" role="dialog" style="display: none;" aria-hidden="true">
@@ -415,6 +424,9 @@
                     </button>
                     <button type="button" class="btn btn-info" @click="abrirModalImagen(clienteDetalle)">
                         <i class="fa fa-image"></i> Imagen
+                    </button>
+                    <button type="button" class="btn btn-success" @click="verDatosFiscalesDesdeDetalle()">
+                        <i class="fa fa-file-text-o"></i> Datos Fiscales
                     </button>
                     <button v-if="!isLimitedUser && clienteDetalle" type="button" class="btn btn-primary" @click="cerrarModalDetalle(); abrirModal('client','actualizar_datos', clienteDetalle)">
                         <i class="fa fa-edit"></i> Editar
@@ -1316,10 +1328,12 @@
 
 <script>
 import ClientAddressesComponent from './ClientAddressesComponent.vue';
+import ClientFiscalDataModal from './ClientFiscalDataModal.vue';
 
 export default {
         components: {
-            ClientAddressesComponent
+            ClientAddressesComponent,
+            ClientFiscalDataModal
         },
         props: {
             shop: {
@@ -1746,6 +1760,15 @@ export default {
             },
             abrirModalDirecciones(client) {
                 this.$refs.clientAddresses.abrirModal(client);
+            },
+            abrirModalDatosFiscales(client) {
+                if (!client?.id) return;
+                this.$refs.clientFiscalData.abrirModal(client);
+            },
+            verDatosFiscalesDesdeDetalle() {
+                const cliente = this.clienteDetalle;
+                this.cerrarModalDetalle();
+                this.abrirModalDatosFiscales(cliente);
             },
             // Modal Detalle
             abrirModalDetalle(client) {

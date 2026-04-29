@@ -375,10 +375,11 @@ class CfdiInvoiceController extends Controller
             'receptor_rfc' => 'required|string|max:13',
             'receptor_razon_social' => 'required|string|max:255',
             'receptor_regimen_fiscal' => 'required|string|max:3',
-            'receptor_uso_cfdi' => 'required|string|max:3',
+            'receptor_uso_cfdi' => 'required|string|max:5',
             'receptor_codigo_postal' => 'required|string|max:5',
             'forma_pago' => 'required|string|max:2',
             'metodo_pago' => 'required|string|max:3',
+            'client_fiscal_data_id' => 'nullable|integer',
         ]);
 
         $receipt = Receipt::with('detail.product')
@@ -418,6 +419,7 @@ class CfdiInvoiceController extends Controller
             'metodo_pago' => $request->metodo_pago,
             'conceptos_sat' => $request->conceptos_sat ?? [],
             'guardar_datos_cliente' => (bool) $request->guardar_datos_cliente,
+            'client_fiscal_data_id' => $request->client_fiscal_data_id,
         ]);
 
         if (!$result['ok']) {

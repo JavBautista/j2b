@@ -244,11 +244,48 @@ class CfdiTimbradoService
             $responseData = $result['data'];
             $uuid = $responseData['uuid'] ?? null;
 
+            // === Determinar / crear el perfil fiscal del receptor para vincular FK ===
+            $clientFiscalDataId = null;
+            if ($receipt->client_id && !$esPublicoGeneral) {
+                if (!empty($data['client_fiscal_data_id'])) {
+                    $perfilSeleccionado = ClientFiscalData::where('id', $data['client_fiscal_data_id'])
+                        ->where('client_id', $receipt->client_id)
+                        ->first();
+                    if ($perfilSeleccionado) {
+                        $clientFiscalDataId = $perfilSeleccionado->id;
+                    }
+                }
+
+                if (!$clientFiscalDataId) {
+                    $existing = ClientFiscalData::where('client_id', $receipt->client_id)
+                        ->where('rfc', $receptorRfc)
+                        ->where('active', true)
+                        ->first();
+                    if ($existing) {
+                        $clientFiscalDataId = $existing->id;
+                    } elseif (!empty($data['guardar_datos_cliente'])) {
+                        $hasAny = ClientFiscalData::where('client_id', $receipt->client_id)->exists();
+                        $nuevo = ClientFiscalData::create([
+                            'client_id' => $receipt->client_id,
+                            'rfc' => $receptorRfc,
+                            'razon_social' => strtoupper($data['receptor_razon_social']),
+                            'regimen_fiscal' => $data['receptor_regimen_fiscal'],
+                            'uso_cfdi' => $data['receptor_uso_cfdi'],
+                            'codigo_postal' => $data['receptor_codigo_postal'],
+                            'is_default' => !$hasAny,
+                            'active' => true,
+                        ]);
+                        $clientFiscalDataId = $nuevo->id;
+                    }
+                }
+            }
+
             // === Crear registro de factura ===
             $invoice = CfdiInvoice::create([
                 'shop_id' => $shop->id,
                 'cfdi_emisor_id' => $emisor->id,
                 'receipt_id' => $receipt->id,
+                'client_fiscal_data_id' => $clientFiscalDataId,
                 'receptor_rfc' => $receptorRfc,
                 'receptor_nombre' => strtoupper($data['receptor_razon_social']),
                 'receptor_regimen' => $data['receptor_regimen_fiscal'],
@@ -299,25 +336,6 @@ class CfdiTimbradoService
                             'error' => $resp['message'],
                         ]);
                     }
-                }
-            }
-
-            // === Guardar datos fiscales del cliente si se solicitó ===
-            if (!empty($data['guardar_datos_cliente']) && $receipt->client_id && !$esPublicoGeneral) {
-                $existing = ClientFiscalData::where('client_id', $receipt->client_id)
-                    ->where('rfc', $receptorRfc)
-                    ->first();
-                if (!$existing) {
-                    $hasAny = ClientFiscalData::where('client_id', $receipt->client_id)->exists();
-                    ClientFiscalData::create([
-                        'client_id' => $receipt->client_id,
-                        'rfc' => $receptorRfc,
-                        'razon_social' => strtoupper($data['receptor_razon_social']),
-                        'regimen_fiscal' => $data['receptor_regimen_fiscal'],
-                        'uso_cfdi' => $data['receptor_uso_cfdi'],
-                        'codigo_postal' => $data['receptor_codigo_postal'],
-                        'is_default' => !$hasAny,
-                    ]);
                 }
             }
 

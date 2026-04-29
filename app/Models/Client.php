@@ -50,10 +50,10 @@ class Client extends Model
     }
 
     public function fiscalData(){
-        return $this->hasMany(ClientFiscalData::class);
+        return $this->hasMany(ClientFiscalData::class)->where('active', true);
     }
 
     public function defaultFiscalData(){
-        return $this->hasOne(ClientFiscalData::class)->where('is_default', true);
+        return $this->hasOne(ClientFiscalData::class)->where('is_default', true)->where('active', true);
     }
 }

@@ -33,61 +33,52 @@
                 <small>Aun no se han emitido complementos. Cada abono futuro generara uno automaticamente.</small>
             </div>
 
-            <!-- Tabla de complementos -->
-            <div v-if="complementos.length > 0" class="table-responsive">
-                <table class="table table-sm table-bordered mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th class="text-center" style="width: 40px;">#</th>
-                            <th>Folio</th>
-                            <th>Fecha</th>
-                            <th class="text-end">Monto</th>
-                            <th class="text-end">Saldo</th>
-                            <th class="text-center">Estado</th>
-                            <th class="text-center" style="width: 110px;">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="c in complementos" :key="c.id">
-                            <td class="text-center">{{ c.num_parcialidad }}</td>
-                            <td>{{ c.serie }}-{{ c.folio }}</td>
-                            <td>
-                                <small>{{ formatDate(c.fecha_timbrado || c.fecha_emision) }}</small>
-                            </td>
-                            <td class="text-end">{{ formatCurrency(c.imp_pagado) }}</td>
-                            <td class="text-end">
-                                <small class="text-muted">{{ formatCurrency(c.imp_saldo_insoluto) }}</small>
-                            </td>
-                            <td class="text-center">
-                                <span class="badge" :class="badgeClass(c.status)">{{ statusLabel(c.status) }}</span>
-                            </td>
-                            <td class="text-center">
-                                <template v-if="c.status === 'vigente'">
-                                    <button class="btn btn-sm btn-outline-primary me-1"
-                                        @click="descargar(c, 'xml')"
-                                        :disabled="descargando === c.id"
-                                        title="Descargar XML">
-                                        <i class="fa fa-file-code-o"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-danger"
-                                        @click="descargar(c, 'pdf')"
-                                        :disabled="descargando === c.id"
-                                        title="Descargar PDF">
-                                        <i class="fa fa-file-pdf-o"></i>
-                                    </button>
-                                </template>
-                                <template v-else-if="c.status === 'failed'">
-                                    <button class="btn btn-sm btn-outline-warning"
-                                        @click="reemitir(c)"
-                                        :disabled="reemitiendo === c.id"
-                                        title="Re-emitir complemento">
-                                        <i class="fa fa-refresh" :class="{ 'fa-spin': reemitiendo === c.id }"></i>
-                                    </button>
-                                </template>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+            <!-- Cards apilados de complementos -->
+            <div v-if="complementos.length > 0" class="complemento-list">
+                <div v-for="c in complementos" :key="c.id" class="complemento-card">
+                    <div class="d-flex justify-content-between align-items-start mb-1">
+                        <div>
+                            <span class="parcialidad-badge">Parcialidad {{ c.num_parcialidad }}</span>
+                            <span class="folio-text ms-1">{{ c.serie }}-{{ c.folio }}</span>
+                        </div>
+                        <span class="badge" :class="badgeClass(c.status)">{{ statusLabel(c.status) }}</span>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mt-2">
+                        <div>
+                            <div class="monto-grande text-success">{{ formatCurrency(c.imp_pagado) }}</div>
+                            <div class="saldo-text">
+                                Saldo restante: <strong>{{ formatCurrency(c.imp_saldo_insoluto) }}</strong>
+                            </div>
+                            <div class="fecha-text">
+                                <i class="fa fa-calendar-o me-1"></i>{{ formatDate(c.fecha_timbrado || c.fecha_emision) }}
+                            </div>
+                        </div>
+                        <div class="acciones-col">
+                            <template v-if="c.status === 'vigente'">
+                                <button class="btn btn-sm btn-outline-primary mb-1 w-100"
+                                    @click="descargar(c, 'xml')"
+                                    :disabled="descargando === c.id"
+                                    title="Descargar XML">
+                                    <i class="fa fa-file-code-o me-1"></i>XML
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger w-100"
+                                    @click="descargar(c, 'pdf')"
+                                    :disabled="descargando === c.id"
+                                    title="Descargar PDF">
+                                    <i class="fa fa-file-pdf-o me-1"></i>PDF
+                                </button>
+                            </template>
+                            <template v-else-if="c.status === 'failed'">
+                                <button class="btn btn-sm btn-outline-warning w-100"
+                                    @click="reemitir(c)"
+                                    :disabled="reemitiendo === c.id">
+                                    <i class="fa fa-refresh me-1" :class="{ 'fa-spin': reemitiendo === c.id }"></i>Re-emitir
+                                </button>
+                            </template>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Mensaje de error inline si hay alguno -->
@@ -226,3 +217,63 @@ export default {
     },
 };
 </script>
+
+<style scoped>
+.complemento-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.complemento-card {
+    background: #fff;
+    border: 1px solid #e3e7ed;
+    border-left: 3px solid #0d6efd;
+    border-radius: 6px;
+    padding: 0.6rem 0.75rem;
+    transition: box-shadow 0.15s ease;
+}
+.complemento-card:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+.parcialidad-badge {
+    background: #e7f1ff;
+    color: #0d6efd;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+.folio-text {
+    font-size: 0.75rem;
+    color: #6c757d;
+    font-weight: 500;
+}
+.monto-grande {
+    font-size: 1.1rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+.saldo-text {
+    font-size: 0.72rem;
+    color: #6c757d;
+    margin-top: 1px;
+}
+.saldo-text strong {
+    color: #495057;
+}
+.fecha-text {
+    font-size: 0.7rem;
+    color: #adb5bd;
+    margin-top: 2px;
+}
+.acciones-col {
+    min-width: 80px;
+    margin-left: 0.5rem;
+}
+.acciones-col .btn {
+    font-size: 0.72rem;
+    padding: 0.2rem 0.4rem;
+}
+</style>

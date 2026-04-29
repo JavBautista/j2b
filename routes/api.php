@@ -660,6 +660,11 @@ Route::group([
         Route::get('cfdi/receipt/{id}/data', [\App\Http\Controllers\CfdiInvoiceController::class, 'getReceiptData']);
         Route::post('cfdi/timbrar', [\App\Http\Controllers\CfdiInvoiceController::class, 'timbrar']);
 
+        /* CFDI COMPLEMENTOS DE PAGO (PPD) - Listar / descargar / re-emitir */
+        Route::get('cfdi/nota/{receiptId}/complementos', [\App\Http\Controllers\CfdiInvoiceController::class, 'listarComplementos']);
+        Route::get('cfdi/complemento/{id}/descargar/{formato}', [\App\Http\Controllers\CfdiInvoiceController::class, 'descargarComplemento']);
+        Route::post('cfdi/complemento/{id}/reemitir', [\App\Http\Controllers\CfdiInvoiceController::class, 'reemitirComplemento']);
+
         /* CFDI CATALOGOS SAT - Búsqueda de claves producto/unidad (autocompletado en modal móvil) */
         Route::get('cfdi/sat/product-codes', [\App\Http\Controllers\Admin\SatCatalogController::class, 'productCodes']);
         Route::get('cfdi/sat/unit-codes', [\App\Http\Controllers\Admin\SatCatalogController::class, 'unitCodes']);

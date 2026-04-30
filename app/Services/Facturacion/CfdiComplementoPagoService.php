@@ -7,6 +7,8 @@ use App\Models\CfdiInvoice;
 use App\Models\CfdiPagoComplemento;
 use App\Models\PartialPayments;
 use App\Models\Receipt;
+use App\Models\ShopBankAccount;
+use App\Support\SatCatalogos\Bancos;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -97,9 +99,19 @@ class CfdiComplementoPagoService
                 ? Carbon::parse($abono->payment_date, 'America/Mexico_City')->format('Y-m-d\TH:i:s')
                 : Carbon::now('America/Mexico_City')->format('Y-m-d\TH:i:s');
 
-            $formaPago = $this->mapearFormaPago($receipt->payment);
+            // Forma de pago: prioridad al abono (cada abono PPD puede tener forma distinta).
+            // Fallback al receipt para registros antiguos sin payment_method seteado.
+            $formaPago = $abono->payment_method
+                ?: $this->mapearFormaPago($receipt->payment);
+            $esBancarizada = in_array($formaPago, ['02','03','04','05','06','28','29'], true);
+
             $moneda = $shop->getCurrencyCode();
             $monedaPago = $moneda === 'XXX' ? 'MXN' : $moneda;
+
+            // Datos bancarios opcionales del abono (solo se mandan al SAT si forma bancarizada)
+            $datosBancarios = $esBancarizada
+                ? $this->construirDatosBancarios($abono, $shop->id)
+                : [];
 
             $complemento = CfdiPagoComplemento::create([
                 'shop_id' => $shop->id,
@@ -174,11 +186,19 @@ class CfdiComplementoPagoService
                             'monto_total_pagos' => $fmt($impPagado),
                         ],
                         'pago' => [[
-                            'fecha_pago' => $fechaPago,
-                            'forma_de_pago_p' => $formaPago,
-                            'moneda_p' => $monedaPago,
-                            'tipo_cambio_p' => 1,
-                            'monto' => $fmt($impPagado),
+                            ...array_filter([
+                                'fecha_pago' => $fechaPago,
+                                'forma_de_pago_p' => $formaPago,
+                                'moneda_p' => $monedaPago,
+                                'tipo_cambio_p' => 1,
+                                'monto' => $fmt($impPagado),
+                                'num_operacion' => $datosBancarios['num_operacion'] ?? null,
+                                'rfc_emisor_cta_ord' => $datosBancarios['rfc_emisor_cta_ord'] ?? null,
+                                'nom_banco_ord_ext' => $datosBancarios['nom_banco_ord_ext'] ?? null,
+                                'cta_ordenante' => $datosBancarios['cta_ordenante'] ?? null,
+                                'rfc_emisor_cta_ben' => $datosBancarios['rfc_emisor_cta_ben'] ?? null,
+                                'cta_beneficiario' => $datosBancarios['cta_beneficiario'] ?? null,
+                            ], fn($v) => $v !== null && $v !== ''),
                             'docto_relacionado' => [array_merge([
                                 'id_documento' => $invoice->uuid,
                                 'serie' => $invoice->serie,
@@ -342,6 +362,8 @@ class CfdiComplementoPagoService
 
     /**
      * Mapea la forma de pago humana del receipt a clave SAT (catálogo c_FormaPago).
+     * Solo se usa como fallback cuando partial_payments.payment_method está vacío
+     * (registros legacy anteriores a la migración add_payment_fields_to_partial_payments).
      */
     protected function mapearFormaPago(?string $payment): string
     {
@@ -352,6 +374,67 @@ class CfdiComplementoPagoService
             'TARJETA'       => '04',
             default         => '99',
         };
+    }
+
+    /**
+     * Construye los nodos bancarios condicionales del nodo pago[0] según el SAT
+     * Pagos 2.0. Solo se llama cuando la forma de pago es bancarizada
+     * (02,03,04,05,06,28,29). Todos los campos son opcionales — solo se incluyen
+     * los que efectivamente se capturaron.
+     *
+     * Cuenta beneficiaria: viene de shop_bank_accounts (la cuenta del comercio
+     * que recibió el pago). Si no se eligió, se intenta usar la default activa.
+     * Cuenta ordenante: viene del propio abono (datos del cliente pagador).
+     *
+     * @return array<string,string>
+     */
+    protected function construirDatosBancarios(PartialPayments $abono, int $shopId): array
+    {
+        $out = [];
+
+        if ($abono->num_operacion) {
+            $out['num_operacion'] = $abono->num_operacion;
+        }
+
+        // Cuenta ORDENANTE (cliente)
+        if ($abono->is_foreign_bank_ord) {
+            // Banco extranjero: RFC fijo y se manda nom_banco_ord_ext
+            $out['rfc_emisor_cta_ord'] = 'XEXX010101000';
+            if ($abono->bank_ord_code) {
+                $banco = Bancos::find($abono->bank_ord_code);
+                if ($banco && !empty($banco['name'])) {
+                    $out['nom_banco_ord_ext'] = $banco['name'];
+                }
+            }
+        } elseif ($abono->bank_ord_code) {
+            $banco = Bancos::find($abono->bank_ord_code);
+            if ($banco && !empty($banco['rfc'])) {
+                $out['rfc_emisor_cta_ord'] = $banco['rfc'];
+            }
+        }
+        if ($abono->cta_ordenante) {
+            $out['cta_ordenante'] = $abono->cta_ordenante;
+        }
+
+        // Cuenta BENEFICIARIA (comercio): explícita en el abono o default activa de la tienda
+        $cuentaBeneficiaria = null;
+        if ($abono->shop_bank_account_id) {
+            $cuentaBeneficiaria = ShopBankAccount::find($abono->shop_bank_account_id);
+        }
+        if (!$cuentaBeneficiaria) {
+            $cuentaBeneficiaria = ShopBankAccount::where('shop_id', $shopId)
+                ->where('is_default', true)
+                ->where('is_active', true)
+                ->first();
+        }
+        if ($cuentaBeneficiaria) {
+            if (!empty($cuentaBeneficiaria->bank_rfc)) {
+                $out['rfc_emisor_cta_ben'] = $cuentaBeneficiaria->bank_rfc;
+            }
+            $out['cta_beneficiario'] = $cuentaBeneficiaria->clabe;
+        }
+
+        return $out;
     }
 
     /**

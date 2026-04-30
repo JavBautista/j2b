@@ -90,6 +90,19 @@ class ReceiptController extends Controller
         }
 
         $randomPhrase = PdfPhrase::getRandom();
+
+        // Cuentas bancarias para depósito: solo se muestran si la nota tiene saldo pendiente
+        // o es a crédito/PPD. La plantilla ya valida visualmente, pero filtramos aquí también.
+        $tienePendiente = ((float) $receipt->received < (float) $receipt->total)
+            || ((bool) ($receipt->credit ?? false) && !($receipt->credit_completed ?? false));
+        $bankAccounts = $tienePendiente
+            ? \App\Models\ShopBankAccount::where('shop_id', $receipt->shop_id)
+                ->where('is_active', true)
+                ->orderByDesc('is_default')
+                ->orderBy('alias')
+                ->get()
+            : collect();
+
         $pdf = PDF::loadView('receipt_rent_pdf', [
             'receipt' => $receipt,
             'withImages' => $withImages,
@@ -97,6 +110,7 @@ class ReceiptController extends Controller
             'qrImage' => $qrImage,
             'pdfPhrase' => $randomPhrase['phrase'],
             'pdfPhraseUrl' => $randomPhrase['link_url'],
+            'bankAccounts' => $bankAccounts,
         ]);
         return $pdf->stream($name_file.'.pdf',array("Attachment" => false));
     }//printReceiptRent()
@@ -1012,12 +1026,24 @@ class ReceiptController extends Controller
         }
 
         $randomPhrase = PdfPhrase::getRandom();
+
+        $tienePendiente = ((float) $receipt->received < (float) $receipt->total)
+            || ((bool) ($receipt->credit ?? false) && !($receipt->credit_completed ?? false));
+        $bankAccounts = $tienePendiente
+            ? \App\Models\ShopBankAccount::where('shop_id', $receipt->shop_id)
+                ->where('is_active', true)
+                ->orderByDesc('is_default')
+                ->orderBy('alias')
+                ->get()
+            : collect();
+
         $pdf = PDF::loadView('receipt_rent_pdf',[
             'receipt'=>$receipt,
             'receiptSettings' => $receiptSettings,
             'qrImage' => $qrImage,
             'pdfPhrase' => $randomPhrase['phrase'],
             'pdfPhraseUrl' => $randomPhrase['link_url'],
+            'bankAccounts' => $bankAccounts,
         ]);
         return $pdf->stream($name_file.'.pdf',array("Attachment" => false));
     }//printReceiptRent()

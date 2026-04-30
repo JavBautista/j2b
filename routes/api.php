@@ -692,6 +692,13 @@ Route::group([
         Route::delete('fiscal-data/{id}',                [\App\Http\Controllers\ClientFiscalDataController::class, 'destroy']);
         Route::patch( 'fiscal-data/{id}/set-default',    [\App\Http\Controllers\ClientFiscalDataController::class, 'setDefault']);
 
+        /* CUENTAS BANCARIAS DE LA TIENDA - Multitenant, usadas en complementos Pagos 2.0 */
+        Route::get(   'shop/bank-accounts',                [\App\Http\Controllers\ShopBankAccountController::class, 'index']);
+        Route::post(  'shop/bank-accounts',                [\App\Http\Controllers\ShopBankAccountController::class, 'store']);
+        Route::put(   'shop/bank-accounts/{id}',           [\App\Http\Controllers\ShopBankAccountController::class, 'update']);
+        Route::delete('shop/bank-accounts/{id}',           [\App\Http\Controllers\ShopBankAccountController::class, 'destroy']);
+        Route::patch( 'shop/bank-accounts/{id}/set-default',[\App\Http\Controllers\ShopBankAccountController::class, 'setDefault']);
+
     });
 });
 /*------------------------------------------------------------------

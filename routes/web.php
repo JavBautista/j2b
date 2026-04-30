@@ -318,6 +318,16 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::post('/admin/facturacion/configuracion/registrar', [App\Http\Controllers\Admin\CfdiConfigController::class, 'registrar']);
         Route::get('/admin/facturacion/configuracion/timbre-transactions', [App\Http\Controllers\Admin\CfdiConfigController::class, 'getTimbreTransactions']);
 
+        // Cuentas bancarias de la tienda (multitenant) — usadas en complementos de pago y PDFs de notas
+        Route::get('/admin/configuracion/cuentas-bancarias', [\App\Http\Controllers\ShopBankAccountController::class, 'page'])->name('admin.bank-accounts.page');
+        Route::get('/admin/configuracion/cuentas-bancarias/data', [\App\Http\Controllers\ShopBankAccountController::class, 'index'])->name('admin.bank-accounts.index');
+        Route::group(['middleware' => ['full.admin']], function () {
+            Route::post('/admin/configuracion/cuentas-bancarias', [\App\Http\Controllers\ShopBankAccountController::class, 'store'])->name('admin.bank-accounts.store');
+            Route::put('/admin/configuracion/cuentas-bancarias/{id}', [\App\Http\Controllers\ShopBankAccountController::class, 'update'])->name('admin.bank-accounts.update');
+            Route::delete('/admin/configuracion/cuentas-bancarias/{id}', [\App\Http\Controllers\ShopBankAccountController::class, 'destroy'])->name('admin.bank-accounts.destroy');
+            Route::patch('/admin/configuracion/cuentas-bancarias/{id}/set-default', [\App\Http\Controllers\ShopBankAccountController::class, 'setDefault'])->name('admin.bank-accounts.set-default');
+        }); // ./Cuentas bancarias escritura (full.admin)
+
         // Facturación CFDI - Facturas Emitidas
         Route::get('/admin/facturacion/facturas', [App\Http\Controllers\Admin\CfdiInvoiceController::class, 'indexFacturas'])->name('admin.cfdi.facturas');
         Route::get('/admin/facturacion/facturas/get', [App\Http\Controllers\Admin\CfdiInvoiceController::class, 'getFacturas']);

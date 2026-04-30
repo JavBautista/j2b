@@ -91,8 +91,8 @@
                     @if($noCertificadoEmisor)
                         <strong>No. Cert. Emisor:</strong> {{ $noCertificadoEmisor }}<br>
                     @endif
-                    @if($timbreFiscal && isset($timbreFiscal['no_certificado_sat']))
-                        <strong>No. Cert. SAT:</strong> {{ $timbreFiscal['no_certificado_sat'] }}<br>
+                    @if($timbreFiscal && isset($timbreFiscal['num_certificado_sat']))
+                        <strong>No. Cert. SAT:</strong> {{ $timbreFiscal['num_certificado_sat'] }}<br>
                     @endif
                     @if($complemento->fecha_timbrado)
                         <strong>Fecha de Certificaci&oacute;n:</strong><br>
@@ -189,6 +189,9 @@
             <tr>
                 <th>Folio Fiscal (UUID)</th>
                 <th class="c">Serie-Folio</th>
+                <th class="c">Met. Pago</th>
+                <th class="c">Moneda</th>
+                <th class="c">T. Cam.</th>
                 <th class="c">Parcialidad</th>
                 <th class="r">Saldo Anterior</th>
                 <th class="r">Importe Pagado</th>
@@ -200,6 +203,9 @@
             <tr>
                 <td style="font-size: 6.5px;">{{ $invoice->uuid }}</td>
                 <td class="c">{{ $invoice->serie }}-{{ $invoice->folio }}</td>
+                <td class="c">{{ $invoice->metodo_pago ?? 'PPD' }}</td>
+                <td class="c">{{ $monedaDr ?? 'MXN' }}</td>
+                <td class="c">{{ number_format((float) ($equivalenciaDr ?? 1), 4) }}</td>
                 <td class="c">{{ $complemento->num_parcialidad }}</td>
                 <td class="r">${{ number_format($complemento->imp_saldo_ant, 2) }}</td>
                 <td class="r b">${{ number_format($complemento->imp_pagado, 2) }}</td>
@@ -208,6 +214,42 @@
             </tr>
         </tbody>
     </table>
+
+    @if($tieneInfoBancaria)
+        <div class="bar" style="margin-top: 6px;">Informaci&oacute;n Bancaria del Pago</div>
+        <table class="pago-table" style="border: 1px solid #d4e6dc;">
+            <tbody>
+                @if($infoBancaria['num_operacion'])
+                <tr>
+                    <th style="width: 220px;">N&uacute;mero de Operaci&oacute;n:</th>
+                    <td colspan="3">{{ $infoBancaria['num_operacion'] }}</td>
+                </tr>
+                @endif
+                @if($infoBancaria['rfc_emisor_cta_ord'] || $infoBancaria['cta_ordenante'] || $infoBancaria['nom_banco_ord_ext'])
+                <tr>
+                    <th>RFC Banco Ordenante (Cliente):</th>
+                    <td style="width: 220px;">{{ $infoBancaria['rfc_emisor_cta_ord'] ?? '—' }}</td>
+                    <th style="width: 130px;">Cuenta Ordenante:</th>
+                    <td>{{ $infoBancaria['cta_ordenante'] ?? '—' }}</td>
+                </tr>
+                @if($infoBancaria['nom_banco_ord_ext'])
+                <tr>
+                    <th>Banco Ordenante (Extranjero):</th>
+                    <td colspan="3">{{ $infoBancaria['nom_banco_ord_ext'] }}</td>
+                </tr>
+                @endif
+                @endif
+                @if($infoBancaria['rfc_emisor_cta_ben'] || $infoBancaria['cta_beneficiario'])
+                <tr>
+                    <th>RFC Banco Beneficiario:</th>
+                    <td>{{ $infoBancaria['rfc_emisor_cta_ben'] ?? '—' }}</td>
+                    <th>Cuenta Beneficiaria:</th>
+                    <td>{{ $infoBancaria['cta_beneficiario'] ?? '—' }}</td>
+                </tr>
+                @endif
+            </tbody>
+        </table>
+    @endif
 
     @if($tieneIva)
         <div class="bar" style="margin-top: 6px;">Impuestos del Pago (Traslados)</div>
@@ -261,11 +303,11 @@
     {{-- SELLOS Y QR --}}
     @if($timbreFiscal)
         <div class="sello-bar">Sello Digital del Emisor</div>
-        <div class="sello-text">{{ $timbreFiscal['sello_cfd'] ?? '' }}</div>
+        <div class="sello-text">{{ $timbreFiscal['sello'] ?? '' }}</div>
         <div class="sello-bar" style="margin-top: 3px;">Sello Digital del SAT</div>
         <div class="sello-text">{{ $timbreFiscal['sello_sat'] ?? '' }}</div>
         <div class="sello-bar" style="margin-top: 3px;">Cadena Original del Complemento de Certificaci&oacute;n Digital del SAT</div>
-        <div class="sello-text">||{{ $timbreFiscal['version'] ?? '1.1' }}|{{ $complemento->uuid }}|{{ $complemento->fecha_timbrado ? \Carbon\Carbon::parse($complemento->fecha_timbrado)->format('Y-m-d\TH:i:s') : '' }}|{{ $timbreFiscal['rfc_prov_certif'] ?? '' }}|{{ $timbreFiscal['sello_cfd'] ?? '' }}|{{ $timbreFiscal['no_certificado_sat'] ?? '' }}||</div>
+        <div class="sello-text">||1.1|{{ $complemento->uuid }}|{{ $complemento->fecha_timbrado ? \Carbon\Carbon::parse($complemento->fecha_timbrado)->format('Y-m-d\TH:i:s') : '' }}|{{ $timbreFiscal['rfc_certifico'] ?? '' }}|{{ $timbreFiscal['sello'] ?? '' }}|{{ $timbreFiscal['num_certificado_sat'] ?? '' }}||</div>
     @endif
 
     @if($qrBase64)

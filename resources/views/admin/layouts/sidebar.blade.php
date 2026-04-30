@@ -102,6 +102,9 @@
                         <a class="nav-link" href="{{ route('admin.cfdi.config') }}"><i class="fa fa-cog"></i> Configuración</a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="{{ route('admin.bank-accounts.page') }}"><i class="fa fa-university"></i> Cuentas Bancarias</a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="{{ route('admin.cfdi.facturas') }}"><i class="fa fa-list-alt"></i> Facturas Emitidas</a>
                     </li>
                 </ul>

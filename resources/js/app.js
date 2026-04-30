@@ -55,6 +55,7 @@ import AiSettingsComponent from './components/admin/AiSettingsComponent.vue';
 import AiIndexingComponent from './components/admin/AiIndexingComponent.vue';
 import CfdiConfigComponent from './components/admin/CfdiConfigComponent.vue';
 import CfdiFacturasComponent from './components/admin/CfdiFacturasComponent.vue';
+import ShopBankAccountsComponent from './components/admin/ShopBankAccountsComponent.vue';
 import ReceiptSettingsComponent from './components/admin/ReceiptSettingsComponent.vue';
 import ServiceTrackingConfigComponent from './components/admin/ServiceTrackingConfigComponent.vue';
 
@@ -101,6 +102,7 @@ app.component('ai-settings-component', AiSettingsComponent);
 app.component('ai-indexing-component', AiIndexingComponent);
 app.component('cfdi-config-component', CfdiConfigComponent);
 app.component('cfdi-facturas-component', CfdiFacturasComponent);
+app.component('shop-bank-accounts-component', ShopBankAccountsComponent);
 app.component('receipt-settings-component', ReceiptSettingsComponent);
 app.component('service-tracking-config-component', ServiceTrackingConfigComponent);
 app.component('users-component', AdminUsersComponent);

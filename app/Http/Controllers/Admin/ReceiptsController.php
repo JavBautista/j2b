@@ -892,6 +892,17 @@ class ReceiptsController extends Controller
             ->with('partialPayments')
             ->findOrFail($id);
 
+        // Validación campos opcionales por-abono (Pagos 2.0)
+        $request->validate([
+            'amount'                => 'required|numeric|min:0.01',
+            'payment_method'        => 'nullable|string|in:01,02,03,04,05,06,28,29,99',
+            'shop_bank_account_id'  => 'nullable|integer|exists:shop_bank_accounts,id',
+            'bank_ord_code'         => 'nullable|string|max:10',
+            'cta_ordenante'         => ['nullable','string','max:50','regex:/^[A-Z0-9_]{10,50}$/i'],
+            'is_foreign_bank_ord'   => 'nullable|boolean',
+            'num_operacion'         => 'nullable|string|max:100',
+        ]);
+
         $suma_actual = $receipt->partialPayments->sum('amount');
         $nueva_suma = $suma_actual + $request->amount;
 
@@ -903,6 +914,12 @@ class ReceiptsController extends Controller
         $payment->amount = $request->amount;
         $payment->payment_type = $payment_type;
         $payment->payment_date = now();
+        $payment->payment_method = $request->payment_method ?? '99';
+        $payment->shop_bank_account_id = $request->shop_bank_account_id;
+        $payment->bank_ord_code = $request->bank_ord_code;
+        $payment->cta_ordenante = $request->cta_ordenante ? strtoupper($request->cta_ordenante) : null;
+        $payment->is_foreign_bank_ord = (bool) $request->is_foreign_bank_ord;
+        $payment->num_operacion = $request->num_operacion;
         $payment->save();
 
         // Actualizar receipt

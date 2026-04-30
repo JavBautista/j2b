@@ -901,10 +901,26 @@ class CfdiInvoiceController extends Controller
             } catch (\Exception $e) {}
         }
 
+        // Datos del documento relacionado (moneda y tipo de cambio reales del payload)
+        $doctoRel = $pago['docto_relacionado'][0] ?? [];
+        $monedaDr = $doctoRel['moneda_dr'] ?? ($invoice->moneda ?? 'MXN');
+        $equivalenciaDr = (float) ($doctoRel['equivalencia_dr'] ?? 1);
+
+        // Información bancaria del pago (presente solo si forma bancarizada)
+        $infoBancaria = [
+            'num_operacion'        => $pago['num_operacion'] ?? null,
+            'rfc_emisor_cta_ord'   => $pago['rfc_emisor_cta_ord'] ?? null,
+            'nom_banco_ord_ext'    => $pago['nom_banco_ord_ext'] ?? null,
+            'cta_ordenante'        => $pago['cta_ordenante'] ?? null,
+            'rfc_emisor_cta_ben'   => $pago['rfc_emisor_cta_ben'] ?? null,
+            'cta_beneficiario'     => $pago['cta_beneficiario'] ?? null,
+        ];
+        $tieneInfoBancaria = (bool) array_filter($infoBancaria, fn($v) => $v !== null && $v !== '');
+
         // QR SAT (mismo formato que factura)
         $qrBase64 = null;
         if ($complemento->uuid && $emisor) {
-            $sello = $timbreFiscal['sello'] ?? $timbreFiscal['sello_cfd'] ?? '';
+            $sello = $timbreFiscal['sello'] ?? '';
             $fe = substr($sello, -8);
             $totalFormatted = str_pad('0.000000', 24, '0', STR_PAD_LEFT);
             $qrUrl = "https://verificacfdi.facturaelectronica.sat.gob.mx/default.aspx"
@@ -935,6 +951,10 @@ class CfdiInvoiceController extends Controller
             'taxRate' => $taxRate,
             'fechaPagoFmt' => $fechaPagoFmt,
             'qrBase64' => $qrBase64,
+            'monedaDr' => $monedaDr,
+            'equivalenciaDr' => $equivalenciaDr,
+            'infoBancaria' => $infoBancaria,
+            'tieneInfoBancaria' => $tieneInfoBancaria,
         ])->setPaper('letter', 'portrait');
 
         return $pdf->output();

@@ -477,15 +477,16 @@
 
                     <!-- Modal Agregar Abono -->
                     <div v-if="showModalAbono" class="modal d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
-                        <div class="modal-dialog modal-sm modal-dialog-centered">
+                        <div class="modal-dialog modal-md modal-dialog-centered modal-dialog-scrollable">
                             <div class="modal-content">
-                                <div class="modal-header py-2">
+                                <div class="modal-header py-2 bg-success text-white">
                                     <h6 class="modal-title"><i class="fa fa-money me-2"></i>Agregar Abono</h6>
-                                    <button type="button" class="btn-close" @click="showModalAbono = false"></button>
+                                    <button type="button" class="btn-close btn-close-white" @click="showModalAbono = false"></button>
                                 </div>
                                 <div class="modal-body">
-                                    <label class="form-label small">Monto del abono</label>
-                                    <div class="input-group">
+                                    <!-- Monto -->
+                                    <label class="form-label small">Monto del abono <span class="text-danger">*</span></label>
+                                    <div class="input-group mb-2">
                                         <span class="input-group-text">$</span>
                                         <input
                                             ref="inputAbono"
@@ -495,10 +496,64 @@
                                             min="0.01"
                                             :max="adeudo"
                                             step="0.01"
-                                            @keyup.enter="agregarAbono"
                                         >
                                     </div>
-                                    <small class="text-muted">Adeudo actual: {{ formatCurrency(adeudo) }}</small>
+                                    <small class="text-muted d-block mb-3">Adeudo actual: {{ formatCurrency(adeudo) }}</small>
+
+                                    <!-- Forma de pago SAT -->
+                                    <label class="form-label small">Forma de pago <span class="text-danger">*</span></label>
+                                    <select class="form-select form-select-sm mb-3" v-model="nuevoAbono.payment_method">
+                                        <option value="01">01 — Efectivo</option>
+                                        <option value="02">02 — Cheque nominativo</option>
+                                        <option value="03">03 — Transferencia electrónica</option>
+                                        <option value="04">04 — Tarjeta de crédito</option>
+                                        <option value="05">05 — Monedero electrónico</option>
+                                        <option value="06">06 — Dinero electrónico</option>
+                                        <option value="28">28 — Tarjeta de débito</option>
+                                        <option value="29">29 — Tarjeta de servicios</option>
+                                        <option value="99">99 — Por definir</option>
+                                    </select>
+
+                                    <!-- Bloque condicional bancarizado -->
+                                    <div v-if="abonoEsBancarizado" class="border rounded p-2 bg-light mb-2">
+                                        <div class="text-muted small mb-2">
+                                            <i class="fa fa-university"></i> Información bancaria (opcional, para complemento de pago)
+                                        </div>
+
+                                        <!-- Cuenta beneficiaria (cuál cuenta de la tienda recibió) -->
+                                        <label class="form-label small mb-1">Cuenta que recibió el pago</label>
+                                        <select class="form-select form-select-sm mb-2" v-model="nuevoAbono.shop_bank_account_id">
+                                            <option :value="null">— Usar cuenta predeterminada —</option>
+                                            <option v-for="c in cuentasBancarias" :key="c.id" :value="c.id">
+                                                {{ c.alias }} — {{ c.bank_name }}
+                                            </option>
+                                        </select>
+                                        <div v-if="cuentasBancarias.length === 0" class="alert alert-warning py-1 px-2 small mb-2">
+                                            <i class="fa fa-info-circle"></i> No tienes cuentas bancarias configuradas.
+                                            <a href="/admin/configuracion/cuentas-bancarias" target="_blank">Configurarlas</a>.
+                                        </div>
+
+                                        <!-- Banco ordenante (cliente) -->
+                                        <label class="form-label small mb-1">Banco del cliente</label>
+                                        <select class="form-select form-select-sm mb-2" v-model="nuevoAbono.bank_ord_code">
+                                            <option value="">— No especificar —</option>
+                                            <option v-for="b in bancosOrdenantes" :key="b.code" :value="b.code">
+                                                {{ b.code }} — {{ b.name }}
+                                            </option>
+                                        </select>
+                                        <div v-if="nuevoAbono.bank_ord_code === '999'" class="form-check form-check-inline mb-2">
+                                            <input class="form-check-input" type="checkbox" id="chkExtranjero" v-model="nuevoAbono.is_foreign_bank_ord">
+                                            <label class="form-check-label small" for="chkExtranjero">Banco extranjero (XEXX010101000)</label>
+                                        </div>
+
+                                        <!-- Cuenta ordenante -->
+                                        <label class="form-label small mb-1">Cuenta del cliente (opcional)</label>
+                                        <input type="text" class="form-control form-control-sm mb-2" v-model="nuevoAbono.cta_ordenante" maxlength="50" placeholder="10-50 caracteres alfanuméricos">
+
+                                        <!-- Núm operación -->
+                                        <label class="form-label small mb-1">Núm. de operación / referencia</label>
+                                        <input type="text" class="form-control form-control-sm" v-model="nuevoAbono.num_operacion" maxlength="100" placeholder="Ej. SPEI-20260429-001">
+                                    </div>
                                 </div>
                                 <div class="modal-footer py-2">
                                     <button class="btn btn-secondary btn-sm" @click="showModalAbono = false">Cancelar</button>
@@ -908,9 +963,19 @@ export default {
 
             // Pagos parciales
             showModalAbono: false,
-            nuevoAbono: { amount: 0 },
+            nuevoAbono: this.crearAbonoVacio(),
             agregandoAbono: false,
             eliminandoAbono: false,
+            cuentasBancarias: [],
+            bancosOrdenantes: [
+                { code: '002', name: 'Banamex (Citibanamex)' },
+                { code: '012', name: 'BBVA México' },
+                { code: '014', name: 'Santander' },
+                { code: '021', name: 'HSBC' },
+                { code: '044', name: 'Scotiabank' },
+                { code: '072', name: 'Banorte' },
+                { code: '999', name: 'Otro / Extranjero' },
+            ],
 
             // Acciones rápidas
             accionEnProceso: false
@@ -925,6 +990,9 @@ export default {
         },
         isViewMode() {
             return this.receiptId !== null && this.readOnly;
+        },
+        abonoEsBancarizado() {
+            return ['02','03','04','05','06','28','29'].includes(this.nuevoAbono.payment_method);
         },
         puedeGuardar() {
             return this.client && this.items.length > 0;
@@ -1805,9 +1873,49 @@ export default {
         },
 
         // ==================== PAGOS PARCIALES / ABONOS ====================
+        crearAbonoVacio() {
+            return {
+                amount: 0,
+                payment_method: '01',
+                shop_bank_account_id: null,
+                bank_ord_code: '',
+                cta_ordenante: '',
+                is_foreign_bank_ord: false,
+                num_operacion: '',
+            };
+        },
+
+        async cargarCuentasBancariasShop() {
+            // Solo carga una vez por sesión del componente
+            if (this.cuentasBancarias.length > 0) return;
+            try {
+                const res = await axios.get('/admin/configuracion/cuentas-bancarias/data');
+                if (res.data.ok) {
+                    this.cuentasBancarias = (res.data.accounts || []).filter(c => c.is_active);
+                }
+            } catch (e) {
+                // Silencioso: el aviso "no hay cuentas" ya cubre el caso de fallo
+                console.warn('No se pudieron cargar las cuentas bancarias.', e);
+            }
+        },
+
+        mapearFormaPagoReceipt(payment) {
+            const m = String(payment || '').trim().toUpperCase();
+            return ({
+                'EFECTIVO': '01',
+                'CHEQUE': '02',
+                'TRANSFERENCIA': '03',
+                'TARJETA': '04',
+            })[m] || '01';
+        },
+
         abrirModalAbono() {
+            this.nuevoAbono = this.crearAbonoVacio();
             this.nuevoAbono.amount = this.adeudo;
+            // Forma de pago default: la de la nota original (mapeada a SAT)
+            this.nuevoAbono.payment_method = this.mapearFormaPagoReceipt(this.receipt.payment);
             this.showModalAbono = true;
+            this.cargarCuentasBancariasShop();
             this.$nextTick(() => {
                 if (this.$refs.inputAbono) {
                     this.$refs.inputAbono.focus();
@@ -1821,12 +1929,23 @@ export default {
 
             this.agregandoAbono = true;
             try {
-                const response = await axios.post(`/admin/receipts/${this.receiptId}/partial-payment`, {
-                    amount: this.nuevoAbono.amount
-                });
+                // Solo enviar campos bancarios si la forma es bancarizada
+                const bancarizada = ['02','03','04','05','06','28','29'].includes(this.nuevoAbono.payment_method);
+                const payload = {
+                    amount: this.nuevoAbono.amount,
+                    payment_method: this.nuevoAbono.payment_method,
+                };
+                if (bancarizada) {
+                    if (this.nuevoAbono.shop_bank_account_id) payload.shop_bank_account_id = this.nuevoAbono.shop_bank_account_id;
+                    if (this.nuevoAbono.bank_ord_code) payload.bank_ord_code = this.nuevoAbono.bank_ord_code;
+                    if (this.nuevoAbono.cta_ordenante) payload.cta_ordenante = this.nuevoAbono.cta_ordenante;
+                    if (this.nuevoAbono.is_foreign_bank_ord) payload.is_foreign_bank_ord = true;
+                    if (this.nuevoAbono.num_operacion) payload.num_operacion = this.nuevoAbono.num_operacion;
+                }
+                const response = await axios.post(`/admin/receipts/${this.receiptId}/partial-payment`, payload);
                 if (response.data.ok) {
                     this.showModalAbono = false;
-                    this.nuevoAbono.amount = 0;
+                    this.nuevoAbono = this.crearAbonoVacio();
                     // Actualizar receiptOriginal con datos frescos del server
                     this.receiptOriginal = response.data.receipt;
                     this.receipt.received = response.data.receipt.received;

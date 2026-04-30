@@ -213,6 +213,51 @@
             </table>
         @endif
 
+        @if(isset($bankAccounts) && $bankAccounts->count() > 0)
+            <!-- Datos para depósito (cuentas bancarias activas de la tienda) -->
+            <div style="margin-top: 14px; padding: 8px 10px; border: 1px solid #c6d3df; background-color: #f4f8fc; font-size: 9px;">
+                <div style="font-weight: bold; color: #1a4d8f; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; font-size: 9px;">
+                    Datos para Dep&oacute;sito o Transferencia
+                </div>
+                <table style="width: 100%; border-collapse: collapse; font-size: 8.5px;">
+                    <thead>
+                        <tr style="background-color: #e3ecf5; color: #1a4d8f;">
+                            <th style="padding: 3px 5px; text-align: left; border-bottom: 1px solid #c6d3df;">Banco</th>
+                            <th style="padding: 3px 5px; text-align: left; border-bottom: 1px solid #c6d3df;">Titular</th>
+                            <th style="padding: 3px 5px; text-align: left; border-bottom: 1px solid #c6d3df;">CLABE</th>
+                            @if($bankAccounts->contains(fn($c) => !empty($c->account_number)))
+                            <th style="padding: 3px 5px; text-align: left; border-bottom: 1px solid #c6d3df;">N&uacute;m. Cuenta</th>
+                            @endif
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($bankAccounts as $cuenta)
+                        <tr>
+                            <td style="padding: 3px 5px; border-bottom: 1px dotted #d4dde6;">
+                                {{ $cuenta->bank_name }}
+                                @if($cuenta->is_default)
+                                    <span style="color: #fff; background-color: #2c7a40; padding: 1px 5px; border-radius: 3px; font-size: 7px; font-weight: bold; letter-spacing: 0.3px;">PRINCIPAL</span>
+                                @endif
+                            </td>
+                            <td style="padding: 3px 5px; border-bottom: 1px dotted #d4dde6;">{{ $cuenta->holder_name }}</td>
+                            <td style="padding: 3px 5px; border-bottom: 1px dotted #d4dde6; font-family: 'Courier New', monospace;">
+                                {{ chunk_split($cuenta->clabe, 4, ' ') }}
+                            </td>
+                            @if($bankAccounts->contains(fn($c) => !empty($c->account_number)))
+                            <td style="padding: 3px 5px; border-bottom: 1px dotted #d4dde6; font-family: 'Courier New', monospace;">
+                                {{ $cuenta->account_number ?? '—' }}
+                            </td>
+                            @endif
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+                <div style="margin-top: 4px; font-size: 7.5px; color: #666; font-style: italic;">
+                    Al realizar el dep&oacute;sito, env&iacute;a tu comprobante con el folio de esta nota.
+                </div>
+            </div>
+        @endif
+
         <!-- Footer J2Biznes -->
         <div style="position: fixed; bottom: 10px; left: 0; right: 0; text-align: center;">
             <p style="font-size: 9px; color: #999; margin: 0;">

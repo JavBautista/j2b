@@ -59,6 +59,11 @@
                             <i class="fa fa-search"></i>
                         </button>
                     </div>
+                    <div v-if="hayFiltrosActivos" class="col-md-2 d-flex align-items-end">
+                        <button class="btn btn-outline-secondary w-100" @click="limpiarFiltros" title="Limpiar todos los filtros">
+                            <i class="fa fa-times me-1"></i> Limpiar filtros
+                        </button>
+                    </div>
                 </div>
                 <!-- Filtros de campos extras -->
                 <div v-if="extraFilterFields.length > 0" class="row g-3 mt-1">
@@ -343,6 +348,12 @@ export default {
         }
     },
     computed: {
+        hayFiltrosActivos() {
+            const f = this.filtros;
+            const algunoEnFiltros = !!(f.buscar || f.buscar_articulo || f.tipo || f.status || f.origen || f.fecha_desde || f.fecha_hasta);
+            const algunoEnExtras = Object.values(this.extraFilters).some(v => v && v.trim() !== '');
+            return algunoEnFiltros || algunoEnExtras;
+        },
         paginationPages() {
             const pages = [];
             const current = this.pagination.current_page;
@@ -358,12 +369,40 @@ export default {
         }
     },
     mounted() {
+        this.restaurarFiltros();
         this.cargarFilterableFields();
         this.cargarReceipts();
     },
     methods: {
+        restaurarFiltros() {
+            try {
+                const saved = sessionStorage.getItem('admin_receipts_filtros');
+                if (!saved) return;
+                const data = JSON.parse(saved);
+                if (data.filtros) Object.assign(this.filtros, data.filtros);
+                if (data.extraFilters) Object.assign(this.extraFilters, data.extraFilters);
+                if (data.page) this.pagination.current_page = data.page;
+            } catch (e) { /* storage corrupto, ignorar */ }
+        },
+        guardarFiltros() {
+            try {
+                sessionStorage.setItem('admin_receipts_filtros', JSON.stringify({
+                    filtros: this.filtros,
+                    extraFilters: this.extraFilters,
+                    page: this.pagination.current_page,
+                }));
+            } catch (e) { /* sin acceso a storage, no romper UX */ }
+        },
+        limpiarFiltros() {
+            this.filtros = { buscar: '', buscar_articulo: '', tipo: '', status: '', origen: '', fecha_desde: '', fecha_hasta: '' };
+            Object.keys(this.extraFilters).forEach(k => this.extraFilters[k] = '');
+            this.pagination.current_page = 1;
+            sessionStorage.removeItem('admin_receipts_filtros');
+            this.cargarReceipts();
+        },
         async cargarReceipts() {
             this.loading = true;
+            this.guardarFiltros();
             try {
                 const params = new URLSearchParams({
                     page: this.pagination.current_page,

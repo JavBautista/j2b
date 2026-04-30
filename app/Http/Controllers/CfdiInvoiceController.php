@@ -566,6 +566,78 @@ class CfdiInvoiceController extends Controller
     }
 
     /**
+     * Descarga pública XML/PDF de un complemento de pago (sin autenticación).
+     * Ruta web: /print-cfdi-complemento/{id}/{formato}
+     * Mismo patrón que /print-cfdi/{id}/{formato}.
+     */
+    public function descargarComplementoPublic($id, $formato)
+    {
+        $complemento = CfdiPagoComplemento::find($id);
+        if (!$complemento) {
+            abort(404, 'Complemento no encontrado');
+        }
+        if (!in_array($formato, ['xml', 'pdf'])) {
+            abort(422, 'Formato no válido');
+        }
+        if (!$complemento->uuid) {
+            abort(422, 'El complemento no tiene UUID (no fue timbrado).');
+        }
+
+        $contentType = $formato === 'xml' ? 'application/xml' : 'application/pdf';
+        $filename = "complemento_{$complemento->serie}{$complemento->folio}.{$formato}";
+        $pathColumn = "{$formato}_path";
+
+        if ($complemento->$pathColumn && Storage::disk('cfdi')->exists($complemento->$pathColumn)) {
+            $content = Storage::disk('cfdi')->get($complemento->$pathColumn);
+            return response($content)
+                ->header('Content-Type', $contentType)
+                ->header('Content-Disposition', "inline; filename=\"{$filename}\"");
+        }
+
+        try {
+            if ($formato === 'pdf') {
+                $adminCtrl = new \App\Http\Controllers\Admin\CfdiInvoiceController();
+                $content = $adminCtrl->generarPdfComplemento($complemento);
+                $path = "{$complemento->shop_id}/complementos/{$complemento->uuid}.pdf";
+                try {
+                    Storage::disk('cfdi')->put($path, $content);
+                    $complemento->update(['pdf_path' => $path]);
+                } catch (\Exception $e) {
+                    Log::warning('No se pudo cachear PDF complemento (public)', ['complemento_id' => $id, 'error' => $e->getMessage()]);
+                }
+            } else {
+                $hubService = new HubCfdiService();
+                $result = $hubService->descargar($complemento->uuid, 'xml');
+                if (!$result['success']) {
+                    abort(500, 'Error al descargar XML');
+                }
+                $base64 = $result['data']['archivo'] ?? $result['data']['base64'] ?? null;
+                if (!$base64) {
+                    abort(500, 'No se recibió el XML de la API');
+                }
+                $content = base64_decode($base64);
+                $path = "{$complemento->shop_id}/complementos/{$complemento->uuid}.xml";
+                try {
+                    Storage::disk('cfdi')->put($path, $content);
+                    $complemento->update(['xml_path' => $path]);
+                } catch (\Exception $e) {
+                    Log::warning('No se pudo cachear XML complemento (public)', ['complemento_id' => $id, 'error' => $e->getMessage()]);
+                }
+            }
+            return response($content)
+                ->header('Content-Type', $contentType)
+                ->header('Content-Disposition', "inline; filename=\"{$filename}\"");
+        } catch (\Exception $e) {
+            Log::error('Complemento Public Descarga error', [
+                'complemento_id' => $id,
+                'formato' => $formato,
+                'error' => $e->getMessage(),
+            ]);
+            abort(500, 'Error al descargar');
+        }
+    }
+
+    /**
      * Re-emitir complemento failed.
      * POST /api/auth/cfdi/complemento/{id}/reemitir
      */

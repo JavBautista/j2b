@@ -80,6 +80,8 @@ Route::get('/print-receipt-rent', [ReceiptController::class, 'printReceiptRent']
 Route::get('/print-purchase-order', [PurchaseOrderController::class, 'printPurchaseOrder']);
 Route::get('/print-contract', [ContractController::class, 'printContract']);
 Route::get('/print-cfdi/{id}/{formato}', [\App\Http\Controllers\CfdiInvoiceController::class, 'descargarPublic']);
+Route::get('/print-cfdi-complemento/{id}/{formato}', [\App\Http\Controllers\CfdiInvoiceController::class, 'descargarComplementoPublic']);
+Route::get('/print-consignment', [\App\Http\Controllers\RentConsignmentController::class, 'printPublic']);
 Route::get('/print-task-checklist', [TaskController::class, 'printChecklistPdf']);
 Route::get('/print-task-reception', [TaskController::class, 'printReceptionPdf']);
 Route::get('/service-tracking/{trackingCode}', [\App\Http\Controllers\PublicServiceTrackingController::class, 'show'])->name('public.service-tracking');

@@ -136,6 +136,43 @@ class RentConsignmentController extends Controller
             ->header('Content-Disposition', "inline; filename=\"{$filename}\"");
     }
 
+    /**
+     * Descarga pública del PDF de la consigna (sin autenticación).
+     * Ruta web: /print-consignment?id=X
+     * Mismo patrón que /print-receipt-rent.
+     */
+    public function printPublic(Request $request)
+    {
+        if (!$request->has('id')) {
+            abort(404, 'Consigna no encontrada.');
+        }
+
+        $cons = RentConsignment::find($request->id);
+        if (!$cons) {
+            abort(404, 'Consigna no encontrada.');
+        }
+
+        $service = new RentConsignmentService();
+
+        if ($cons->pdf_path && Storage::disk('consignments')->exists($cons->pdf_path)) {
+            $content = Storage::disk('consignments')->get($cons->pdf_path);
+        } else {
+            try {
+                $path = $service->generarYGuardarPdf($cons);
+                $cons->pdf_path = $path;
+                $cons->save();
+                $content = Storage::disk('consignments')->get($path);
+            } catch (\Throwable $e) {
+                abort(500, 'Error al generar PDF: ' . $e->getMessage());
+            }
+        }
+
+        $filename = "consigna_{$cons->folioCompleto()}.pdf";
+        return response($content)
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', "inline; filename=\"{$filename}\"");
+    }
+
     public function subirFirma(Request $request, $id)
     {
         $request->validate([

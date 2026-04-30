@@ -340,6 +340,7 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::get('/admin/facturacion/descargar/{id}/{formato}', [App\Http\Controllers\Admin\CfdiInvoiceController::class, 'descargar']);
 
         // Facturación CFDI - Complementos de pago (PPD)
+        Route::get('/admin/facturacion/receipt/{receiptId}/abonos-previos-pendientes', [App\Http\Controllers\Admin\CfdiInvoiceController::class, 'abonosPreviosPendientes']);
         Route::get('/admin/facturacion/nota/{receiptId}/complementos', [App\Http\Controllers\Admin\CfdiInvoiceController::class, 'listarComplementos']);
         Route::get('/admin/facturacion/complemento/{id}/descargar/{formato}', [App\Http\Controllers\Admin\CfdiInvoiceController::class, 'descargarComplemento']);
         Route::post('/admin/facturacion/complemento/{id}/reemitir', [App\Http\Controllers\Admin\CfdiInvoiceController::class, 'reemitirComplemento']);

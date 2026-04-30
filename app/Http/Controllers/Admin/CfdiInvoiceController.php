@@ -244,6 +244,19 @@ class CfdiInvoiceController extends Controller
             return response()->json(['ok' => false, 'message' => 'No se puede facturar una nota con total $0 (cortesía total).'], 422);
         }
 
+        // Si va a ser PPD y tiene abonos previos sin forma SAT real, exigir decisión del usuario
+        $esPPD = (float) $receipt->received < (float) $receipt->total;
+        if ($esPPD) {
+            $abonosPendientes = $receipt->getAbonosPreviosPendientesMetodo();
+            if ($abonosPendientes->count() > 0) {
+                $abonosPrevios = $request->input('abonos_previos');
+                $errorPayload = $this->validarAbonosPrevios($abonosPrevios, $abonosPendientes);
+                if ($errorPayload) {
+                    return response()->json($errorPayload, 422);
+                }
+            }
+        }
+
         // Delegar al servicio compartido (misma lógica para web admin y API Ionic)
         $service = new CfdiTimbradoService();
         $result = $service->emitir($receipt, $shop, $emisor, [
@@ -256,6 +269,7 @@ class CfdiInvoiceController extends Controller
             'metodo_pago' => $request->metodo_pago,
             'conceptos_sat' => $request->conceptos_sat ?? [],
             'guardar_datos_cliente' => (bool) $request->guardar_datos_cliente,
+            'abonos_previos' => $request->input('abonos_previos'),
         ]);
 
         if (!$result['ok']) {
@@ -477,6 +491,64 @@ class CfdiInvoiceController extends Controller
     }
 
     /**
+     * Valida el payload abonos_previos cuando una nota PPD tiene abonos sin forma SAT.
+     * Devuelve null si OK, o un array de error 422 con detalle del problema.
+     *
+     * @param mixed                                    $abonosPrevios input del request (puede ser null/array)
+     * @param \Illuminate\Database\Eloquent\Collection $abonosPendientes lista de partial_payments que requieren decisión
+     */
+    public function validarAbonosPrevios($abonosPrevios, $abonosPendientes): ?array
+    {
+        if (!is_array($abonosPrevios) || empty($abonosPrevios['estrategia'])) {
+            return [
+                'ok' => false,
+                'message' => 'Esta nota tiene abonos previos sin forma de pago. Debes decidir qué hacer con ellos antes de timbrar.',
+                'requiere_decision' => true,
+                'abonos_pendientes' => $abonosPendientes->map(fn($a) => [
+                    'id' => $a->id,
+                    'amount' => (float) $a->amount,
+                    'payment_date' => $a->payment_date,
+                    'payment_type' => $a->payment_type,
+                ])->values(),
+            ];
+        }
+
+        $estrategia = $abonosPrevios['estrategia'];
+
+        if ($estrategia === 'consolidar') {
+            $consolidado = $abonosPrevios['consolidado'] ?? null;
+            if (!is_array($consolidado) || empty($consolidado['payment_method'])) {
+                return ['ok' => false, 'message' => 'Falta payment_method en abonos_previos.consolidado'];
+            }
+            if ($consolidado['payment_method'] === '99') {
+                return ['ok' => false, 'message' => 'El SAT rechaza forma de pago 99 en complementos. Elige una forma específica.'];
+            }
+            return null;
+        }
+
+        if ($estrategia === 'separar') {
+            $asignaciones = collect($abonosPrevios['asignaciones'] ?? [])->keyBy('partial_payment_id');
+            $faltan = [];
+            foreach ($abonosPendientes as $a) {
+                $asig = $asignaciones->get($a->id);
+                if (!$asig || empty($asig['payment_method']) || $asig['payment_method'] === '99') {
+                    $faltan[] = $a->id;
+                }
+            }
+            if (count($faltan) > 0) {
+                return [
+                    'ok' => false,
+                    'message' => 'Faltan asignaciones de forma de pago para algunos abonos previos.',
+                    'partial_payment_ids_sin_asignar' => $faltan,
+                ];
+            }
+            return null;
+        }
+
+        return ['ok' => false, 'message' => "Estrategia inválida: {$estrategia}. Usa 'separar' o 'consolidar'."];
+    }
+
+    /**
      * Genera el PDF de una factura CFDI usando dompdf.
      * Retorna el contenido binario del PDF.
      */
@@ -695,6 +767,36 @@ class CfdiInvoiceController extends Controller
         }
 
         return $texto . ' PESOS ' . str_pad($centavos, 2, '0', STR_PAD_LEFT) . '/100';
+    }
+
+    /**
+     * Listar abonos previos al timbrado PPD que aún no tienen forma de pago SAT.
+     * El frontend usa esta lista para decidir si abrir el diálogo de "estrategia"
+     * (separar vs consolidar) antes de timbrar.
+     * GET /admin/facturacion/receipt/{receiptId}/abonos-previos-pendientes
+     */
+    public function abonosPreviosPendientes($receiptId)
+    {
+        $shop = auth()->user()->shop;
+
+        $receipt = Receipt::where('shop_id', $shop->id)->find($receiptId);
+        if (!$receipt) {
+            return response()->json(['ok' => false, 'message' => 'Nota no encontrada'], 404);
+        }
+
+        $abonos = $receipt->getAbonosPreviosPendientesMetodo();
+
+        return response()->json([
+            'ok' => true,
+            'requiere_decision' => $abonos->count() > 0,
+            'abonos' => $abonos->map(fn($a) => [
+                'id' => $a->id,
+                'amount' => (float) $a->amount,
+                'payment_date' => $a->payment_date,
+                'payment_type' => $a->payment_type,
+                'payment_method' => $a->payment_method,
+            ])->values(),
+        ]);
     }
 
     /**

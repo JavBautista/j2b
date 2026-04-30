@@ -317,6 +317,287 @@ class CfdiComplementoPagoService
     }
 
     /**
+     * Emite UN solo complemento de pago que abarca varios abonos previos.
+     * Usado cuando el usuario timbra una nota PPD con abonos previos y elige
+     * la estrategia "consolidar" (en lugar de "separar" con un complemento por abono).
+     *
+     * @param Receipt                  $receipt          Nota con cfdiInvoice cargado
+     * @param \Illuminate\Support\Collection $abonos     Colección de PartialPayments a consolidar (>= 1)
+     * @param array                    $datos            Decisión del usuario:
+     *   - payment_method (string requerido): forma SAT del pago consolidado
+     *   - fecha_pago (string opcional ISO): fecha del consolidado, default = la del último abono
+     *   - shop_bank_account_id, bank_ord_code, cta_ordenante, is_foreign_bank_ord, num_operacion (opcionales)
+     * @param int                      $numParcialidad   Número de parcialidad del complemento
+     */
+    public function emitirConsolidado(Receipt $receipt, \Illuminate\Support\Collection $abonos, array $datos, int $numParcialidad): array
+    {
+        $invoice = $receipt->cfdiInvoice;
+
+        if (!$invoice || $invoice->tipo_comprobante !== 'I' || $invoice->metodo_pago !== 'PPD' || $invoice->status !== 'vigente') {
+            return ['ok' => false, 'complemento' => null, 'message' => 'La nota no tiene una factura PPD vigente.'];
+        }
+        if ($abonos->isEmpty()) {
+            return ['ok' => false, 'complemento' => null, 'message' => 'No hay abonos para consolidar.'];
+        }
+        if (empty($datos['payment_method'])) {
+            return ['ok' => false, 'complemento' => null, 'message' => 'Falta payment_method para el complemento consolidado.'];
+        }
+
+        $shop = $receipt->shop;
+        $emisor = CfdiEmisor::where('shop_id', $receipt->shop_id)->where('is_registered', true)->first();
+
+        if (!$emisor) {
+            return ['ok' => false, 'complemento' => null, 'message' => 'No hay emisor CFDI registrado para esta tienda.'];
+        }
+        if ($emisor->timbresDisponibles() <= 0) {
+            return ['ok' => false, 'complemento' => null, 'message' => 'No hay timbres disponibles para emitir el complemento.'];
+        }
+
+        $fmt = fn($n) => number_format((float) $n, 2, '.', '');
+
+        // === Calcular saldos consolidados ===
+        $impSaldoAnt = round($invoice->saldoInsoluto(), 2);
+        $impPagado = round((float) $abonos->sum('amount'), 2);
+
+        if ($impPagado <= 0) {
+            return ['ok' => false, 'complemento' => null, 'message' => 'La suma de abonos debe ser mayor a cero.'];
+        }
+        if ($impPagado > $impSaldoAnt) {
+            return ['ok' => false, 'complemento' => null, 'message' => "La suma ({$impPagado}) excede el saldo insoluto ({$impSaldoAnt})."];
+        }
+
+        $impSaldoInsoluto = round($impSaldoAnt - $impPagado, 2);
+
+        // Abono representativo (legacy partial_payment_id) y array de IDs consolidados
+        $abonoPrimero = $abonos->first();
+        $consolidatedIds = $abonos->pluck('id')->values()->all();
+
+        // Fecha de pago: la que mande el front, o la del último abono
+        $fechaPagoSrc = $datos['fecha_pago']
+            ?? optional($abonos->sortByDesc('payment_date')->first())->payment_date
+            ?? Carbon::now('America/Mexico_City');
+
+        $folio = null;
+        $complemento = null;
+
+        try {
+            $folio = $emisor->siguienteFolioComplemento();
+            $fechaEmision = Carbon::now('America/Mexico_City')->format('Y-m-d H:i:s');
+            $fechaPago = Carbon::parse($fechaPagoSrc, 'America/Mexico_City')->format('Y-m-d\TH:i:s');
+
+            $formaPago = $datos['payment_method'];
+            $esBancarizada = in_array($formaPago, ['02','03','04','05','06','28','29'], true);
+
+            $moneda = $shop->getCurrencyCode();
+            $monedaPago = $moneda === 'XXX' ? 'MXN' : $moneda;
+
+            // Datos bancarios opcionales (vienen del request, usamos un partial_payment "virtual" para reutilizar el helper)
+            $datosBancarios = [];
+            if ($esBancarizada) {
+                $virtualAbono = new PartialPayments([
+                    'shop_bank_account_id' => $datos['shop_bank_account_id'] ?? null,
+                    'bank_ord_code' => $datos['bank_ord_code'] ?? null,
+                    'cta_ordenante' => $datos['cta_ordenante'] ?? null,
+                    'is_foreign_bank_ord' => (bool) ($datos['is_foreign_bank_ord'] ?? false),
+                    'num_operacion' => $datos['num_operacion'] ?? null,
+                ]);
+                $datosBancarios = $this->construirDatosBancarios($virtualAbono, $shop->id);
+            }
+
+            $complemento = CfdiPagoComplemento::create([
+                'shop_id' => $shop->id,
+                'cfdi_invoice_id' => $invoice->id,
+                'partial_payment_id' => $abonoPrimero->id,
+                'consolidated_partial_payment_ids' => $consolidatedIds,
+                'serie' => $emisor->serie_complemento ?? 'CP',
+                'folio' => $folio,
+                'fecha_emision' => $fechaEmision,
+                'monto' => $impPagado,
+                'forma_pago' => $formaPago,
+                'num_parcialidad' => $numParcialidad,
+                'imp_saldo_ant' => $impSaldoAnt,
+                'imp_pagado' => $impPagado,
+                'imp_saldo_insoluto' => $impSaldoInsoluto,
+                'status' => CfdiPagoComplemento::STATUS_PENDING,
+            ]);
+
+            $tieneIva = (float) $invoice->total_impuestos > 0;
+            $taxDivisor = $shop->getTaxDivisor();
+            if ($tieneIva) {
+                $baseDr = round($impPagado / $taxDivisor, 2);
+                $importeDr = round($impPagado - $baseDr, 2);
+            } else {
+                $baseDr = $impPagado;
+                $importeDr = 0;
+            }
+
+            $payload = [
+                'serie' => $emisor->serie_complemento ?? 'CP',
+                'folio' => (string) $folio,
+                'fecha_emision' => $fechaEmision,
+                'tipo_comprobante' => 'P',
+                'exportacion' => '01',
+                'moneda' => 'XXX',
+                'lugar_expedicion' => $emisor->codigo_postal,
+                'subtotal' => 0,
+                'total' => 0,
+                'emisor' => [
+                    'rfc' => $emisor->rfc,
+                    'razon_social' => $emisor->razon_social,
+                    'regimen_fiscal' => $emisor->regimen_fiscal,
+                ],
+                'receptor' => [
+                    'rfc' => $invoice->receptor_rfc,
+                    'razon_social' => $invoice->receptor_nombre,
+                    'regimen_fiscal' => $invoice->receptor_regimen,
+                    'uso_cfdi' => 'CP01',
+                    'codigo_postal' => $invoice->receptor_cp,
+                ],
+                'conceptos' => [[
+                    'clave_prod_serv' => '84111506',
+                    'cantidad' => 1,
+                    'clave_unidad' => 'ACT',
+                    'descripcion' => 'Pago',
+                    'valor_unitario' => 0,
+                    'subtotal' => 0,
+                    'importe' => 0,
+                    'objeto_impuesto' => '01',
+                ]],
+                'complementos' => [
+                    'pagos_20' => [
+                        'version' => '2.0',
+                        'totales' => [
+                            'total_traslados_base_iva16' => $tieneIva ? $fmt($baseDr) : '0.00',
+                            'total_traslados_impuesto_iva16' => $tieneIva ? $fmt($importeDr) : '0.00',
+                            'monto_total_pagos' => $fmt($impPagado),
+                        ],
+                        'pago' => [[
+                            ...array_filter([
+                                'fecha_pago' => $fechaPago,
+                                'forma_de_pago_p' => $formaPago,
+                                'moneda_p' => $monedaPago,
+                                'tipo_cambio_p' => 1,
+                                'monto' => $fmt($impPagado),
+                                'num_operacion' => $datosBancarios['num_operacion'] ?? null,
+                                'rfc_emisor_cta_ord' => $datosBancarios['rfc_emisor_cta_ord'] ?? null,
+                                'nom_banco_ord_ext' => $datosBancarios['nom_banco_ord_ext'] ?? null,
+                                'cta_ordenante' => $datosBancarios['cta_ordenante'] ?? null,
+                                'rfc_emisor_cta_ben' => $datosBancarios['rfc_emisor_cta_ben'] ?? null,
+                                'cta_beneficiario' => $datosBancarios['cta_beneficiario'] ?? null,
+                            ], fn($v) => $v !== null && $v !== ''),
+                            'docto_relacionado' => [array_merge([
+                                'id_documento' => $invoice->uuid,
+                                'serie' => $invoice->serie,
+                                'folio' => (string) $invoice->folio,
+                                'moneda_dr' => $monedaPago,
+                                'equivalencia_dr' => 1,
+                                'num_parcialidad' => $numParcialidad,
+                                'imp_saldo_ant' => $fmt($impSaldoAnt),
+                                'imp_pagado' => $fmt($impPagado),
+                                'imp_saldo_insoluto' => $fmt($impSaldoInsoluto),
+                                'objeto_imp_dr' => $tieneIva ? '02' : '01',
+                            ], $tieneIva ? [
+                                'impuestos_dr' => [
+                                    'traslados_dr' => [[
+                                        'base_dr' => $fmt($baseDr),
+                                        'impuesto_dr' => '002',
+                                        'tipo_factor_dr' => 'Tasa',
+                                        'tasa_o_cuota_dr' => $shop->getTaxSatRate(),
+                                        'importe_dr' => $fmt($importeDr),
+                                    ]],
+                                ],
+                            ] : [])],
+                            ...($tieneIva ? ['impuestos_p' => [
+                                'traslados_p' => [[
+                                    'base_p' => $fmt($baseDr),
+                                    'impuesto_p' => '002',
+                                    'tipo_factor_p' => 'Tasa',
+                                    'tasa_o_cuota_p' => $shop->getTaxSatRate(),
+                                    'importe_p' => $fmt($importeDr),
+                                ]],
+                            ]] : []),
+                        ]],
+                    ],
+                ],
+            ];
+
+            $complemento->request_json = $payload;
+            $complemento->save();
+
+            $hubService = new HubCfdiService();
+            $result = $hubService->timbrar($payload);
+
+            if (!$result['success']) {
+                $emisor->revertirFolioComplemento();
+                $complemento->update([
+                    'status' => CfdiPagoComplemento::STATUS_FAILED,
+                    'error_message' => $result['error'] ?? 'Error desconocido',
+                    'response_json' => $result['data'] ?? null,
+                ]);
+                Log::error('Complemento consolidado fallido', [
+                    'shop_id' => $shop->id,
+                    'receipt_id' => $receipt->id,
+                    'consolidated_ids' => $consolidatedIds,
+                    'error' => $result['error'],
+                ]);
+                return [
+                    'ok' => false,
+                    'complemento' => $complemento,
+                    'message' => 'Error al timbrar complemento consolidado: ' . ($result['error'] ?? 'Error desconocido'),
+                ];
+            }
+
+            $responseData = $result['data'];
+            $uuid = $responseData['uuid'] ?? null;
+
+            $complemento->update([
+                'uuid' => $uuid,
+                'fecha_timbrado' => $responseData['fecha_timbrado'] ?? null,
+                'status' => CfdiPagoComplemento::STATUS_VIGENTE,
+                'response_json' => $responseData,
+            ]);
+
+            $this->guardarXmlLocal($hubService, $complemento, $shop->id);
+            $emisor->increment('timbres_usados');
+
+            Log::info('Complemento consolidado timbrado', [
+                'shop_id' => $shop->id,
+                'receipt_id' => $receipt->id,
+                'consolidated_ids' => $consolidatedIds,
+                'complemento_uuid' => $uuid,
+                'monto' => $impPagado,
+            ]);
+
+            return [
+                'ok' => true,
+                'complemento' => $complemento->fresh(),
+                'message' => 'Complemento consolidado emitido correctamente.',
+            ];
+        } catch (\Exception $e) {
+            if ($folio !== null) {
+                $emisor->revertirFolioComplemento();
+            }
+            if ($complemento) {
+                $complemento->update([
+                    'status' => CfdiPagoComplemento::STATUS_FAILED,
+                    'error_message' => $e->getMessage(),
+                ]);
+            }
+            Log::error('Complemento consolidado exception', [
+                'shop_id' => $shop->id,
+                'receipt_id' => $receipt->id,
+                'consolidated_ids' => $consolidatedIds,
+                'error' => $e->getMessage(),
+            ]);
+            return [
+                'ok' => false,
+                'complemento' => $complemento,
+                'message' => 'Error al emitir complemento consolidado: ' . $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
      * Reintenta un complemento que quedó en status='failed'. Reutiliza el partial_payment
      * y el num_parcialidad del registro original; recalcula saldos por si entró otro
      * complemento entre el fallo y el reintento.

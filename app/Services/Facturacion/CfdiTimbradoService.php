@@ -318,23 +318,65 @@ class CfdiTimbradoService
             $emisor->increment('timbres_usados');
 
             // === PPD: emitir complementos iniciales por abonos previos ===
-            // Si la nota tenía partial_payments antes de timbrar, hay que emitir un
-            // complemento por cada uno. Si alguno falla queda como 'failed' y se
-            // puede re-emitir desde la UI; NO se revierte la factura tipo I.
+            // Si la nota tenía partial_payments antes de timbrar, aplicar la decisión
+            // del usuario (data['abonos_previos']) antes de emitir complementos.
+            //
+            // estrategia=separar    → un complemento por abono (UPDATE de cada uno con su forma SAT)
+            // estrategia=consolidar → UN solo complemento sumando todos
+            //
+            // Si alguno falla queda 'failed' y se re-emite desde la UI; NO se revierte la factura.
             $complementosIniciales = [];
             if ($esPPD && (float) $receipt->received > 0) {
                 $complementoService = new CfdiComplementoPagoService();
                 $abonos = $receipt->partialPayments()->where('amount', '>', 0)->orderBy('id')->get();
-                foreach ($abonos as $idx => $abono) {
-                    $resp = $complementoService->emitir($receipt, $abono, $idx + 1);
+                $abonosPrevios = $data['abonos_previos'] ?? null;
+                $estrategia = $abonosPrevios['estrategia'] ?? 'separar';
+
+                if ($estrategia === 'consolidar' && !empty($abonosPrevios['consolidado'])) {
+                    // === Estrategia CONSOLIDAR: un solo complemento ===
+                    $resp = $complementoService->emitirConsolidado(
+                        $receipt,
+                        $abonos,
+                        $abonosPrevios['consolidado'],
+                        1
+                    );
                     $complementosIniciales[] = $resp;
                     if (!$resp['ok']) {
-                        Log::warning('Complemento inicial PPD falló', [
+                        Log::warning('Complemento consolidado inicial PPD falló', [
                             'shop_id' => $shop->id,
                             'receipt_id' => $receipt->id,
-                            'partial_payment_id' => $abono->id,
+                            'consolidated_ids' => $abonos->pluck('id')->all(),
                             'error' => $resp['message'],
                         ]);
+                    }
+                } else {
+                    // === Estrategia SEPARAR (default): un complemento por abono ===
+                    // Antes de emitir, aplicar las asignaciones recibidas del front a cada abono.
+                    $asignaciones = collect($abonosPrevios['asignaciones'] ?? [])
+                        ->keyBy('partial_payment_id');
+
+                    foreach ($abonos as $idx => $abono) {
+                        $asig = $asignaciones->get($abono->id);
+                        if ($asig) {
+                            $abono->payment_method = $asig['payment_method'] ?? $abono->payment_method;
+                            $abono->shop_bank_account_id = $asig['shop_bank_account_id'] ?? null;
+                            $abono->bank_ord_code = $asig['bank_ord_code'] ?? null;
+                            $abono->cta_ordenante = !empty($asig['cta_ordenante']) ? strtoupper($asig['cta_ordenante']) : null;
+                            $abono->is_foreign_bank_ord = (bool) ($asig['is_foreign_bank_ord'] ?? false);
+                            $abono->num_operacion = $asig['num_operacion'] ?? null;
+                            $abono->save();
+                        }
+
+                        $resp = $complementoService->emitir($receipt, $abono, $idx + 1);
+                        $complementosIniciales[] = $resp;
+                        if (!$resp['ok']) {
+                            Log::warning('Complemento inicial PPD falló', [
+                                'shop_id' => $shop->id,
+                                'receipt_id' => $receipt->id,
+                                'partial_payment_id' => $abono->id,
+                                'error' => $resp['message'],
+                            ]);
+                        }
                     }
                 }
             }

@@ -408,6 +408,20 @@ class CfdiInvoiceController extends Controller
             return response()->json(['ok' => false, 'message' => 'No se puede facturar una nota con total $0 (cortesía total).'], 422);
         }
 
+        // Si va a ser PPD y tiene abonos previos sin forma SAT real, exigir decisión del usuario
+        $esPPD = (float) $receipt->received < (float) $receipt->total;
+        if ($esPPD) {
+            $abonosPendientes = $receipt->getAbonosPreviosPendientesMetodo();
+            if ($abonosPendientes->count() > 0) {
+                $abonosPrevios = $request->input('abonos_previos');
+                $adminCtrl = new \App\Http\Controllers\Admin\CfdiInvoiceController();
+                $errorPayload = $adminCtrl->validarAbonosPrevios($abonosPrevios, $abonosPendientes);
+                if ($errorPayload) {
+                    return response()->json($errorPayload, 422);
+                }
+            }
+        }
+
         $service = new CfdiTimbradoService();
         $result = $service->emitir($receipt, $shop, $emisor, [
             'receptor_rfc' => $request->receptor_rfc,
@@ -420,6 +434,7 @@ class CfdiInvoiceController extends Controller
             'conceptos_sat' => $request->conceptos_sat ?? [],
             'guardar_datos_cliente' => (bool) $request->guardar_datos_cliente,
             'client_fiscal_data_id' => $request->client_fiscal_data_id,
+            'abonos_previos' => $request->input('abonos_previos'),
         ]);
 
         if (!$result['ok']) {
@@ -450,6 +465,33 @@ class CfdiInvoiceController extends Controller
             'total_impuestos' => $invoice->total_impuestos,
             'total' => $invoice->total,
             'conceptos_cortesia_excluidos' => $result['conceptos_cortesia_excluidos'],
+        ]);
+    }
+
+    /**
+     * Abonos previos al timbrado PPD que aún no tienen forma de pago SAT.
+     * GET /api/auth/cfdi/receipt/{receiptId}/abonos-previos-pendientes
+     */
+    public function abonosPreviosPendientes($receiptId)
+    {
+        $shop = auth()->user()->shop;
+        $receipt = Receipt::where('shop_id', $shop->id)->find($receiptId);
+        if (!$receipt) {
+            return response()->json(['ok' => false, 'message' => 'Nota no encontrada'], 404);
+        }
+
+        $abonos = $receipt->getAbonosPreviosPendientesMetodo();
+
+        return response()->json([
+            'ok' => true,
+            'requiere_decision' => $abonos->count() > 0,
+            'abonos' => $abonos->map(fn($a) => [
+                'id' => $a->id,
+                'amount' => (float) $a->amount,
+                'payment_date' => $a->payment_date,
+                'payment_type' => $a->payment_type,
+                'payment_method' => $a->payment_method,
+            ])->values(),
         ]);
     }
 

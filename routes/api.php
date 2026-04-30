@@ -661,6 +661,7 @@ Route::group([
         Route::post('cfdi/timbrar', [\App\Http\Controllers\CfdiInvoiceController::class, 'timbrar']);
 
         /* CFDI COMPLEMENTOS DE PAGO (PPD) - Listar / descargar / re-emitir */
+        Route::get('cfdi/receipt/{receiptId}/abonos-previos-pendientes', [\App\Http\Controllers\CfdiInvoiceController::class, 'abonosPreviosPendientes']);
         Route::get('cfdi/nota/{receiptId}/complementos', [\App\Http\Controllers\CfdiInvoiceController::class, 'listarComplementos']);
         Route::get('cfdi/complemento/{id}/descargar/{formato}', [\App\Http\Controllers\CfdiInvoiceController::class, 'descargarComplemento']);
         Route::post('cfdi/complemento/{id}/reemitir', [\App\Http\Controllers\CfdiInvoiceController::class, 'reemitirComplemento']);

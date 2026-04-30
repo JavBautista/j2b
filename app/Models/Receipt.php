@@ -54,4 +54,22 @@ class Receipt extends Model
     {
         return $this->hasOne(CfdiInvoice::class);
     }
+
+    /**
+     * Abonos previos al timbrado PPD que no tienen forma de pago SAT real.
+     * Estos requieren que el usuario decida (separar/consolidar) antes de
+     * que el complemento se mande al SAT, porque la forma '99' es rechazada.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<PartialPayments>
+     */
+    public function getAbonosPreviosPendientesMetodo()
+    {
+        return $this->partialPayments()
+            ->where('amount', '>', 0)
+            ->where(function ($q) {
+                $q->whereNull('payment_method')->orWhere('payment_method', '99');
+            })
+            ->orderBy('id')
+            ->get();
+    }
 }

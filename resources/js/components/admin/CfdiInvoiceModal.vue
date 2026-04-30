@@ -368,15 +368,23 @@
         <client-fiscal-data-modal ref="fiscalDataMgmt"
             @seleccionado="onPerfilSeleccionado"
             @closed="onGestionCerrada"></client-fiscal-data-modal>
+
+        <!-- Diálogo de abonos previos al timbrado PPD -->
+        <abonos-previos-dialog ref="abonosPreviosDialog"
+            :abonos="abonosPreviosPendientes"
+            :cuentas-bancarias="cuentasBancariasShop"
+            @submitted="onAbonosPreviosSubmitted"
+            @cancelled="onAbonosPreviosCancelled"></abonos-previos-dialog>
     </div>
 </template>
 
 <script>
 import ClientFiscalDataModal from '../shops/ClientFiscalDataModal.vue';
+import AbonosPreviosDialog from './AbonosPreviosDialog.vue';
 
 export default {
     name: 'CfdiInvoiceModal',
-    components: { ClientFiscalDataModal },
+    components: { ClientFiscalDataModal, AbonosPreviosDialog },
     directives: {
         focus: { mounted(el) { el.focus(); } },
     },
@@ -409,6 +417,11 @@ export default {
             formaPago: '01',
             metodoPago: 'PUE',
             conceptosSat: [],
+            // Diálogo de abonos previos al timbrado PPD
+            abonosPreviosPendientes: [],
+            cuentasBancariasShop: [],
+            abonosPreviosPayload: null,
+            timbradoEnEspera: false,
             satProductResults: [],
             satUnitResults: [],
             activeSearchIdx: null,
@@ -576,6 +589,9 @@ export default {
             this.guardarDatosCliente = true;
             this.timbradoExitoso = false;
             this.resultadoTimbrado = null;
+            this.abonosPreviosPendientes = [];
+            this.abonosPreviosPayload = null;
+            this.timbradoEnEspera = false;
             this.receptor = { rfc: '', razon_social: '', regimen_fiscal: '', uso_cfdi: 'G03', codigo_postal: '' };
             this.formaPago = '01';
             this.metodoPago = 'PUE';
@@ -691,6 +707,43 @@ export default {
 
             if (!confirm.isConfirmed) return;
 
+            // Si va a ser PPD y hay abonos previos sin forma SAT, abrir diálogo de decisión
+            if (this.metodoPago === 'PPD') {
+                try {
+                    const r = await axios.get(`/admin/facturacion/receipt/${this.receiptData.id}/abonos-previos-pendientes`);
+                    if (r.data.ok && r.data.requiere_decision) {
+                        this.abonosPreviosPendientes = r.data.abonos;
+                        // Cargar cuentas bancarias activas para el bloque bancarizado del diálogo
+                        try {
+                            const rc = await axios.get('/admin/configuracion/cuentas-bancarias/data');
+                            this.cuentasBancariasShop = (rc.data.accounts || []).filter(c => c.is_active);
+                        } catch (e) { this.cuentasBancariasShop = []; }
+                        this.timbradoEnEspera = true;
+                        this.$refs.abonosPreviosDialog.abrir();
+                        return; // El flujo continúa cuando el diálogo emite 'submitted'
+                    }
+                } catch (e) {
+                    Swal.fire('Error', e.response?.data?.message || 'No se pudo verificar abonos previos.', 'error');
+                    return;
+                }
+            }
+
+            await this._ejecutarTimbrado();
+        },
+
+        async onAbonosPreviosSubmitted(payload) {
+            this.abonosPreviosPayload = payload;
+            this.timbradoEnEspera = false;
+            await this._ejecutarTimbrado();
+        },
+
+        onAbonosPreviosCancelled() {
+            this.timbradoEnEspera = false;
+            this.abonosPreviosPayload = null;
+        },
+
+        async _ejecutarTimbrado() {
+
             // Bloquear toda la pantalla con loader mientras se hace la petición al PAC
             Swal.fire({
                 title: 'Timbrando factura...',
@@ -704,7 +757,7 @@ export default {
 
             this.timbrando = true;
             try {
-                const res = await axios.post('/admin/facturacion/timbrar', {
+                const payloadTimbrar = {
                     receipt_id: this.receiptData.id,
                     receptor_rfc: this.receptor.rfc,
                     receptor_razon_social: this.receptor.razon_social,
@@ -721,7 +774,11 @@ export default {
                         clave_unidad: c.clave_unidad,
                         descripcion: c.descripcion,
                     })),
-                });
+                };
+                if (this.abonosPreviosPayload) {
+                    payloadTimbrar.abonos_previos = this.abonosPreviosPayload;
+                }
+                const res = await axios.post('/admin/facturacion/timbrar', payloadTimbrar);
 
                 Swal.close();
 
@@ -733,7 +790,22 @@ export default {
                 }
             } catch (e) {
                 Swal.close();
-                Swal.fire('Error', e.response?.data?.message || 'Error al timbrar factura', 'error');
+                // Salvaguarda: si el backend devuelve 422 con requiere_decision=true,
+                // significa que la nota PPD tiene abonos previos sin forma SAT.
+                // En vez de mostrar error, abrimos el diálogo (cubre caso de cache de navegador
+                // o de un futuro cliente que no llamó al GET previo).
+                const data = e.response?.data;
+                if (e.response?.status === 422 && data?.requiere_decision && Array.isArray(data?.abonos_pendientes)) {
+                    this.abonosPreviosPendientes = data.abonos_pendientes.map(a => ({ ...a, payment_method: '99' }));
+                    try {
+                        const rc = await axios.get('/admin/configuracion/cuentas-bancarias/data');
+                        this.cuentasBancariasShop = (rc.data.accounts || []).filter(c => c.is_active);
+                    } catch (ee) { this.cuentasBancariasShop = []; }
+                    this.timbradoEnEspera = true;
+                    this.$refs.abonosPreviosDialog.abrir();
+                    return;
+                }
+                Swal.fire('Error', data?.message || 'Error al timbrar factura', 'error');
             } finally {
                 this.timbrando = false;
             }

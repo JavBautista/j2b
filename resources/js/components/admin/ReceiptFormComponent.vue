@@ -1970,10 +1970,20 @@ export default {
                 }
             } catch (error) {
                 console.error('Error:', error);
-                Swal.fire('Error', 'No se pudo agregar el abono', 'error');
+                Swal.fire('Error', this.extraerMensajeError(error, 'No se pudo agregar el abono'), 'error');
             } finally {
                 this.agregandoAbono = false;
             }
+        },
+
+        extraerMensajeError(error, fallback) {
+            const data = error?.response?.data;
+            if (data?.errors) {
+                const msgs = Object.values(data.errors).flat();
+                if (msgs.length > 0) return msgs.join('\n');
+            }
+            if (data?.message) return data.message;
+            return fallback;
         },
 
         async eliminarAbono(pago) {
@@ -2002,7 +2012,7 @@ export default {
                 }
             } catch (error) {
                 console.error('Error:', error);
-                Swal.fire('Error', 'No se pudo eliminar el abono', 'error');
+                Swal.fire('Error', this.extraerMensajeError(error, 'No se pudo eliminar el abono'), 'error');
             } finally {
                 this.eliminandoAbono = false;
             }

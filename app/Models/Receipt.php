@@ -52,7 +52,12 @@ class Receipt extends Model
 
     public function cfdiInvoice()
     {
-        return $this->hasOne(CfdiInvoice::class);
+        return $this->hasOne(CfdiInvoice::class)->where('status', 'vigente');
+    }
+
+    public function cfdiInvoices()
+    {
+        return $this->hasMany(CfdiInvoice::class);
     }
 
     /**

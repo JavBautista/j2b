@@ -969,6 +969,13 @@ class ReceiptsController extends Controller
         }
 
         if ($invoice->metodo_pago !== 'PPD' || $invoice->status !== 'vigente') {
+            Log::warning('Abono registrado pero la factura no es PPD vigente — sin complemento', [
+                'receipt_id' => $receipt->id,
+                'partial_payment_id' => $abono->id,
+                'invoice_uuid' => $invoice->uuid,
+                'invoice_metodo_pago' => $invoice->metodo_pago,
+                'invoice_status' => $invoice->status,
+            ]);
             return null;
         }
 

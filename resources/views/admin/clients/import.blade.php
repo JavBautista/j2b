@@ -1,18 +1,15 @@
 @extends('admin.layouts.app')
 
+@section('page-header')
+    <x-admin.page-header
+        title="Importar Clientes desde Excel"
+        parent-label="Clientes"
+        :parent-route="route('admin.clients')"
+    />
+@endsection
+
 @section('content')
     <div class="container-fluid">
-        <div class="row">
-            <div class="col-md-12">
-                <nav aria-label="breadcrumb">
-                    <ol class="breadcrumb">
-                        <li class="breadcrumb-item"><a href="{{ url('/admin/clients') }}">Clientes</a></li>
-                        <li class="breadcrumb-item active">Importar</li>
-                    </ol>
-                </nav>
-                <h1 class="page-header">Importar Clientes desde Excel</h1>
-            </div>
-        </div>
         <div class="row">
             <div class="col-md-12">
                 <client-import-component :shop="{{ json_encode($shop) }}"></client-import-component>

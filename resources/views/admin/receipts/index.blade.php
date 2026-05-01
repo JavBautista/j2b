@@ -1,18 +1,17 @@
 @extends('admin.layouts.app')
 
+@section('page-header')
+    <x-admin.page-header
+        title="Recibos de {{ $client->name }}"
+        parent-label="Clientes"
+        :parent-route="route('admin.clients')"
+    />
+@endsection
+
 @section('content')
     <div class="container-fluid">
         <div class="row">
             <div class="col-md-12">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h1 class="page-header">
-                        <i class="fa fa-receipt"></i> Recibos de {{ $client->name }}
-                    </h1>
-                    <a href="{{ route('admin.clients') }}" class="btn btn-secondary">
-                        <i class="fa fa-arrow-left"></i> Volver a Clientes
-                    </a>
-                </div>
-                
                 <!-- Información del cliente -->
                 <div class="card mb-4">
                     <div class="card-body">

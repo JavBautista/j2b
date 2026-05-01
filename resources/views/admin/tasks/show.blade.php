@@ -1,14 +1,15 @@
 @extends('admin.layouts.app')
 
+@section('page-header')
+    <x-admin.page-header
+        title="Detalle de Tarea"
+        parent-label="Tareas"
+        :parent-route="route('admin.tasks')"
+    />
+@endsection
+
 @section('content')
     <div class="container-fluid">
-        <div class="row">
-            <div class="col-md-12">
-                <a href="{{ route('admin.tasks') }}" class="j2b-btn j2b-btn-dark mb-3">
-                    <i class="fa fa-arrow-left"></i> Volver a Tareas
-                </a>
-            </div>
-        </div>
         <div class="row">
             <div class="col-md-12">
                 <task-detail-component

@@ -1,20 +1,15 @@
 @extends('admin.layouts.app')
 
+@section('page-header')
+    <x-admin.page-header
+        title="Configuraciones del Asistente IA"
+        parent-label="Configuraciones"
+        :parent-route="route('admin.configurations')"
+    />
+@endsection
+
 @section('content')
 <div class="container-fluid py-4">
-    <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h4 class="mb-1">
-                <i class="fas fa-bolt text-warning"></i> Configuraciones del Asistente IA
-            </h4>
-            <p class="text-muted mb-0">Administra la inteligencia artificial de tu tienda</p>
-        </div>
-        <a href="{{ route('admin.configurations') }}" class="btn btn-outline-secondary">
-            <i class="fas fa-arrow-left"></i> Volver
-        </a>
-    </div>
-
     <!-- Opciones de configuración -->
     <div class="row">
         <!-- Contexto de Tienda (Prompt) -->

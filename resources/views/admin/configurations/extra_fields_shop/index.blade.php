@@ -1,28 +1,21 @@
 @extends('admin.layouts.app')
 
+@section('page-header')
+    <x-admin.page-header
+        title="Campos Extras"
+        parent-label="Configuraciones"
+        :parent-route="route('admin.configurations')"
+    >
+        <x-slot:actions>
+            <a href="{{ route('admin.configurations.extra_fields.create') }}" class="btn btn-primary">
+                <i class="fa fa-plus me-1"></i> Agregar Campo
+            </a>
+        </x-slot:actions>
+    </x-admin.page-header>
+@endsection
+
 @section('content')
 <div class="container-fluid">
-    <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h4 class="mb-1" style="color: var(--j2b-dark); font-weight: 600;">
-                <i class="fa fa-plus-square" style="color: var(--j2b-primary);"></i>
-                Campos Extras
-            </h4>
-            <p class="mb-0" style="color: var(--j2b-gray-500);">
-                Administra campos personalizados para tus formularios
-            </p>
-        </div>
-        <div class="d-flex gap-2">
-            <a href="{{ route('admin.configurations') }}" class="j2b-btn j2b-btn-outline">
-                <i class="fa fa-arrow-left"></i> Volver
-            </a>
-            <a href="{{ route('admin.configurations.extra_fields.create') }}" class="j2b-btn j2b-btn-primary">
-                <i class="fa fa-plus"></i> Agregar Campo
-            </a>
-        </div>
-    </div>
-
     <!-- Alertas -->
     @if(session('success'))
         <div class="j2b-banner-alert j2b-banner-success mb-3">

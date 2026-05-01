@@ -1,5 +1,13 @@
 @extends('admin.layouts.app')
 
+@section('page-header')
+    <x-admin.page-header
+        title="Rentas de {{ $client->name }}"
+        parent-label="Clientes"
+        :parent-route="route('admin.clients')"
+    />
+@endsection
+
 @section('content')
 <div class="container-fluid">
     <rentas-cliente-component

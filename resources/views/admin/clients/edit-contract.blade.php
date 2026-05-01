@@ -1,23 +1,24 @@
 @extends('admin.layouts.app')
 
+@section('page-header')
+    <x-admin.page-header
+        title="Editar Contrato #{{ $contract->folio ?: $contract->id }} — {{ $client->name }}"
+        parent-label="Contratos del Cliente"
+        :parent-route="route('admin.clients.contracts', $client)"
+    >
+        <x-slot:actions>
+            <a href="{{ route('admin.contracts.view', $contract) }}" class="btn btn-info">
+                <i class="fas fa-eye me-1"></i> Ver Original
+            </a>
+        </x-slot:actions>
+    </x-admin.page-header>
+@endsection
+
 @section('content')
 <div class="container-fluid">
     <div class="row justify-content-center">
         <div class="col-md-10">
             <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h4 class="mb-0">
-                        <i class="fas fa-edit text-warning"></i> Editar Contrato #{{ $contract->folio ?: $contract->id }} - {{ $client->name }}
-                    </h4>
-                    <div>
-                        <a href="{{ route('admin.clients.contracts', $client) }}" class="btn btn-secondary me-2">
-                            <i class="fas fa-arrow-left"></i> Volver a Contratos
-                        </a>
-                        <a href="{{ route('admin.contracts.view', $contract) }}" class="btn btn-info">
-                            <i class="fas fa-eye"></i> Ver Original
-                        </a>
-                    </div>
-                </div>
                 <div class="card-body">
                     <!-- Información del Cliente - Fila completa arriba -->
                     <div class="row mb-4">

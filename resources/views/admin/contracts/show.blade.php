@@ -1,21 +1,24 @@
 @extends('admin.layouts.app')
 
+@section('page-header')
+    <x-admin.page-header
+        title="Vista Previa: {{ $template->name }}"
+        parent-label="Plantillas de Contratos"
+        :parent-route="route('contract-templates.index')"
+    >
+        <x-slot:actions>
+            <a href="{{ route('contract-templates.edit', $template->id) }}" class="btn btn-warning">
+                <i class="fas fa-edit me-1"></i> Editar
+            </a>
+        </x-slot:actions>
+    </x-admin.page-header>
+@endsection
+
 @section('content')
 <div class="container">
     <div class="row">
         <div class="col-md-12">
             <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h4 class="mb-0">Vista Previa: {{ $template->name }}</h4>
-                    <div>
-                        <a href="{{ route('contract-templates.index') }}" class="btn btn-secondary">
-                            <i class="fas fa-arrow-left"></i> Volver
-                        </a>
-                        <a href="{{ route('contract-templates.edit', $template->id) }}" class="btn btn-warning">
-                            <i class="fas fa-edit"></i> Editar
-                        </a>
-                    </div>
-                </div>
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-8">

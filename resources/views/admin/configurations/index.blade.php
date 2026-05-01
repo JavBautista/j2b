@@ -1,19 +1,15 @@
 @extends('admin.layouts.app')
 
+@section('page-header')
+    <x-admin.page-header
+        title="Configuraciones del Sistema"
+        icon="fa-cogs"
+        subtitle="Personaliza y administra las opciones de tu plataforma"
+    />
+@endsection
+
 @section('content')
 <div class="container-fluid">
-    <!-- Header -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex align-items-center">
-                <div>
-                    <h3 class="mb-1"><i class="fas fa-cogs me-2 text-primary"></i>Configuraciones del Sistema</h3>
-                    <p class="text-muted mb-0">Personaliza y administra las opciones de tu plataforma</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Secciones de Configuración -->
     <div class="row">
         <!-- Configuraciones Generales -->

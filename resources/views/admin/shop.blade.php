@@ -1,22 +1,17 @@
 @extends('admin.layouts.app')
 
+@section('page-header')
+    <x-admin.page-header title="Detalles de la Tienda" icon="fa-store" subtitle="Administra la información de tu negocio">
+        <x-slot:actions>
+            <a href="{{ route('admin.shop.edit') }}" class="btn btn-primary">
+                <i class="fas fa-edit me-1"></i> Editar Información
+            </a>
+        </x-slot:actions>
+    </x-admin.page-header>
+@endsection
+
 @section('content')
 <div class="container-fluid">
-    <!-- Header con botón de editar -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h3 class="mb-1"><i class="fas fa-store me-2 text-primary"></i>Detalles de la Tienda</h3>
-                    <p class="text-muted mb-0">Administra la información de tu negocio</p>
-                </div>
-                <a href="{{ route('admin.shop.edit') }}" class="btn btn-primary">
-                    <i class="fas fa-edit me-1"></i> Editar Información
-                </a>
-            </div>
-        </div>
-    </div>
-
     @if(session('success'))
         <div class="row mb-4">
             <div class="col-12">

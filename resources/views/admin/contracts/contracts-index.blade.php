@@ -1,21 +1,23 @@
 @extends('admin.layouts.app')
 
+@section('page-header')
+    <x-admin.page-header title="Contratos Generados" icon="fa-file-signature">
+        <x-slot:actions>
+            <a href="{{ route('admin.contracts') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-file-contract me-1"></i> Plantillas
+            </a>
+            <a href="{{ route('contracts.create') }}" class="btn btn-success">
+                <i class="fas fa-plus me-1"></i> Nuevo Contrato
+            </a>
+        </x-slot:actions>
+    </x-admin.page-header>
+@endsection
+
 @section('content')
 <div class="container-fluid">
     <div class="row">
         <div class="col-md-12">
             <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h4 class="mb-0">Contratos Generados</h4>
-                    <div>
-                        <a href="{{ route('admin.contracts') }}" class="btn btn-outline-secondary me-2">
-                            <i class="fas fa-file-contract"></i> Plantillas
-                        </a>
-                        <a href="{{ route('contracts.create') }}" class="btn btn-success">
-                            <i class="fas fa-plus"></i> Nuevo Contrato
-                        </a>
-                    </div>
-                </div>
                 <div class="card-body">
                     @if($contracts->count() > 0)
                         <div class="table-responsive">

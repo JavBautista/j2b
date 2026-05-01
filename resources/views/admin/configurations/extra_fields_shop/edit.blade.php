@@ -1,22 +1,15 @@
 @extends('admin.layouts.app')
 
+@section('page-header')
+    <x-admin.page-header
+        title="Editar Campo: {{ $extraField->field_name }}"
+        parent-label="Campos Extras"
+        :parent-route="route('admin.configurations.extra_fields')"
+    />
+@endsection
+
 @section('content')
 <div class="container-fluid">
-    <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h4 class="mb-1" style="color: var(--j2b-dark); font-weight: 600;">
-                <i class="fa fa-pencil" style="color: var(--j2b-primary);"></i>
-                Editar Campo Extra
-            </h4>
-            <p class="mb-0" style="color: var(--j2b-gray-500);">
-                Modifica las propiedades de "{{ $extraField->field_name }}"
-            </p>
-        </div>
-        <a href="{{ route('admin.configurations.extra_fields') }}" class="j2b-btn j2b-btn-outline">
-            <i class="fa fa-arrow-left"></i> Volver
-        </a>
-    </div>
 
     <div class="row justify-content-center">
         <div class="col-md-8">

@@ -1,16 +1,18 @@
 @extends('admin.layouts.app')
 
+@section('page-header')
+    <x-admin.page-header
+        title="Crear Nuevo Contrato"
+        parent-label="Contratos Generados"
+        :parent-route="route('contracts.index')"
+    />
+@endsection
+
 @section('content')
 <div class="container">
     <div class="row justify-content-center">
         <div class="col-md-8">
             <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h4 class="mb-0">Crear Nuevo Contrato</h4>
-                    <a href="{{ route('contracts.index') }}" class="btn btn-secondary">
-                        <i class="fas fa-arrow-left"></i> Volver
-                    </a>
-                </div>
                 <div class="card-body">
                     <form action="{{ route('contracts.store') }}" method="POST">
                         @csrf

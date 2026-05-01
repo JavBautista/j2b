@@ -1,12 +1,18 @@
 @extends('client.layouts.app')
 
+@section('page-header')
+    <x-admin.page-header
+        title="Editar Información de la Tienda"
+        parent-label="Mi Tienda"
+        :parent-route="route('client.shop')"
+    />
+@endsection
+
 @section('content')
 <div class="container">
     <div class="row justify-content-center">
         <div class="col-md-8">
             <div class="card">
-                <div class="card-header">Editar información de la tienda</div>
-
                 <div class="card-body">
                     <form action="{{ route('client.shop.update', $shop->id) }}" method="POST">
                         @csrf

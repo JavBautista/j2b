@@ -1,25 +1,24 @@
 @extends('admin.layouts.app')
 
+@section('page-header')
+    <x-admin.page-header
+        title="Contrato #{{ $contract->folio ?: $contract->id }}"
+        parent-label="Contratos del Cliente"
+        :parent-route="route('admin.clients.contracts', $contract->client)"
+    >
+        <x-slot:actions>
+            <a href="{{ route('contracts.generate-pdf', $contract) }}" target="_blank" class="btn btn-primary">
+                <i class="fa fa-download me-1"></i> Descargar PDF
+            </a>
+        </x-slot:actions>
+    </x-admin.page-header>
+@endsection
+
 @section('content')
 <div class="container-fluid">
     <div class="row justify-content-center">
         <div class="col-md-12">
             <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h4 class="mb-0">
-                        <i class="fa fa-file-text"></i> Contrato #{{ $contract->folio ?: $contract->id }}
-                    </h4>
-                    <div>
-                        <a href="{{ route('contracts.generate-pdf', $contract) }}"
-                           target="_blank"
-                           class="btn btn-primary">
-                            <i class="fa fa-download"></i> Descargar PDF
-                        </a>
-                        <a href="{{ route('admin.clients.contracts', $contract->client) }}" class="btn btn-secondary">
-                            <i class="fa fa-arrow-left"></i> Volver a Contratos
-                        </a>
-                    </div>
-                </div>
                 <div class="card-body">
                     <!-- Información del Contrato -->
                     <div class="row mb-4">

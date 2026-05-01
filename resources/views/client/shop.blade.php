@@ -1,20 +1,27 @@
 @extends('client.layouts.app')
 
+@section('page-header')
+    <x-admin.page-header title="Detalles de la Tienda" icon="fa-store" subtitle="Información de tu negocio">
+        <x-slot:actions>
+            <a href="{{ route('client.shop.edit') }}" class="btn btn-primary">
+                <i class="fa fa-edit me-1"></i> Editar
+            </a>
+        </x-slot:actions>
+    </x-admin.page-header>
+@endsection
+
 @section('content')
 <div class="container">
     <div class="row justify-content-center">
         <div class="col-md-8">
             <div class="card">
-
-                <div class="card-header">Detalles de la tienda</div>
-
                 <div class="card-body">
                     @if(session('success'))
                         <div class="alert alert-success">
                             {{ session('success') }}
                         </div>
                     @endif
-                    <a href="{{ route('client.shop.edit') }}" class="btn btn-primary float-right"><i class="icon-pencil"></i> Editar</a>
+
 
 
                     <div class="mb-3">

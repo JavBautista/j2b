@@ -1,21 +1,15 @@
 @extends('superadmin.layouts.app')
 
+@section('page-header')
+    <x-admin.page-header
+        title="Configuración de Suscripciones"
+        icon="fa-cog"
+        subtitle="Configura los parámetros globales del sistema de suscripciones"
+    />
+@endsection
+
 @section('content')
 <div class="container-fluid" style="padding: 1.5rem;">
-
-    <!-- Header con título -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h4 class="mb-1" style="color: var(--j2b-dark); font-weight: 600;">
-                <i class="fa fa-cog" style="color: var(--j2b-primary);"></i> Configuracion de Suscripciones
-            </h4>
-            <p class="mb-0" style="color: var(--j2b-gray-500);">Configura los parametros globales del sistema de suscripciones</p>
-        </div>
-        <a href="{{ route('superadmin.index') }}" class="j2b-btn j2b-btn-secondary">
-            <i class="fa fa-arrow-left"></i> Volver
-        </a>
-    </div>
-
     <!-- Mensaje de éxito -->
     @if(session('success'))
         <div class="j2b-banner-alert j2b-banner-success mb-4">

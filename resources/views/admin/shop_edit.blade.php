@@ -1,24 +1,15 @@
 @extends('admin.layouts.app')
 
+@section('page-header')
+    <x-admin.page-header
+        title="Editar Información de la Tienda"
+        parent-label="Mi Tienda"
+        :parent-route="route('admin.shop')"
+    />
+@endsection
+
 @section('content')
 <div class="container-fluid">
-    <!-- Header -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h3 class="mb-1"><i class="fas fa-edit me-2 text-primary"></i>Editar Información de la Tienda</h3>
-                    <p class="text-muted mb-0">Actualiza los datos de tu negocio</p>
-                </div>
-                <div>
-                    <a href="{{ route('admin.shop') }}" class="btn btn-outline-secondary">
-                        <i class="fas fa-arrow-left me-1"></i> Volver
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <form action="{{ route('admin.shop.update', $shop->id) }}" method="POST">
         @csrf
         @method('PUT')

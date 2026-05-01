@@ -1,22 +1,15 @@
 @extends('admin.layouts.app')
 
+@section('page-header')
+    <x-admin.page-header
+        title="Nuevo Campo Extra"
+        parent-label="Campos Extras"
+        :parent-route="route('admin.configurations.extra_fields')"
+    />
+@endsection
+
 @section('content')
 <div class="container-fluid">
-    <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h4 class="mb-1" style="color: var(--j2b-dark); font-weight: 600;">
-                <i class="fa fa-plus-circle" style="color: var(--j2b-primary);"></i>
-                Nuevo Campo Extra
-            </h4>
-            <p class="mb-0" style="color: var(--j2b-gray-500);">
-                Crea un campo personalizado para tus formularios
-            </p>
-        </div>
-        <a href="{{ route('admin.configurations.extra_fields') }}" class="j2b-btn j2b-btn-outline">
-            <i class="fa fa-arrow-left"></i> Volver
-        </a>
-    </div>
 
     <div class="row justify-content-center">
         <div class="col-md-8">

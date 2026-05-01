@@ -1,23 +1,24 @@
 @extends('admin.layouts.app')
 
+@section('page-header')
+    <x-admin.page-header
+        title="Contratos de {{ $client->name }}"
+        parent-label="Clientes"
+        :parent-route="route('admin.clients')"
+    >
+        <x-slot:actions>
+            <a href="{{ route('admin.clients.assign-contract', $client) }}" class="btn btn-success">
+                <i class="fa fa-plus me-1"></i> Crear Nuevo Contrato
+            </a>
+        </x-slot:actions>
+    </x-admin.page-header>
+@endsection
+
 @section('content')
 <div class="container-fluid">
     <div class="row justify-content-center">
         <div class="col-md-12">
             <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h4 class="mb-0">
-                        <i class="fa fa-file-text"></i> Contratos de {{ $client->name }}
-                    </h4>
-                    <div>
-                        <a href="{{ route('admin.clients.assign-contract', $client) }}" class="btn btn-success">
-                            <i class="fa fa-plus"></i> Crear Nuevo Contrato
-                        </a>
-                        <a href="{{ route('admin.clients') }}" class="btn btn-secondary">
-                            <i class="fa fa-arrow-left"></i> Volver a Clientes
-                        </a>
-                    </div>
-                </div>
                 <div class="card-body">
                     <!-- Información del Cliente -->
                     <div class="alert alert-info">

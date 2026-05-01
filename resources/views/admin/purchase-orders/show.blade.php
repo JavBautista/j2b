@@ -1,14 +1,15 @@
 @extends('admin.layouts.app')
 
+@section('page-header')
+    <x-admin.page-header
+        title="Detalle de Orden de Compra"
+        parent-label="Órdenes de Compra"
+        :parent-route="route('admin.purchase-orders')"
+    />
+@endsection
+
 @section('content')
     <div class="container-fluid">
-        <div class="row">
-            <div class="col-md-12">
-                <h1 class="page-header">
-                    <i class="fa fa-eye me-2"></i>Detalle de Orden de Compra
-                </h1>
-            </div>
-        </div>
         <div class="row">
             <div class="col-md-12">
                 <purchase-order-show-component

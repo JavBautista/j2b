@@ -1,21 +1,23 @@
 @extends('client.layouts.app')
 
+@section('page-header')
+    <x-admin.page-header title="Plantillas de Contratos" icon="fa-file-contract">
+        <x-slot:actions>
+            <a href="{{ route('contracts.index') }}" class="btn btn-outline-primary">
+                <i class="fas fa-file-contract me-1"></i> Ver Contratos
+            </a>
+            <a href="{{ route('contract-templates.create') }}" class="btn btn-success">
+                <i class="fas fa-plus me-1"></i> Nueva Plantilla
+            </a>
+        </x-slot:actions>
+    </x-admin.page-header>
+@endsection
+
 @section('content')
 <div class="container-fluid">
     <div class="row">
         <div class="col-md-12">
             <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h4 class="mb-0">Plantillas de Contratos</h4>
-                    <div>
-                        <a href="{{ route('contracts.index') }}" class="btn btn-outline-primary me-2">
-                            <i class="fas fa-file-contract"></i> Ver Contratos
-                        </a>
-                        <a href="{{ route('contract-templates.create') }}" class="btn btn-success">
-                            <i class="fas fa-plus"></i> Nueva Plantilla
-                        </a>
-                    </div>
-                </div>
                 <div class="card-body">
                     @if($templates->count() > 0)
                         <div class="table-responsive" style="min-height: 400px;">

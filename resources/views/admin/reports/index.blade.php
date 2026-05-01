@@ -1,12 +1,11 @@
 @extends('admin.layouts.app')
 
+@section('page-header')
+    <x-admin.page-header title="Reportes" icon="fa-chart-line" />
+@endsection
+
 @section('content')
     <div class="container-fluid">
-        <div class="row">
-            <div class="col-md-12">
-                <h1 class="page-header">Reportes</h1>
-            </div>
-        </div>
         <div class="row">
             <div class="col-md-12">
                 <reports-component

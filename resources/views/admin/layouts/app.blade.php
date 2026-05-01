@@ -67,6 +67,7 @@
             @include('admin.layouts.sidebar')
             <!-- Contenido Principal -->
             <main class="main">
+                @yield('page-header')
                 @yield('content')
             </main>
             <!-- /Fin del contenido principal -->

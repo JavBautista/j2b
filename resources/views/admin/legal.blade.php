@@ -6,20 +6,12 @@
     $pageIcon = $isTerms ? 'fa-file-contract' : 'fa-shield-alt';
 @endphp
 
+@section('page-header')
+    <x-admin.page-header :title="$pageTitle" :icon="$pageIcon" subtitle="Documento legal de la plataforma J2Biznes" />
+@endsection
+
 @section('content')
 <div class="container-fluid">
-    <!-- Header -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex align-items-center">
-                <div>
-                    <h3 class="mb-1"><i class="fas {{ $pageIcon }} me-2 text-primary"></i>{{ $pageTitle }}</h3>
-                    <p class="text-muted mb-0">Documento legal de la plataforma J2Biznes</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <div class="row">
         <div class="col-12">
             @if($document)

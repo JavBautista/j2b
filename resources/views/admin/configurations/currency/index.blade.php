@@ -1,24 +1,15 @@
 @extends('admin.layouts.app')
 
+@section('page-header')
+    <x-admin.page-header
+        title="Moneda e Impuesto"
+        parent-label="Configuraciones"
+        :parent-route="route('admin.configurations')"
+    />
+@endsection
+
 @section('content')
 <div class="container-fluid">
-    <!-- Header -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h3 class="mb-1"><i class="fas fa-coins me-2 text-primary"></i>Moneda e Impuesto</h3>
-                    <p class="text-muted mb-0">Configura la moneda y el impuesto de tu tienda</p>
-                </div>
-                <div>
-                    <a href="{{ route('admin.configurations') }}" class="btn btn-outline-secondary">
-                        <i class="fas fa-arrow-left me-1"></i> Volver
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-
     @if(session('success'))
     <div class="alert alert-success alert-dismissible fade show" role="alert">
         <i class="fas fa-check-circle me-2"></i>{{ session('success') }}

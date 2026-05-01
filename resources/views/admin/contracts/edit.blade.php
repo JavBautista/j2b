@@ -1,16 +1,18 @@
 @extends('admin.layouts.app')
 
+@section('page-header')
+    <x-admin.page-header
+        title="Editar Plantilla: {{ $template->name }}"
+        parent-label="Plantillas de Contratos"
+        :parent-route="route('contract-templates.index')"
+    />
+@endsection
+
 @section('content')
 <div class="container-fluid">
     <div class="row">
         <div class="col-md-12">
             <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h4 class="mb-0">Editar Plantilla: {{ $template->name }}</h4>
-                    <a href="{{ route('contract-templates.index') }}" class="btn btn-secondary">
-                        <i class="fas fa-arrow-left"></i> Volver
-                    </a>
-                </div>
                 <div class="card-body">
                     <shop-template-creator-component 
                         :default-variables="{{ json_encode($defaultVariables) }}"

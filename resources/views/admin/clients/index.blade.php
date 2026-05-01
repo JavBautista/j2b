@@ -1,12 +1,11 @@
 @extends('admin.layouts.app')
 
+@section('page-header')
+    <x-admin.page-header title="Clientes de la tienda" icon="fa-users" />
+@endsection
+
 @section('content')
     <div class="container-fluid">
-        <div class="row">
-            <div class="col-md-12">
-                <h1 class="page-header">Clientes de la tienda</h1>
-            </div>
-        </div>
         <div class="row">
             <div class="col-md-12">
                 <shop-clients-component

@@ -1,23 +1,24 @@
 @extends('admin.layouts.app')
 
+@section('page-header')
+    <x-admin.page-header
+        title="Historial de Cambios - Contrato #{{ $contract->folio ?: $contract->id }}"
+        parent-label="Contratos del Cliente"
+        :parent-route="route('admin.clients.contracts', $client)"
+    >
+        <x-slot:actions>
+            <a href="{{ route('admin.contracts.view', $contract) }}" class="btn btn-info">
+                <i class="fa fa-eye me-1"></i> Ver Contrato
+            </a>
+        </x-slot:actions>
+    </x-admin.page-header>
+@endsection
+
 @section('content')
 <div class="container-fluid">
     <div class="row justify-content-center">
         <div class="col-md-12">
             <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h4 class="mb-0">
-                        <i class="fa fa-history"></i> Historial de Cambios - Contrato #{{ $contract->folio ?: $contract->id }}
-                    </h4>
-                    <div>
-                        <a href="{{ route('admin.contracts.view', $contract) }}" class="btn btn-info">
-                            <i class="fa fa-eye"></i> Ver Contrato
-                        </a>
-                        <a href="{{ route('admin.clients.contracts', $client) }}" class="btn btn-secondary">
-                            <i class="fa fa-arrow-left"></i> Volver a Contratos
-                        </a>
-                    </div>
-                </div>
                 <div class="card-body">
                     <!-- Información del Contrato -->
                     <div class="alert alert-info">

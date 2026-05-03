@@ -13,6 +13,11 @@
                 </a>
             </li>
             <li class="nav-item">
+                <a href="{{ route('admin.monitoreo') }}" class="nav-link">
+                    <i class="fa fa-map-marker"></i> Monitoreo GPS
+                </a>
+            </li>
+            <li class="nav-item">
                 <a href="{{ route('admin.receipts') }}" class="nav-link">
                     <i class="fa fa-list-alt"></i> Ventas
                 </a>

@@ -511,6 +511,12 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
             Route::delete('/admin/purchase-orders/partial-payment/{paymentId}', [App\Http\Controllers\Admin\PurchaseOrdersController::class, 'deletePartialPayment'])->name('admin.purchase-orders.delete-partial-payment');
         }); // ./Órdenes de Compra escritura (full.admin)
 
+        // Monitoreo GPS (admin web)
+        Route::get('/admin/monitoreo', [App\Http\Controllers\Admin\TaskMonitoringController::class, 'index'])->name('admin.monitoreo');
+        Route::get('/admin/monitoreo/get', [App\Http\Controllers\Admin\TaskMonitoringController::class, 'get'])->name('admin.monitoreo.get');
+        Route::get('/admin/monitoreo/counters', [App\Http\Controllers\Admin\TaskMonitoringController::class, 'counters'])->name('admin.monitoreo.counters');
+        Route::get('/admin/monitoreo/{id}/history', [App\Http\Controllers\Admin\TaskMonitoringController::class, 'history'])->name('admin.monitoreo.history');
+
         // Rutas para recibos de Tareas(admin web)
         Route::get('/admin/tasks', [TasksController::class, 'index'])->name('admin.tasks');
         Route::get('/admin/tasks/get', [TasksController::class, 'get'])->name('admin.tasks.get');

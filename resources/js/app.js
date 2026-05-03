@@ -58,6 +58,9 @@ import CfdiFacturasComponent from './components/admin/CfdiFacturasComponent.vue'
 import ShopBankAccountsComponent from './components/admin/ShopBankAccountsComponent.vue';
 import ReceiptSettingsComponent from './components/admin/ReceiptSettingsComponent.vue';
 import ServiceTrackingConfigComponent from './components/admin/ServiceTrackingConfigComponent.vue';
+import MonitoreoComponent from './components/admin/MonitoreoComponent.vue';
+import TrackingMapModal from './components/admin/TrackingMapModal.vue';
+import TrackingHistoryListModal from './components/admin/TrackingHistoryListModal.vue';
 
 // Componentes Shared (reutilizables)
 import ModalSelectClient from './components/shared/ModalSelectClient.vue';
@@ -105,6 +108,9 @@ app.component('cfdi-facturas-component', CfdiFacturasComponent);
 app.component('shop-bank-accounts-component', ShopBankAccountsComponent);
 app.component('receipt-settings-component', ReceiptSettingsComponent);
 app.component('service-tracking-config-component', ServiceTrackingConfigComponent);
+app.component('monitoreo-component', MonitoreoComponent);
+app.component('tracking-map-modal', TrackingMapModal);
+app.component('tracking-history-list-modal', TrackingHistoryListModal);
 app.component('users-component', AdminUsersComponent);
 app.component('reports-component', ReportsComponent);
 app.component('gastos-component', GastosComponent);

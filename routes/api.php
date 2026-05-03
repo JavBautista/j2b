@@ -502,13 +502,13 @@ Route::group([
         /*SERVICE TRACKING CONFIG (CRUD de pasos)*/
         Route::get('service-tracking-config', [\App\Http\Controllers\ServiceTrackingConfigApiController::class, 'get']);
         Route::post('service-tracking-config', [\App\Http\Controllers\ServiceTrackingConfigApiController::class, 'store']);
-        Route::put('service-tracking-config/{id}', [\App\Http\Controllers\ServiceTrackingConfigApiController::class, 'update']);
         Route::put('service-tracking-config/reorder/steps', [\App\Http\Controllers\ServiceTrackingConfigApiController::class, 'reorder']);
+        Route::put('service-tracking-config/disclaimer', [\App\Http\Controllers\ServiceTrackingConfigApiController::class, 'updateDisclaimer']);
+        Route::put('service-tracking-config/{id}', [\App\Http\Controllers\ServiceTrackingConfigApiController::class, 'update']);
         Route::put('service-tracking-config/{id}/toggle', [\App\Http\Controllers\ServiceTrackingConfigApiController::class, 'toggleActive']);
         Route::put('service-tracking-config/{id}/set-initial', [\App\Http\Controllers\ServiceTrackingConfigApiController::class, 'setInitial']);
         Route::put('service-tracking-config/{id}/set-final', [\App\Http\Controllers\ServiceTrackingConfigApiController::class, 'setFinal']);
         Route::delete('service-tracking-config/{id}', [\App\Http\Controllers\ServiceTrackingConfigApiController::class, 'delete']);
-        Route::put('service-tracking-config/disclaimer', [\App\Http\Controllers\ServiceTrackingConfigApiController::class, 'updateDisclaimer']);
 
         /*TASK CHECKLIST*/
         Route::get('tasks/checklist/search-catalog', [TaskController::class, 'searchChecklistCatalog']);

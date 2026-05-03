@@ -327,7 +327,7 @@ export default {
                     this.receiptDisclaimer = res.data.receipt_disclaimer || '';
                 })
                 .catch(err => {
-                    alert('Error al cargar los pasos');
+                    this.showToast('error', 'Error al cargar los pasos');
                 })
                 .finally(() => {
                     this.loading = false;
@@ -379,7 +379,7 @@ export default {
                     this.loadSteps();
                 })
                 .catch(err => {
-                    alert(err.response?.data?.message || 'Error al guardar');
+                    this.showToast('error', err.response?.data?.message || 'Error al guardar');
                 })
                 .finally(() => {
                     this.saving = false;
@@ -392,19 +392,29 @@ export default {
                     this.loadSteps();
                 })
                 .catch(err => {
-                    alert('Error al cambiar estado');
+                    this.showToast('error', 'Error al cambiar estado');
                 });
         },
 
-        eliminarPaso(step) {
-            if (!confirm('¿Eliminar el paso "' + step.name + '"?')) return;
+        async eliminarPaso(step) {
+            const result = await Swal.fire({
+                title: '¿Eliminar paso?',
+                text: `Se eliminará "${step.name}"`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#dc3545',
+            });
+            if (!result.isConfirmed) return;
 
             axios.delete('/admin/configurations/service-tracking/' + step.id)
                 .then(res => {
                     this.loadSteps();
+                    this.showToast('success', 'Paso eliminado');
                 })
                 .catch(err => {
-                    alert(err.response?.data?.message || 'Error al eliminar');
+                    this.showToast('error', err.response?.data?.message || 'Error al eliminar');
                 });
         },
 
@@ -430,7 +440,7 @@ export default {
             const ids = this.steps.map(s => s.id);
             axios.put('/admin/configurations/service-tracking/reorder/steps', { ids })
                 .catch(err => {
-                    alert('Error al reordenar');
+                    this.showToast('error', 'Error al reordenar');
                     this.loadSteps();
                 });
         },
@@ -441,14 +451,29 @@ export default {
                 receipt_disclaimer: this.receiptDisclaimer || null,
             })
                 .then(() => {
-                    alert('Aviso legal guardado');
+                    this.showToast('success', 'Aviso legal guardado');
                 })
                 .catch(() => {
-                    alert('Error al guardar');
+                    this.showToast('error', 'Error al guardar');
                 })
                 .finally(() => {
                     this.savingDisclaimer = false;
                 });
+        },
+
+        showToast(type, message) {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: type === 'success' ? 'success' : 'error',
+                    title: message,
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 4000,
+                });
+            } else {
+                alert(message);
+            }
         },
     }
 };

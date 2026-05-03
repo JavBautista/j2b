@@ -302,12 +302,12 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
             Route::get('/admin/configurations/service-tracking/get', [App\Http\Controllers\Admin\ServiceTrackingConfigController::class, 'get']);
             Route::post('/admin/configurations/service-tracking/store', [App\Http\Controllers\Admin\ServiceTrackingConfigController::class, 'store']);
             Route::put('/admin/configurations/service-tracking/reorder/steps', [App\Http\Controllers\Admin\ServiceTrackingConfigController::class, 'reorder']);
+            Route::put('/admin/configurations/service-tracking/disclaimer', [App\Http\Controllers\Admin\ServiceTrackingConfigController::class, 'updateDisclaimer']);
             Route::put('/admin/configurations/service-tracking/{id}', [App\Http\Controllers\Admin\ServiceTrackingConfigController::class, 'update']);
             Route::put('/admin/configurations/service-tracking/{id}/toggle', [App\Http\Controllers\Admin\ServiceTrackingConfigController::class, 'toggleActive']);
             Route::put('/admin/configurations/service-tracking/{id}/set-initial', [App\Http\Controllers\Admin\ServiceTrackingConfigController::class, 'setInitial']);
             Route::put('/admin/configurations/service-tracking/{id}/set-final', [App\Http\Controllers\Admin\ServiceTrackingConfigController::class, 'setFinal']);
             Route::delete('/admin/configurations/service-tracking/{id}', [App\Http\Controllers\Admin\ServiceTrackingConfigController::class, 'delete']);
-            Route::put('/admin/configurations/service-tracking/disclaimer', [App\Http\Controllers\Admin\ServiceTrackingConfigController::class, 'updateDisclaimer']);
         }); // ./Configuraciones (full.admin)
 
         // Facturación CFDI - Configuración Emisor

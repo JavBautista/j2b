@@ -127,6 +127,27 @@
         </div>
     </section>
 
+    <!-- Demo Video Section -->
+    <section id="demo" class="demo-video">
+        <div class="container">
+            <div class="section-header scroll-reveal">
+                <h2>Mira J2Biznes en acción</h2>
+                <p>2 minutos para descubrir cómo simplificar tu negocio</p>
+            </div>
+            <div class="video-wrapper scroll-reveal">
+                <video
+                    controls
+                    preload="metadata"
+                    poster="{{ asset('videos/demo-poster.jpg') }}"
+                    playsinline
+                >
+                    <source src="{{ asset('videos/demo.mp4') }}" type="video/mp4">
+                    Tu navegador no soporta video HTML5.
+                </video>
+            </div>
+        </div>
+    </section>
+
     <!-- Features Section -->
     <section id="caracteristicas" class="features">
         <div class="container">
@@ -271,10 +292,10 @@
                     <a href="#descarga" class="pricing-btn btn-primary">Elegir Plan</a>
                 </div>
 
-                <!-- Plan Enterprise -->
+                <!-- Plan Premium -->
                 <div class="pricing-card scroll-reveal">
                     <div class="pricing-header">
-                        <h3>ENTERPRISE</h3>
+                        <h3>PREMIUM</h3>
                         <div class="price">
                             <span class="currency">MX$</span>
                             <span class="amount">1,999</span>
@@ -290,7 +311,31 @@
                         <li><i class="fas fa-check"></i> Órdenes de trabajo con fotos y firma</li>
                         <li><i class="fas fa-check"></i> Portal de cliente en la app</li>
                         <li><i class="fas fa-check"></i> Multi-moneda</li>
-                        <li><i class="fas fa-check"></i> Soporte dedicado</li>
+                        <li><i class="fas fa-check"></i> Soporte prioritario</li>
+                    </ul>
+                    <a href="#descarga" class="pricing-btn btn-outline">Elegir Plan</a>
+                </div>
+
+                <!-- Plan Enterprise -->
+                <div class="pricing-card scroll-reveal">
+                    <div class="pricing-header">
+                        <h3>ENTERPRISE</h3>
+                        <div class="price">
+                            <span class="currency">MX$</span>
+                            <span class="amount">2,500</span>
+                            <span class="period">/mes</span>
+                        </div>
+                    </div>
+                    <ul class="pricing-features">
+                        <li><i class="fas fa-check"></i> Todo lo del plan PREMIUM</li>
+                        <li><i class="fas fa-user-tie"></i> <strong>Gerente de cuenta dedicado</strong></li>
+                        <li><i class="fas fa-graduation-cap"></i> <strong>Onboarding y capacitación personalizada</strong></li>
+                        <li><i class="fas fa-database"></i> Migración de datos asistida</li>
+                        <li><i class="fas fa-shield-alt"></i> SLA garantizado 99.9% uptime</li>
+                        <li><i class="fas fa-headset"></i> Soporte 24/7</li>
+                        <li><i class="fas fa-cloud-upload-alt"></i> Backups premium con restauración prioritaria</li>
+                        <li><i class="fas fa-chart-line"></i> Reportes ejecutivos personalizados</li>
+                        <li><i class="fas fa-sync-alt"></i> Capacitación recurrente trimestral</li>
                     </ul>
                     <a href="#descarga" class="pricing-btn btn-outline">Elegir Plan</a>
                 </div>

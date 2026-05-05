@@ -738,11 +738,11 @@ class ReceiptController extends Controller
             ], 422);
         }
 
-        // Guard: nota timbrada solo permite transición a CANCELADA
-        if($receipt->is_tax_invoiced && $new_status !== Receipt::STATUS_CANCELADA){
+        // Guard: nota timbrada no puede regresar a estados pre-facturación
+        if($receipt->is_tax_invoiced && in_array($new_status, [Receipt::STATUS_POR_FACTURAR, Receipt::STATUS_NUEVA_COMPRA])){
             return response()->json([
                 'ok'=>false,
-                'message'=>'No se puede cambiar el status de una nota facturada (CFDI vigente). Solo se permite cancelar.'
+                'message'=>'No se puede regresar una nota facturada (CFDI vigente) a "'.$new_status.'".'
             ], 422);
         }
 

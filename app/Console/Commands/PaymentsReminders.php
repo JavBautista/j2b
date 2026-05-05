@@ -61,9 +61,10 @@ class PaymentsReminders extends Command
         $log_text = "[" . now() . "] Se inicia proceso de recordatorios.";
         Storage::append("log_payment_reminders.txt", $log_text);
 
-        // Obtener los créditos activos
+        // Obtener los créditos activos (excluir cancelados / devueltos)
         $receipts = Receipt::with('client')->where('credit', 1)
             ->where('credit_completed', 0)
+            ->whereNotIn('status', [Receipt::STATUS_CANCELADA, Receipt::STATUS_DEVOLUCION])
             ->get();
         // Fecha actual
         $date_today = Carbon::now()->startOfDay(); // Asegurarse de comparar solo la fecha

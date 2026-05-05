@@ -17,6 +17,7 @@ use App\Models\PdfPhrase;
 use Barryvdh\DomPDF\Facade\Pdf as PDF;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 
 class ReceiptController extends Controller
 {
@@ -308,20 +309,9 @@ class ReceiptController extends Controller
             $rent_mm=$rcp['rent_mm'];
         }
 
-        //Este bloque es para obtener el ultimo folio de la tienda o inicializarlo en 1
-        $ultimo_folio = Receipt::where('shop_id', $shop->id)->max('folio');
-        $nuevo_folio = 0;
-        if (!$ultimo_folio) {
-            // Si no hay folios para esta tienda aún, asignamos el valor 1 al nuevo folio
-            $nuevo_folio = 1;
-        } else {
-            // Si hay folios, asignamos el valor siguiente al último folio
-            $nuevo_folio = $ultimo_folio + 1;
-        }
         //Guardamos todos los datos de la NOTA, deben de venir desde la APP con algun valor
+        // El folio se asigna abajo dentro de una transacción con lock para evitar duplicados.
         $receipt = new Receipt();
-
-        $receipt->folio = $nuevo_folio;
 
         $receipt->shop_id     = $shop->id;
         $receipt->client_id   = $rcp['client_id'];
@@ -377,7 +367,15 @@ class ReceiptController extends Controller
             $receipt->credit_completed = 1;
         }
 
-        $receipt->save();
+        // Asignación de folio + persistencia en transacción con lock pesimista
+        // sobre la fila del shop. Serializa la creación de recibos por tienda
+        // y evita folios duplicados ante doble click / reintentos de red.
+        DB::transaction(function() use($shop, $receipt) {
+            Shop::where('id', $shop->id)->lockForUpdate()->first();
+            $ultimo_folio = Receipt::where('shop_id', $shop->id)->max('folio');
+            $receipt->folio = $ultimo_folio ? $ultimo_folio + 1 : 1;
+            $receipt->save();
+        });
 
         //Guardaremos pagos parciales si:
         //1 NO es cotizacion

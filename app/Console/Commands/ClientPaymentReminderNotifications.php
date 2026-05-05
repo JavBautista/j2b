@@ -30,6 +30,7 @@ class ClientPaymentReminderNotifications extends Command
         $receipts = Receipt::with('client')
             ->where('credit', 1)
             ->where('credit_completed', 0)
+            ->whereNotIn('status', [Receipt::STATUS_CANCELADA, Receipt::STATUS_DEVOLUCION])
             ->whereIn('credit_date_notification', [$date_in_3, $date_in_1])
             ->whereHas('client', function ($query) {
                 $query->whereNotNull('user_id');

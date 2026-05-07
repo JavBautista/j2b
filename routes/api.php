@@ -108,6 +108,18 @@ Route::group([
     Route::post('receipt-create','App\Http\Controllers\Chatbot\ChatbotController@receiptStore');
 });
 
+/*
+*-------------------------------------------------------------------
+*ROUTES FOR SNMP AGENT (lectura remota de copiadoras/multifuncionales)
+*---------------------------------------------------------------------
+*/
+Route::group([
+    'prefix' => 'snmp',
+    'middleware' => ['snmp.token']
+], function () {
+    Route::post('equipment-reading', 'App\Http\Controllers\Snmp\SnmpReadingController@store');
+});
+
 
 
 /*------------------------------------------------------------------

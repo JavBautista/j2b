@@ -63,6 +63,12 @@
                 </ul>
             </li>
 
+            <li class="nav-item">
+                <a href="{{ route('admin.snmp-readings') }}" class="nav-link">
+                    <i class="fa fa-cloud-download"></i> Lecturas SNMP
+                </a>
+            </li>
+
             {{-- Reportes: Solo para Admin Full (limited = 0) --}}
             @if(Auth::user()->isFullAdmin())
             <li class="nav-item nav-dropdown">

@@ -61,6 +61,8 @@ import ServiceTrackingConfigComponent from './components/admin/ServiceTrackingCo
 import MonitoreoComponent from './components/admin/MonitoreoComponent.vue';
 import TrackingMapModal from './components/admin/TrackingMapModal.vue';
 import TrackingHistoryListModal from './components/admin/TrackingHistoryListModal.vue';
+import SnmpTokenManagerComponent from './components/admin/snmp/SnmpTokenManagerComponent.vue';
+import SnmpReadingsComponent from './components/admin/snmp/SnmpReadingsComponent.vue';
 
 // Componentes Shared (reutilizables)
 import ModalSelectClient from './components/shared/ModalSelectClient.vue';
@@ -111,6 +113,8 @@ app.component('service-tracking-config-component', ServiceTrackingConfigComponen
 app.component('monitoreo-component', MonitoreoComponent);
 app.component('tracking-map-modal', TrackingMapModal);
 app.component('tracking-history-list-modal', TrackingHistoryListModal);
+app.component('snmp-token-manager-component', SnmpTokenManagerComponent);
+app.component('snmp-readings-component', SnmpReadingsComponent);
 app.component('users-component', AdminUsersComponent);
 app.component('reports-component', ReportsComponent);
 app.component('gastos-component', GastosComponent);

@@ -669,5 +669,14 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
             Route::get('/admin/reports/diferencias-mensual', [\App\Http\Controllers\Admin\ReportsController::class, 'diferenciasMensual']);
             Route::get('/admin/reports/ventas-periodo', [\App\Http\Controllers\Admin\ReportsController::class, 'ventasPeriodo']);
         });
+
+        // ===== Agente SNMP (lecturas remotas de copiadoras/multifuncionales) =====
+        Route::get('/admin/clients/{client}/snmp-token', [\App\Http\Controllers\Admin\SnmpTokenController::class, 'getToken'])->name('admin.clients.snmp-token.get');
+        Route::post('/admin/clients/{client}/snmp-token/regenerate', [\App\Http\Controllers\Admin\SnmpTokenController::class, 'regenerate'])->name('admin.clients.snmp-token.regenerate');
+        Route::post('/admin/clients/{client}/snmp-token/toggle', [\App\Http\Controllers\Admin\SnmpTokenController::class, 'toggle'])->name('admin.clients.snmp-token.toggle');
+
+        Route::get('/admin/snmp-readings', [\App\Http\Controllers\Admin\SnmpReadingsController::class, 'index'])->name('admin.snmp-readings');
+        Route::get('/admin/snmp-readings/get', [\App\Http\Controllers\Admin\SnmpReadingsController::class, 'getReadings'])->name('admin.snmp-readings.get');
+        Route::get('/admin/snmp-readings/clients', [\App\Http\Controllers\Admin\SnmpReadingsController::class, 'getClients'])->name('admin.snmp-readings.clients');
     }); //./Routes Middleware admin
 });#./Middlware AUTH

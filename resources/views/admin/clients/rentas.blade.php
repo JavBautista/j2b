@@ -10,6 +10,8 @@
 
 @section('content')
 <div class="container-fluid">
+    <snmp-token-manager-component :client-id="{{ $client->id }}"></snmp-token-manager-component>
+
     <rentas-cliente-component
         :client="{{ json_encode($client) }}"
         :shop="{{ json_encode($shop) }}"

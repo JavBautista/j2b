@@ -50,6 +50,7 @@ class SnmpReadingController extends Controller
 
         $rentDetail = RentDetail::where('serial_number', $serie)
             ->whereIn('rent_id', $rentIds)
+            ->where('monitor_enabled', true)
             ->first();
 
         $reading = EquipmentCounterReading::create([

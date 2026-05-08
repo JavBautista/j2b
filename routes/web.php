@@ -678,5 +678,9 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::get('/admin/snmp-readings', [\App\Http\Controllers\Admin\SnmpReadingsController::class, 'index'])->name('admin.snmp-readings');
         Route::get('/admin/snmp-readings/get', [\App\Http\Controllers\Admin\SnmpReadingsController::class, 'getReadings'])->name('admin.snmp-readings.get');
         Route::get('/admin/snmp-readings/clients', [\App\Http\Controllers\Admin\SnmpReadingsController::class, 'getClients'])->name('admin.snmp-readings.clients');
+
+        // ===== J2 Monitor — Configuración de licencias por cliente =====
+        Route::get('/admin/clients/{client}/monitor-config', [\App\Http\Controllers\Admin\ClientMonitorController::class, 'show'])->name('admin.clients.monitor-config.show');
+        Route::put('/admin/clients/{client}/monitor-config', [\App\Http\Controllers\Admin\ClientMonitorController::class, 'update'])->name('admin.clients.monitor-config.update');
     }); //./Routes Middleware admin
 });#./Middlware AUTH

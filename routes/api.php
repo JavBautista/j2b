@@ -118,6 +118,7 @@ Route::group([
     'middleware' => ['snmp.token']
 ], function () {
     Route::post('equipment-reading', 'App\Http\Controllers\Snmp\SnmpReadingController@store');
+    Route::get('equipment-list', 'App\Http\Controllers\Snmp\SnmpAgentController@equipmentList');
 });
 
 

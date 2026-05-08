@@ -1,0 +1,23 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('clients', function (Blueprint $table) {
+            $table->boolean('monitor_active')->default(false)->after('level');
+            $table->unsignedSmallInteger('monitor_licenses_total')->default(0)->after('monitor_active');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('clients', function (Blueprint $table) {
+            $table->dropColumn(['monitor_active', 'monitor_licenses_total']);
+        });
+    }
+};

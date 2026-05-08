@@ -175,7 +175,12 @@
                                     <div class="card h-100 border-primary">
                                         <div class="card-header bg-primary text-white py-2 d-flex justify-content-between align-items-center">
                                             <strong>{{ equipo.trademark }} - {{ equipo.model }}</strong>
-                                            <span class="badge bg-success">${{ equipo.rent_price }}</span>
+                                            <div>
+                                                <span v-if="equipo.monitor_enabled" class="badge bg-warning text-dark me-1" title="Licencia J2 Monitor asignada">
+                                                    <i class="fa fa-id-card"></i> Monitor
+                                                </span>
+                                                <span class="badge bg-success">${{ equipo.rent_price }}</span>
+                                            </div>
                                         </div>
                                         <div class="card-body py-2">
                                             <div class="row small">
@@ -186,6 +191,12 @@
                                                     <a :href="equipo.url_web_monitor" target="_blank" class="btn btn-outline-info btn-sm">
                                                         <i class="fa fa-external-link"></i> Monitor
                                                     </a>
+                                                </div>
+                                            </div>
+                                            <div v-if="equipo.local_ip" class="row small mt-1">
+                                                <div class="col-12">
+                                                    <strong>IP local:</strong>
+                                                    <code>{{ equipo.local_ip }}</code>
                                                 </div>
                                             </div>
 
@@ -335,6 +346,43 @@
                         <div class="col-md-8">
                             <label class="form-label">URL Web Monitor</label>
                             <input type="url" class="form-control" v-model="formEquipo.url_web_monitor" placeholder="https://...">
+                        </div>
+                    </div>
+
+                    <!-- J2 Monitor (licencia + IP local) -->
+                    <div class="card mb-3 border-primary">
+                        <div class="card-header py-2 bg-primary text-white d-flex justify-content-between align-items-center">
+                            <strong><i class="fa fa-id-card"></i> J2 Monitor</strong>
+                            <div class="form-check form-switch mb-0">
+                                <input type="checkbox" class="form-check-input" id="monitorEnabledSwitch" v-model="formEquipo.monitor_enabled">
+                                <label class="form-check-label small ms-1" for="monitorEnabledSwitch">
+                                    Asignar licencia
+                                </label>
+                            </div>
+                        </div>
+                        <div class="card-body py-2">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label class="form-label small">IP local</label>
+                                    <input
+                                        type="text"
+                                        class="form-control form-control-sm"
+                                        v-model="formEquipo.local_ip"
+                                        placeholder="192.168.1.50"
+                                        :required="formEquipo.monitor_enabled">
+                                    <small class="text-muted">Dirección del equipo en la red del cliente.</small>
+                                </div>
+                                <div class="col-md-6 d-flex align-items-center">
+                                    <small v-if="formEquipo.monitor_enabled" class="text-primary">
+                                        <i class="fa fa-info-circle"></i>
+                                        El equipo será incluido en la lista que recibe el agente Python.
+                                        Requiere número de serie e IP local capturados.
+                                    </small>
+                                    <small v-else class="text-muted fst-italic">
+                                        Licencia no asignada — el agente no leerá este equipo.
+                                    </small>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -610,6 +658,8 @@ export default {
                 serial_number: '',
                 rent_price: 0,
                 url_web_monitor: '',
+                local_ip: '',
+                monitor_enabled: false,
                 monochrome: false,
                 pages_included_mono: 0,
                 extra_page_cost_mono: 0,
@@ -747,12 +797,12 @@ export default {
         // EQUIPOS
         abrirModalNuevoEquipo() {
             this.editandoEquipo = false;
-            this.formEquipo = { id: null, rent_id: this.rentaSeleccionada.id, trademark: '', model: '', serial_number: '', rent_price: 0, url_web_monitor: '', monochrome: false, pages_included_mono: 0, extra_page_cost_mono: 0, counter_mono: 0, color: false, pages_included_color: 0, extra_page_cost_color: 0, counter_color: 0 };
+            this.formEquipo = { id: null, rent_id: this.rentaSeleccionada.id, trademark: '', model: '', serial_number: '', rent_price: 0, url_web_monitor: '', local_ip: '', monitor_enabled: false, monochrome: false, pages_included_mono: 0, extra_page_cost_mono: 0, counter_mono: 0, color: false, pages_included_color: 0, extra_page_cost_color: 0, counter_color: 0 };
             this.modalFormEquipo = 1;
         },
         editarEquipo(equipo) {
             this.editandoEquipo = true;
-            this.formEquipo = { id: equipo.id, rent_id: equipo.rent_id, trademark: equipo.trademark || '', model: equipo.model || '', serial_number: equipo.serial_number || '', rent_price: equipo.rent_price || 0, url_web_monitor: equipo.url_web_monitor || '', monochrome: !!equipo.monochrome, pages_included_mono: equipo.pages_included_mono || 0, extra_page_cost_mono: equipo.extra_page_cost_mono || 0, counter_mono: equipo.counter_mono || 0, color: !!equipo.color, pages_included_color: equipo.pages_included_color || 0, extra_page_cost_color: equipo.extra_page_cost_color || 0, counter_color: equipo.counter_color || 0 };
+            this.formEquipo = { id: equipo.id, rent_id: equipo.rent_id, trademark: equipo.trademark || '', model: equipo.model || '', serial_number: equipo.serial_number || '', rent_price: equipo.rent_price || 0, url_web_monitor: equipo.url_web_monitor || '', local_ip: equipo.local_ip || '', monitor_enabled: !!equipo.monitor_enabled, monochrome: !!equipo.monochrome, pages_included_mono: equipo.pages_included_mono || 0, extra_page_cost_mono: equipo.extra_page_cost_mono || 0, counter_mono: equipo.counter_mono || 0, color: !!equipo.color, pages_included_color: equipo.pages_included_color || 0, extra_page_cost_color: equipo.extra_page_cost_color || 0, counter_color: equipo.counter_color || 0 };
             this.modalFormEquipo = 1;
         },
         cerrarModalFormEquipo() { this.modalFormEquipo = 0; },
@@ -766,10 +816,14 @@ export default {
                     this.cerrarModalFormEquipo();
                     this.seleccionarRenta(this.rentaSeleccionada);
                     this.cargarRentas();
+                    window.dispatchEvent(new CustomEvent('monitor:license-changed'));
                 }
                 this.guardandoEquipo = false;
             }).catch(error => {
-                Swal.fire('Error', error.response?.data?.message || 'Error', 'error');
+                const msg = error.response?.data?.message
+                    || (error.response?.data?.errors ? Object.values(error.response.data.errors).flat().join(' · ') : null)
+                    || 'Error';
+                Swal.fire('Error', msg, 'error');
                 this.guardandoEquipo = false;
             });
         },

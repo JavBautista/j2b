@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Rent;
 use App\Models\RentDetail;
 use App\Models\Consumables;
+use App\Services\Monitor\MonitorLicenseService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class RentsController extends Controller
 {
@@ -200,23 +202,34 @@ class RentsController extends Controller
     /**
      * Crear nuevo equipo para una renta
      */
-    public function storeDetail(Request $request)
+    public function storeDetail(Request $request, MonitorLicenseService $monitorLicenses)
     {
+        $user = Auth::user();
+        $shop = $user->shop;
+
         $request->validate([
             'rent_id' => 'required|exists:rents,id',
             'trademark' => 'required|string|max:255',
             'model' => 'required|string|max:255',
-            'serial_number' => 'nullable|string|max:255',
+            'serial_number' => [
+                'nullable', 'string', 'max:255',
+                Rule::unique('rent_details', 'serial_number')->where('shop_id', $shop->id),
+            ],
             'rent_price' => 'required|numeric|min:0',
+            'local_ip' => 'nullable|ip|max:45',
+            'monitor_enabled' => 'nullable|boolean',
         ]);
-
-        $user = Auth::user();
-        $shop = $user->shop;
 
         // Verificar que la renta pertenece a un cliente de esta tienda
         $rent = Rent::with('client')->findOrFail($request->rent_id);
         if ($rent->client->shop_id !== $shop->id) {
             return response()->json(['ok' => false, 'message' => 'Renta no encontrada'], 404);
+        }
+
+        // Validación licencia de monitoreo
+        if ($request->boolean('monitor_enabled')) {
+            $check = $this->validateMonitorLicense($rent->client, $request, null, $monitorLicenses);
+            if ($check) return $check;
         }
 
         $now = now();
@@ -227,10 +240,12 @@ class RentsController extends Controller
         $detail->active = 1;
         $detail->trademark = $request->trademark;
         $detail->model = $request->model;
-        $detail->serial_number = $request->serial_number;
+        $detail->serial_number = $request->serial_number ?: null;
         $detail->rent_price = $request->rent_price;
         $detail->description = $request->description;
         $detail->url_web_monitor = $request->url_web_monitor;
+        $detail->local_ip = $request->local_ip ?: null;
+        $detail->monitor_enabled = $request->boolean('monitor_enabled');
 
         // Blanco y Negro
         $detail->monochrome = $request->monochrome ? 1 : 0;
@@ -258,29 +273,45 @@ class RentsController extends Controller
     /**
      * Actualizar equipo
      */
-    public function updateDetail(Request $request)
+    public function updateDetail(Request $request, MonitorLicenseService $monitorLicenses)
     {
+        $user = Auth::user();
+        $shop = $user->shop;
+
         $request->validate([
             'id' => 'required|exists:rent_details,id',
             'trademark' => 'required|string|max:255',
             'model' => 'required|string|max:255',
-            'serial_number' => 'nullable|string|max:255',
+            'serial_number' => [
+                'nullable', 'string', 'max:255',
+                Rule::unique('rent_details', 'serial_number')
+                    ->where('shop_id', $shop->id)
+                    ->ignore($request->id),
+            ],
             'rent_price' => 'required|numeric|min:0',
+            'local_ip' => 'nullable|ip|max:45',
+            'monitor_enabled' => 'nullable|boolean',
         ]);
 
-        $user = Auth::user();
-        $shop = $user->shop;
-
         $detail = RentDetail::where('shop_id', $shop->id)->findOrFail($request->id);
+
+        // Validación licencia de monitoreo (si se intenta activar y antes estaba apagada)
+        if ($request->boolean('monitor_enabled')) {
+            $rent = Rent::with('client')->findOrFail($detail->rent_id);
+            $check = $this->validateMonitorLicense($rent->client, $request, $detail, $monitorLicenses);
+            if ($check) return $check;
+        }
 
         $now = now();
 
         $detail->trademark = $request->trademark;
         $detail->model = $request->model;
-        $detail->serial_number = $request->serial_number;
+        $detail->serial_number = $request->serial_number ?: null;
         $detail->rent_price = $request->rent_price;
         $detail->description = $request->description;
         $detail->url_web_monitor = $request->url_web_monitor;
+        $detail->local_ip = $request->local_ip ?: null;
+        $detail->monitor_enabled = $request->boolean('monitor_enabled');
 
         // Blanco y Negro
         $detail->monochrome = $request->monochrome ? 1 : 0;
@@ -457,5 +488,42 @@ class RentsController extends Controller
             'consumable' => $consumable,
             'message' => 'Consumible agregado correctamente.'
         ]);
+    }
+
+    /**
+     * Pre-condiciones para asignar una licencia de monitoreo a un equipo.
+     * Devuelve null si todo OK, o un JsonResponse 422 si falla.
+     */
+    private function validateMonitorLicense(\App\Models\Client $client, Request $request, ?RentDetail $existing, MonitorLicenseService $monitorLicenses)
+    {
+        if (!$client->monitor_active) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'El servicio J2 Monitor no está activo para este cliente.',
+            ], 422);
+        }
+
+        if (empty($request->serial_number)) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'El número de serie es obligatorio para asignar licencia de monitoreo.',
+            ], 422);
+        }
+
+        if (empty($request->local_ip)) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'La IP local es obligatoria para asignar licencia de monitoreo.',
+            ], 422);
+        }
+
+        if (!$monitorLicenses->canEnable($client, $existing)) {
+            return response()->json([
+                'ok' => false,
+                'message' => "Sin licencias disponibles ({$client->monitor_licenses_used}/{$client->monitor_licenses_total}).",
+            ], 422);
+        }
+
+        return null;
     }
 }

@@ -180,6 +180,12 @@ class CfdiInvoiceController extends Controller
                 'codigo_postal' => $emisor->codigo_postal,
                 'serie' => $emisor->serie,
                 'timbres_disponibles' => $emisor->timbresDisponibles(),
+                // Defaults de retenciones (frontend los usa para prellenar el modal).
+                // Tasas en formato decimal (0.10 = 10%).
+                'ret_isr_default_aplica' => (bool) $emisor->ret_isr_default_aplica,
+                'ret_isr_default_tasa' => $emisor->ret_isr_default_tasa,
+                'ret_iva_default_aplica' => (bool) $emisor->ret_iva_default_aplica,
+                'ret_iva_default_tasa' => $emisor->ret_iva_default_tasa,
             ],
         ]);
     }
@@ -216,6 +222,13 @@ class CfdiInvoiceController extends Controller
             'receptor_codigo_postal' => 'required|string|max:5',
             'forma_pago' => 'required|string|max:2',
             'metodo_pago' => 'required|string|max:3',
+            // Retenciones (opcionales). Tasas en formato decimal (0.10 = 10%).
+            'ret_isr_aplica' => 'nullable|boolean',
+            'ret_isr_tasa' => 'nullable|numeric|between:0,1',
+            'ret_iva_aplica' => 'nullable|boolean',
+            'ret_iva_tasa' => 'nullable|numeric|between:0,1',
+            'conceptos_sat' => 'nullable|array',
+            'conceptos_sat.*.aplica_retencion' => 'nullable|boolean',
         ]);
 
         $receipt = Receipt::with('detail.product')
@@ -270,6 +283,10 @@ class CfdiInvoiceController extends Controller
             'conceptos_sat' => $request->conceptos_sat ?? [],
             'guardar_datos_cliente' => (bool) $request->guardar_datos_cliente,
             'abonos_previos' => $request->input('abonos_previos'),
+            'ret_isr_aplica' => (bool) $request->input('ret_isr_aplica', false),
+            'ret_isr_tasa' => (float) $request->input('ret_isr_tasa', 0),
+            'ret_iva_aplica' => (bool) $request->input('ret_iva_aplica', false),
+            'ret_iva_tasa' => (float) $request->input('ret_iva_tasa', 0),
         ]);
 
         if (!$result['ok']) {

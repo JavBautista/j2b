@@ -47,4 +47,19 @@ class CfdiPagoComplemento extends Model
     {
         return $this->belongsTo(PartialPayments::class);
     }
+
+    public function taxes()
+    {
+        return $this->hasMany(CfdiPagoComplementoTax::class);
+    }
+
+    public function taxesDr()
+    {
+        return $this->taxes()->where('scope', 'dr');
+    }
+
+    public function taxesP()
+    {
+        return $this->taxes()->where('scope', 'p');
+    }
 }

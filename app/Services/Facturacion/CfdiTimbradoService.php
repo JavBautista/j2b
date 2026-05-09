@@ -22,12 +22,23 @@ use Illuminate\Support\Facades\Storage;
 class CfdiTimbradoService
 {
     /**
+     * Formato SAT obligatorio para tasas: string con 6 decimales (ej. "0.106667").
+     * Aplicar a TODA tasa que entre al payload TBT.
+     */
+    private function fmtTasa(float $tasa): string
+    {
+        return number_format($tasa, 6, '.', '');
+    }
+
+    /**
      * @param Receipt     $receipt  Con detail.product precargado
      * @param Shop        $shop
      * @param CfdiEmisor  $emisor
      * @param array       $data     receptor_rfc, receptor_razon_social, receptor_regimen_fiscal,
      *                              receptor_uso_cfdi, receptor_codigo_postal, forma_pago,
-     *                              metodo_pago, conceptos_sat (opt), guardar_datos_cliente (opt)
+     *                              metodo_pago, conceptos_sat (opt), guardar_datos_cliente (opt),
+     *                              ret_isr_aplica (opt), ret_isr_tasa (opt, decimal 0.10),
+     *                              ret_iva_aplica (opt), ret_iva_tasa (opt, decimal 0.106667)
      */
     public function emitir(Receipt $receipt, Shop $shop, CfdiEmisor $emisor, array $data): array
     {
@@ -54,6 +65,13 @@ class CfdiTimbradoService
             foreach (($data['conceptos_sat'] ?? []) as $cs) {
                 $conceptosSatMap[$cs['detail_id']] = $cs;
             }
+
+            // Config retenciones: tasas globales por factura, aplicación por concepto.
+            // El `aplica_retencion` por concepto vive en $conceptosSatMap[$detail_id]['aplica_retencion'].
+            $retIsrAplica = (bool) ($data['ret_isr_aplica'] ?? false);
+            $retIsrTasa = (float) ($data['ret_isr_tasa'] ?? 0);
+            $retIvaAplica = (bool) ($data['ret_iva_aplica'] ?? false);
+            $retIvaTasa = (float) ($data['ret_iva_tasa'] ?? 0);
 
             // === PASO 1: pre-calcular items facturables con valores brutos sin IVA ===
             $tieneIva = $receipt->iva > 0;
@@ -117,6 +135,11 @@ class CfdiTimbradoService
             $subtotalTotal = 0;
             $descuentoTotal = 0;
             $ivaTotal = 0;
+            $retIsrTotal = 0;
+            $retIvaTotal = 0;
+            // Metadata por concepto para persistir en cfdi_invoice_taxes post-timbre.
+            // Cada entrada: ['index', 'base', 'iva', 'ret_isr', 'ret_iva']
+            $conceptosTaxData = [];
 
             foreach ($facturables as $ef) {
                 $item = $ef['item'];
@@ -158,17 +181,73 @@ class CfdiTimbradoService
                     $concepto['descuento'] = $fmt($descuentoConcepto);
                 }
 
+                // Retenciones por concepto: solo cuando el usuario marcó este concepto.
+                // Tasas globales por factura, aplicación por concepto.
+                $aplicaRetConcepto = (bool) ($satOverride['aplica_retencion'] ?? false);
+                $retConceptoIsr = 0;
+                $retConceptoIva = 0;
+                $retencionesNodes = [];
+
+                if ($aplicaRetConcepto) {
+                    if ($retIsrAplica && $retIsrTasa > 0) {
+                        $r = round($base * $retIsrTasa, 2);
+                        // SAT rechaza retenciones con importe 0 — omitir nodo si redondeo cae bajo 1¢.
+                        if ($r >= 0.01) {
+                            $retConceptoIsr = $r;
+                            $retencionesNodes[] = [
+                                'base' => $fmt($base),
+                                'impuesto' => '001',
+                                'tipo_factor' => 'Tasa',
+                                'tasa_cuota' => $this->fmtTasa($retIsrTasa),
+                                'importe' => $fmt($r),
+                            ];
+                        }
+                    }
+                    // IVA retenido solo cuando hay IVA trasladado en el concepto
+                    // (si IVA traslado=0, retención IVA=0 → SAT rechaza).
+                    if ($retIvaAplica && $retIvaTasa > 0 && $ivaItem > 0) {
+                        $r = round($base * $retIvaTasa, 2);
+                        if ($r >= 0.01) {
+                            $retConceptoIva = $r;
+                            $retencionesNodes[] = [
+                                'base' => $fmt($base),
+                                'impuesto' => '002',
+                                'tipo_factor' => 'Tasa',
+                                'tasa_cuota' => $this->fmtTasa($retIvaTasa),
+                                'importe' => $fmt($r),
+                            ];
+                        }
+                    }
+                }
+
+                if (!empty($retencionesNodes)) {
+                    $concepto['impuestos']['retenciones'] = $retencionesNodes;
+                }
+
+                $conceptosTaxData[] = [
+                    'index' => count($conceptos),
+                    'base' => $base,
+                    'iva' => $ivaItem,
+                    'ret_isr' => $retConceptoIsr,
+                    'ret_iva' => $retConceptoIva,
+                ];
+
                 $conceptos[] = $concepto;
                 $subtotalTotal += $importe;
                 $descuentoTotal += $descuentoConcepto;
                 $ivaTotal += $ivaItem;
+                $retIsrTotal += $retConceptoIsr;
+                $retIvaTotal += $retConceptoIva;
             }
 
             $subtotalTotal = round($subtotalTotal, 2);
             $descuentoTotal = round($descuentoTotal, 2);
             $ivaTotal = round($ivaTotal, 2);
+            $retIsrTotal = round($retIsrTotal, 2);
+            $retIvaTotal = round($retIvaTotal, 2);
+            $retTotal = round($retIsrTotal + $retIvaTotal, 2);
             $baseIvaGlobal = round($subtotalTotal - $descuentoTotal, 2);
-            $total = round($baseIvaGlobal + $ivaTotal, 2);
+            $total = round($baseIvaGlobal + $ivaTotal - $retTotal, 2);
 
             // === Construir payload CFDI ===
             $cfdiPayload = [
@@ -222,8 +301,22 @@ class CfdiTimbradoService
                 ]],
             ];
 
+            // Retenciones globales: suma por impuesto. Sin tasa ni base (regla SAT).
+            if ($retTotal > 0) {
+                $cfdiPayload['impuestos']['total_impuestos_retenidos'] = $fmt($retTotal);
+                $globalRet = [];
+                if ($retIsrTotal >= 0.01) {
+                    $globalRet[] = ['impuesto' => '001', 'importe' => $fmt($retIsrTotal)];
+                }
+                if ($retIvaTotal >= 0.01) {
+                    $globalRet[] = ['impuesto' => '002', 'importe' => $fmt($retIvaTotal)];
+                }
+                $cfdiPayload['impuestos']['retenciones'] = $globalRet;
+            }
+
             // === Llamar API PAC ===
-            $hubService = new HubCfdiService();
+            // app() para que tests/tinker puedan inyectar fake via container binding.
+            $hubService = app(HubCfdiService::class);
             $result = $hubService->timbrar($cfdiPayload);
 
             if (!$result['success']) {
@@ -301,11 +394,89 @@ class CfdiTimbradoService
                 'metodo_pago' => $metodoPago,
                 'subtotal' => $subtotalTotal,
                 'total_impuestos' => $ivaTotal,
+                'total_retenciones' => $retTotal,
                 'total' => $total,
                 'status' => 'vigente',
                 'request_json' => $cfdiPayload,
                 'response_json' => $responseData,
             ]);
+
+            // === Persistir desglose de impuestos en cfdi_invoice_taxes ===
+            // Source of truth de retenciones para complementos PPD y reportes.
+            // Falla aquí NO revierte el timbre: el CFDI ya está vigente en TBT,
+            // los datos viven en request_json como respaldo.
+            try {
+                foreach ($conceptosTaxData as $cm) {
+                    if ($cm['iva'] > 0) {
+                        $invoice->taxes()->create([
+                            'concepto_index' => $cm['index'],
+                            'tipo' => 'traslado',
+                            'impuesto' => '002',
+                            'tipo_factor' => 'Tasa',
+                            'tasa' => $taxDecimal,
+                            'base' => $cm['base'],
+                            'importe' => $cm['iva'],
+                        ]);
+                    }
+                    if ($cm['ret_isr'] > 0) {
+                        $invoice->taxes()->create([
+                            'concepto_index' => $cm['index'],
+                            'tipo' => 'retencion',
+                            'impuesto' => '001',
+                            'tipo_factor' => 'Tasa',
+                            'tasa' => $retIsrTasa,
+                            'base' => $cm['base'],
+                            'importe' => $cm['ret_isr'],
+                        ]);
+                    }
+                    if ($cm['ret_iva'] > 0) {
+                        $invoice->taxes()->create([
+                            'concepto_index' => $cm['index'],
+                            'tipo' => 'retencion',
+                            'impuesto' => '002',
+                            'tipo_factor' => 'Tasa',
+                            'tasa' => $retIvaTasa,
+                            'base' => $cm['base'],
+                            'importe' => $cm['ret_iva'],
+                        ]);
+                    }
+                }
+
+                if ($ivaTotal > 0) {
+                    $invoice->taxes()->create([
+                        'concepto_index' => null,
+                        'tipo' => 'traslado',
+                        'impuesto' => '002',
+                        'tipo_factor' => 'Tasa',
+                        'tasa' => $taxDecimal,
+                        'base' => $baseIvaGlobal,
+                        'importe' => $ivaTotal,
+                    ]);
+                }
+                // Globales de retención: sin tasa ni base (regla SAT).
+                if ($retIsrTotal >= 0.01) {
+                    $invoice->taxes()->create([
+                        'concepto_index' => null,
+                        'tipo' => 'retencion',
+                        'impuesto' => '001',
+                        'importe' => $retIsrTotal,
+                    ]);
+                }
+                if ($retIvaTotal >= 0.01) {
+                    $invoice->taxes()->create([
+                        'concepto_index' => null,
+                        'tipo' => 'retencion',
+                        'impuesto' => '002',
+                        'importe' => $retIvaTotal,
+                    ]);
+                }
+            } catch (\Exception $e) {
+                Log::warning('CFDI: persistencia de cfdi_invoice_taxes falló (CFDI vigente, datos en request_json)', [
+                    'invoice_id' => $invoice->id,
+                    'uuid' => $uuid,
+                    'error' => $e->getMessage(),
+                ]);
+            }
 
             // === Actualizar receipt y emisor ===
             // PUE marca PAGADA. PPD mantiene el status actual (POR COBRAR / POR FACTURAR)

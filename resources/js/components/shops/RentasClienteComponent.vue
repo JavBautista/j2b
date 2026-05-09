@@ -820,12 +820,61 @@ export default {
                 }
                 this.guardandoEquipo = false;
             }).catch(error => {
-                const msg = error.response?.data?.message
-                    || (error.response?.data?.errors ? Object.values(error.response.data.errors).flat().join(' · ') : null)
+                this.guardandoEquipo = false;
+                const data = error.response?.data;
+                if (data?.code === 'serial_in_use' && data.conflict) {
+                    this.manejarConflictoSerial(data.message, data.conflict);
+                    return;
+                }
+                const msg = data?.message
+                    || (data?.errors ? Object.values(data.errors).flat().join(' · ') : null)
                     || 'Error';
                 Swal.fire('Error', msg, 'error');
-                this.guardandoEquipo = false;
             });
+        },
+        manejarConflictoSerial(message, conflict) {
+            if (conflict.in_inventory) {
+                Swal.fire({
+                    title: 'Equipo ya existe en inventario',
+                    html: `<div style="text-align:left">${message}</div>`,
+                    icon: 'info',
+                    showCancelButton: true,
+                    showDenyButton: true,
+                    confirmButtonText: 'Asignar a esta renta',
+                    denyButtonText: 'Cambiar serial',
+                    cancelButtonText: 'Cancelar',
+                    confirmButtonColor: '#3085d6',
+                }).then(result => {
+                    if (result.isConfirmed) {
+                        axios.post('/admin/rents/details/assign', {
+                            equipment_id: conflict.rent_detail_id,
+                            rent_id: this.rentaSeleccionada.id,
+                        }).then(response => {
+                            if (response.data.ok) {
+                                Swal.fire('Asignado', response.data.message, 'success');
+                                this.cerrarModalFormEquipo();
+                                this.seleccionarRenta(this.rentaSeleccionada);
+                                this.cargarRentas();
+                            }
+                        }).catch(err => {
+                            const m = err.response?.data?.message || 'No se pudo asignar el equipo.';
+                            Swal.fire('Error', m, 'error');
+                        });
+                    }
+                });
+            } else {
+                const detalle = `<div style="text-align:left"><p>${message}</p>`
+                    + `<hr><p><strong>Cliente:</strong> ${conflict.client_name || 'N/D'}<br>`
+                    + `<strong>Renta:</strong> #${conflict.rent_folio || 'N/D'}<br>`
+                    + `<strong>Equipo:</strong> ${conflict.trademark} ${conflict.model}</p>`
+                    + `<p>Cambia el número de serie o desactiva el equipo en conflicto.</p></div>`;
+                Swal.fire({
+                    title: 'Serial ya en uso',
+                    html: detalle,
+                    icon: 'warning',
+                    confirmButtonText: 'Entendido',
+                });
+            }
         },
         liberarEquipo(equipo) {
             Swal.fire({ title: 'Liberar Equipo', text: '¿Liberar este equipo?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Si' }).then(result => {

@@ -207,13 +207,21 @@ class RentsController extends Controller
         $user = Auth::user();
         $shop = $user->shop;
 
+        // Check explícito de serial en uso (mensaje detallado antes del validate genérico)
+        if ($request->filled('serial_number')) {
+            $conflictResp = $this->serialConflictResponse($shop->id, $request->serial_number, null);
+            if ($conflictResp) return $conflictResp;
+        }
+
         $request->validate([
             'rent_id' => 'required|exists:rents,id',
             'trademark' => 'required|string|max:255',
             'model' => 'required|string|max:255',
             'serial_number' => [
                 'nullable', 'string', 'max:255',
-                Rule::unique('rent_details', 'serial_number')->where('shop_id', $shop->id),
+                Rule::unique('rent_details', 'serial_number')
+                    ->where('shop_id', $shop->id)
+                    ->where('active', 1),
             ],
             'rent_price' => 'required|numeric|min:0',
             'local_ip' => 'nullable|ip|max:45',
@@ -278,6 +286,12 @@ class RentsController extends Controller
         $user = Auth::user();
         $shop = $user->shop;
 
+        // Check explícito de serial en uso (mensaje detallado antes del validate genérico)
+        if ($request->filled('serial_number')) {
+            $conflictResp = $this->serialConflictResponse($shop->id, $request->serial_number, (int) $request->id);
+            if ($conflictResp) return $conflictResp;
+        }
+
         $request->validate([
             'id' => 'required|exists:rent_details,id',
             'trademark' => 'required|string|max:255',
@@ -286,6 +300,7 @@ class RentsController extends Controller
                 'nullable', 'string', 'max:255',
                 Rule::unique('rent_details', 'serial_number')
                     ->where('shop_id', $shop->id)
+                    ->where('active', 1)
                     ->ignore($request->id),
             ],
             'rent_price' => 'required|numeric|min:0',
@@ -525,5 +540,56 @@ class RentsController extends Controller
         }
 
         return null;
+    }
+
+    /**
+     * Detecta si el serial ya está en uso por otro equipo activo de la tienda.
+     * Devuelve un JsonResponse 422 con info detallada del conflicto, o null si no hay choque.
+     * Reusa el equipo del inventario en lugar de crear uno nuevo (in_inventory=true).
+     */
+    private function serialConflictResponse(int $shopId, string $serial, ?int $ignoreId)
+    {
+        $query = RentDetail::where('shop_id', $shopId)
+            ->where('serial_number', $serial)
+            ->where('active', 1);
+
+        if ($ignoreId) {
+            $query->where('id', '!=', $ignoreId);
+        }
+
+        $existing = $query->first();
+        if (!$existing) return null;
+
+        $inInventory = (int) $existing->rent_id === 0;
+
+        $conflict = [
+            'rent_detail_id' => $existing->id,
+            'trademark' => $existing->trademark,
+            'model' => $existing->model,
+            'serial_number' => $existing->serial_number,
+            'in_inventory' => $inInventory,
+        ];
+
+        if ($inInventory) {
+            $message = "El equipo {$existing->trademark} {$existing->model} con serial '{$serial}' ya existe en tu inventario. Asígnalo a esta renta en lugar de crearlo de nuevo.";
+        } else {
+            $rent = Rent::with('client')->find($existing->rent_id);
+            $clientName = $rent && $rent->client ? $rent->client->name : 'cliente desconocido';
+            $folio = $rent ? $rent->folio : null;
+
+            $conflict['client_id'] = $rent ? $rent->client_id : null;
+            $conflict['client_name'] = $clientName;
+            $conflict['rent_id'] = $existing->rent_id;
+            $conflict['rent_folio'] = $folio;
+
+            $message = "El número de serie '{$serial}' ya está en uso por el equipo {$existing->trademark} {$existing->model} del cliente '{$clientName}' (renta #{$folio}).";
+        }
+
+        return response()->json([
+            'ok' => false,
+            'code' => 'serial_in_use',
+            'message' => $message,
+            'conflict' => $conflict,
+        ], 422);
     }
 }

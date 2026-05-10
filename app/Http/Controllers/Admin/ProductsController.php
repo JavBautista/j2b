@@ -134,6 +134,7 @@ class ProductsController extends Controller
             $product->reserve = $request->reserve ?? 0;
             $product->sat_product_code = $request->sat_product_code;
             $product->sat_unit_code = $request->sat_unit_code ?? 'H87';
+            $product->aplica_retencion_default = (bool) $request->input('aplica_retencion_default', false);
             $product->save();
 
             $product->load('category', 'images');
@@ -184,6 +185,7 @@ class ProductsController extends Controller
         $product->reserve = $request->reserve ?? $product->reserve;
         $product->sat_product_code = $request->sat_product_code;
         $product->sat_unit_code = $request->sat_unit_code ?? $product->sat_unit_code;
+        $product->aplica_retencion_default = (bool) $request->input('aplica_retencion_default', $product->aplica_retencion_default);
         $product->save();
 
         // Notificar clientes en espera si stock pasó de 0 a >0

@@ -12,6 +12,8 @@ class ClientMonitorController extends Controller
 {
     /**
      * Resumen del servicio J2 Monitor del cliente.
+     * Incluye el toggle monitor_active del cliente + el cupo global de la Shop
+     * (asignado por superadmin).
      */
     public function show(Client $client, MonitorLicenseService $service)
     {
@@ -23,13 +25,16 @@ class ClientMonitorController extends Controller
 
         return response()->json([
             'ok' => true,
-            'monitor' => $service->summary($client),
+            'monitor' => array_merge(
+                ['monitor_active' => (bool) $client->monitor_active],
+                $service->summary($shop)
+            ),
         ]);
     }
 
     /**
-     * Configurar el servicio J2 Monitor del cliente
-     * (activar/desactivar y asignar total de licencias contratadas).
+     * Activar/desactivar el servicio J2 Monitor para este cliente.
+     * El cupo total lo controla el superadmin a nivel Shop.
      */
     public function update(Client $client, Request $request, MonitorLicenseService $service)
     {
@@ -41,29 +46,18 @@ class ClientMonitorController extends Controller
 
         $request->validate([
             'monitor_active' => 'required|boolean',
-            'monitor_licenses_total' => 'required|integer|min:0|max:10000',
         ]);
 
-        $newTotal = (int) $request->monitor_licenses_total;
-        $used = $client->monitor_licenses_used;
-
-        if ($newTotal < $used) {
-            $enabled = $service->enabledEquipments($client);
-            return response()->json([
-                'ok' => false,
-                'message' => "No se puede reducir a {$newTotal} licencias: hay {$used} equipos con licencia asignada. Desactiva primero los equipos sobrantes.",
-                'enabled_equipments' => $enabled,
-            ], 422);
-        }
-
         $client->monitor_active = $request->boolean('monitor_active');
-        $client->monitor_licenses_total = $newTotal;
         $client->save();
 
         return response()->json([
             'ok' => true,
             'message' => 'Configuración de J2 Monitor actualizada.',
-            'monitor' => $service->summary($client->fresh()),
+            'monitor' => array_merge(
+                ['monitor_active' => (bool) $client->monitor_active],
+                $service->summary($shop)
+            ),
         ]);
     }
 }

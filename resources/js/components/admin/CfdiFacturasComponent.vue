@@ -13,6 +13,10 @@
                         <option value="cancelada">Canceladas</option>
                     </select>
                     <input type="text" class="form-control form-control-sm" v-model="filtros.buscar" placeholder="RFC o nombre..." style="width:180px" @keyup.enter="cargar">
+                    <div class="form-check form-check-inline ms-1" title="Mostrar solo facturas con retenciones de ISR/IVA">
+                        <input class="form-check-input" type="checkbox" id="chkSoloRet" v-model="filtros.solo_con_retenciones" @change="cargar">
+                        <label class="form-check-label small" for="chkSoloRet">Solo con retenciones</label>
+                    </div>
                     <button class="btn btn-sm btn-primary" @click="cargar" :disabled="loading">
                         <i class="fa fa-search"></i> Buscar
                     </button>
@@ -57,6 +61,14 @@
                             </div>
                         </div>
                     </div>
+                    <div class="col-md-3 mb-2" v-if="(totales.total_retenciones || 0) > 0">
+                        <div class="card bg-warning text-white">
+                            <div class="card-body py-2 px-3">
+                                <h6 class="card-title mb-1"><i class="fa fa-minus-circle"></i> Retenciones (vigentes)</h6>
+                                <h3 class="mb-0">{{ formatMoney(totales.total_retenciones) }}</h3>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Loading -->
@@ -76,6 +88,7 @@
                                 <th>Nota #</th>
                                 <th class="text-right">Subtotal</th>
                                 <th class="text-right">IVA</th>
+                                <th class="text-right text-warning">Retenciones</th>
                                 <th class="text-right">Total</th>
                                 <th class="text-center">Status</th>
                                 <th class="text-center">Acciones</th>
@@ -92,6 +105,9 @@
                                 <td>{{ f.receipt_folio || '-' }}</td>
                                 <td class="text-right">{{ formatMoney(f.subtotal) }}</td>
                                 <td class="text-right">{{ formatMoney(f.total_impuestos) }}</td>
+                                <td class="text-right" :class="{ 'text-warning fw-bold': (f.total_retenciones || 0) > 0 }">
+                                    {{ (f.total_retenciones || 0) > 0 ? '-' + formatMoney(f.total_retenciones) : '—' }}
+                                </td>
                                 <td class="text-right"><strong>{{ formatMoney(f.total) }}</strong></td>
                                 <td class="text-center">
                                     <span class="badge" :class="f.status === 'vigente' ? 'badge-success' : 'badge-danger'">
@@ -136,6 +152,7 @@ export default {
                 fecha_fin: this.defaultFechaFin(),
                 status: 'todos',
                 buscar: '',
+                solo_con_retenciones: false,
             },
         };
     },
@@ -159,6 +176,7 @@ export default {
                     fecha_fin: this.filtros.fecha_fin,
                     status: this.filtros.status,
                     buscar: this.filtros.buscar,
+                    solo_con_retenciones: this.filtros.solo_con_retenciones ? '1' : '0',
                 });
                 const { data } = await axios.get('/admin/facturacion/facturas/get?' + params);
                 if (data.ok) {

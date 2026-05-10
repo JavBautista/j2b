@@ -361,6 +361,21 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="form-group row">
+                            <div class="col-md-9 offset-md-3">
+                                <div class="form-check form-switch retencion-switch">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="chkAplicaRetProd"
+                                        v-model="formProduct.aplica_retencion_default" :disabled="modoLectura">
+                                    <label class="form-check-label" for="chkAplicaRetProd">
+                                        Este producto normalmente lleva retención al facturar
+                                    </label>
+                                </div>
+                                <small class="text-muted d-block mt-1">
+                                    Si lo activas, en el modal de timbrado el concepto vendrá ya marcado
+                                    para aplicar las retenciones (ISR/IVA) configuradas.
+                                </small>
+                            </div>
+                        </div>
                         </form>
                 </div>
                 <div class="modal-footer">
@@ -544,7 +559,8 @@ export default {
                 sat_product_code: null,
                 sat_product_desc: '',
                 sat_unit_code: 'H87',
-                sat_unit_name: 'Pieza (pza,pz)'
+                sat_unit_name: 'Pieza (pza,pz)',
+                aplica_retencion_default: false,
             },
 
             // Stock
@@ -682,7 +698,8 @@ export default {
                     sat_product_code: null,
                     sat_product_desc: '',
                     sat_unit_code: 'H87',
-                    sat_unit_name: 'Pieza (pza,pz)'
+                    sat_unit_name: 'Pieza (pza,pz)',
+                    aplica_retencion_default: false,
                 };
                 this.satProductSearch = '';
                 this.satUnitSearch = '';
@@ -692,7 +709,10 @@ export default {
             } else if (tipo === 'ver' && product) {
                 this.modoEdicion = false;
                 this.modoLectura = true;
-                this.formProduct = { ...product };
+                this.formProduct = {
+                    ...product,
+                    aplica_retencion_default: !!product.aplica_retencion_default,
+                };
                 this.errorForm = false;
                 this.erroresForm = [];
                 this.modalEditar = true;
@@ -715,7 +735,8 @@ export default {
                     sat_product_code: product.sat_product_code || null,
                     sat_product_desc: product.sat_product_desc || '',
                     sat_unit_code: product.sat_unit_code || 'H87',
-                    sat_unit_name: product.sat_unit_name || ''
+                    sat_unit_name: product.sat_unit_name || '',
+                    aplica_retencion_default: !!product.aplica_retencion_default,
                 };
                 this.satProductSearch = '';
                 this.satUnitSearch = '';
@@ -1131,5 +1152,29 @@ export default {
         background: transparent;
         border-top: 1px solid #eee;
         padding: 0.5rem 1rem;
+    }
+
+    /* Toggle de retención más grande y con buen contraste */
+    .retencion-switch .form-check-input {
+        width: 2.8em;
+        height: 1.4em;
+        margin-top: 0.1em;
+        cursor: pointer;
+        background-color: #ced4da;
+        border-color: #adb5bd;
+        box-shadow: none;
+    }
+    .retencion-switch .form-check-input:checked {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+    }
+    .retencion-switch .form-check-input:focus {
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+    }
+    .retencion-switch .form-check-label {
+        cursor: pointer;
+        margin-left: 0.4em;
+        padding-top: 0.15em;
+        font-size: 0.95rem;
     }
 </style>

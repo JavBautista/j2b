@@ -46,7 +46,13 @@ class SnmpReadingController extends Controller
         $contadores = $datos['contadores'] ?? [];
         $toners = $datos['niveles_toner'] ?? [];
 
-        $rentIds = Rent::where('client_id', $tokenModel->client_id)->pluck('id');
+        // Si el token tiene rent_id, restringir match solo a esa renta.
+        // Si rent_id es NULL (token legacy), comportamiento previo: todas las rentas del cliente.
+        if ($tokenModel->rent_id) {
+            $rentIds = [$tokenModel->rent_id];
+        } else {
+            $rentIds = Rent::where('client_id', $tokenModel->client_id)->pluck('id');
+        }
 
         $rentDetail = RentDetail::where('serial_number', $serie)
             ->whereIn('rent_id', $rentIds)

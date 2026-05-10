@@ -199,6 +199,9 @@
                                                 <th class="text-end">P. Unit.</th>
                                                 <th class="text-end">Importe</th>
                                                 <th v-if="prorrateo.factor > 0" class="text-end text-danger">Descuento</th>
+                                                <th v-if="algunaRetencionActiva" class="text-center" style="width: 70px;" title="Marca los conceptos a los que se aplican las retenciones globales">
+                                                    <i class="fa fa-minus-circle text-warning"></i> Ret.
+                                                </th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -283,29 +286,101 @@
                                                 <td v-if="prorrateo.factor > 0" class="text-end text-danger">
                                                     −${{ formatNumber(prorrateo.facturables[idx]?.descuento || 0) }}
                                                 </td>
+                                                <td v-if="algunaRetencionActiva" class="text-center">
+                                                    <input type="checkbox" class="form-check-input" v-model="item.aplicaRet">
+                                                </td>
                                             </tr>
                                         </tbody>
                                         <tfoot>
                                             <tr>
-                                                <td :colspan="prorrateo.factor > 0 ? 6 : 5" class="text-end"><strong>Subtotal:</strong></td>
+                                                <td :colspan="colspanFooter" class="text-end"><strong>Subtotal:</strong></td>
                                                 <td class="text-end">${{ formatNumber(subtotalDisplay) }}</td>
                                             </tr>
                                             <tr v-if="prorrateo.factor > 0">
-                                                <td colspan="6" class="text-end text-danger">
+                                                <td :colspan="colspanFooter" class="text-end text-danger">
                                                     <strong>Descuento prorrateado:</strong>
                                                 </td>
                                                 <td class="text-end text-danger">−${{ formatNumber(descuentoDisplay) }}</td>
                                             </tr>
                                             <tr>
-                                                <td :colspan="prorrateo.factor > 0 ? 6 : 5" class="text-end"><strong>{{ $shopTaxName || 'IVA' }} ({{ $shopTaxRate }}%):</strong></td>
+                                                <td :colspan="colspanFooter" class="text-end"><strong>{{ $shopTaxName || 'IVA' }} ({{ $shopTaxRate }}%):</strong></td>
                                                 <td class="text-end">${{ formatNumber(ivaDisplay) }}</td>
                                             </tr>
+                                            <tr v-if="retIsrAplica && prorrateo.retIsr > 0">
+                                                <td :colspan="colspanFooter" class="text-end text-warning">
+                                                    <strong>Retención ISR ({{ retIsrTasa }}%):</strong>
+                                                </td>
+                                                <td class="text-end text-warning">−${{ formatNumber(retIsrDisplay) }}</td>
+                                            </tr>
+                                            <tr v-if="retIvaAplica && prorrateo.retIva > 0">
+                                                <td :colspan="colspanFooter" class="text-end text-warning">
+                                                    <strong>Retención IVA ({{ retIvaTasa }}%):</strong>
+                                                </td>
+                                                <td class="text-end text-warning">−${{ formatNumber(retIvaDisplay) }}</td>
+                                            </tr>
                                             <tr>
-                                                <td :colspan="prorrateo.factor > 0 ? 6 : 5" class="text-end"><strong>Total:</strong></td>
+                                                <td :colspan="colspanFooter" class="text-end"><strong>Total CFDI:</strong></td>
                                                 <td class="text-end"><strong>${{ formatNumber(totalDisplay) }}</strong></td>
                                             </tr>
                                         </tfoot>
                                     </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Retenciones -->
+                        <div class="card mb-3">
+                            <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center">
+                                <strong><i class="fa fa-minus-circle me-1 text-warning"></i> Retenciones</strong>
+                                <small class="text-muted">Marca los conceptos en la tabla a los que aplica</small>
+                            </div>
+                            <div class="card-body py-3">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <div class="form-check form-switch retencion-switch mb-2">
+                                            <input class="form-check-input" type="checkbox" role="switch" id="chkRetIsr" v-model="retIsrAplica">
+                                            <label class="form-check-label" for="chkRetIsr">
+                                                <strong>Retención ISR</strong>
+                                            </label>
+                                        </div>
+                                        <div class="input-group input-group-sm" v-if="retIsrAplica">
+                                            <input type="number" class="form-control text-end" v-model.number="retIsrTasa" step="0.0001" min="0" max="100">
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                        <small v-if="retIsrAplica" class="text-muted d-block mt-1" style="font-size: 0.75rem;">
+                                            Tasas comunes — Honorarios/arrendamiento: <strong>10%</strong> · RESICO PF: <strong>1.25%</strong>
+                                        </small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check form-switch retencion-switch mb-2">
+                                            <input class="form-check-input" type="checkbox" role="switch" id="chkRetIva" v-model="retIvaAplica">
+                                            <label class="form-check-label" for="chkRetIva">
+                                                <strong>Retención IVA</strong>
+                                            </label>
+                                        </div>
+                                        <div class="input-group input-group-sm" v-if="retIvaAplica">
+                                            <input type="number" class="form-control text-end" v-model.number="retIvaTasa" step="0.0001" min="0" max="100">
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                        <small v-if="retIvaAplica" class="text-muted d-block mt-1" style="font-size: 0.75rem;">
+                                            Tasas comunes — Honorarios/arrendamiento: <strong>10.6667%</strong> · Fletes: <strong>4%</strong>
+                                        </small>
+                                    </div>
+                                </div>
+                                <div v-if="warningsRetencion.length > 0" class="alert alert-warning py-2 mt-3 mb-0">
+                                    <i class="fa fa-exclamation-triangle me-1"></i>
+                                    <strong>Atención:</strong>
+                                    <ul class="mb-0 mt-1 small">
+                                        <li v-for="(w, i) in warningsRetencion" :key="i">{{ w }}</li>
+                                    </ul>
+                                </div>
+                                <div v-if="algunaRetencionActiva && retTotalDisplay > 0" class="alert alert-info py-2 mt-3 mb-0 small">
+                                    <i class="fa fa-info-circle me-1"></i>
+                                    El receptor te transferirá <strong>${{ formatNumber(totalDisplay) }}</strong>
+                                    y entregará al SAT en tu nombre <strong>${{ formatNumber(retTotalDisplay) }}</strong>
+                                    (que tu contador acreditará).
+                                    El saldo comercial del cliente sigue siendo
+                                    <strong>${{ formatNumber(receiptData?.total || 0) }}</strong>.
                                 </div>
                             </div>
                         </div>
@@ -417,6 +492,11 @@ export default {
             formaPago: '01',
             metodoPago: 'PUE',
             conceptosSat: [],
+            // Retenciones — tasas en porcentaje (UI). Se convierten a decimal al enviar.
+            retIsrAplica: false,
+            retIsrTasa: 10.0000,
+            retIvaAplica: false,
+            retIvaTasa: 10.6667,
             // Diálogo de abonos previos al timbrado PPD
             abonosPreviosPendientes: [],
             cuentasBancariasShop: [],
@@ -477,6 +557,10 @@ export default {
             const divisor = this.$taxDivisor;
             const decimal = divisor - 1;
 
+            // Lookup de aplica_retencion por detail_id desde conceptosSat (marcable por usuario)
+            const aplicaRetById = {};
+            this.conceptosSat.forEach(c => { aplicaRetById[c.detail_id] = !!c.aplicaRet; });
+
             // Pre-calcular items facturables (sin cortesías) con valores brutos sin IVA
             const facturables = this.receiptData.detail
                 .filter(it => !it.is_complimentary)
@@ -492,6 +576,9 @@ export default {
                         descuento: 0,
                         base: importeBruto,
                         iva: 0,
+                        aplicaRet: aplicaRetById[it.id] || false,
+                        retIsr: 0,
+                        retIva: 0,
                     };
                 })
                 .filter(f => f.importe > 0);
@@ -526,20 +613,47 @@ export default {
                 }
             }
 
-            // Calcular base e IVA por concepto
-            let descTotal = 0, ivaTotal = 0;
+            // Calcular base, IVA y retenciones por concepto.
+            // Retenciones se aplican solo si el concepto está marcado (f.aplicaRet) Y la tasa global está activa.
+            // Tasas en data() se almacenan en porcentaje; se convierten a decimal aquí.
+            const retIsrDec = this.retIsrAplica && this.retIsrTasa > 0
+                ? parseFloat(this.retIsrTasa) / 100
+                : 0;
+            const retIvaDec = this.retIvaAplica && this.retIvaTasa > 0
+                ? parseFloat(this.retIvaTasa) / 100
+                : 0;
+
+            let descTotal = 0, ivaTotal = 0, retIsrTotal = 0, retIvaTotal = 0;
             facturables.forEach(f => {
                 f.base = Math.round((f.importe - f.descuento) * 100) / 100;
                 f.iva = Math.round(f.base * decimal * 100) / 100;
+                f.retIsr = 0;
+                f.retIva = 0;
+                if (f.aplicaRet) {
+                    if (retIsrDec > 0) {
+                        const r = Math.round(f.base * retIsrDec * 100) / 100;
+                        if (r >= 0.01) f.retIsr = r;
+                    }
+                    // IVA retenido solo si IVA trasladado > 0 (regla SAT)
+                    if (retIvaDec > 0 && f.iva > 0) {
+                        const r = Math.round(f.base * retIvaDec * 100) / 100;
+                        if (r >= 0.01) f.retIva = r;
+                    }
+                }
                 descTotal += f.descuento;
                 ivaTotal += f.iva;
+                retIsrTotal += f.retIsr;
+                retIvaTotal += f.retIva;
             });
 
             const subtotalR = Math.round(subtotal * 100) / 100;
             const descR = Math.round(descTotal * 100) / 100;
             const baseIvaR = Math.round((subtotalR - descR) * 100) / 100;
             const ivaR = Math.round(ivaTotal * 100) / 100;
-            const totalR = Math.round((baseIvaR + ivaR) * 100) / 100;
+            const retIsrR = Math.round(retIsrTotal * 100) / 100;
+            const retIvaR = Math.round(retIvaTotal * 100) / 100;
+            const retTotalR = Math.round((retIsrR + retIvaR) * 100) / 100;
+            const totalR = Math.round((baseIvaR + ivaR - retTotalR) * 100) / 100;
 
             return {
                 facturables,
@@ -547,6 +661,9 @@ export default {
                 descuento: descR,
                 baseIva: baseIvaR,
                 iva: ivaR,
+                retIsr: retIsrR,
+                retIva: retIvaR,
+                retTotal: retTotalR,
                 total: totalR,
                 factor,
             };
@@ -554,7 +671,41 @@ export default {
         subtotalDisplay() { return this.prorrateo.subtotal; },
         descuentoDisplay() { return this.prorrateo.descuento; },
         ivaDisplay() { return this.prorrateo.iva; },
+        retIsrDisplay() { return this.prorrateo.retIsr; },
+        retIvaDisplay() { return this.prorrateo.retIva; },
+        retTotalDisplay() { return this.prorrateo.retTotal; },
         totalDisplay() { return this.prorrateo.total; },
+        // True si hay al menos una retención global activa con tasa > 0
+        algunaRetencionActiva() {
+            return (this.retIsrAplica && this.retIsrTasa > 0) ||
+                   (this.retIvaAplica && this.retIvaTasa > 0);
+        },
+        // Colspan del tfoot: 5 cols base + descuento (1) + retención (1)
+        colspanFooter() {
+            return 5 + (this.prorrateo.factor > 0 ? 1 : 0) + (this.algunaRetencionActiva ? 1 : 0);
+        },
+        // Warnings suaves (regímenes/tasas inusuales). Vacío si todo OK.
+        warningsRetencion() {
+            const w = [];
+            if (!this.algunaRetencionActiva) return w;
+            const reg = this.receptor.regimen_fiscal;
+            // Persona física como receptor + retención (típicamente PF→PM, no al revés)
+            if (['612', '605', '606', '607', '608', '611'].includes(reg)) {
+                w.push('Receptor es persona física. Las retenciones típicamente fluyen PF→PM, no al revés.');
+            }
+            // Receptor RESICO PM + retención IVA
+            if (reg === '626' && this.retIvaAplica) {
+                w.push('Receptor RESICO. La retención de IVA es inusual con este régimen.');
+            }
+            // Tasas fuera de rangos comunes
+            if (this.retIsrAplica && this.retIsrTasa > 30) {
+                w.push(`Retención ISR del ${this.retIsrTasa}% es inusual. Confirma con tu contador.`);
+            }
+            if (this.retIvaAplica && this.retIvaTasa > 16) {
+                w.push(`Retención IVA del ${this.retIvaTasa}% es inusual. Confirma con tu contador.`);
+            }
+            return w;
+        },
     },
     watch: {
         receiptId(newVal) {
@@ -596,6 +747,10 @@ export default {
             this.formaPago = '01';
             this.metodoPago = 'PUE';
             this.conceptosSat = [];
+            this.retIsrAplica = false;
+            this.retIsrTasa = 10.0000;
+            this.retIvaAplica = false;
+            this.retIvaTasa = 10.6667;
             this.satProductResults = [];
             this.satUnitResults = [];
             this.activeSearchIdx = null;
@@ -610,6 +765,15 @@ export default {
                     this.emisorData = res.data.emisor;
                     this.metodoPago = res.data.metodo_pago_calculado || 'PUE';
                     this.perfilesFiscales = res.data.receipt.client?.fiscal_data || [];
+                    // Prellenar retenciones con defaults del emisor (tasas en backend son decimales)
+                    this.retIsrAplica = !!res.data.emisor.ret_isr_default_aplica;
+                    if (res.data.emisor.ret_isr_default_tasa) {
+                        this.retIsrTasa = parseFloat(res.data.emisor.ret_isr_default_tasa) * 100;
+                    }
+                    this.retIvaAplica = !!res.data.emisor.ret_iva_default_aplica;
+                    if (res.data.emisor.ret_iva_default_tasa) {
+                        this.retIvaTasa = parseFloat(res.data.emisor.ret_iva_default_tasa) * 100;
+                    }
                     this.initConceptosSat();
 
                     const defaultPerfil = this.perfilesFiscales.find(p => p.is_default);
@@ -773,7 +937,13 @@ export default {
                         clave_prod_serv: c.clave_prod_serv,
                         clave_unidad: c.clave_unidad,
                         descripcion: c.descripcion,
+                        aplica_retencion: !!c.aplicaRet,
                     })),
+                    // Retenciones globales (decimal). Tasas en data() están en porcentaje.
+                    ret_isr_aplica: this.retIsrAplica,
+                    ret_isr_tasa: this.retIsrAplica ? parseFloat(this.retIsrTasa) / 100 : 0,
+                    ret_iva_aplica: this.retIvaAplica,
+                    ret_iva_tasa: this.retIvaAplica ? parseFloat(this.retIvaTasa) / 100 : 0,
                 };
                 if (this.abonosPreviosPayload) {
                     payloadTimbrar.abonos_previos = this.abonosPreviosPayload;
@@ -861,6 +1031,8 @@ export default {
                         subtotal: f.importe,
                         clave_prod_serv: claveProd,
                         clave_unidad: claveUnidad,
+                        // aplicaRet por concepto. Default desde el flag del producto.
+                        aplicaRet: !!item.product?.aplica_retencion_default,
                         editingDesc: false,
                         productSearch: claveProd,
                         unitSearch: claveUnidad,
@@ -950,5 +1122,28 @@ export default {
 .mostrar {
     display: list-item !important;
     opacity: 1 !important;
+}
+/* Toggle de retenciones más grande y con buen contraste */
+.retencion-switch .form-check-input {
+    width: 2.8em;
+    height: 1.4em;
+    margin-top: 0.1em;
+    cursor: pointer;
+    background-color: #ced4da;
+    border-color: #adb5bd;
+    box-shadow: none;
+}
+.retencion-switch .form-check-input:checked {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+.retencion-switch .form-check-input:focus {
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+}
+.retencion-switch .form-check-label {
+    cursor: pointer;
+    margin-left: 0.4em;
+    padding-top: 0.15em;
+    font-size: 0.95rem;
 }
 </style>

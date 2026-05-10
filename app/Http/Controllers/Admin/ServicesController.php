@@ -75,6 +75,7 @@ class ServicesController extends Controller
         $service->price = $request->price;
         $service->sat_product_code = $request->sat_product_code;
         $service->sat_unit_code = $request->sat_unit_code ?? 'E48';
+        $service->aplica_retencion_default = (bool) $request->input('aplica_retencion_default', false);
         $service->save();
 
         return response()->json([
@@ -105,6 +106,7 @@ class ServicesController extends Controller
         $service->price = $request->price;
         $service->sat_product_code = $request->sat_product_code;
         $service->sat_unit_code = $request->sat_unit_code ?? $service->sat_unit_code;
+        $service->aplica_retencion_default = (bool) $request->input('aplica_retencion_default', $service->aplica_retencion_default);
         $service->save();
 
         return response()->json([

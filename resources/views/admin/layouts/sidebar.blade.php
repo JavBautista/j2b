@@ -118,6 +118,9 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{{ route('admin.cfdi.facturas') }}"><i class="fa fa-list-alt"></i> Facturas Emitidas</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ route('admin.reportes.retenciones') }}"><i class="fa fa-minus-circle"></i> Reporte Retenciones</a>
+                    </li>
                 </ul>
             </li>
             @endif

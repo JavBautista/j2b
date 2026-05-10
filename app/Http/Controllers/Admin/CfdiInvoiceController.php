@@ -65,6 +65,10 @@ class CfdiInvoiceController extends Controller
             });
         }
 
+        if ($request->boolean('solo_con_retenciones')) {
+            $query->where('total_retenciones', '>', 0);
+        }
+
         $facturas = $query->with('receipt:id,folio')->orderBy('fecha_emision', 'desc')->get();
 
         $vigentes = $facturas->where('status', 'vigente');
@@ -79,6 +83,7 @@ class CfdiInvoiceController extends Controller
                 'canceladas' => $canceladas->count(),
                 'subtotal' => round($vigentes->sum('subtotal'), 2),
                 'impuestos' => round($vigentes->sum('total_impuestos'), 2),
+                'total_retenciones' => round($vigentes->sum('total_retenciones'), 2),
                 'total' => round($vigentes->sum('total'), 2),
             ],
             'facturas' => $facturas->map(function ($f) {
@@ -94,6 +99,7 @@ class CfdiInvoiceController extends Controller
                     'receipt_folio' => $f->receipt ? $f->receipt->folio : null,
                     'subtotal' => $f->subtotal,
                     'total_impuestos' => $f->total_impuestos,
+                    'total_retenciones' => $f->total_retenciones,
                     'total' => $f->total,
                     'status' => $f->status,
                 ];
@@ -852,11 +858,15 @@ class CfdiInvoiceController extends Controller
                 'serie' => $invoice->serie,
                 'folio' => $invoice->folio,
                 'metodo_pago' => $invoice->metodo_pago,
+                'subtotal' => (float) $invoice->subtotal,
+                'total_impuestos' => (float) $invoice->total_impuestos,
+                'total_retenciones' => (float) $invoice->total_retenciones,
                 'total' => (float) $invoice->total,
                 'status' => $invoice->status,
             ],
             'saldo_insoluto' => (float) $invoice->saldoInsoluto(),
             'complementos' => $complementos,
+            'receipt_total_comercial' => (float) $receipt->total,
         ]);
     }
 
@@ -1013,6 +1023,32 @@ class CfdiInvoiceController extends Controller
             $taxRate = (float) ($traslado['tasa_o_cuota_p'] ?? 0.16);
         }
 
+        // Retenciones del complemento (DR con tasa/base/importe, P con impuesto/importe)
+        $impuestosNombre = ['001' => 'ISR', '002' => 'IVA', '003' => 'IEPS'];
+        $retencionesDr = [];
+        $totalRetenciones = 0;
+        $totalRetIsr = 0;
+        $totalRetIva = 0;
+        if ($pago) {
+            foreach ($pago['docto_relacionado'][0]['impuestos_dr']['retenciones_dr'] ?? [] as $r) {
+                $retencionesDr[] = [
+                    'codigo' => $r['impuesto_dr'] ?? '',
+                    'nombre' => $impuestosNombre[$r['impuesto_dr']] ?? '',
+                    'tasa' => $r['tasa_o_cuota_dr'] ?? '',
+                    'base' => (float) ($r['base_dr'] ?? 0),
+                    'importe' => (float) ($r['importe_dr'] ?? 0),
+                ];
+            }
+            foreach ($pago['impuestos_p']['retenciones_p'] ?? [] as $r) {
+                $imp = $r['impuesto_p'] ?? '';
+                $monto = (float) ($r['importe_p'] ?? 0);
+                $totalRetenciones += $monto;
+                if ($imp === '001') $totalRetIsr += $monto;
+                if ($imp === '002') $totalRetIva += $monto;
+            }
+        }
+        $tieneRetenciones = !empty($retencionesDr);
+
         $fechaPagoFmt = $pago['fecha_pago'] ?? null;
         if ($fechaPagoFmt) {
             try {
@@ -1072,6 +1108,11 @@ class CfdiInvoiceController extends Controller
             'qrBase64' => $qrBase64,
             'monedaDr' => $monedaDr,
             'equivalenciaDr' => $equivalenciaDr,
+            'tieneRetenciones' => $tieneRetenciones,
+            'retencionesDr' => $retencionesDr,
+            'totalRetenciones' => $totalRetenciones,
+            'totalRetIsr' => $totalRetIsr,
+            'totalRetIva' => $totalRetIva,
             'infoBancaria' => $infoBancaria,
             'tieneInfoBancaria' => $tieneInfoBancaria,
         ])->setPaper('letter', 'portrait');

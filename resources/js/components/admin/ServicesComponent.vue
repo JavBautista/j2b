@@ -163,6 +163,19 @@
                                 </ul>
                             </div>
                         </div>
+                        <div class="form-group">
+                            <div class="form-check form-switch retencion-switch">
+                                <input class="form-check-input" type="checkbox" role="switch" id="chkAplicaRetSrv"
+                                    v-model="formService.aplica_retencion_default">
+                                <label class="form-check-label" for="chkAplicaRetSrv">
+                                    Este servicio normalmente lleva retención al facturar
+                                </label>
+                            </div>
+                            <small class="text-muted d-block mt-1">
+                                Si lo activas, en el modal de timbrado el concepto vendrá ya marcado
+                                para aplicar las retenciones (ISR/IVA) configuradas.
+                            </small>
+                        </div>
                     </form>
                 </div>
                 <div class="modal-footer">
@@ -209,7 +222,8 @@ export default {
                 sat_product_code: null,
                 sat_product_desc: '',
                 sat_unit_code: 'E48',
-                sat_unit_name: 'Unidad de servicio'
+                sat_unit_name: 'Unidad de servicio',
+                aplica_retencion_default: false,
             },
 
             // SAT autocomplete
@@ -302,7 +316,8 @@ export default {
                     sat_product_code: null,
                     sat_product_desc: '',
                     sat_unit_code: 'E48',
-                    sat_unit_name: 'Unidad de servicio'
+                    sat_unit_name: 'Unidad de servicio',
+                    aplica_retencion_default: false,
                 };
                 this.satProductSearch = '';
                 this.satUnitSearch = '';
@@ -319,7 +334,8 @@ export default {
                     sat_product_code: service.sat_product_code || null,
                     sat_product_desc: service.sat_product_desc || '',
                     sat_unit_code: service.sat_unit_code || 'E48',
-                    sat_unit_name: service.sat_unit_name || ''
+                    sat_unit_name: service.sat_unit_name || '',
+                    aplica_retencion_default: !!service.aplica_retencion_default,
                 };
                 this.satProductSearch = '';
                 this.satUnitSearch = '';
@@ -469,5 +485,29 @@ export default {
         position: fixed !important;
         background-color: #3c29297a !important;
         overflow: scroll;
+    }
+
+    /* Toggle de retención más grande y con buen contraste */
+    .retencion-switch .form-check-input {
+        width: 2.8em;
+        height: 1.4em;
+        margin-top: 0.1em;
+        cursor: pointer;
+        background-color: #ced4da;
+        border-color: #adb5bd;
+        box-shadow: none;
+    }
+    .retencion-switch .form-check-input:checked {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+    }
+    .retencion-switch .form-check-input:focus {
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+    }
+    .retencion-switch .form-check-label {
+        cursor: pointer;
+        margin-left: 0.4em;
+        padding-top: 0.15em;
+        font-size: 0.95rem;
     }
 </style>

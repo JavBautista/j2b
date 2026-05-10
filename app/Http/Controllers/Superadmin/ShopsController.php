@@ -183,6 +183,41 @@ class ShopsController extends Controller
         User::where('shop_id', $shop->id)->update(['active' => 0]);
     }//deactive()
 
+    /**
+     * Asignar/actualizar el cupo de licencias J2 Monitor de una tienda.
+     * Solo el superadmin puede usarlo. Valida que el nuevo total no sea menor
+     * que el uso actual de la tienda.
+     */
+    public function updateMonitorLicenses(Request $request, $id)
+    {
+        if(!$request->ajax()) return redirect('/');
+
+        $request->validate([
+            'monitor_licenses_total' => 'required|integer|min:0|max:10000',
+        ]);
+
+        $shop = Shop::findOrFail($id);
+        $newTotal = (int) $request->monitor_licenses_total;
+        $used = $shop->monitor_licenses_used;
+
+        if ($newTotal < $used) {
+            return response()->json([
+                'ok' => false,
+                'message' => "No se puede reducir a {$newTotal} licencias: la tienda ya tiene {$used} equipos con licencia asignada. Pide al admin que libere licencias primero.",
+                'used' => $used,
+            ], 422);
+        }
+
+        $shop->monitor_licenses_total = $newTotal;
+        $shop->save();
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Licencias J2 Monitor actualizadas.',
+            'shop' => $shop->fresh(),
+        ]);
+    }//updateMonitorLicenses()
+
     public function uploadLogo(Request $request){
         $request->validate([
             'logo' => 'required|file|mimes:jpeg,png,jpg,gif,svg',

@@ -40,7 +40,13 @@ class SnmpAgentController extends Controller
             ]);
         }
 
-        $rentIds = $client->rents()->pluck('id');
+        // Si el token tiene rent_id, filtrar solo equipos de esa renta.
+        // Si rent_id es NULL (token legacy), comportamiento previo: todas las rentas del cliente.
+        if ($tokenModel->rent_id) {
+            $rentIds = [$tokenModel->rent_id];
+        } else {
+            $rentIds = $client->rents()->pluck('id');
+        }
 
         $equipos = RentDetail::whereIn('rent_id', $rentIds)
             ->where('monitor_enabled', true)

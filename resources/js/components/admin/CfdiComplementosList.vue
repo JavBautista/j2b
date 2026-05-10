@@ -17,6 +17,26 @@
                 </div>
             </div>
 
+            <!-- Panel comercial vs fiscal (solo cuando hay retenciones) -->
+            <div v-if="(invoice.total_retenciones || 0) > 0"
+                class="alert alert-info py-2 mb-2 small">
+                <div class="fw-bold mb-1">
+                    <i class="fa fa-info-circle me-1"></i>Esta factura tiene retenciones
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>Saldo comercial del cliente:</span>
+                    <span class="fw-bold">{{ formatCurrency(receiptTotalComercial) }}</span>
+                </div>
+                <div class="d-flex justify-content-between text-warning">
+                    <span>Retenido (lo entrega al SAT):</span>
+                    <span class="fw-bold">-{{ formatCurrency(invoice.total_retenciones) }}</span>
+                </div>
+                <div class="d-flex justify-content-between border-top pt-1 mt-1">
+                    <span>Te transfiere (total fiscal):</span>
+                    <span class="fw-bold text-success">{{ formatCurrency(invoice.total) }}</span>
+                </div>
+            </div>
+
             <!-- Encabezado lista -->
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <h6 class="mb-0">
@@ -105,6 +125,7 @@ export default {
         return {
             invoice: null,
             saldoInsoluto: 0,
+            receiptTotalComercial: 0,
             complementos: [],
             cargando: false,
             descargando: null,
@@ -124,6 +145,7 @@ export default {
                 if (res.data.ok) {
                     this.invoice = res.data.invoice;
                     this.saldoInsoluto = parseFloat(res.data.saldo_insoluto || 0);
+                    this.receiptTotalComercial = parseFloat(res.data.receipt_total_comercial || 0);
                     this.complementos = res.data.complementos || [];
                 }
             } catch (e) {

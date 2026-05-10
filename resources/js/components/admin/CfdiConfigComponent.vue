@@ -262,6 +262,60 @@
             </div>
         </div>
 
+        <!-- Card Retenciones por Defecto (visible cuando ya está activa la facturación) -->
+        <div v-if="isRegistered" class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fa fa-minus-circle text-warning"></i> Retenciones por Defecto</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small mb-3">
+                    <i class="fa fa-info-circle"></i>
+                    Estos valores se cargarán automáticamente al abrir el modal de timbrado.
+                    Puedes sobrescribirlos en cada factura si lo necesitas.
+                </p>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="form-check form-switch retencion-switch mb-2">
+                            <input class="form-check-input" type="checkbox" role="switch" id="cfgRetIsr" v-model="retDefaults.isrAplica">
+                            <label class="form-check-label fw-bold" for="cfgRetIsr">
+                                Mi emisor normalmente retiene ISR
+                            </label>
+                        </div>
+                        <div v-if="retDefaults.isrAplica" class="input-group input-group-sm">
+                            <input type="number" class="form-control text-end" v-model.number="retDefaults.isrTasa"
+                                step="0.0001" min="0" max="100">
+                            <span class="input-group-text">%</span>
+                        </div>
+                        <small v-if="retDefaults.isrAplica" class="text-muted d-block mt-1" style="font-size: 0.75rem;">
+                            Tasas comunes — Honorarios/arrendamiento: <strong>10%</strong> · RESICO PF: <strong>1.25%</strong>
+                        </small>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-check form-switch retencion-switch mb-2">
+                            <input class="form-check-input" type="checkbox" role="switch" id="cfgRetIva" v-model="retDefaults.ivaAplica">
+                            <label class="form-check-label fw-bold" for="cfgRetIva">
+                                Mi emisor normalmente retiene IVA
+                            </label>
+                        </div>
+                        <div v-if="retDefaults.ivaAplica" class="input-group input-group-sm">
+                            <input type="number" class="form-control text-end" v-model.number="retDefaults.ivaTasa"
+                                step="0.0001" min="0" max="100">
+                            <span class="input-group-text">%</span>
+                        </div>
+                        <small v-if="retDefaults.ivaAplica" class="text-muted d-block mt-1" style="font-size: 0.75rem;">
+                            Tasas comunes — Honorarios/arrendamiento: <strong>10.6667%</strong> · Fletes: <strong>4%</strong>
+                        </small>
+                    </div>
+                </div>
+                <div class="text-end mt-3">
+                    <button class="btn btn-primary" @click="saveRetencionesDefaults" :disabled="savingRet">
+                        <i class="fa" :class="savingRet ? 'fa-spinner fa-spin' : 'fa-save'"></i>
+                        {{ savingRet ? 'Guardando...' : 'Guardar Retenciones por Defecto' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Card 4: Activar Facturacion (Paso 3) -->
         <div class="card border-0 shadow-sm mb-4">
             <div class="card-header bg-white border-bottom">
@@ -314,11 +368,19 @@ export default {
         return {
             loading: true,
             saving: false,
+            savingRet: false,
             uploadingCsd: false,
             registering: false,
             editingFiscalData: false,
             editingCsd: false,
             emisor: null,
+            // Retenciones por defecto (UI en porcentaje, BD en decimal)
+            retDefaults: {
+                isrAplica: false,
+                isrTasa: 10.0000,
+                ivaAplica: false,
+                ivaTasa: 10.6667,
+            },
             timbresContratados: 0,
             timbreTransactions: [],
             hasCer: false,
@@ -382,6 +444,15 @@ export default {
                         this.form.regimen_fiscal = this.emisor.regimen_fiscal || '';
                         this.form.codigo_postal = this.emisor.codigo_postal || '';
                         this.form.serie = this.emisor.serie || 'A';
+                        // Retenciones por defecto: BD guarda decimal (0.10), UI muestra porcentaje (10)
+                        this.retDefaults.isrAplica = !!this.emisor.ret_isr_default_aplica;
+                        if (this.emisor.ret_isr_default_tasa) {
+                            this.retDefaults.isrTasa = parseFloat(this.emisor.ret_isr_default_tasa) * 100;
+                        }
+                        this.retDefaults.ivaAplica = !!this.emisor.ret_iva_default_aplica;
+                        if (this.emisor.ret_iva_default_tasa) {
+                            this.retDefaults.ivaTasa = parseFloat(this.emisor.ret_iva_default_tasa) * 100;
+                        }
                     }
                 }
                 // Cargar historial de timbres
@@ -439,6 +510,30 @@ export default {
                 Swal.fire('Error', msg, 'error');
             } finally {
                 this.saving = false;
+            }
+        },
+
+        async saveRetencionesDefaults() {
+            this.savingRet = true;
+            try {
+                const payload = {
+                    ret_isr_default_aplica: !!this.retDefaults.isrAplica,
+                    ret_isr_default_tasa: this.retDefaults.isrAplica ? parseFloat(this.retDefaults.isrTasa) / 100 : null,
+                    ret_iva_default_aplica: !!this.retDefaults.ivaAplica,
+                    ret_iva_default_tasa: this.retDefaults.ivaAplica ? parseFloat(this.retDefaults.ivaTasa) / 100 : null,
+                };
+                const { data } = await axios.post('/admin/facturacion/configuracion/retenciones-defaults', payload);
+                if (data.ok) {
+                    this.emisor = data.emisor;
+                    Swal.fire({ icon: 'success', title: 'Guardado', text: data.message, timer: 1800, showConfirmButton: false });
+                } else {
+                    Swal.fire('Error', data.message || 'Error al guardar', 'error');
+                }
+            } catch (error) {
+                const msg = error.response?.data?.message || 'Error al guardar defaults de retenciones';
+                Swal.fire('Error', msg, 'error');
+            } finally {
+                this.savingRet = false;
             }
         },
 
@@ -561,3 +656,29 @@ export default {
     },
 };
 </script>
+
+<style scoped>
+/* Toggle de retenciones más grande y con buen contraste */
+.retencion-switch .form-check-input {
+    width: 2.8em;
+    height: 1.4em;
+    margin-top: 0.1em;
+    cursor: pointer;
+    background-color: #ced4da;
+    border-color: #adb5bd;
+    box-shadow: none;
+}
+.retencion-switch .form-check-input:checked {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+.retencion-switch .form-check-input:focus {
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+}
+.retencion-switch .form-check-label {
+    cursor: pointer;
+    margin-left: 0.4em;
+    padding-top: 0.15em;
+    font-size: 0.95rem;
+}
+</style>

@@ -58,6 +58,7 @@
                                 <th style="width: 100px;">Logo</th>
                                 <th style="width: 100px;">Estado</th>
                                 <th style="width: 80px;">Corte</th>
+                                <th style="width: 180px;">Licencias Monitor</th>
                                 <th style="width: 120px;">Creacion</th>
                                 <th style="width: 140px;">Acciones</th>
                             </tr>
@@ -103,6 +104,27 @@
                                     <span class="j2b-badge j2b-badge-info">Dia {{ shop.cutoff || '-' }}</span>
                                   </td>
                                   <td>
+                                    <div class="d-flex align-items-center gap-1">
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            max="10000"
+                                            class="j2b-input"
+                                            style="width: 80px;"
+                                            v-model.number="licenciasInputMap[shop.id]"
+                                            :disabled="guardandoLicencias[shop.id]">
+                                        <button class="j2b-btn j2b-btn-sm j2b-btn-primary"
+                                            :disabled="guardandoLicencias[shop.id] || licenciasInputMap[shop.id] === shop.monitor_licenses_total"
+                                            @click="guardarLicenciasMonitor(shop)" title="Guardar">
+                                            <i class="fa fa-save" v-if="!guardandoLicencias[shop.id]"></i>
+                                            <i class="fa fa-spinner fa-spin" v-else></i>
+                                        </button>
+                                    </div>
+                                    <small class="d-block mt-1" style="color: var(--j2b-gray-500); font-size: 11px;">
+                                        <i class="fa fa-info-circle"></i> {{ shop.monitor_licenses_used || 0 }} en uso
+                                    </small>
+                                  </td>
+                                  <td>
                                     <small style="color: var(--j2b-gray-500);">{{ shop.created_at | formatDate }}</small>
                                   </td>
                                   <td>
@@ -146,7 +168,7 @@
                                   </td>
                               </tr>
                               <tr v-if="arrayShops.length === 0">
-                                  <td colspan="7" class="text-center py-5">
+                                  <td colspan="8" class="text-center py-5">
                                       <i class="fa fa-inbox fa-3x mb-3" style="color: var(--j2b-gray-300);"></i>
                                       <p style="color: var(--j2b-gray-500);">No se encontraron tiendas</p>
                                   </td>
@@ -709,6 +731,10 @@
               modalStats: 0,
               statsLoading: false,
               statsData: null,
+
+              // J2 Monitor — input editable de licencias por tienda
+              licenciasInputMap: {},
+              guardandoLicencias: {},
             }
         },
         computed:{
@@ -756,6 +782,10 @@
                     var respuesta  = response.data;
                     me.arrayShops = respuesta.shops.data;
                     me.pagination = respuesta.pagination;
+                    // Sincronizar inputs editables de licencias con los valores actuales
+                    const map = {};
+                    me.arrayShops.forEach(s => { map[s.id] = s.monitor_licenses_total || 0; });
+                    me.licenciasInputMap = map;
                   })
                   .catch(function (error) {
                     // handle error
@@ -764,6 +794,35 @@
                   .finally(function () {
                     // always executed
                   });
+            },
+            guardarLicenciasMonitor(shop){
+                const me = this;
+                const nuevoTotal = parseInt(me.licenciasInputMap[shop.id], 10);
+                if (isNaN(nuevoTotal) || nuevoTotal < 0) {
+                    Swal.fire('Error', 'Ingresa un número válido (0 o más).', 'error');
+                    return;
+                }
+                me.guardandoLicencias = { ...me.guardandoLicencias, [shop.id]: true };
+                axios.put(`/superadmin/shops/${shop.id}/monitor-licenses`, {
+                    monitor_licenses_total: nuevoTotal,
+                }).then(response => {
+                    if (response.data.ok) {
+                        const updated = response.data.shop;
+                        const idx = me.arrayShops.findIndex(s => s.id === shop.id);
+                        if (idx !== -1) {
+                            me.arrayShops.splice(idx, 1, updated);
+                            me.licenciasInputMap = { ...me.licenciasInputMap, [shop.id]: updated.monitor_licenses_total };
+                        }
+                        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: response.data.message, showConfirmButton: false, timer: 1800 });
+                    }
+                }).catch(error => {
+                    const msg = error.response?.data?.message || 'No se pudo actualizar las licencias.';
+                    Swal.fire('Error', msg, 'error');
+                }).finally(() => {
+                    const next = { ...me.guardandoLicencias };
+                    delete next[shop.id];
+                    me.guardandoLicencias = next;
+                });
             },
             actualizarAActivo(id){
                 const swalWithBootstrapButtons = Swal.mixin({

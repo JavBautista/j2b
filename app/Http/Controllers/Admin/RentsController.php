@@ -236,7 +236,7 @@ class RentsController extends Controller
 
         // Validación licencia de monitoreo
         if ($request->boolean('monitor_enabled')) {
-            $check = $this->validateMonitorLicense($rent->client, $request, null, $monitorLicenses);
+            $check = $this->validateMonitorLicense($shop, $rent->client, $request, null, $monitorLicenses);
             if ($check) return $check;
         }
 
@@ -313,7 +313,7 @@ class RentsController extends Controller
         // Validación licencia de monitoreo (si se intenta activar y antes estaba apagada)
         if ($request->boolean('monitor_enabled')) {
             $rent = Rent::with('client')->findOrFail($detail->rent_id);
-            $check = $this->validateMonitorLicense($rent->client, $request, $detail, $monitorLicenses);
+            $check = $this->validateMonitorLicense($shop, $rent->client, $request, $detail, $monitorLicenses);
             if ($check) return $check;
         }
 
@@ -508,8 +508,10 @@ class RentsController extends Controller
     /**
      * Pre-condiciones para asignar una licencia de monitoreo a un equipo.
      * Devuelve null si todo OK, o un JsonResponse 422 si falla.
+     * El cupo se valida contra la Shop (asignado por superadmin).
+     * El gating per-cliente sigue por client.monitor_active.
      */
-    private function validateMonitorLicense(\App\Models\Client $client, Request $request, ?RentDetail $existing, MonitorLicenseService $monitorLicenses)
+    private function validateMonitorLicense(\App\Models\Shop $shop, \App\Models\Client $client, Request $request, ?RentDetail $existing, MonitorLicenseService $monitorLicenses)
     {
         if (!$client->monitor_active) {
             return response()->json([
@@ -532,10 +534,10 @@ class RentsController extends Controller
             ], 422);
         }
 
-        if (!$monitorLicenses->canEnable($client, $existing)) {
+        if (!$monitorLicenses->canEnable($shop, $existing)) {
             return response()->json([
                 'ok' => false,
-                'message' => "Sin licencias disponibles ({$client->monitor_licenses_used}/{$client->monitor_licenses_total}).",
+                'message' => "Sin licencias disponibles en tu tienda ({$shop->monitor_licenses_used}/{$shop->monitor_licenses_total}). Solicita más al administrador.",
             ], 422);
         }
 

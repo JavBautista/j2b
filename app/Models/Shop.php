@@ -24,6 +24,8 @@ class Shop extends Model
         'cfdi_enabled' => 'boolean',
     ];
 
+    protected $appends = ['monitor_licenses_used', 'monitor_licenses_available'];
+
     public function extraFields()
     {
         return $this->hasMany(ExtraFieldShop::class);
@@ -218,5 +220,19 @@ class Shop extends Model
     public function revertirFolioConsignacion(): void
     {
         $this->decrement('consignment_folio_actual');
+    }
+
+    // === J2 Monitor: licencias por tienda (asignadas por superadmin) ===
+
+    public function getMonitorLicensesUsedAttribute(): int
+    {
+        return RentDetail::where('shop_id', $this->id)
+            ->where('monitor_enabled', true)
+            ->count();
+    }
+
+    public function getMonitorLicensesAvailableAttribute(): int
+    {
+        return max(0, (int) $this->monitor_licenses_total - $this->monitor_licenses_used);
     }
 }

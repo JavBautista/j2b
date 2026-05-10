@@ -93,6 +93,46 @@ class CfdiConfigController extends Controller
     }
 
     /**
+     * Guardar defaults de retenciones del emisor (ISR / IVA).
+     * Tasas en formato decimal (0.10 = 10%).
+     */
+    public function saveRetencionesDefaults(Request $request)
+    {
+        if (!$request->ajax()) return redirect('/');
+
+        $shop = auth()->user()->shop;
+
+        if (!$shop || !$shop->cfdi_enabled) {
+            return response()->json(['ok' => false, 'message' => 'CFDI no habilitado'], 403);
+        }
+
+        $request->validate([
+            'ret_isr_default_aplica' => 'required|boolean',
+            'ret_isr_default_tasa' => 'nullable|numeric|between:0,1',
+            'ret_iva_default_aplica' => 'required|boolean',
+            'ret_iva_default_tasa' => 'nullable|numeric|between:0,1',
+        ]);
+
+        $emisor = CfdiEmisor::where('shop_id', $shop->id)->first();
+        if (!$emisor) {
+            return response()->json(['ok' => false, 'message' => 'Primero guarda los datos fiscales del emisor'], 422);
+        }
+
+        $emisor->update([
+            'ret_isr_default_aplica' => (bool) $request->ret_isr_default_aplica,
+            'ret_isr_default_tasa' => $request->ret_isr_default_aplica ? $request->ret_isr_default_tasa : null,
+            'ret_iva_default_aplica' => (bool) $request->ret_iva_default_aplica,
+            'ret_iva_default_tasa' => $request->ret_iva_default_aplica ? $request->ret_iva_default_tasa : null,
+        ]);
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Retenciones por defecto guardadas',
+            'emisor' => $emisor->fresh(),
+        ]);
+    }
+
+    /**
      * Subir archivos CSD (.cer y .key)
      */
     public function uploadCsd(Request $request)

@@ -21,17 +21,17 @@
                 <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
                     <span class="badge" :class="resumen.monitor_active ? 'bg-success' : 'bg-secondary'">
                         <i class="fa" :class="resumen.monitor_active ? 'fa-check-circle' : 'fa-pause-circle'"></i>
-                        Servicio {{ resumen.monitor_active ? 'activo' : 'inactivo' }}
+                        Servicio {{ resumen.monitor_active ? 'activo' : 'inactivo' }} para este cliente
                     </span>
                     <button class="btn btn-sm btn-outline-primary" @click="abrirEditar()">
-                        <i class="fa fa-cog"></i> Editar configuración
+                        <i class="fa fa-power-off"></i> {{ resumen.monitor_active ? 'Desactivar' : 'Activar' }} servicio
                     </button>
                 </div>
 
                 <div class="mb-2">
                     <div class="d-flex justify-content-between mb-1">
                         <span class="small text-muted">
-                            <strong>{{ resumen.used }}</strong> de <strong>{{ resumen.total }}</strong> licencias asignadas
+                            <strong>{{ resumen.used }}</strong> de <strong>{{ resumen.total }}</strong> licencias asignadas en tu tienda
                         </span>
                         <span class="small text-muted">
                             {{ resumen.available }} disponibles
@@ -45,56 +45,54 @@
                             role="progressbar">
                         </div>
                     </div>
+                    <div class="form-text mt-1">
+                        <i class="fa fa-info-circle"></i>
+                        El cupo total lo asigna el administrador del sistema. Las licencias se comparten entre todos tus clientes.
+                    </div>
                 </div>
 
                 <div v-if="resumen.total === 0" class="alert alert-warning small mb-0 mt-2">
-                    <i class="fa fa-info-circle"></i>
-                    Aún no hay licencias contratadas. Edita la configuración para asignar el cupo.
+                    <i class="fa fa-exclamation-triangle"></i>
+                    Tu tienda no tiene licencias asignadas. Solicita al administrador del sistema que te asigne licencias para usar J2 Monitor.
+                </div>
+                <div v-else-if="resumen.available === 0" class="alert alert-warning small mb-0 mt-2">
+                    <i class="fa fa-exclamation-triangle"></i>
+                    Ya estás usando todas tus licencias. Para asignar a un nuevo equipo, libera una de las existentes o solicita más al administrador.
                 </div>
                 <div v-else-if="!resumen.monitor_active" class="alert alert-secondary small mb-0 mt-2">
                     <i class="fa fa-info-circle"></i>
-                    Servicio en pausa. El agente recibirá lista vacía hasta reactivar.
+                    Servicio en pausa para este cliente. El agente recibirá lista vacía hasta reactivar.
                 </div>
             </div>
         </div>
 
-        <!-- Modal Editar Configuración -->
+        <!-- Modal Activar/Desactivar Servicio -->
         <div class="modal fade" tabindex="-1" :class="{ mostrar: modalEditar }" role="dialog" style="display: none;">
             <div class="modal-dialog" role="document">
                 <div class="modal-content">
                     <div class="modal-header bg-primary text-white">
-                        <h5 class="modal-title"><i class="fa fa-cog"></i> Configuración J2 Monitor</h5>
+                        <h5 class="modal-title"><i class="fa fa-power-off"></i> Servicio J2 Monitor</h5>
                         <button type="button" class="btn-close btn-close-white" @click="cerrarEditar()"></button>
                     </div>
                     <div class="modal-body">
                         <div class="form-check form-switch mb-3">
                             <input class="form-check-input" type="checkbox" id="monActiveSwitch" v-model="formEditar.monitor_active">
                             <label class="form-check-label" for="monActiveSwitch">
-                                <strong>Servicio activo</strong>
+                                <strong>Servicio activo para este cliente</strong>
                                 <div class="small text-muted">
-                                    Si está inactivo, el agente Python recibe lista vacía y deja de monitorear.
+                                    Si está inactivo, el agente Python recibe lista vacía y deja de monitorear los equipos de este cliente.
                                 </div>
                             </label>
                         </div>
 
-                        <div class="mb-2">
-                            <label class="form-label">Licencias contratadas (cupo total)</label>
-                            <input type="number" min="0" max="10000" class="form-control" v-model.number="formEditar.monitor_licenses_total">
-                            <div class="form-text">
-                                Máximo de equipos que pueden tener licencia asignada simultáneamente.
-                                Actualmente {{ resumen.used }} equipo(s) ya tienen licencia.
-                            </div>
-                        </div>
-
-                        <div v-if="formEditar.monitor_licenses_total < resumen.used" class="alert alert-danger small mb-0">
-                            <i class="fa fa-exclamation-triangle"></i>
-                            No puedes reducir a {{ formEditar.monitor_licenses_total }} licencias porque ya hay
-                            {{ resumen.used }} equipos con licencia asignada. Desactiva primero los sobrantes.
+                        <div class="alert alert-info small mb-0">
+                            <i class="fa fa-info-circle"></i>
+                            El cupo de licencias de tu tienda ({{ resumen.total }}) lo controla el administrador del sistema y no se modifica desde aquí.
                         </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" @click="cerrarEditar()">Cancelar</button>
-                        <button type="button" class="btn btn-primary" @click="guardar()" :disabled="guardando || formEditar.monitor_licenses_total < resumen.used">
+                        <button type="button" class="btn btn-primary" @click="guardar()" :disabled="guardando">
                             <i v-if="guardando" class="fa fa-spinner fa-spin"></i>
                             <i v-else class="fa fa-save"></i>
                             Guardar
@@ -122,7 +120,7 @@ export default {
             resumen: { monitor_active: false, total: 0, used: 0, available: 0 },
             modalEditar: 0,
             guardando: false,
-            formEditar: { monitor_active: false, monitor_licenses_total: 0 },
+            formEditar: { monitor_active: false },
         };
     },
 
@@ -165,7 +163,6 @@ export default {
 
         abrirEditar() {
             this.formEditar.monitor_active = !!this.resumen.monitor_active;
-            this.formEditar.monitor_licenses_total = this.resumen.total || 0;
             this.modalEditar = 1;
         },
 
@@ -174,12 +171,10 @@ export default {
         },
 
         async guardar() {
-            if (this.formEditar.monitor_licenses_total < this.resumen.used) return;
             this.guardando = true;
             try {
                 const res = await axios.put(`/admin/clients/${this.clientId}/monitor-config`, {
                     monitor_active: !!this.formEditar.monitor_active,
-                    monitor_licenses_total: this.formEditar.monitor_licenses_total,
                 });
                 this.resumen = res.data.monitor;
                 this.cerrarEditar();

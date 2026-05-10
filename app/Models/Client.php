@@ -56,16 +56,4 @@ class Client extends Model
     public function defaultFiscalData(){
         return $this->hasOne(ClientFiscalData::class)->where('is_default', true)->where('active', true);
     }
-
-    public function getMonitorLicensesUsedAttribute(): int
-    {
-        return RentDetail::whereIn('rent_id', $this->rents()->pluck('id'))
-            ->where('monitor_enabled', true)
-            ->count();
-    }
-
-    public function getMonitorLicensesAvailableAttribute(): int
-    {
-        return max(0, (int) $this->monitor_licenses_total - $this->monitor_licenses_used);
-    }
 }

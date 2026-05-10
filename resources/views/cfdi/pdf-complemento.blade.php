@@ -275,6 +275,32 @@
         </table>
     @endif
 
+    @if($tieneRetenciones)
+        <div class="bar" style="margin-top: 6px;">Impuestos del Pago (Retenciones)</div>
+        <table class="pago-table" style="border: 1px solid #f3d4c4;">
+            <thead>
+                <tr>
+                    <th>Impuesto</th>
+                    <th>Tipo Factor</th>
+                    <th class="r">Tasa o Cuota</th>
+                    <th class="r">Base</th>
+                    <th class="r">Importe</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($retencionesDr as $ret)
+                <tr>
+                    <td>{{ $ret['codigo'] }} - {{ $ret['nombre'] }}</td>
+                    <td>Tasa</td>
+                    <td class="r">{{ $ret['tasa'] }}</td>
+                    <td class="r">${{ number_format($ret['base'], 2) }}</td>
+                    <td class="r b" style="color:#b34700;">${{ number_format($ret['importe'], 2) }}</td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
+    @endif
+
     {{-- RESUMEN MONTO TOTAL DEL PAGO --}}
     <table class="summary-row">
         <tr>
@@ -293,6 +319,18 @@
                     <tr>
                         <td class="lbl">Total Traslados Imp. IVA 16%:</td>
                         <td class="val r">${{ number_format($importeDr, 2) }}</td>
+                    </tr>
+                    @endif
+                    @if($totalRetIsr > 0)
+                    <tr>
+                        <td class="lbl" style="color:#b34700;">Total Retenciones ISR:</td>
+                        <td class="val r" style="color:#b34700;">-${{ number_format($totalRetIsr, 2) }}</td>
+                    </tr>
+                    @endif
+                    @if($totalRetIva > 0)
+                    <tr>
+                        <td class="lbl" style="color:#b34700;">Total Retenciones IVA:</td>
+                        <td class="val r" style="color:#b34700;">-${{ number_format($totalRetIva, 2) }}</td>
                     </tr>
                     @endif
                 </table>

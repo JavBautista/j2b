@@ -10,6 +10,10 @@ class Service extends Model
     use HasFactory;
     protected $guarded=[];
 
+    protected $casts = [
+        'aplica_retencion_default' => 'boolean',
+    ];
+
     public function shop(){
         return $this->belongsTo(Shop::class);
     }

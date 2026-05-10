@@ -27,6 +27,11 @@ class SnmpAgentToken extends Model
         return $this->belongsTo(Client::class);
     }
 
+    public function rent()
+    {
+        return $this->belongsTo(Rent::class);
+    }
+
     public static function generateToken(): string
     {
         do {

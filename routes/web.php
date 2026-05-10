@@ -123,6 +123,7 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::put('/superadmin/shops/update-cutoff', [ShopsController::class, 'updateCutoff']);
         Route::get('/superadmin/shops/{id}/info', [ShopsController::class, 'getInfo']);
         Route::get('/superadmin/shops/{id}/stats', [ShopsController::class, 'getStats']);
+        Route::put('/superadmin/shops/{id}/monitor-licenses', [ShopsController::class, 'updateMonitorLicenses']);
 
         //Plans
         Route::get('/superadmin/plans', [SuperadminPagesController::class, 'plans'])->name('superadmin.plans');
@@ -314,9 +315,15 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::get('/admin/facturacion/configuracion', [App\Http\Controllers\Admin\CfdiConfigController::class, 'index'])->name('admin.cfdi.config');
         Route::get('/admin/facturacion/configuracion/get', [App\Http\Controllers\Admin\CfdiConfigController::class, 'get']);
         Route::post('/admin/facturacion/configuracion/save', [App\Http\Controllers\Admin\CfdiConfigController::class, 'save']);
+        Route::post('/admin/facturacion/configuracion/retenciones-defaults', [App\Http\Controllers\Admin\CfdiConfigController::class, 'saveRetencionesDefaults']);
         Route::post('/admin/facturacion/configuracion/upload-csd', [App\Http\Controllers\Admin\CfdiConfigController::class, 'uploadCsd']);
         Route::post('/admin/facturacion/configuracion/registrar', [App\Http\Controllers\Admin\CfdiConfigController::class, 'registrar']);
         Route::get('/admin/facturacion/configuracion/timbre-transactions', [App\Http\Controllers\Admin\CfdiConfigController::class, 'getTimbreTransactions']);
+
+        // Reporte mensual de retenciones
+        Route::get('/admin/reportes/retenciones', [App\Http\Controllers\Admin\RetencionesReporteController::class, 'index'])->name('admin.reportes.retenciones');
+        Route::get('/admin/reportes/retenciones/data', [App\Http\Controllers\Admin\RetencionesReporteController::class, 'data']);
+        Route::get('/admin/reportes/retenciones/export', [App\Http\Controllers\Admin\RetencionesReporteController::class, 'export']);
 
         // Cuentas bancarias de la tienda (multitenant) — usadas en complementos de pago y PDFs de notas
         Route::get('/admin/configuracion/cuentas-bancarias', [\App\Http\Controllers\ShopBankAccountController::class, 'page'])->name('admin.bank-accounts.page');
@@ -675,6 +682,11 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::post('/admin/clients/{client}/snmp-token/regenerate', [\App\Http\Controllers\Admin\SnmpTokenController::class, 'regenerate'])->name('admin.clients.snmp-token.regenerate');
         Route::post('/admin/clients/{client}/snmp-token/toggle', [\App\Http\Controllers\Admin\SnmpTokenController::class, 'toggle'])->name('admin.clients.snmp-token.toggle');
 
+        // ===== SNMP — Token por renta (nuevo modelo) =====
+        Route::get('/admin/rents/{rent}/snmp-token', [\App\Http\Controllers\Admin\RentSnmpTokenController::class, 'getToken'])->name('admin.rents.snmp-token.get');
+        Route::post('/admin/rents/{rent}/snmp-token/regenerate', [\App\Http\Controllers\Admin\RentSnmpTokenController::class, 'regenerate'])->name('admin.rents.snmp-token.regenerate');
+        Route::post('/admin/rents/{rent}/snmp-token/toggle', [\App\Http\Controllers\Admin\RentSnmpTokenController::class, 'toggle'])->name('admin.rents.snmp-token.toggle');
+
         Route::get('/admin/snmp-readings', [\App\Http\Controllers\Admin\SnmpReadingsController::class, 'index'])->name('admin.snmp-readings');
         Route::get('/admin/snmp-readings/get', [\App\Http\Controllers\Admin\SnmpReadingsController::class, 'getReadings'])->name('admin.snmp-readings.get');
         Route::get('/admin/snmp-readings/clients', [\App\Http\Controllers\Admin\SnmpReadingsController::class, 'getClients'])->name('admin.snmp-readings.clients');
@@ -682,5 +694,8 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         // ===== J2 Monitor — Configuración de licencias por cliente =====
         Route::get('/admin/clients/{client}/monitor-config', [\App\Http\Controllers\Admin\ClientMonitorController::class, 'show'])->name('admin.clients.monitor-config.show');
         Route::put('/admin/clients/{client}/monitor-config', [\App\Http\Controllers\Admin\ClientMonitorController::class, 'update'])->name('admin.clients.monitor-config.update');
+
+        // ===== J2 Monitor — Resumen de licencias de la Shop (admin actual) =====
+        Route::get('/admin/monitor/shop-summary', [\App\Http\Controllers\Admin\MonitorController::class, 'shopSummary'])->name('admin.monitor.shop-summary');
     }); //./Routes Middleware admin
 });#./Middlware AUTH

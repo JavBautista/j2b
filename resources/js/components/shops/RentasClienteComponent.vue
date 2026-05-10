@@ -139,6 +139,12 @@
                     </div>
                 </div>
 
+                <!-- Token Agente SNMP de esta renta -->
+                <rent-snmp-token-component
+                    :rent-id="rentaSeleccionada.id"
+                    :key="'token-' + rentaSeleccionada.id">
+                </rent-snmp-token-component>
+
                 <!-- Equipos -->
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
@@ -354,32 +360,35 @@
                         <div class="card-header py-2 bg-primary text-white d-flex justify-content-between align-items-center">
                             <strong><i class="fa fa-id-card"></i> J2 Monitor</strong>
                             <div class="form-check form-switch mb-0">
-                                <input type="checkbox" class="form-check-input" id="monitorEnabledSwitch" v-model="formEquipo.monitor_enabled">
+                                <input type="checkbox" class="form-check-input" id="monitorEnabledSwitch"
+                                    v-model="formEquipo.monitor_enabled"
+                                    :disabled="!licenciaPuedeAsignarse">
                                 <label class="form-check-label small ms-1" for="monitorEnabledSwitch">
                                     Asignar licencia
                                 </label>
                             </div>
                         </div>
-                        <div class="card-body py-2">
-                            <div class="row">
+                        <div class="card-body py-2" v-if="formEquipo.monitor_enabled || (!licenciaPuedeAsignarse && !formEquipo.monitor_enabled)">
+                            <div v-if="!licenciaPuedeAsignarse && !formEquipo.monitor_enabled" class="alert alert-warning small mb-0 py-2">
+                                <i class="fa fa-exclamation-triangle"></i>
+                                Sin licencias disponibles ({{ monitorSummary.used }}/{{ monitorSummary.total }} en uso). Libera una licencia o solicita más al administrador del sistema.
+                            </div>
+                            <div v-if="formEquipo.monitor_enabled" class="row">
                                 <div class="col-md-6">
-                                    <label class="form-label small">IP local</label>
+                                    <label class="form-label small">IP local <span class="text-danger">*</span></label>
                                     <input
                                         type="text"
                                         class="form-control form-control-sm"
                                         v-model="formEquipo.local_ip"
                                         placeholder="192.168.1.50"
-                                        :required="formEquipo.monitor_enabled">
+                                        required>
                                     <small class="text-muted">Dirección del equipo en la red del cliente.</small>
                                 </div>
                                 <div class="col-md-6 d-flex align-items-center">
-                                    <small v-if="formEquipo.monitor_enabled" class="text-primary">
+                                    <small class="text-primary">
                                         <i class="fa fa-info-circle"></i>
                                         El equipo será incluido en la lista que recibe el agente Python.
                                         Requiere número de serie e IP local capturados.
-                                    </small>
-                                    <small v-else class="text-muted fst-italic">
-                                        Licencia no asignada — el agente no leerá este equipo.
                                     </small>
                                 </div>
                             </div>
@@ -690,8 +699,27 @@ export default {
             modalUrlMonitor: 0,
             equipoUrlMonitor: null,
             urlMonitorTemp: '',
-            guardandoUrlMonitor: false
+            guardandoUrlMonitor: false,
+
+            // J2 Monitor — cupo de licencias de la Shop
+            monitorSummary: { total: 0, used: 0, available: 0 },
         }
+    },
+    computed: {
+        // ¿Puede activarse el toggle de licencia para el equipo en edición?
+        // Si el equipo ya la tenía, siempre puede mantenerse. Si no, se requiere cupo libre.
+        licenciaPuedeAsignarse() {
+            if (this.editandoEquipo && this.formEquipo.monitor_enabled) return true;
+            return this.monitorSummary.available > 0;
+        },
+    },
+    watch: {
+        // Al apagar el toggle de licencia, limpiar la IP (no tiene sentido sin monitoreo).
+        'formEquipo.monitor_enabled'(nuevoValor) {
+            if (!nuevoValor) {
+                this.formEquipo.local_ip = '';
+            }
+        },
     },
     methods: {
         cargarRentas() {
@@ -967,10 +995,24 @@ export default {
                 this.cargandoConsumibles = false;
             }).catch(() => { this.cargandoConsumibles = false; });
         },
-        cerrarModalHistorialConsumibles() { this.modalHistorialConsumibles = 0; }
+        cerrarModalHistorialConsumibles() { this.modalHistorialConsumibles = 0; },
+
+        cargarMonitorSummary() {
+            axios.get('/admin/monitor/shop-summary').then(response => {
+                if (response.data.ok) { this.monitorSummary = response.data.monitor; }
+            }).catch(() => { /* silencioso: la card de licencias muestra estado real */ });
+        },
     },
     mounted() {
         this.cargarRentas();
+        this.cargarMonitorSummary();
+        this._monitorRefreshHandler = () => this.cargarMonitorSummary();
+        window.addEventListener('monitor:license-changed', this._monitorRefreshHandler);
+    },
+    unmounted() {
+        if (this._monitorRefreshHandler) {
+            window.removeEventListener('monitor:license-changed', this._monitorRefreshHandler);
+        }
     }
 }
 </script>

@@ -200,6 +200,15 @@
     {{-- =============== DESGLOSE DE IMPUESTOS =============== --}}
     @php
         $impuestos = $requestData['impuestos'] ?? null;
+        // Mapear nombres SAT y extraer tasa por impuesto desde el primer concepto que la tenga
+        // (las retenciones globales no llevan tasa, está solo a nivel concepto).
+        $impNombre = ['001' => 'ISR', '002' => 'IVA', '003' => 'IEPS'];
+        $tasaRetencionPorImp = [];
+        foreach ($requestData['conceptos'] ?? [] as $c) {
+            foreach ($c['impuestos']['retenciones'] ?? [] as $r) {
+                $tasaRetencionPorImp[$r['impuesto']] = $r['tasa_cuota'] ?? '0.000000';
+            }
+        }
     @endphp
     @if($impuestos && isset($impuestos['traslados']))
     <table class="impuestos-table">
@@ -229,6 +238,31 @@
     </table>
     @endif
 
+    {{-- =============== DESGLOSE DE RETENCIONES =============== --}}
+    @if($impuestos && !empty($impuestos['retenciones']))
+    <table class="impuestos-table">
+        <thead>
+            <tr>
+                <th colspan="3">Desglose de Impuestos Retenidos</th>
+            </tr>
+            <tr>
+                <th>Impuesto</th>
+                <th class="r">Tasa o Cuota</th>
+                <th class="r">Importe</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach($impuestos['retenciones'] as $ret)
+            <tr>
+                <td>{{ $ret['impuesto'] }} - {{ $impNombre[$ret['impuesto']] ?? '' }}</td>
+                <td class="r">{{ $tasaRetencionPorImp[$ret['impuesto']] ?? '-' }}</td>
+                <td class="r">${{ number_format($ret['importe'] ?? 0, 2) }}</td>
+            </tr>
+            @endforeach
+        </tbody>
+    </table>
+    @endif
+
     {{-- =============== TOTALES =============== --}}
     <table class="totales-row">
         <tr>
@@ -244,6 +278,21 @@
                         <td class="tot-lbl">{{ $requestData['moneda'] === 'MXN' ? 'IVA' : 'Tax' }} {{ number_format(($impuestos['traslados'][0]['tasa_cuota'] ?? 0.16) * 100, 0) }}%:</td>
                         <td class="tot-val">${{ number_format($invoice->total_impuestos, 2) }}</td>
                     </tr>
+                    @endif
+                    @if($invoice->total_retenciones > 0 && !empty($impuestos['retenciones']))
+                        @foreach($impuestos['retenciones'] as $ret)
+                        @php
+                            $tasaPct = isset($tasaRetencionPorImp[$ret['impuesto']])
+                                ? rtrim(rtrim(number_format((float)$tasaRetencionPorImp[$ret['impuesto']] * 100, 4, '.', ''), '0'), '.')
+                                : '';
+                        @endphp
+                        <tr>
+                            <td class="tot-lbl" style="color:#b34700;">
+                                Ret. {{ $impNombre[$ret['impuesto']] ?? $ret['impuesto'] }}@if($tasaPct !== '') ({{ $tasaPct }}%)@endif:
+                            </td>
+                            <td class="tot-val" style="color:#b34700;">-${{ number_format($ret['importe'] ?? 0, 2) }}</td>
+                        </tr>
+                        @endforeach
                     @endif
                     <tr class="tot-total">
                         <td class="tot-lbl">TOTAL:</td>

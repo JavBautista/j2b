@@ -202,7 +202,7 @@ class RentsController extends Controller
     /**
      * Crear nuevo equipo para una renta
      */
-    public function storeDetail(Request $request, MonitorLicenseService $monitorLicenses)
+    public function storeDetail(Request $request)
     {
         $user = Auth::user();
         $shop = $user->shop;
@@ -224,20 +224,12 @@ class RentsController extends Controller
                     ->where('active', 1),
             ],
             'rent_price' => 'required|numeric|min:0',
-            'local_ip' => 'nullable|ip|max:45',
-            'monitor_enabled' => 'nullable|boolean',
         ]);
 
         // Verificar que la renta pertenece a un cliente de esta tienda
         $rent = Rent::with('client')->findOrFail($request->rent_id);
         if ($rent->client->shop_id !== $shop->id) {
             return response()->json(['ok' => false, 'message' => 'Renta no encontrada'], 404);
-        }
-
-        // Validación licencia de monitoreo
-        if ($request->boolean('monitor_enabled')) {
-            $check = $this->validateMonitorLicense($shop, $rent->client, $request, null, $monitorLicenses);
-            if ($check) return $check;
         }
 
         $now = now();
@@ -252,8 +244,6 @@ class RentsController extends Controller
         $detail->rent_price = $request->rent_price;
         $detail->description = $request->description;
         $detail->url_web_monitor = $request->url_web_monitor;
-        $detail->local_ip = $request->local_ip ?: null;
-        $detail->monitor_enabled = $request->boolean('monitor_enabled');
 
         // Blanco y Negro
         $detail->monochrome = $request->monochrome ? 1 : 0;
@@ -281,7 +271,7 @@ class RentsController extends Controller
     /**
      * Actualizar equipo
      */
-    public function updateDetail(Request $request, MonitorLicenseService $monitorLicenses)
+    public function updateDetail(Request $request)
     {
         $user = Auth::user();
         $shop = $user->shop;
@@ -304,18 +294,9 @@ class RentsController extends Controller
                     ->ignore($request->id),
             ],
             'rent_price' => 'required|numeric|min:0',
-            'local_ip' => 'nullable|ip|max:45',
-            'monitor_enabled' => 'nullable|boolean',
         ]);
 
         $detail = RentDetail::where('shop_id', $shop->id)->findOrFail($request->id);
-
-        // Validación licencia de monitoreo (si se intenta activar y antes estaba apagada)
-        if ($request->boolean('monitor_enabled')) {
-            $rent = Rent::with('client')->findOrFail($detail->rent_id);
-            $check = $this->validateMonitorLicense($shop, $rent->client, $request, $detail, $monitorLicenses);
-            if ($check) return $check;
-        }
 
         $now = now();
 
@@ -325,8 +306,6 @@ class RentsController extends Controller
         $detail->rent_price = $request->rent_price;
         $detail->description = $request->description;
         $detail->url_web_monitor = $request->url_web_monitor;
-        $detail->local_ip = $request->local_ip ?: null;
-        $detail->monitor_enabled = $request->boolean('monitor_enabled');
 
         // Blanco y Negro
         $detail->monochrome = $request->monochrome ? 1 : 0;
@@ -361,11 +340,64 @@ class RentsController extends Controller
 
         $detail = RentDetail::where('shop_id', $shop->id)->findOrFail($id);
         $detail->rent_id = 0;
+        $detail->monitor_enabled = false;
         $detail->save();
 
         return response()->json([
             'ok' => true,
             'message' => 'Equipo liberado correctamente.'
+        ]);
+    }
+
+    /**
+     * Activar/desactivar licencia J2 Monitor de un equipo + IP local.
+     * Endpoint dedicado (no se mezcla con storeDetail/updateDetail).
+     */
+    public function updateDetailMonitor($id, Request $request, MonitorLicenseService $monitorLicenses)
+    {
+        $user = Auth::user();
+        $shop = $user->shop;
+
+        $request->validate([
+            'monitor_enabled' => 'required|boolean',
+            'local_ip' => 'nullable|ip|max:45',
+        ]);
+
+        $detail = RentDetail::where('shop_id', $shop->id)->findOrFail($id);
+
+        if ($request->boolean('monitor_enabled')) {
+            $rent = Rent::with('client')->findOrFail($detail->rent_id);
+
+            if (!$rent->client->monitor_active) {
+                return response()->json(['ok' => false, 'message' => 'El servicio J2 Monitor no está activo para este cliente.'], 422);
+            }
+            if (empty($detail->serial_number)) {
+                return response()->json(['ok' => false, 'message' => 'El equipo debe tener número de serie antes de asignar licencia.'], 422);
+            }
+            if (empty($request->local_ip)) {
+                return response()->json(['ok' => false, 'message' => 'La IP local es obligatoria para asignar licencia.'], 422);
+            }
+            if (!$monitorLicenses->canEnable($shop, $detail)) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => "Sin licencias disponibles en tu tienda ({$shop->monitor_licenses_used}/{$shop->monitor_licenses_total}). Solicita más al administrador.",
+                ], 422);
+            }
+
+            $detail->monitor_enabled = true;
+            $detail->local_ip = $request->local_ip;
+        } else {
+            $detail->monitor_enabled = false;
+            $detail->local_ip = null;
+        }
+
+        $detail->save();
+
+        return response()->json([
+            'ok' => true,
+            'rent_detail' => $detail,
+            'summary' => $monitorLicenses->summary($shop->fresh()),
+            'message' => 'Licencia J2 Monitor actualizada.'
         ]);
     }
 

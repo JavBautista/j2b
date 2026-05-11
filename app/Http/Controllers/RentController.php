@@ -190,6 +190,7 @@ class RentController extends Controller
     public function liberarDetail(Request $request){
         $rent_detail = RentDetail::findOrFail($request->id);
         $rent_detail->rent_id=0;
+        $rent_detail->monitor_enabled = false;
         $rent_detail->save();
         return response()->json([
             'ok'=>true,

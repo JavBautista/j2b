@@ -448,6 +448,7 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::post('/admin/rents/details/store', [RentsController::class, 'storeDetail'])->name('admin.rents.details.store');
         Route::put('/admin/rents/details/update', [RentsController::class, 'updateDetail'])->name('admin.rents.details.update');
         Route::put('/admin/rents/details/{id}/liberar', [RentsController::class, 'liberarDetail'])->name('admin.rents.details.liberar');
+        Route::put('/admin/rents/details/{id}/monitor', [RentsController::class, 'updateDetailMonitor'])->name('admin.rents.details.monitor');
         Route::post('/admin/rents/details/assign', [RentsController::class, 'assignEquipment'])->name('admin.rents.details.assign');
         Route::put('/admin/rents/details/{id}/url-monitor', [RentsController::class, 'updateUrlMonitor'])->name('admin.rents.details.url-monitor');
         Route::get('/admin/rents/equipments/available', [RentsController::class, 'getAvailableEquipments'])->name('admin.rents.equipments.available');

@@ -237,6 +237,9 @@
                                                 <button class="btn btn-outline-warning" @click="editarEquipo(equipo)" title="Editar">
                                                     <i class="fa fa-edit"></i>
                                                 </button>
+                                                <button class="btn btn-outline-info" @click="abrirModalLicencia(equipo)" title="Licencia J2 Monitor">
+                                                    <i class="fa fa-id-card"></i>
+                                                </button>
                                                 <button class="btn btn-outline-primary" @click="editarUrlMonitor(equipo)" title="URL Monitor">
                                                     <i class="fa fa-link"></i>
                                                 </button>
@@ -352,46 +355,6 @@
                         <div class="col-md-8">
                             <label class="form-label">URL Web Monitor</label>
                             <input type="url" class="form-control" v-model="formEquipo.url_web_monitor" placeholder="https://...">
-                        </div>
-                    </div>
-
-                    <!-- J2 Monitor (licencia + IP local) -->
-                    <div class="card mb-3 border-primary">
-                        <div class="card-header py-2 bg-primary text-white d-flex justify-content-between align-items-center">
-                            <strong><i class="fa fa-id-card"></i> J2 Monitor</strong>
-                            <div class="form-check form-switch mb-0">
-                                <input type="checkbox" class="form-check-input" id="monitorEnabledSwitch"
-                                    v-model="formEquipo.monitor_enabled"
-                                    :disabled="!licenciaPuedeAsignarse">
-                                <label class="form-check-label small ms-1" for="monitorEnabledSwitch">
-                                    Asignar licencia
-                                </label>
-                            </div>
-                        </div>
-                        <div class="card-body py-2" v-if="formEquipo.monitor_enabled || (!licenciaPuedeAsignarse && !formEquipo.monitor_enabled)">
-                            <div v-if="!licenciaPuedeAsignarse && !formEquipo.monitor_enabled" class="alert alert-warning small mb-0 py-2">
-                                <i class="fa fa-exclamation-triangle"></i>
-                                Sin licencias disponibles ({{ monitorSummary.used }}/{{ monitorSummary.total }} en uso). Libera una licencia o solicita más al administrador del sistema.
-                            </div>
-                            <div v-if="formEquipo.monitor_enabled" class="row">
-                                <div class="col-md-6">
-                                    <label class="form-label small">IP local <span class="text-danger">*</span></label>
-                                    <input
-                                        type="text"
-                                        class="form-control form-control-sm"
-                                        v-model="formEquipo.local_ip"
-                                        placeholder="192.168.1.50"
-                                        required>
-                                    <small class="text-muted">Dirección del equipo en la red del cliente.</small>
-                                </div>
-                                <div class="col-md-6 d-flex align-items-center">
-                                    <small class="text-primary">
-                                        <i class="fa fa-info-circle"></i>
-                                        El equipo será incluido en la lista que recibe el agente Python.
-                                        Requiere número de serie e IP local capturados.
-                                    </small>
-                                </div>
-                            </div>
                         </div>
                     </div>
 
@@ -623,6 +586,63 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal Licencia J2 Monitor -->
+    <div class="modal fade" tabindex="-1" :class="{'mostrar':modalLicencia}" role="dialog" style="display: none;">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title"><i class="fa fa-id-card"></i> Licencia J2 Monitor</h5>
+                    <button type="button" class="btn-close btn-close-white" @click="cerrarModalLicencia()"></button>
+                </div>
+                <div class="modal-body" v-if="equipoLicencia">
+                    <p class="small mb-3">
+                        <strong>Equipo:</strong> {{ equipoLicencia.trademark }} {{ equipoLicencia.model }}
+                        <span v-if="equipoLicencia.serial_number"> · Serie: <code>{{ equipoLicencia.serial_number }}</code></span>
+                    </p>
+
+                    <div v-if="!formLicencia.monitor_enabled && monitorSummary.available === 0 && !licenciaOriginalActiva"
+                         class="alert alert-warning small">
+                        <i class="fa fa-exclamation-triangle"></i>
+                        Sin licencias disponibles ({{ monitorSummary.used }}/{{ monitorSummary.total }} en uso).
+                        Libera otra licencia o solicita más al administrador.
+                    </div>
+
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox"
+                               id="licenciaActivaSwitch"
+                               v-model="formLicencia.monitor_enabled"
+                               @click="onClickToggleLicencia($event)"
+                               :disabled="!formLicencia.monitor_enabled && monitorSummary.available === 0 && !licenciaOriginalActiva">
+                        <label class="form-check-label" for="licenciaActivaSwitch">
+                            <strong>{{ formLicencia.monitor_enabled ? 'Licencia activa' : 'Licencia inactiva' }}</strong>
+                            <div class="small text-muted">
+                                Al activar, el equipo será incluido en la lista del agente Python que lee contadores e insumos.
+                            </div>
+                        </label>
+                    </div>
+
+                    <div v-if="formLicencia.monitor_enabled" class="mb-2">
+                        <label class="form-label small">IP local <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" v-model="formLicencia.local_ip" placeholder="192.168.1.50">
+                        <small class="text-muted">Dirección del equipo en la red del cliente.</small>
+                    </div>
+
+                    <div class="alert alert-light small mb-0 mt-3">
+                        <i class="fa fa-info-circle text-info"></i>
+                        Tu tienda tiene <strong>{{ monitorSummary.used }} de {{ monitorSummary.total }}</strong> licencias en uso ({{ monitorSummary.available }} disponibles).
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @click="cerrarModalLicencia()">Cancelar</button>
+                    <button type="button" class="btn btn-info text-white" @click="guardarLicencia()" :disabled="guardandoLicencia">
+                        <i v-if="guardandoLicencia" class="fa fa-spinner fa-spin"></i>
+                        <i v-else class="fa fa-save"></i> Guardar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 </template>
 
@@ -667,8 +687,6 @@ export default {
                 serial_number: '',
                 rent_price: 0,
                 url_web_monitor: '',
-                local_ip: '',
-                monitor_enabled: false,
                 monochrome: false,
                 pages_included_mono: 0,
                 extra_page_cost_mono: 0,
@@ -703,23 +721,14 @@ export default {
 
             // J2 Monitor — cupo de licencias de la Shop
             monitorSummary: { total: 0, used: 0, available: 0 },
+
+            // Modal Licencia J2 Monitor (dedicado, por equipo)
+            modalLicencia: 0,
+            equipoLicencia: null,
+            formLicencia: { monitor_enabled: false, local_ip: '' },
+            licenciaOriginalActiva: false,
+            guardandoLicencia: false,
         }
-    },
-    computed: {
-        // ¿Puede activarse el toggle de licencia para el equipo en edición?
-        // Si el equipo ya la tenía, siempre puede mantenerse. Si no, se requiere cupo libre.
-        licenciaPuedeAsignarse() {
-            if (this.editandoEquipo && this.formEquipo.monitor_enabled) return true;
-            return this.monitorSummary.available > 0;
-        },
-    },
-    watch: {
-        // Al apagar el toggle de licencia, limpiar la IP (no tiene sentido sin monitoreo).
-        'formEquipo.monitor_enabled'(nuevoValor) {
-            if (!nuevoValor) {
-                this.formEquipo.local_ip = '';
-            }
-        },
     },
     methods: {
         cargarRentas() {
@@ -825,12 +834,12 @@ export default {
         // EQUIPOS
         abrirModalNuevoEquipo() {
             this.editandoEquipo = false;
-            this.formEquipo = { id: null, rent_id: this.rentaSeleccionada.id, trademark: '', model: '', serial_number: '', rent_price: 0, url_web_monitor: '', local_ip: '', monitor_enabled: false, monochrome: false, pages_included_mono: 0, extra_page_cost_mono: 0, counter_mono: 0, color: false, pages_included_color: 0, extra_page_cost_color: 0, counter_color: 0 };
+            this.formEquipo = { id: null, rent_id: this.rentaSeleccionada.id, trademark: '', model: '', serial_number: '', rent_price: 0, url_web_monitor: '', monochrome: false, pages_included_mono: 0, extra_page_cost_mono: 0, counter_mono: 0, color: false, pages_included_color: 0, extra_page_cost_color: 0, counter_color: 0 };
             this.modalFormEquipo = 1;
         },
         editarEquipo(equipo) {
             this.editandoEquipo = true;
-            this.formEquipo = { id: equipo.id, rent_id: equipo.rent_id, trademark: equipo.trademark || '', model: equipo.model || '', serial_number: equipo.serial_number || '', rent_price: equipo.rent_price || 0, url_web_monitor: equipo.url_web_monitor || '', local_ip: equipo.local_ip || '', monitor_enabled: !!equipo.monitor_enabled, monochrome: !!equipo.monochrome, pages_included_mono: equipo.pages_included_mono || 0, extra_page_cost_mono: equipo.extra_page_cost_mono || 0, counter_mono: equipo.counter_mono || 0, color: !!equipo.color, pages_included_color: equipo.pages_included_color || 0, extra_page_cost_color: equipo.extra_page_cost_color || 0, counter_color: equipo.counter_color || 0 };
+            this.formEquipo = { id: equipo.id, rent_id: equipo.rent_id, trademark: equipo.trademark || '', model: equipo.model || '', serial_number: equipo.serial_number || '', rent_price: equipo.rent_price || 0, url_web_monitor: equipo.url_web_monitor || '', monochrome: !!equipo.monochrome, pages_included_mono: equipo.pages_included_mono || 0, extra_page_cost_mono: equipo.extra_page_cost_mono || 0, counter_mono: equipo.counter_mono || 0, color: !!equipo.color, pages_included_color: equipo.pages_included_color || 0, extra_page_cost_color: equipo.extra_page_cost_color || 0, counter_color: equipo.counter_color || 0 };
             this.modalFormEquipo = 1;
         },
         cerrarModalFormEquipo() { this.modalFormEquipo = 0; },
@@ -912,6 +921,7 @@ export default {
                             Swal.fire('Exito', response.data.message, 'success');
                             this.seleccionarRenta(this.rentaSeleccionada);
                             this.cargarRentas();
+                            window.dispatchEvent(new CustomEvent('monitor:license-changed'));
                         }
                     });
                 }
@@ -941,6 +951,59 @@ export default {
                         }
                     });
                 }
+            });
+        },
+
+        // Licencia J2 Monitor (modal dedicado por equipo)
+        abrirModalLicencia(equipo) {
+            this.equipoLicencia = equipo;
+            this.licenciaOriginalActiva = !!equipo.monitor_enabled;
+            this.formLicencia = {
+                monitor_enabled: !!equipo.monitor_enabled,
+                local_ip: equipo.local_ip || '',
+            };
+            this.modalLicencia = 1;
+        },
+        cerrarModalLicencia() {
+            this.modalLicencia = 0;
+            this.equipoLicencia = null;
+        },
+        onClickToggleLicencia(event) {
+            if (this.formLicencia.monitor_enabled && this.licenciaOriginalActiva) {
+                event.preventDefault();
+                Swal.fire({
+                    title: '¿Desasignar licencia?',
+                    text: 'Este equipo dejará de ser monitoreado por J2 Monitor y la licencia quedará disponible para otro equipo. El equipo seguirá rentado al cliente.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    confirmButtonText: 'Sí, desasignar',
+                    cancelButtonText: 'Cancelar',
+                }).then(result => {
+                    if (result.isConfirmed) {
+                        this.formLicencia.monitor_enabled = false;
+                        this.formLicencia.local_ip = '';
+                        this.guardarLicencia();
+                    }
+                });
+            }
+        },
+        guardarLicencia() {
+            this.guardandoLicencia = true;
+            axios.put(`/admin/rents/details/${this.equipoLicencia.id}/monitor`, {
+                monitor_enabled: this.formLicencia.monitor_enabled,
+                local_ip: this.formLicencia.monitor_enabled ? this.formLicencia.local_ip : null,
+            }).then(response => {
+                if (response.data.ok) {
+                    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: response.data.message, showConfirmButton: false, timer: 1800 });
+                    this.cerrarModalLicencia();
+                    this.seleccionarRenta(this.rentaSeleccionada);
+                    window.dispatchEvent(new CustomEvent('monitor:license-changed'));
+                }
+                this.guardandoLicencia = false;
+            }).catch(error => {
+                Swal.fire('Error', error.response?.data?.message || 'No se pudo actualizar la licencia.', 'error');
+                this.guardandoLicencia = false;
             });
         },
 

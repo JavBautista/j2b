@@ -259,7 +259,11 @@ class RentsController extends Controller
         $detail->counter_color = $request->counter_color ?? 0;
         $detail->update_counter_color = $now;
 
-        $detail->save();
+        try {
+            $detail->save();
+        } catch (\Illuminate\Database\QueryException $e) {
+            return $this->handleDuplicateSerialException($e, (string) $request->serial_number);
+        }
 
         return response()->json([
             'ok' => true,
@@ -321,7 +325,11 @@ class RentsController extends Controller
         $detail->counter_color = $request->counter_color ?? 0;
         $detail->update_counter_color = $now;
 
-        $detail->save();
+        try {
+            $detail->save();
+        } catch (\Illuminate\Database\QueryException $e) {
+            return $this->handleDuplicateSerialException($e, (string) $request->serial_number);
+        }
 
         return response()->json([
             'ok' => true,
@@ -577,15 +585,15 @@ class RentsController extends Controller
     }
 
     /**
-     * Detecta si el serial ya está en uso por otro equipo activo de la tienda.
+     * Detecta si el serial ya está en uso por otro equipo de la tienda (activo o no).
      * Devuelve un JsonResponse 422 con info detallada del conflicto, o null si no hay choque.
-     * Reusa el equipo del inventario en lugar de crear uno nuevo (in_inventory=true).
+     * El UNIQUE de MySQL es (shop_id, serial_number) sin filtrar por active, así que también
+     * los equipos active=0 sostienen el serial y deben reportarse aquí.
      */
     private function serialConflictResponse(int $shopId, string $serial, ?int $ignoreId)
     {
         $query = RentDetail::where('shop_id', $shopId)
-            ->where('serial_number', $serial)
-            ->where('active', 1);
+            ->where('serial_number', $serial);
 
         if ($ignoreId) {
             $query->where('id', '!=', $ignoreId);
@@ -594,7 +602,8 @@ class RentsController extends Controller
         $existing = $query->first();
         if (!$existing) return null;
 
-        $inInventory = (int) $existing->rent_id === 0;
+        $isInactive = (int) $existing->active === 0;
+        $inInventory = !$isInactive && (int) $existing->rent_id === 0;
 
         $conflict = [
             'rent_detail_id' => $existing->id,
@@ -602,9 +611,12 @@ class RentsController extends Controller
             'model' => $existing->model,
             'serial_number' => $existing->serial_number,
             'in_inventory' => $inInventory,
+            'is_inactive' => $isInactive,
         ];
 
-        if ($inInventory) {
+        if ($isInactive) {
+            $message = "La serie '{$serial}' está reservada por un equipo DESACTIVADO de tu inventario: {$existing->trademark} {$existing->model} (id #{$existing->id}). Para liberar el serial, cambia el serial actual por otro distinto o pide limpieza del equipo desactivado.";
+        } elseif ($inInventory) {
             $message = "El equipo {$existing->trademark} {$existing->model} con serial '{$serial}' ya existe en tu inventario. Asígnalo a esta renta en lugar de crearlo de nuevo.";
         } else {
             $rent = Rent::with('client')->find($existing->rent_id);
@@ -624,6 +636,27 @@ class RentsController extends Controller
             'code' => 'serial_in_use',
             'message' => $message,
             'conflict' => $conflict,
+        ], 422);
+    }
+
+    /**
+     * Defensa en profundidad: convierte QueryException 1062 sobre el UNIQUE de serial
+     * en una respuesta 422 amigable. Si no es ese caso, re-lanza.
+     */
+    private function handleDuplicateSerialException(\Illuminate\Database\QueryException $e, string $serial)
+    {
+        $isDuplicate = ($e->errorInfo[1] ?? null) === 1062
+            && str_contains($e->getMessage(), 'rent_details_shop_serial_unique');
+
+        if (!$isDuplicate) {
+            throw $e;
+        }
+
+        return response()->json([
+            'ok' => false,
+            'code' => 'serial_in_use',
+            'message' => "El número de serie '{$serial}' ya está registrado en tu tienda. Refresca la página e intenta de nuevo; si el problema persiste, contacta a soporte.",
+            'conflict' => ['serial_number' => $serial, 'is_inactive' => null],
         ], 422);
     }
 }

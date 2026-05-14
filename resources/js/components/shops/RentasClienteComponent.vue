@@ -870,6 +870,20 @@ export default {
             });
         },
         manejarConflictoSerial(message, conflict) {
+            if (conflict.is_inactive) {
+                const detalle = `<div style="text-align:left"><p>${message}</p>`
+                    + `<hr><p><strong>Equipo bloqueante:</strong> ${conflict.trademark || ''} ${conflict.model || ''}<br>`
+                    + `<strong>ID interno:</strong> #${conflict.rent_detail_id}<br>`
+                    + `<strong>Estado:</strong> Desactivado</p>`
+                    + `<p>Cambia el serial actual por otro, o pide a soporte que limpie el equipo desactivado.</p></div>`;
+                Swal.fire({
+                    title: 'Serial reservado por equipo desactivado',
+                    html: detalle,
+                    icon: 'warning',
+                    confirmButtonText: 'Entendido',
+                });
+                return;
+            }
             if (conflict.in_inventory) {
                 Swal.fire({
                     title: 'Equipo ya existe en inventario',

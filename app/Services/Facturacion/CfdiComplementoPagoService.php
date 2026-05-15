@@ -734,6 +734,14 @@ class CfdiComplementoPagoService
         $retIsrInv = (float) $retGlobales->where('impuesto', '001')->sum('importe');
         $retIvaInv = (float) $retGlobales->where('impuesto', '002')->sum('importe');
 
+        // Base efectiva del CFDI (post-descuento/cortesías). El campo `subtotal`
+        // guarda la suma BRUTA de importes; cuando la nota lleva descuento o
+        // ítems en cortesía, `total_impuestos` se calcula sobre la base ya
+        // descontada, por lo que multiplicar `subtotal * factor` produce un
+        // `base_dr` incoherente con `importe_dr`. La base efectiva se reconstruye
+        // desde total + retenciones − IVA y se usa para repartir proporcionalmente.
+        $baseEfectivaInv = round($totalInv - $totalIvaInv + $retIsrInv + $retIvaInv, 2);
+
         // Tasas de retención: vienen en las filas POR concepto (las globales no llevan tasa).
         $tasaIsrFila = $invoice->retenciones()->whereNotNull('concepto_index')->where('impuesto', '001')->first();
         $tasaIvaFila = $invoice->retenciones()->whereNotNull('concepto_index')->where('impuesto', '002')->first();
@@ -759,13 +767,13 @@ class CfdiComplementoPagoService
                 $sumRetIsrDrPrevio += (float) $c->taxesDr()->where('tipo', 'retencion')->where('impuesto', '001')->sum('importe');
                 $sumRetIvaDrPrevio += (float) $c->taxesDr()->where('tipo', 'retencion')->where('impuesto', '002')->sum('importe');
             }
-            $baseDr = round($subtotalInv - $sumBaseDrPrevio, 2);
+            $baseDr = round($baseEfectivaInv - $sumBaseDrPrevio, 2);
             $ivaDr = $tieneIva ? round($totalIvaInv - $sumIvaDrPrevio, 2) : 0;
             $retIsrDr = $retIsrInv > 0 ? round($retIsrInv - $sumRetIsrDrPrevio, 2) : 0;
             $retIvaDr = $retIvaInv > 0 ? round($retIvaInv - $sumRetIvaDrPrevio, 2) : 0;
         } else {
             $factor = $totalInv > 0 ? $impPagado / $totalInv : 0;
-            $baseDr = round($subtotalInv * $factor, 2);
+            $baseDr = round($baseEfectivaInv * $factor, 2);
             $ivaDr = $tieneIva ? round($totalIvaInv * $factor, 2) : 0;
             $retIsrDr = $retIsrInv > 0 ? round($retIsrInv * $factor, 2) : 0;
             $retIvaDr = $retIvaInv > 0 ? round($retIvaInv * $factor, 2) : 0;

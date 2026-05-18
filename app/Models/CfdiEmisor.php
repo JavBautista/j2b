@@ -27,6 +27,11 @@ class CfdiEmisor extends Model
         return $this->hasMany(CfdiInvoice::class);
     }
 
+    public function impuestosLocalesDefaults()
+    {
+        return $this->hasMany(CfdiEmisorImpuestoLocalDefault::class);
+    }
+
     /**
      * Timbres disponibles (asignados - usados)
      */

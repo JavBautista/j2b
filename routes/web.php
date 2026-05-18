@@ -330,6 +330,9 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::get('/admin/facturacion/configuracion/get', [App\Http\Controllers\Admin\CfdiConfigController::class, 'get']);
         Route::post('/admin/facturacion/configuracion/save', [App\Http\Controllers\Admin\CfdiConfigController::class, 'save']);
         Route::post('/admin/facturacion/configuracion/retenciones-defaults', [App\Http\Controllers\Admin\CfdiConfigController::class, 'saveRetencionesDefaults']);
+        Route::get('/admin/facturacion/configuracion/impuestos-locales-defaults', [App\Http\Controllers\Admin\CfdiConfigController::class, 'listImpuestosLocalesDefaults']);
+        Route::post('/admin/facturacion/configuracion/impuestos-locales-defaults', [App\Http\Controllers\Admin\CfdiConfigController::class, 'storeImpuestoLocalDefault']);
+        Route::delete('/admin/facturacion/configuracion/impuestos-locales-defaults/{id}', [App\Http\Controllers\Admin\CfdiConfigController::class, 'destroyImpuestoLocalDefault']);
         Route::post('/admin/facturacion/configuracion/upload-csd', [App\Http\Controllers\Admin\CfdiConfigController::class, 'uploadCsd']);
         Route::post('/admin/facturacion/configuracion/registrar', [App\Http\Controllers\Admin\CfdiConfigController::class, 'registrar']);
         Route::get('/admin/facturacion/configuracion/timbre-transactions', [App\Http\Controllers\Admin\CfdiConfigController::class, 'getTimbreTransactions']);

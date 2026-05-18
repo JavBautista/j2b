@@ -42,6 +42,13 @@ class CfdiTimbradoService
      */
     public function emitir(Receipt $receipt, Shop $shop, CfdiEmisor $emisor, array $data): array
     {
+        // Router pipeline: facturas con impuestos locales toman el pipeline XML
+        // alterno (TimbraCFDI compat). El JSON path queda INTACTO para todo lo demás.
+        // Invariante crítico — ver xdev/facturacion/PLAN_IMPUESTOS_LOCALES.md §0.5.1.
+        if (!empty($data['impuestos_locales'])) {
+            return app(CfdiTimbradoXmlService::class)->emitir($receipt, $shop, $emisor, $data);
+        }
+
         // El PAC valida que todos los campos monetarios tengan los mismos decimales.
         // round() devuelve float y PHP trunca ceros al serializar (469.90 -> 469.9).
         // fmt() fuerza string "0.00" para todos los valores que van al payload del PAC.

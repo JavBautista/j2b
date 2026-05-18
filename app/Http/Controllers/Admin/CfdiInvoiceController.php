@@ -8,6 +8,7 @@ use App\Models\CfdiInvoice;
 use App\Models\CfdiPagoComplemento;
 use App\Models\ClientFiscalData;
 use App\Models\Receipt;
+use App\Services\Facturacion\CfdiCancelacionService;
 use App\Services\Facturacion\CfdiComplementoPagoService;
 use App\Services\Facturacion\CfdiTimbradoService;
 use App\Services\Facturacion\HubCfdiService;
@@ -294,6 +295,7 @@ class CfdiInvoiceController extends Controller
             'ret_isr_tasa' => (float) $request->input('ret_isr_tasa', 0),
             'ret_iva_aplica' => (bool) $request->input('ret_iva_aplica', false),
             'ret_iva_tasa' => (float) $request->input('ret_iva_tasa', 0),
+            'impuestos_locales' => $request->input('impuestos_locales'),
         ]);
 
         if (!$result['ok']) {
@@ -376,9 +378,9 @@ class CfdiInvoiceController extends Controller
         ]);
 
         try {
-            $hubService = new HubCfdiService();
-            $result = $hubService->cancelar(
-                $invoice->uuid,
+            $cancelService = app(CfdiCancelacionService::class);
+            $result = $cancelService->cancelar(
+                $invoice,
                 $request->motivo,
                 $request->folio_sustitucion
             );

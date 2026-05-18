@@ -51,6 +51,21 @@ class CfdiInvoice extends Model
         return $this->taxes()->where('tipo', 'retencion');
     }
 
+    public function impuestosLocales()
+    {
+        return $this->hasMany(CfdiInvoiceImpuestoLocal::class);
+    }
+
+    public function retencionesLocales()
+    {
+        return $this->impuestosLocales()->where('tipo', 'retencion');
+    }
+
+    public function trasladosLocales()
+    {
+        return $this->impuestosLocales()->where('tipo', 'traslado');
+    }
+
     /**
      * Saldo insoluto = total factura - suma de complementos vigentes
      */

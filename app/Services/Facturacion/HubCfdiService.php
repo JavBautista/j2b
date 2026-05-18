@@ -85,6 +85,48 @@ class HubCfdiService
     }
 
     /**
+     * Timbrar un CFDI vía endpoint XML de compatibilidad.
+     * Se envía el XML SIN sellar; TBT lo sella con el CSD del panel.
+     * Usado para facturas con complementos no soportados por API JSON
+     * (ej. implocal v1.0).
+     *
+     * @param string $xml CFDI 4.0 completo (raw XML)
+     * @return array ['success' => bool, 'data' => mixed, 'error' => string|null]
+     */
+    public function timbrarCompat(string $xml): array
+    {
+        return $this->requestXml(
+            'POST',
+            "/v1/compatibilidad/{$this->clientId}/TimbraCFDI",
+            $xml
+        );
+    }
+
+    /**
+     * Cancelar un CFDI timbrado por la API de compatibilidad.
+     * NO usar el endpoint de cancelación JSON con UUIDs timbrados por compat.
+     *
+     * @param string $rfc RFC del emisor
+     * @param string $uuid UUID a cancelar
+     * @param string $motivo "01"..."04"
+     * @param string|null $folioSustitucion UUID sustituto (solo motivo "01")
+     * @return array
+     */
+    public function cancelarCompat(string $rfc, string $uuid, string $motivo, ?string $folioSustitucion = null): array
+    {
+        $body = [
+            'Rfc' => $rfc,
+            'Uuid' => $uuid,
+            'Motivo' => $motivo,
+        ];
+        if ($folioSustitucion) {
+            $body['FolioSustitucion'] = $folioSustitucion;
+        }
+
+        return $this->request('POST', "/v1/compatibilidad/{$this->clientId}/CancelaCFDI", $body);
+    }
+
+    /**
      * Registrar un emisor vía API de compatibilidad
      *
      * @param array $data Datos del emisor (RFC, CSD, etc.)
@@ -220,6 +262,100 @@ class HubCfdiService
                 'success' => false,
                 'data' => null,
                 'error' => $errorMsg,
+            ];
+        }
+    }
+
+    /**
+     * Variante de request() para endpoints que aceptan/envían XML (compatibility).
+     * Diferencias clave vs request() JSON:
+     *  - Content-Type: application/xml
+     *  - Body es string raw (no array)
+     *  - Logueamos un snippet del XML (truncado) además del payload completo
+     */
+    protected function requestXml(string $method, string $endpoint, string $xml): array
+    {
+        $startedAt = microtime(true);
+        $url = $this->baseUrl . $endpoint;
+
+        LogFacturacion::hub('cfdi.hub.request', [
+            'method' => $method,
+            'url' => $url,
+            'endpoint' => $endpoint,
+            'content_type' => 'application/xml',
+            'request_payload' => ['xml' => $xml, 'xml_bytes' => strlen($xml)],
+        ]);
+
+        try {
+            $retryConfig = config('hubcfdi.retry', ['times' => 2, 'sleep' => 1000]);
+
+            $http = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $this->apiToken,
+                'X-CLIENT-ID' => $this->clientId,
+                'Content-Type' => 'application/xml',
+                'Accept' => 'application/json',
+            ])
+                ->withBody($xml, 'application/xml')
+                ->timeout($this->timeout)
+                ->retry($retryConfig['times'], $retryConfig['sleep']);
+
+            $response = match (strtoupper($method)) {
+                'POST' => $http->post($url),
+                default => throw new Exception("Método HTTP no soportado en requestXml: {$method}"),
+            };
+
+            $durationMs = (int) round((microtime(true) - $startedAt) * 1000);
+
+            if (!$response->successful()) {
+                $errorBody = $response->json() ?? ['raw' => $response->body()];
+                $errorMsg = $errorBody['message'] ?? $errorBody['Mensaje'] ?? $errorBody['error'] ?? $response->body();
+
+                LogFacturacion::hub('cfdi.hub.api_error', [
+                    'endpoint' => $endpoint,
+                    'http_status' => $response->status(),
+                    'duration_ms' => $durationMs,
+                    'request_payload' => ['xml_bytes' => strlen($xml)],
+                    'response_payload' => is_array($errorBody) ? $errorBody : ['raw' => $response->body()],
+                    'error_message' => is_string($errorMsg) ? $errorMsg : json_encode($errorMsg),
+                ], 'error');
+
+                return [
+                    'success' => false,
+                    'data' => null,
+                    'error' => $errorMsg,
+                ];
+            }
+
+            $responseData = $response->json();
+
+            LogFacturacion::hub('cfdi.hub.response', [
+                'endpoint' => $endpoint,
+                'http_status' => $response->status(),
+                'duration_ms' => $durationMs,
+                'response_payload' => is_array($responseData) ? $responseData : ['raw' => $response->body()],
+            ]);
+
+            return [
+                'success' => true,
+                'data' => $responseData['data'] ?? $responseData,
+                'error' => null,
+            ];
+
+        } catch (Exception $e) {
+            $durationMs = (int) round((microtime(true) - $startedAt) * 1000);
+
+            LogFacturacion::hub('cfdi.hub.api_error', [
+                'endpoint' => $endpoint,
+                'duration_ms' => $durationMs,
+                'request_payload' => ['xml_bytes' => strlen($xml)],
+                'error_code' => 'exception',
+                'error_message' => $e->getMessage(),
+            ], 'error');
+
+            return [
+                'success' => false,
+                'data' => null,
+                'error' => $e->getMessage(),
             ];
         }
     }

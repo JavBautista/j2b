@@ -49,7 +49,82 @@ class CfdiConfigController extends Controller
             'timbres_contratados' => $shop->cfdi_timbres_contratados ?? 0,
             'has_cer' => $emisor && !empty($emisor->cer_file),
             'has_key' => $emisor && !empty($emisor->key_file),
+            'impuestos_locales_defaults' => $emisor
+                ? $emisor->impuestosLocalesDefaults()->where('activo', true)->get()
+                : [],
         ]);
+    }
+
+    /**
+     * Listar defaults de impuestos locales del emisor (cedular, ISH, etc.)
+     * Usado por CfdiInvoiceModal para mostrar sugerencias rápidas al facturar.
+     */
+    public function listImpuestosLocalesDefaults()
+    {
+        $shop = auth()->user()->shop;
+        if (!$shop || !$shop->cfdi_enabled) {
+            return response()->json(['ok' => false, 'message' => 'CFDI no habilitado'], 403);
+        }
+        $emisor = \App\Models\CfdiEmisor::where('shop_id', $shop->id)->first();
+        if (!$emisor) {
+            return response()->json(['ok' => true, 'defaults' => []]);
+        }
+        return response()->json([
+            'ok' => true,
+            'defaults' => $emisor->impuestosLocalesDefaults()->orderBy('id')->get(),
+        ]);
+    }
+
+    /**
+     * Crear un default de impuesto local.
+     */
+    public function storeImpuestoLocalDefault(Request $request)
+    {
+        $shop = auth()->user()->shop;
+        if (!$shop || !$shop->cfdi_enabled) {
+            return response()->json(['ok' => false, 'message' => 'CFDI no habilitado'], 403);
+        }
+        $emisor = \App\Models\CfdiEmisor::where('shop_id', $shop->id)->first();
+        if (!$emisor) {
+            return response()->json(['ok' => false, 'message' => 'Configura primero los datos fiscales'], 422);
+        }
+
+        $request->validate([
+            'tipo' => 'required|in:retencion,traslado',
+            'nombre' => 'required|string|min:3|max:100',
+            'tasa_porcentaje' => 'required|numeric|between:0,100',
+        ]);
+
+        $default = $emisor->impuestosLocalesDefaults()->create([
+            'tipo' => $request->tipo,
+            'nombre' => strtoupper($request->nombre),
+            'tasa_porcentaje' => $request->tasa_porcentaje,
+            'activo' => true,
+        ]);
+
+        return response()->json(['ok' => true, 'default' => $default]);
+    }
+
+    /**
+     * Eliminar un default de impuesto local.
+     */
+    public function destroyImpuestoLocalDefault($id)
+    {
+        $shop = auth()->user()->shop;
+        if (!$shop || !$shop->cfdi_enabled) {
+            return response()->json(['ok' => false, 'message' => 'CFDI no habilitado'], 403);
+        }
+        $emisor = \App\Models\CfdiEmisor::where('shop_id', $shop->id)->first();
+        if (!$emisor) {
+            return response()->json(['ok' => false, 'message' => 'Sin emisor'], 404);
+        }
+
+        $deleted = $emisor->impuestosLocalesDefaults()->where('id', $id)->delete();
+        if (!$deleted) {
+            return response()->json(['ok' => false, 'message' => 'No encontrado'], 404);
+        }
+
+        return response()->json(['ok' => true]);
     }
 
     /**

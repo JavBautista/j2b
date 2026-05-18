@@ -435,6 +435,11 @@ class CfdiInvoiceController extends Controller
             'guardar_datos_cliente' => (bool) $request->guardar_datos_cliente,
             'client_fiscal_data_id' => $request->client_fiscal_data_id,
             'abonos_previos' => $request->input('abonos_previos'),
+            'ret_isr_aplica' => (bool) $request->input('ret_isr_aplica', false),
+            'ret_isr_tasa' => (float) $request->input('ret_isr_tasa', 0),
+            'ret_iva_aplica' => (bool) $request->input('ret_iva_aplica', false),
+            'ret_iva_tasa' => (float) $request->input('ret_iva_tasa', 0),
+            'impuestos_locales' => $request->input('impuestos_locales'),
         ]);
 
         if (!$result['ok']) {

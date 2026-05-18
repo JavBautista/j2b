@@ -385,6 +385,13 @@
                             </div>
                         </div>
 
+                        <!-- Impuestos Locales (cedular, ISH, etc.) -->
+                        <impuestos-locales-editor
+                            v-model="impuestosLocales"
+                            :base-sugerida="receiptData?.subtotal || 0"
+                            :defaults="impuestosLocalesDefaults"
+                        ></impuestos-locales-editor>
+
                         <!-- Pago -->
                         <div class="card mb-3">
                             <div class="card-header bg-light py-2">
@@ -497,6 +504,9 @@ export default {
             retIsrTasa: 10.0000,
             retIvaAplica: false,
             retIvaTasa: 10.6667,
+            // Impuestos locales (cedular/ISH/etc) — array de objetos {tipo,nombre,tasa_porcentaje,base,importe}
+            impuestosLocales: [],
+            impuestosLocalesDefaults: [],
             // Diálogo de abonos previos al timbrado PPD
             abonosPreviosPendientes: [],
             cuentasBancariasShop: [],
@@ -840,6 +850,11 @@ export default {
                     if (res.data.emisor.ret_iva_default_tasa) {
                         this.retIvaTasa = parseFloat(res.data.emisor.ret_iva_default_tasa) * 100;
                     }
+                    // Cargar defaults de impuestos locales para sugerencias rápidas en el editor
+                    try {
+                        const dl = await axios.get('/admin/facturacion/configuracion/impuestos-locales-defaults');
+                        if (dl.data.ok) this.impuestosLocalesDefaults = dl.data.defaults;
+                    } catch (_) { /* silencio: no bloquea timbrado */ }
                     this.initConceptosSat();
 
                     const defaultPerfil = this.perfilesFiscales.find(p => p.is_default);
@@ -1010,6 +1025,8 @@ export default {
                     ret_isr_tasa: this.retIsrAplica ? parseFloat(this.retIsrTasa) / 100 : 0,
                     ret_iva_aplica: this.retIvaAplica,
                     ret_iva_tasa: this.retIvaAplica ? parseFloat(this.retIvaTasa) / 100 : 0,
+                    // Impuestos locales (cedular, ISH, etc.) — array vacío = no aplica
+                    impuestos_locales: (this.impuestosLocales || []).length > 0 ? this.impuestosLocales : undefined,
                 };
                 if (this.abonosPreviosPayload) {
                     payloadTimbrar.abonos_previos = this.abonosPreviosPayload;

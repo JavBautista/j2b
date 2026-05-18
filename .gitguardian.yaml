@@ -1,0 +1,16 @@
+# Configuración de GitGuardian para j2b
+# Doc oficial: https://docs.gitguardian.com/ggshield-docs/reference/ignore-fps
+
+version: 2
+
+# Archivos con falsos positivos conocidos.
+#
+# config/cfdi-logging.php:
+#   Contiene la lista de NOMBRES DE CAMPOS que el helper LogFacturacion
+#   debe redactar antes de loguear (p.ej. 'password', 'api_token', 'sello').
+#   Son los keywords del sanitizador, no credenciales reales.
+#   La lista existe precisamente para impedir que esos campos lleguen
+#   a los archivos de log y a la tabla cfdi_timbrado_logs.
+#
+paths-ignore:
+  - config/cfdi-logging.php

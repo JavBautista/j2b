@@ -93,12 +93,16 @@ class HubCfdiService
      * @param string $xml CFDI 4.0 completo (raw XML)
      * @return array ['success' => bool, 'data' => mixed, 'error' => string|null]
      */
-    public function timbrarCompat(string $xml): array
+    public function timbrarCompat(string $xml, ?string $idComprobante = null): array
     {
-        return $this->requestXml(
+        // TBT compat API: XML envuelto en JSON, base64-encoded (per OpenAPI v1.0.2).
+        return $this->request(
             'POST',
             "/v1/compatibilidad/{$this->clientId}/TimbraCFDI",
-            $xml
+            [
+                'XmlComprobanteBase64' => base64_encode($xml),
+                'IdComprobante' => $idComprobante ?: uniqid('j2b_', true),
+            ]
         );
     }
 
@@ -115,12 +119,12 @@ class HubCfdiService
     public function cancelarCompat(string $rfc, string $uuid, string $motivo, ?string $folioSustitucion = null): array
     {
         $body = [
-            'Rfc' => $rfc,
-            'Uuid' => $uuid,
-            'Motivo' => $motivo,
+            'RfcEmisor' => $rfc,
+            'FolioFiscal' => $uuid,
+            'MotivoCancelacion' => $motivo,
         ];
         if ($folioSustitucion) {
-            $body['FolioSustitucion'] = $folioSustitucion;
+            $body['FolioFiscalSustitucion'] = $folioSustitucion;
         }
 
         return $this->request('POST', "/v1/compatibilidad/{$this->clientId}/CancelaCFDI", $body);

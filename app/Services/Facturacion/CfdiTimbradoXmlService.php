@@ -218,7 +218,18 @@ class CfdiTimbradoXmlService
             }
 
             $responseData = $result['data'];
-            $uuid = $responseData['uuid'] ?? $responseData['Uuid'] ?? null;
+            // TBT compat devuelve UUID en data.Valores.UUID (validado sandbox 2026-05-18)
+            $uuid = $responseData['Valores']['UUID']
+                ?? $responseData['uuid']
+                ?? $responseData['Uuid']
+                ?? null;
+            // FechaTimbrado viene embebida en el XML sellado (atributo TimbreFiscalDigital.FechaTimbrado).
+            $fechaTimbrado = null;
+            if (!empty($responseData['Xml'])) {
+                if (preg_match('/FechaTimbrado="([^"]+)"/', $responseData['Xml'], $m)) {
+                    $fechaTimbrado = str_replace('T', ' ', $m[1]);
+                }
+            }
 
             // ===== Persistir CfdiInvoice =====
             $clientFiscalDataId = $this->resolverClientFiscalData($receipt, $receptorRfc, $data);
@@ -237,7 +248,7 @@ class CfdiTimbradoXmlService
                 'serie' => $emisor->serie ?? 'A',
                 'folio' => (string) $folio,
                 'fecha_emision' => $fechaEmision,
-                'fecha_timbrado' => $responseData['fecha_timbrado'] ?? null,
+                'fecha_timbrado' => $fechaTimbrado ?? ($responseData['fecha_timbrado'] ?? null),
                 'tipo_comprobante' => 'I',
                 'forma_pago' => $data['forma_pago'],
                 'metodo_pago' => 'PUE',

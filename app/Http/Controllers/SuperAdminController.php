@@ -8,6 +8,7 @@ use App\Models\Shop;
 use App\Models\Subscription;
 use App\Models\User;
 use App\Models\Notification;
+use App\Services\Monitor\MonitorBillingService;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
 
@@ -151,15 +152,26 @@ class SuperAdminController extends Controller
             }
         }
 
-        // Multiplicar por meses
-        $priceWithoutIvaTotal = $priceWithoutIva * $durationMonths;
-        $ivaAmountTotal = $ivaAmount * $durationMonths;
-        $totalAmountFinal = $totalAmount * $durationMonths;
+        // Multiplicar por meses (plan base)
+        $planSubtotalNoIva = $priceWithoutIva * $durationMonths;
+        $planIva = $ivaAmount * $durationMonths;
+        $planTotal = $totalAmount * $durationMonths;
+
+        // Sumar cargo de J2 Monitor según licencias contratadas + tier.
+        $svcBilling = app(MonitorBillingService::class)->calculateForShop($shop);
+        $monitorPeriodAmount = round((float) $svcBilling['monitor_amount'] * $durationMonths, 2);
+        $planPeriodAmount = $svcBilling['includes_base_plan'] ? 0.0 : (float) $planTotal;
+
+        $priceWithoutIvaTotal = $svcBilling['includes_base_plan']
+            ? $monitorPeriodAmount
+            : round($planSubtotalNoIva + $monitorPeriodAmount, 2);
+        $ivaAmountTotal = $svcBilling['includes_base_plan'] ? 0.0 : $planIva;
+        $totalAmountFinal = round($planPeriodAmount + $monitorPeriodAmount, 2);
 
         // Actualizar shop
         $shop->update([
             'plan_id' => $plan->id,
-            'monthly_price' => $totalAmount, // Guardar precio mensual de esta tienda
+            'monthly_price' => $totalAmount, // Precio mensual del plan base (sin monitor)
             'is_trial' => false,
             'subscription_status' => 'active',
             'subscription_ends_at' => now()->addMonths($durationMonths),
@@ -175,6 +187,11 @@ class SuperAdminController extends Controller
             'price_without_iva' => $priceWithoutIvaTotal,
             'iva_amount' => $ivaAmountTotal,
             'total_amount' => $totalAmountFinal,
+            'plan_amount' => $planPeriodAmount,
+            'monitor_amount' => $monitorPeriodAmount,
+            'monitor_tier_id' => $svcBilling['tier']?->id,
+            'monitor_equipment_count' => $svcBilling['enabled'] ? $svcBilling['equipment_count'] : null,
+            'monitor_unit_price' => $svcBilling['unit_price'],
             'currency' => $plan->currency,
             'payment_method' => 'other',
             'transaction_id' => 'MANUAL-' . now()->timestamp,
@@ -762,16 +779,28 @@ class SuperAdminController extends Controller
             ? \Carbon\Carbon::parse($request->payment_date)
             : now();
 
-        // Calcular IVA si aplica
+        // Calcular cargo de J2 Monitor según licencias contratadas + tier vigente (o override).
+        // El $amount capturado por el superadmin representa el PLAN BASE; el monitor se SUMA.
+        // Si la shop tiene billing OFF, $svcBilling['monitor_amount'] = 0 y se preserva el flujo legacy.
+        $svcBilling = app(MonitorBillingService::class)->calculateForShop($shop);
+        $monthsInPeriod = $billingCycle === 'yearly' ? 12 : 1;
+        $monitorPeriodAmount = round((float) $svcBilling['monitor_amount'] * $monthsInPeriod, 2);
+
+        // Si el tier es flat con base incluida (ej. 381+ a $4,000): el plan se anula y el monitor cubre todo.
+        $planPeriodAmount = $svcBilling['includes_base_plan'] ? 0.0 : (float) $amount;
+
+        $subtotal = round($planPeriodAmount + $monitorPeriodAmount, 2);
+
+        // Calcular IVA si aplica. Se aplica sobre el subtotal combinado (plan + monitor).
         $ivaRate = SubscriptionSetting::get('iva_rate', 16);
         if ($includeIva) {
-            $priceWithoutIva = round($amount / (1 + ($ivaRate / 100)), 2);
-            $ivaAmount = round($amount - $priceWithoutIva, 2);
-            $totalAmount = $amount;
+            $priceWithoutIva = round($subtotal / (1 + ($ivaRate / 100)), 2);
+            $ivaAmount = round($subtotal - $priceWithoutIva, 2);
+            $totalAmount = $subtotal;
         } else {
-            $priceWithoutIva = $amount;
+            $priceWithoutIva = $subtotal;
             $ivaAmount = 0;
-            $totalAmount = $amount;
+            $totalAmount = $subtotal;
         }
 
         // Determinar día de corte (cutoff)
@@ -857,6 +886,11 @@ class SuperAdminController extends Controller
             'price_without_iva' => $priceWithoutIva,
             'iva_amount' => $ivaAmount,
             'total_amount' => $totalAmount,
+            'plan_amount' => $planPeriodAmount,
+            'monitor_amount' => $monitorPeriodAmount,
+            'monitor_tier_id' => $svcBilling['tier']?->id,
+            'monitor_equipment_count' => $svcBilling['enabled'] ? $svcBilling['equipment_count'] : null,
+            'monitor_unit_price' => $svcBilling['unit_price'],
             'currency' => $shop->plan->currency ?? 'MXN',
             'payment_method' => $paymentMethod,
             'transaction_id' => $request->reference ?: 'MANUAL-' . now()->timestamp,
@@ -895,7 +929,19 @@ class SuperAdminController extends Controller
                 'start' => $periodStart->format('d/m/Y'),
                 'end' => $endsAt->format('d/m/Y'),
                 'label' => $periodLabel
-            ]
+            ],
+            'breakdown' => [
+                'plan_amount' => $planPeriodAmount,
+                'monitor_amount' => $monitorPeriodAmount,
+                'monitor_enabled' => $svcBilling['enabled'],
+                'monitor_tier' => $svcBilling['tier']?->name,
+                'monitor_equipment_count' => $svcBilling['equipment_count'],
+                'monitor_unit_price' => $svcBilling['unit_price'],
+                'monitor_includes_base' => $svcBilling['includes_base_plan'],
+                'subtotal' => $subtotal,
+                'iva_amount' => $ivaAmount,
+                'total_amount' => $totalAmount,
+            ],
         ]);
     }
 
@@ -1226,7 +1272,7 @@ class SuperAdminController extends Controller
     public function generatePaymentPdf($shopId, $paymentId)
     {
         $payment = Subscription::where('shop_id', $shopId)
-            ->with(['shop', 'plan'])
+            ->with(['shop', 'plan', 'monitorTier'])
             ->findOrFail($paymentId);
 
         $shop = $payment->shop;
@@ -1263,6 +1309,13 @@ class SuperAdminController extends Controller
             'iva' => $payment->iva_amount ?? 0,
             'total' => $payment->total_amount,
             'moneda' => $payment->currency ?? 'MXN',
+
+            // Desglose plan / J2 Monitor (nullable en pagos legacy)
+            'plan_amount' => $payment->plan_amount,
+            'monitor_amount' => $payment->monitor_amount,
+            'monitor_tier_name' => $payment->monitorTier?->name,
+            'monitor_equipment_count' => $payment->monitor_equipment_count,
+            'monitor_unit_price' => $payment->monitor_unit_price,
 
             // Pago
             'metodo_pago' => $metodosLabels[$payment->payment_method] ?? $payment->payment_method,

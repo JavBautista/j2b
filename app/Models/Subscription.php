@@ -16,6 +16,11 @@ class Subscription extends Model
         'price_without_iva',
         'iva_amount',
         'total_amount',
+        'plan_amount',
+        'monitor_amount',
+        'monitor_tier_id',
+        'monitor_equipment_count',
+        'monitor_unit_price',
         'currency',
         'payment_method',
         'transaction_id',
@@ -30,6 +35,10 @@ class Subscription extends Model
     protected $casts = [
         'starts_at' => 'datetime',
         'ends_at' => 'datetime',
+        'plan_amount' => 'decimal:2',
+        'monitor_amount' => 'decimal:2',
+        'monitor_unit_price' => 'decimal:2',
+        'monitor_equipment_count' => 'integer',
     ];
 
     // Relaciones
@@ -46,5 +55,10 @@ class Subscription extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function monitorTier()
+    {
+        return $this->belongsTo(MonitorPricingTier::class, 'monitor_tier_id');
     }
 }

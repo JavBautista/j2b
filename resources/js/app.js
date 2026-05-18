@@ -23,6 +23,7 @@ import LegalDocumentsComponent from './components/superadmin/LegalDocumentsCompo
 import CfdiManagementComponent from './components/superadmin/CfdiManagementComponent.vue'
 import SuperadminCfdiFacturasComponent from './components/superadmin/CfdiFacturasComponent.vue'
 import PdfPhrasesComponent from './components/superadmin/PdfPhrasesComponent.vue'
+import MonitorPricingTiersComponent from './components/superadmin/MonitorPricingTiersComponent.vue'
 import ExampleComponent from './components/ExampleComponent.vue';
 //Componenetes de tiendas
 import ClientsComponent from './components/shops/ClientsComponent.vue';
@@ -88,6 +89,7 @@ app.component('legal-documents-component', LegalDocumentsComponent);
 app.component('cfdi-management-component', CfdiManagementComponent);
 app.component('superadmin-cfdi-facturas-component', SuperadminCfdiFacturasComponent);
 app.component('pdf-phrases-component', PdfPhrasesComponent);
+app.component('superadmin-monitor-pricing-tiers', MonitorPricingTiersComponent);
 //Tiendas
 app.component('shop-template-creator-component', TemplateCreatorComponent);
 app.component('shop-clients-component', ClientsComponent);

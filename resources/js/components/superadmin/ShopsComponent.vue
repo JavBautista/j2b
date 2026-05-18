@@ -59,6 +59,7 @@
                                 <th style="width: 100px;">Estado</th>
                                 <th style="width: 80px;">Corte</th>
                                 <th style="width: 180px;">Licencias Monitor</th>
+                                <th style="width: 200px;">Cobro Monitor</th>
                                 <th style="width: 120px;">Creacion</th>
                                 <th style="width: 140px;">Acciones</th>
                             </tr>
@@ -125,6 +126,31 @@
                                     </small>
                                   </td>
                                   <td>
+                                    <div v-if="shop.monitor_billing_enabled">
+                                        <span class="j2b-badge j2b-badge-success" style="margin-bottom:4px;">
+                                            <i class="fa fa-dollar"></i> ACTIVO
+                                        </span>
+                                        <small class="d-block" style="color: var(--j2b-gray-700); font-size: 11px;">
+                                            <template v-if="cobroPrevisto(shop).tier_name">
+                                                {{ cobroPrevisto(shop).tier_name }}
+                                            </template>
+                                            <template v-else>
+                                                Sin tier aplicable
+                                            </template>
+                                        </small>
+                                        <small class="d-block" style="color: var(--j2b-gray-500); font-size: 11px;">
+                                            <strong>${{ formatMoneyShop(cobroPrevisto(shop).monthly) }}</strong>/mes
+                                            <span v-if="shop.monitor_tier_locked_id" class="j2b-badge j2b-badge-warning" style="font-size:9px; margin-left:4px;">LOCK</span>
+                                        </small>
+                                    </div>
+                                    <div v-else>
+                                        <span class="j2b-badge j2b-badge-secondary"><i class="fa fa-pause"></i> Sin cobro</span>
+                                    </div>
+                                    <button class="j2b-btn j2b-btn-sm j2b-btn-outline mt-1" @click="abrirModalMonitorBilling(shop)" title="Configurar cobro monitor">
+                                        <i class="fa fa-cog"></i> Configurar
+                                    </button>
+                                  </td>
+                                  <td>
                                     <small style="color: var(--j2b-gray-500);">{{ shop.created_at | formatDate }}</small>
                                   </td>
                                   <td>
@@ -168,7 +194,7 @@
                                   </td>
                               </tr>
                               <tr v-if="arrayShops.length === 0">
-                                  <td colspan="8" class="text-center py-5">
+                                  <td colspan="9" class="text-center py-5">
                                       <i class="fa fa-inbox fa-3x mb-3" style="color: var(--j2b-gray-300);"></i>
                                       <p style="color: var(--j2b-gray-500);">No se encontraron tiendas</p>
                                   </td>
@@ -666,6 +692,140 @@
     </div>
     <!--Fin Modal Estadísticas-->
 
+    <!--Modal Cobro J2 Monitor-->
+    <div class="modal fade" tabindex="-1" :class="{ mostrar: monitorBillingModal }" role="dialog" style="display:none;" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content j2b-modal-content">
+                <div class="modal-header j2b-modal-header">
+                    <h5 class="modal-title">
+                        <i class="fa fa-dollar" style="color: var(--j2b-primary);"></i>
+                        Cobro J2 Monitor — {{ monitorBillingShop ? monitorBillingShop.name : '' }}
+                    </h5>
+                    <button type="button" class="j2b-modal-close" @click="cerrarModalMonitorBilling" aria-label="Close">
+                        <i class="fa fa-times"></i>
+                    </button>
+                </div>
+
+                <div class="modal-body j2b-modal-body" v-if="monitorBillingShop">
+                    <div v-if="erroresMonitorBilling.length" class="j2b-banner-alert j2b-banner-danger mb-3">
+                        <i class="fa fa-exclamation-circle"></i>
+                        <div>
+                            <div v-for="(e,i) in erroresMonitorBilling" :key="i" v-text="e"></div>
+                        </div>
+                    </div>
+
+                    <!-- Estado actual de la tienda -->
+                    <div class="j2b-form-section">
+                        <h6 class="j2b-form-section-title">
+                            <i class="fa fa-info-circle"></i> Estado de la tienda
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <small style="color: var(--j2b-gray-500);">Licencias contratadas</small>
+                                <div><strong>{{ monitorBillingShop.monitor_licenses_total || 0 }} equipos</strong></div>
+                            </div>
+                            <div class="col-md-4">
+                                <small style="color: var(--j2b-gray-500);">Licencias en uso</small>
+                                <div><strong>{{ monitorBillingShop.monitor_licenses_used || 0 }}</strong></div>
+                            </div>
+                            <div class="col-md-4">
+                                <small style="color: var(--j2b-gray-500);">Plan base mensual</small>
+                                <div><strong>${{ formatMoneyShop(monitorBillingShop.monthly_price) || '0.00' }}</strong></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Activación de cobro -->
+                    <div class="j2b-form-section">
+                        <h6 class="j2b-form-section-title">
+                            <i class="fa fa-toggle-on"></i> Activación
+                        </h6>
+                        <label style="margin-right:24px;">
+                            <input type="radio" :value="true" v-model="monitorBillingForm.enabled">
+                            <strong>Activar cobro</strong> — la próxima mensualidad sumará el cargo de J2 Monitor
+                        </label>
+                        <label style="display:block; margin-top:8px;">
+                            <input type="radio" :value="false" v-model="monitorBillingForm.enabled">
+                            <strong>Desactivar cobro</strong> — el servicio sigue funcionando pero no se cobra
+                        </label>
+                    </div>
+
+                    <!-- Grandfathering: bloqueo de tier/precio -->
+                    <div class="j2b-form-section" v-if="monitorBillingForm.enabled">
+                        <h6 class="j2b-form-section-title">
+                            <i class="fa fa-lock"></i> Override (opcional)
+                        </h6>
+                        <p style="font-size:13px; color: var(--j2b-gray-600);">
+                            Si no configuras nada, la tienda paga el tier vigente del catálogo según sus licencias contratadas.
+                            Activa el override si pactaste un precio fijo distinto que debe respetarse aunque cambie el catálogo.
+                        </p>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-2">
+                                <label class="j2b-label">Tier bloqueado</label>
+                                <select class="j2b-select" v-model="monitorBillingForm.tier_locked_id">
+                                    <option :value="null">— Sin override (usa catálogo vigente) —</option>
+                                    <option v-for="t in tiers" :key="t.id" :value="t.id" :disabled="!t.active">
+                                        {{ t.name }} {{ t.active ? '' : '(inactivo)' }}
+                                    </option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-6 mb-2" v-if="tierLockedSelected && !tierLockedSelected.is_flat_rate">
+                                <label class="j2b-label">Precio congelado por equipo</label>
+                                <input v-model.number="monitorBillingForm.locked_price" type="number" step="0.01" min="0"
+                                       class="j2b-input"
+                                       :placeholder="'Catálogo: $' + format(tierLockedSelected.price_per_equipment)">
+                                <small style="color:#999;">Déjalo vacío para usar el precio del catálogo del tier seleccionado.</small>
+                            </div>
+
+                            <div class="col-md-6 mb-2" v-if="tierLockedSelected && tierLockedSelected.is_flat_rate">
+                                <label class="j2b-label">Monto fijo congelado</label>
+                                <input v-model.number="monitorBillingForm.locked_flat" type="number" step="0.01" min="0"
+                                       class="j2b-input"
+                                       :placeholder="'Catálogo: $' + format(tierLockedSelected.flat_amount)">
+                                <small style="color:#999;">Déjalo vacío para usar el monto del catálogo del tier seleccionado.</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Preview del cobro -->
+                    <div class="j2b-form-section" v-if="monitorBillingForm.enabled">
+                        <h6 class="j2b-form-section-title">
+                            <i class="fa fa-calculator"></i> Cobro mensual previsto
+                        </h6>
+                        <div v-if="previewModal.tier_name" style="font-size: 14px;">
+                            <div><strong>Tier aplicable:</strong> {{ previewModal.tier_name }}</div>
+                            <div v-if="previewModal.unit_price !== null">
+                                <strong>Cálculo:</strong>
+                                {{ monitorBillingShop.monitor_licenses_total }} equipos × ${{ format(previewModal.unit_price) }} = <strong>${{ formatMoneyShop(previewModal.monthly) }}</strong>
+                            </div>
+                            <div v-else>
+                                <strong>Tarifa plana:</strong> <strong>${{ formatMoneyShop(previewModal.monthly) }}</strong>
+                                <span v-if="previewModal.includes_base"> — incluye plan base J2Biznes</span>
+                            </div>
+                            <div v-if="previewModal.is_locked" class="j2b-badge j2b-badge-warning mt-2" style="display:inline-block;">
+                                <i class="fa fa-lock"></i> Precio bloqueado (grandfathering)
+                            </div>
+                        </div>
+                        <div v-else style="color:#999; font-style:italic;">
+                            No hay tier que cubra {{ monitorBillingShop.monitor_licenses_total || 0 }} licencias. Configura un tier primero.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer j2b-modal-footer">
+                    <button type="button" class="j2b-btn j2b-btn-outline" @click="cerrarModalMonitorBilling">Cancelar</button>
+                    <button type="button" class="j2b-btn j2b-btn-primary" @click="guardarMonitorBilling" :disabled="guardandoMonitorBilling">
+                        <i class="fa fa-save"></i>
+                        {{ guardandoMonitorBilling ? 'Guardando…' : 'Guardar' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!--Fin Modal Cobro J2 Monitor-->
+
 </div>
 </template>
 
@@ -735,11 +895,63 @@
               // J2 Monitor — input editable de licencias por tienda
               licenciasInputMap: {},
               guardandoLicencias: {},
+
+              // J2 Monitor — cobro (Sesión 4)
+              tiers: [],
+              monitorBillingModal: 0,
+              monitorBillingShop: null,
+              monitorBillingForm: {
+                  enabled: false,
+                  tier_locked_id: null,
+                  locked_price: null,
+                  locked_flat: null,
+              },
+              erroresMonitorBilling: [],
+              guardandoMonitorBilling: false,
             }
         },
         computed:{
            isActived: function(){
             return this.pagination.current_page;
+           },
+           tierLockedSelected() {
+                if (!this.monitorBillingForm.tier_locked_id) return null;
+                return this.tiers.find(t => t.id === this.monitorBillingForm.tier_locked_id) || null;
+           },
+           previewModal() {
+                if (!this.monitorBillingShop || !this.monitorBillingForm.enabled) {
+                    return { tier_name: null, monthly: 0 };
+                }
+                const count = Number(this.monitorBillingShop.monitor_licenses_total) || 0;
+                if (count <= 0) return { tier_name: null, monthly: 0 };
+
+                const tier = this.monitorBillingForm.tier_locked_id
+                    ? this.tierLockedSelected
+                    : this.resolveTierFromCount(count);
+                if (!tier) return { tier_name: null, monthly: 0 };
+
+                if (tier.is_flat_rate) {
+                    const flat = (this.monitorBillingForm.locked_flat !== null && this.monitorBillingForm.locked_flat !== '')
+                        ? Number(this.monitorBillingForm.locked_flat)
+                        : Number(tier.flat_amount);
+                    return {
+                        tier_name: tier.name,
+                        unit_price: null,
+                        monthly: flat,
+                        includes_base: !!tier.includes_base_plan,
+                        is_locked: !!this.monitorBillingForm.tier_locked_id,
+                    };
+                }
+                const unit = (this.monitorBillingForm.locked_price !== null && this.monitorBillingForm.locked_price !== '')
+                    ? Number(this.monitorBillingForm.locked_price)
+                    : Number(tier.price_per_equipment);
+                return {
+                    tier_name: tier.name,
+                    unit_price: unit,
+                    monthly: Math.round(unit * count * 100) / 100,
+                    includes_base: false,
+                    is_locked: !!this.monitorBillingForm.tier_locked_id,
+                };
            },
            //Calcula los elementos de la paginacion
            pagesNumber: function(){
@@ -1266,9 +1478,103 @@
                 };
                 return textos[nivel] || nivel;
             },
+
+            // ===== J2 Monitor — cobro (Sesión 4) =====
+            format(v) {
+                if (v === null || v === undefined || v === '') return '—';
+                return Number(v).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            },
+            formatMoneyShop(v) {
+                if (v === null || v === undefined || v === '') return '0.00';
+                return Number(v).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            },
+            resolveTierFromCount(count) {
+                const ordered = [...this.tiers].filter(t => t.active).sort((a,b) => a.sort_order - b.sort_order);
+                return ordered.find(t => {
+                    if (count < t.min_equipment) return false;
+                    if (t.max_equipment === null) return true;
+                    return count <= t.max_equipment;
+                }) || null;
+            },
+            cobroPrevisto(shop) {
+                if (!shop.monitor_billing_enabled) return { tier_name: null, monthly: 0 };
+                const count = Number(shop.monitor_licenses_total) || 0;
+                if (count <= 0) return { tier_name: null, monthly: 0 };
+
+                let tier = null;
+                if (shop.monitor_tier_locked_id) {
+                    tier = this.tiers.find(t => t.id === shop.monitor_tier_locked_id) || null;
+                }
+                if (!tier) tier = this.resolveTierFromCount(count);
+                if (!tier) return { tier_name: null, monthly: 0 };
+
+                if (tier.is_flat_rate) {
+                    const flat = shop.monitor_locked_flat_amount !== null
+                        ? Number(shop.monitor_locked_flat_amount)
+                        : Number(tier.flat_amount);
+                    return { tier_name: tier.name, monthly: flat };
+                }
+                const unit = shop.monitor_locked_price_per_equipment !== null
+                    ? Number(shop.monitor_locked_price_per_equipment)
+                    : Number(tier.price_per_equipment);
+                return { tier_name: tier.name, monthly: Math.round(unit * count * 100) / 100 };
+            },
+            cargarTiers() {
+                axios.get('/superadmin/monitor-pricing-tiers').then(r => {
+                    this.tiers = r.data.tiers || [];
+                });
+            },
+            abrirModalMonitorBilling(shop) {
+                this.monitorBillingShop = shop;
+                this.monitorBillingForm = {
+                    enabled: !!shop.monitor_billing_enabled,
+                    tier_locked_id: shop.monitor_tier_locked_id || null,
+                    locked_price: shop.monitor_locked_price_per_equipment !== null
+                        ? Number(shop.monitor_locked_price_per_equipment) : null,
+                    locked_flat: shop.monitor_locked_flat_amount !== null
+                        ? Number(shop.monitor_locked_flat_amount) : null,
+                };
+                this.erroresMonitorBilling = [];
+                this.monitorBillingModal = 1;
+            },
+            cerrarModalMonitorBilling() {
+                this.monitorBillingModal = 0;
+                this.monitorBillingShop = null;
+                this.erroresMonitorBilling = [];
+            },
+            guardarMonitorBilling() {
+                this.guardandoMonitorBilling = true;
+                this.erroresMonitorBilling = [];
+                const payload = {
+                    monitor_billing_enabled: this.monitorBillingForm.enabled,
+                    monitor_tier_locked_id: this.monitorBillingForm.tier_locked_id,
+                    monitor_locked_price_per_equipment: this.monitorBillingForm.locked_price === '' ? null : this.monitorBillingForm.locked_price,
+                    monitor_locked_flat_amount: this.monitorBillingForm.locked_flat === '' ? null : this.monitorBillingForm.locked_flat,
+                };
+                axios.put(`/superadmin/shops/${this.monitorBillingShop.id}/monitor-billing`, payload).then(r => {
+                    // Actualizar shop en el array local
+                    const idx = this.arrayShops.findIndex(s => s.id === this.monitorBillingShop.id);
+                    if (idx !== -1) {
+                        const used = this.arrayShops[idx].monitor_licenses_used;
+                        const available = this.arrayShops[idx].monitor_licenses_available;
+                        this.arrayShops.splice(idx, 1, { ...r.data.shop, monitor_licenses_used: used, monitor_licenses_available: available });
+                    }
+                    this.cerrarModalMonitorBilling();
+                    Swal.fire({ icon: 'success', title: r.data.message, timer: 1800, showConfirmButton: false });
+                }).catch(e => {
+                    if (e.response && e.response.status === 422) {
+                        const errors = e.response.data.errors || {};
+                        const flat = Object.values(errors).flat();
+                        this.erroresMonitorBilling = flat.length ? flat : [e.response.data.message || 'Error de validación'];
+                    } else {
+                        Swal.fire({ icon: 'error', title: 'Error', text: (e.response && e.response.data && e.response.data.message) || 'No se pudo guardar.' });
+                    }
+                }).finally(() => { this.guardandoMonitorBilling = false; });
+            },
         },
         mounted() {
             this.loadShops(1, this.buscar, this.criterio, this.estatus);
+            this.cargarTiers();
         }
     }
 </script>

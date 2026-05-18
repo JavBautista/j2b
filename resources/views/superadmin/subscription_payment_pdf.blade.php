@@ -489,6 +489,30 @@
 
         <!-- Totals -->
         <div class="totals-box">
+            @if(($monitor_amount ?? 0) > 0)
+                @if(($plan_amount ?? 0) > 0)
+                <div class="totals-row">
+                    <div class="totals-label">Plataforma J2Biznes</div>
+                    <div class="totals-value">{{ $moneda }} ${{ number_format($plan_amount, 2) }}</div>
+                </div>
+                @endif
+                <div class="totals-row">
+                    <div class="totals-label">
+                        Servicio J2 Monitor
+                        @if($monitor_tier_name)
+                            <span style="font-weight:400; font-size:11px; color:#555;">— {{ $monitor_tier_name }}</span>
+                        @endif
+                        @if($monitor_unit_price && $monitor_equipment_count)
+                            <span style="font-weight:400; font-size:11px; color:#555;">
+                                ({{ $monitor_equipment_count }} eq × ${{ number_format($monitor_unit_price, 2) }})
+                            </span>
+                        @elseif(!$monitor_unit_price)
+                            <span style="font-weight:400; font-size:11px; color:#555;">(tarifa plana)</span>
+                        @endif
+                    </div>
+                    <div class="totals-value">{{ $moneda }} ${{ number_format($monitor_amount, 2) }}</div>
+                </div>
+            @endif
             <div class="totals-row">
                 <div class="totals-label">Subtotal</div>
                 <div class="totals-value">{{ $moneda }} ${{ number_format($subtotal, 2) }}</div>

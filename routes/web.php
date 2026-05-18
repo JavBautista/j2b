@@ -124,6 +124,7 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::get('/superadmin/shops/{id}/info', [ShopsController::class, 'getInfo']);
         Route::get('/superadmin/shops/{id}/stats', [ShopsController::class, 'getStats']);
         Route::put('/superadmin/shops/{id}/monitor-licenses', [ShopsController::class, 'updateMonitorLicenses']);
+        Route::put('/superadmin/shops/{id}/monitor-billing', [ShopsController::class, 'updateMonitorBilling']);
 
         //Plans
         Route::get('/superadmin/plans', [SuperadminPagesController::class, 'plans'])->name('superadmin.plans');
@@ -132,6 +133,15 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::put('/superadmin/plans/update', [PlansController::class, 'update']);
         Route::put('/superadmin/plans/active', [PlansController::class, 'active']);
         Route::put('/superadmin/plans/deactive', [PlansController::class, 'deactive']);
+
+        //J2 Monitor — Pricing Tiers (catálogo de cobro por rango de equipos)
+        Route::get('/superadmin/monitor-pricing', function () {
+            return view('superadmin.monitor_pricing');
+        })->name('superadmin.monitor-pricing');
+        Route::get('/superadmin/monitor-pricing-tiers', [\App\Http\Controllers\Superadmin\MonitorPricingTiersController::class, 'index']);
+        Route::post('/superadmin/monitor-pricing-tiers', [\App\Http\Controllers\Superadmin\MonitorPricingTiersController::class, 'store']);
+        Route::put('/superadmin/monitor-pricing-tiers/{id}', [\App\Http\Controllers\Superadmin\MonitorPricingTiersController::class, 'update']);
+        Route::patch('/superadmin/monitor-pricing-tiers/{id}/toggle-active', [\App\Http\Controllers\Superadmin\MonitorPricingTiersController::class, 'toggleActive']);
 
         //Users
         Route::get('/superadmin/users', [SuperadminPagesController::class, 'users'])->name('superadmin.users');
@@ -698,5 +708,6 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
 
         // ===== J2 Monitor — Resumen de licencias de la Shop (admin actual) =====
         Route::get('/admin/monitor/shop-summary', [\App\Http\Controllers\Admin\MonitorController::class, 'shopSummary'])->name('admin.monitor.shop-summary');
+        Route::get('/admin/monitor/billing-summary', [\App\Http\Controllers\Admin\MonitorController::class, 'billingSummary'])->name('admin.monitor.billing-summary');
     }); //./Routes Middleware admin
 });#./Middlware AUTH

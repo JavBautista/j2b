@@ -29,6 +29,11 @@
                 </a>
             </li>
             <li class="nav-item">
+                <a href="{{ route('superadmin.monitor-pricing') }}" class="nav-link">
+                    <i class="fa fa-tags"></i> Tarifas J2 Monitor
+                </a>
+            </li>
+            <li class="nav-item">
                 <a href="{{ route('superadmin.subscription-settings') }}" class="nav-link">
                     <i class="fa fa-cog"></i> Config. Suscripciones
                 </a>

@@ -22,6 +22,9 @@ class Shop extends Model
         'active' => 'boolean',
         'is_exempt' => 'boolean',
         'cfdi_enabled' => 'boolean',
+        'monitor_billing_enabled' => 'boolean',
+        'monitor_locked_price_per_equipment' => 'decimal:2',
+        'monitor_locked_flat_amount' => 'decimal:2',
     ];
 
     protected $appends = ['monitor_licenses_used', 'monitor_licenses_available'];
@@ -234,5 +237,10 @@ class Shop extends Model
     public function getMonitorLicensesAvailableAttribute(): int
     {
         return max(0, (int) $this->monitor_licenses_total - $this->monitor_licenses_used);
+    }
+
+    public function monitorLockedTier()
+    {
+        return $this->belongsTo(MonitorPricingTier::class, 'monitor_tier_locked_id');
     }
 }

@@ -218,6 +218,73 @@ class ShopsController extends Controller
         ]);
     }//updateMonitorLicenses()
 
+    /**
+     * Configurar el cobro mensual del servicio J2 Monitor para una tienda.
+     * Permite encender/apagar el cobro y, opcionalmente, congelar un tier y/o precio
+     * (grandfathering) distinto al del catálogo vigente.
+     */
+    public function updateMonitorBilling(Request $request, $id)
+    {
+        if (! $request->ajax()) return redirect('/');
+
+        $request->validate([
+            'monitor_billing_enabled' => 'required|boolean',
+            'monitor_tier_locked_id' => 'nullable|integer|exists:monitor_pricing_tiers,id',
+            'monitor_locked_price_per_equipment' => 'nullable|numeric|min:0',
+            'monitor_locked_flat_amount' => 'nullable|numeric|min:0',
+        ]);
+
+        $shop = Shop::findOrFail($id);
+
+        $lockedTierId = $request->input('monitor_tier_locked_id');
+        $lockedPrice = $request->input('monitor_locked_price_per_equipment');
+        $lockedFlat = $request->input('monitor_locked_flat_amount');
+
+        // Override de precio solo tiene sentido si hay tier locked.
+        if (($lockedPrice !== null || $lockedFlat !== null) && ! $lockedTierId) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Para congelar un precio/monto debes seleccionar primero un tier de bloqueo.',
+            ], 422);
+        }
+
+        // Si el tier locked es flat, solo aplica locked_flat_amount; si es por equipo, solo locked_price.
+        if ($lockedTierId) {
+            $tier = \App\Models\MonitorPricingTier::findOrFail($lockedTierId);
+            if ($tier->is_flat_rate) {
+                $lockedPrice = null;
+            } else {
+                $lockedFlat = null;
+            }
+        }
+
+        $shop->update([
+            'monitor_billing_enabled' => $request->boolean('monitor_billing_enabled'),
+            'monitor_tier_locked_id' => $lockedTierId,
+            'monitor_locked_price_per_equipment' => $lockedPrice,
+            'monitor_locked_flat_amount' => $lockedFlat,
+        ]);
+
+        $billing = app(\App\Services\Monitor\MonitorBillingService::class)
+            ->calculateForShop($shop->fresh());
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Cobro J2 Monitor actualizado.',
+            'shop' => $shop->fresh(),
+            'billing_preview' => [
+                'enabled' => $billing['enabled'],
+                'tier_name' => $billing['tier']?->name,
+                'tier_is_flat' => $billing['tier']?->is_flat_rate ?? false,
+                'tier_includes_base' => $billing['includes_base_plan'],
+                'unit_price' => $billing['unit_price'],
+                'flat_amount' => $billing['flat_amount'],
+                'equipment_count' => $billing['equipment_count'],
+                'monitor_amount_monthly' => $billing['monitor_amount'],
+            ],
+        ]);
+    }//updateMonitorBilling()
+
     public function uploadLogo(Request $request){
         $request->validate([
             'logo' => 'required|file|mimes:jpeg,png,jpg,gif,svg',

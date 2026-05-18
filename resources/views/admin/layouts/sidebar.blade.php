@@ -121,6 +121,9 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{{ route('admin.reportes.retenciones') }}"><i class="fa fa-minus-circle"></i> Reporte Retenciones</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ route('admin.cfdi.bitacora') }}"><i class="fa fa-history"></i> Bitácora</a>
+                    </li>
                 </ul>
             </li>
             @endif

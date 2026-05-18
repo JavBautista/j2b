@@ -11,6 +11,7 @@ use App\Models\Receipt;
 use App\Services\Facturacion\CfdiComplementoPagoService;
 use App\Services\Facturacion\CfdiTimbradoService;
 use App\Services\Facturacion\HubCfdiService;
+use App\Services\Facturacion\Logging\LogFacturacion;
 use App\Exports\FacturasEmitidasExport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -362,6 +363,18 @@ class CfdiInvoiceController extends Controller
             return response()->json(['ok' => false, 'message' => 'Solo se pueden cancelar facturas vigentes'], 422);
         }
 
+        $startedAt = microtime(true);
+
+        LogFacturacion::cancelacion('cfdi.cancelacion.attempt', [
+            'shop_id' => $shop->id,
+            'cfdi_invoice_id' => $invoice->id,
+            'uuid' => $invoice->uuid,
+            'metadata' => [
+                'motivo' => $request->motivo,
+                'folio_sustitucion' => $request->folio_sustitucion,
+            ],
+        ]);
+
         try {
             $hubService = new HubCfdiService();
             $result = $hubService->cancelar(
@@ -371,12 +384,17 @@ class CfdiInvoiceController extends Controller
             );
 
             if (!$result['success']) {
-                Log::error('CFDI Cancelación fallida', [
+                LogFacturacion::cancelacion('cfdi.cancelacion.error', [
                     'shop_id' => $shop->id,
-                    'invoice_id' => $invoice->id,
+                    'cfdi_invoice_id' => $invoice->id,
                     'uuid' => $invoice->uuid,
-                    'error' => $result['error'],
-                ]);
+                    'duration_ms' => (int) round((microtime(true) - $startedAt) * 1000),
+                    'error_message' => is_string($result['error']) ? $result['error'] : json_encode($result['error']),
+                    'metadata' => [
+                        'motivo' => $request->motivo,
+                        'folio_sustitucion' => $request->folio_sustitucion,
+                    ],
+                ], 'error');
 
                 return response()->json([
                     'ok' => false,
@@ -400,11 +418,16 @@ class CfdiInvoiceController extends Controller
                 }
             }
 
-            Log::info('CFDI Cancelación exitosa', [
+            LogFacturacion::cancelacion('cfdi.cancelacion.success', [
                 'shop_id' => $shop->id,
-                'invoice_id' => $invoice->id,
+                'cfdi_invoice_id' => $invoice->id,
                 'uuid' => $invoice->uuid,
-                'motivo' => $request->motivo,
+                'duration_ms' => (int) round((microtime(true) - $startedAt) * 1000),
+                'http_status' => 200,
+                'metadata' => [
+                    'motivo' => $request->motivo,
+                    'folio_sustitucion' => $request->folio_sustitucion,
+                ],
             ]);
 
             return response()->json([
@@ -413,10 +436,14 @@ class CfdiInvoiceController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            Log::error('CFDI Cancelación exception', [
-                'invoice_id' => $invoice->id,
-                'error' => $e->getMessage(),
-            ]);
+            LogFacturacion::cancelacion('cfdi.cancelacion.error', [
+                'shop_id' => $shop->id,
+                'cfdi_invoice_id' => $invoice->id,
+                'uuid' => $invoice->uuid,
+                'duration_ms' => (int) round((microtime(true) - $startedAt) * 1000),
+                'error_code' => 'exception',
+                'error_message' => $e->getMessage(),
+            ], 'error');
 
             return response()->json([
                 'ok' => false,

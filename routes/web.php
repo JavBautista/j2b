@@ -224,6 +224,10 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::get('/superadmin/cfdi/facturas/get', [CfdiController::class, 'getFacturas']);
         Route::get('/superadmin/cfdi/facturas/export', [CfdiController::class, 'exportFacturas']);
 
+        // Bitácora de timbrado global (sin scope por shop)
+        Route::get('/superadmin/cfdi/logs/get', [App\Http\Controllers\Superadmin\CfdiLogsController::class, 'getLogs']);
+        Route::get('/superadmin/cfdi/logs/{id}', [App\Http\Controllers\Superadmin\CfdiLogsController::class, 'show'])->whereNumber('id');
+
         // Legal Documents (Términos y Condiciones, Aviso de Privacidad)
         Route::get('/superadmin/legal-documents', [LegalDocumentsController::class, 'index'])->name('superadmin.legal-documents');
         Route::get('/superadmin/legal-documents/get', [LegalDocumentsController::class, 'get']);
@@ -349,6 +353,11 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::get('/admin/facturacion/facturas', [App\Http\Controllers\Admin\CfdiInvoiceController::class, 'indexFacturas'])->name('admin.cfdi.facturas');
         Route::get('/admin/facturacion/facturas/get', [App\Http\Controllers\Admin\CfdiInvoiceController::class, 'getFacturas']);
         Route::get('/admin/facturacion/facturas/export', [App\Http\Controllers\Admin\CfdiInvoiceController::class, 'exportFacturas']);
+
+        // Facturación CFDI - Bitácora de timbrado (logs estructurados)
+        Route::get('/admin/facturacion/bitacora', [App\Http\Controllers\Admin\CfdiLogsController::class, 'index'])->name('admin.cfdi.bitacora');
+        Route::get('/admin/facturacion/bitacora/get', [App\Http\Controllers\Admin\CfdiLogsController::class, 'getLogs']);
+        Route::get('/admin/facturacion/bitacora/{id}', [App\Http\Controllers\Admin\CfdiLogsController::class, 'show'])->whereNumber('id');
 
         // Facturación CFDI - Timbrado de Notas
         Route::get('/admin/facturacion/receipt/{id}/data', [App\Http\Controllers\Admin\CfdiInvoiceController::class, 'getReceiptData']);

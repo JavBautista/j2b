@@ -8,9 +8,9 @@ use App\Models\CfdiPagoComplemento;
 use App\Models\PartialPayments;
 use App\Models\Receipt;
 use App\Models\ShopBankAccount;
+use App\Services\Facturacion\Logging\LogFacturacion;
 use App\Support\SatCatalogos\Bancos;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -91,6 +91,19 @@ class CfdiComplementoPagoService
         // === Registrar complemento pending y reservar folio ===
         $folio = null;
         $complemento = null;
+        $startedAt = microtime(true);
+
+        LogFacturacion::complementoPago('cfdi.complemento_pago.attempt', [
+            'shop_id' => $shop->id,
+            'cfdi_invoice_id' => $invoice->id,
+            'receipt_id' => $receipt->id,
+            'metadata' => [
+                'invoice_uuid' => $invoice->uuid,
+                'monto_abono' => $impPagado,
+                'num_parcialidad' => $numParcialidad,
+                'partial_payment_id' => $abono->id,
+            ],
+        ]);
 
         try {
             $folio = $emisor->siguienteFolioComplemento();
@@ -228,13 +241,20 @@ class CfdiComplementoPagoService
                     'error_message' => $result['error'] ?? 'Error desconocido',
                     'response_json' => $result['data'] ?? null,
                 ]);
-                Log::error('Complemento de pago fallido', [
+                LogFacturacion::complementoPago('cfdi.complemento_pago.error', [
                     'shop_id' => $shop->id,
+                    'cfdi_invoice_id' => $invoice->id,
                     'receipt_id' => $receipt->id,
-                    'invoice_uuid' => $invoice->uuid,
-                    'folio_revertido' => $folio,
-                    'error' => $result['error'],
-                ]);
+                    'duration_ms' => (int) round((microtime(true) - $startedAt) * 1000),
+                    'request_payload' => $payload,
+                    'response_payload' => $result['data'] ?? null,
+                    'error_message' => is_string($result['error']) ? $result['error'] : json_encode($result['error']),
+                    'metadata' => [
+                        'invoice_uuid' => $invoice->uuid,
+                        'folio_revertido' => $folio,
+                        'partial_payment_id' => $abono->id,
+                    ],
+                ], 'error');
                 return [
                     'ok' => false,
                     'complemento' => $complemento,
@@ -260,12 +280,19 @@ class CfdiComplementoPagoService
 
             $emisor->increment('timbres_usados');
 
-            Log::info('Complemento de pago timbrado', [
+            LogFacturacion::complementoPago('cfdi.complemento_pago.success', [
                 'shop_id' => $shop->id,
+                'cfdi_invoice_id' => $invoice->id,
                 'receipt_id' => $receipt->id,
-                'invoice_uuid' => $invoice->uuid,
-                'complemento_uuid' => $uuid,
-                'monto' => $impPagado,
+                'uuid' => $uuid,
+                'duration_ms' => (int) round((microtime(true) - $startedAt) * 1000),
+                'http_status' => 200,
+                'metadata' => [
+                    'invoice_uuid' => $invoice->uuid,
+                    'monto' => $impPagado,
+                    'num_parcialidad' => $numParcialidad,
+                    'partial_payment_id' => $abono->id,
+                ],
             ]);
 
             return [
@@ -283,13 +310,19 @@ class CfdiComplementoPagoService
                     'error_message' => $e->getMessage(),
                 ]);
             }
-            Log::error('Complemento de pago exception', [
+            LogFacturacion::complementoPago('cfdi.complemento_pago.error', [
                 'shop_id' => $shop->id,
+                'cfdi_invoice_id' => $invoice->id,
                 'receipt_id' => $receipt->id,
-                'invoice_uuid' => $invoice->uuid,
-                'folio_revertido' => $folio,
-                'error' => $e->getMessage(),
-            ]);
+                'duration_ms' => (int) round((microtime(true) - $startedAt) * 1000),
+                'error_code' => 'exception',
+                'error_message' => $e->getMessage(),
+                'metadata' => [
+                    'invoice_uuid' => $invoice->uuid,
+                    'folio_revertido' => $folio,
+                    'partial_payment_id' => $abono->id,
+                ],
+            ], 'error');
             return [
                 'ok' => false,
                 'complemento' => $complemento,
@@ -361,6 +394,20 @@ class CfdiComplementoPagoService
 
         $folio = null;
         $complemento = null;
+        $startedAt = microtime(true);
+
+        LogFacturacion::complementoPago('cfdi.complemento_pago.attempt', [
+            'shop_id' => $shop->id,
+            'cfdi_invoice_id' => $invoice->id,
+            'receipt_id' => $receipt->id,
+            'metadata' => [
+                'invoice_uuid' => $invoice->uuid,
+                'tipo' => 'consolidado',
+                'consolidated_ids' => $consolidatedIds,
+                'monto_consolidado' => $impPagado,
+                'num_parcialidad' => $numParcialidad,
+            ],
+        ]);
 
         try {
             $folio = $emisor->siguienteFolioComplemento();
@@ -498,12 +545,21 @@ class CfdiComplementoPagoService
                     'error_message' => $result['error'] ?? 'Error desconocido',
                     'response_json' => $result['data'] ?? null,
                 ]);
-                Log::error('Complemento consolidado fallido', [
+                LogFacturacion::complementoPago('cfdi.complemento_pago.error', [
                     'shop_id' => $shop->id,
+                    'cfdi_invoice_id' => $invoice->id,
                     'receipt_id' => $receipt->id,
-                    'consolidated_ids' => $consolidatedIds,
-                    'error' => $result['error'],
-                ]);
+                    'duration_ms' => (int) round((microtime(true) - $startedAt) * 1000),
+                    'request_payload' => $payload,
+                    'response_payload' => $result['data'] ?? null,
+                    'error_message' => is_string($result['error']) ? $result['error'] : json_encode($result['error']),
+                    'metadata' => [
+                        'invoice_uuid' => $invoice->uuid,
+                        'tipo' => 'consolidado',
+                        'consolidated_ids' => $consolidatedIds,
+                        'folio_revertido' => $folio,
+                    ],
+                ], 'error');
                 return [
                     'ok' => false,
                     'complemento' => $complemento,
@@ -525,12 +581,20 @@ class CfdiComplementoPagoService
             $this->guardarXmlLocal($hubService, $complemento, $shop->id);
             $emisor->increment('timbres_usados');
 
-            Log::info('Complemento consolidado timbrado', [
+            LogFacturacion::complementoPago('cfdi.complemento_pago.success', [
                 'shop_id' => $shop->id,
+                'cfdi_invoice_id' => $invoice->id,
                 'receipt_id' => $receipt->id,
-                'consolidated_ids' => $consolidatedIds,
-                'complemento_uuid' => $uuid,
-                'monto' => $impPagado,
+                'uuid' => $uuid,
+                'duration_ms' => (int) round((microtime(true) - $startedAt) * 1000),
+                'http_status' => 200,
+                'metadata' => [
+                    'invoice_uuid' => $invoice->uuid,
+                    'tipo' => 'consolidado',
+                    'consolidated_ids' => $consolidatedIds,
+                    'monto' => $impPagado,
+                    'num_parcialidad' => $numParcialidad,
+                ],
             ]);
 
             return [
@@ -548,12 +612,20 @@ class CfdiComplementoPagoService
                     'error_message' => $e->getMessage(),
                 ]);
             }
-            Log::error('Complemento consolidado exception', [
+            LogFacturacion::complementoPago('cfdi.complemento_pago.error', [
                 'shop_id' => $shop->id,
+                'cfdi_invoice_id' => $invoice->id,
                 'receipt_id' => $receipt->id,
-                'consolidated_ids' => $consolidatedIds,
-                'error' => $e->getMessage(),
-            ]);
+                'duration_ms' => (int) round((microtime(true) - $startedAt) * 1000),
+                'error_code' => 'exception',
+                'error_message' => $e->getMessage(),
+                'metadata' => [
+                    'invoice_uuid' => $invoice->uuid,
+                    'tipo' => 'consolidado',
+                    'consolidated_ids' => $consolidatedIds,
+                    'folio_revertido' => $folio,
+                ],
+            ], 'error');
             return [
                 'ok' => false,
                 'complemento' => $complemento,
@@ -924,11 +996,11 @@ class CfdiComplementoPagoService
                 ]);
             }
         } catch (\Exception $e) {
-            Log::warning('Complemento: persistencia de cfdi_pago_complemento_taxes falló', [
-                'complemento_id' => $complemento->id,
+            LogFacturacion::complementoPago('cfdi.complemento_pago.taxes_warning', [
                 'uuid' => $complemento->uuid,
-                'error' => $e->getMessage(),
-            ]);
+                'error_message' => $e->getMessage(),
+                'metadata' => ['complemento_id' => $complemento->id],
+            ], 'warning');
         }
     }
 
@@ -941,10 +1013,11 @@ class CfdiComplementoPagoService
         try {
             $result = $hubService->descargar($complemento->uuid, 'xml');
             if (!$result['success']) {
-                Log::warning('Complemento: no se pudo descargar XML post-timbrado', [
-                    'complemento_id' => $complemento->id,
-                    'error' => $result['error'],
-                ]);
+                LogFacturacion::complementoPago('cfdi.complemento_pago.xml_download_warning', [
+                    'uuid' => $complemento->uuid,
+                    'error_message' => is_string($result['error']) ? $result['error'] : json_encode($result['error']),
+                    'metadata' => ['complemento_id' => $complemento->id],
+                ], 'warning');
                 return;
             }
             $base64 = $result['data']['archivo'] ?? $result['data']['base64'] ?? null;
@@ -954,10 +1027,11 @@ class CfdiComplementoPagoService
             Storage::disk('cfdi')->put($path, base64_decode($base64));
             $complemento->update(['xml_path' => $path]);
         } catch (\Exception $e) {
-            Log::warning('Complemento: excepción guardando XML local', [
-                'complemento_id' => $complemento->id,
-                'error' => $e->getMessage(),
-            ]);
+            LogFacturacion::complementoPago('cfdi.complemento_pago.xml_local_warning', [
+                'uuid' => $complemento->uuid,
+                'error_message' => $e->getMessage(),
+                'metadata' => ['complemento_id' => $complemento->id],
+            ], 'warning');
         }
     }
 }

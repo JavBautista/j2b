@@ -7,8 +7,8 @@ use App\Models\CfdiInvoice;
 use App\Models\ClientFiscalData;
 use App\Models\Receipt;
 use App\Models\Shop;
+use App\Services\Facturacion\Logging\LogFacturacion;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -48,6 +48,21 @@ class CfdiTimbradoService
         $fmt = fn($n) => number_format((float) $n, 2, '.', '');
 
         $folio = null;
+        $startedAt = microtime(true);
+
+        LogFacturacion::timbrado('cfdi.timbrado.attempt', [
+            'shop_id' => $shop->id,
+            'receipt_id' => $receipt->id,
+            'pipeline' => 'json',
+            'metadata' => [
+                'emisor_rfc' => $emisor->rfc ?? null,
+                'receptor_rfc' => strtoupper($data['receipt_rfc'] ?? $data['receptor_rfc'] ?? ''),
+                'receptor_regimen' => $data['receptor_regimen_fiscal'] ?? null,
+                'uso_cfdi' => $data['receptor_uso_cfdi'] ?? null,
+                'total' => $receipt->total ?? null,
+            ],
+        ]);
+
         try {
             $folio = $emisor->siguienteFolio();
             $fechaEmision = Carbon::now('America/Mexico_City')->format('Y-m-d H:i:s');
@@ -321,12 +336,19 @@ class CfdiTimbradoService
 
             if (!$result['success']) {
                 $emisor->revertirFolio();
-                Log::error('CFDI Timbrado fallido', [
+                LogFacturacion::timbrado('cfdi.timbrado.error', [
                     'shop_id' => $shop->id,
                     'receipt_id' => $receipt->id,
-                    'folio_revertido' => $folio,
-                    'error' => $result['error'],
-                ]);
+                    'pipeline' => 'json',
+                    'duration_ms' => (int) round((microtime(true) - $startedAt) * 1000),
+                    'request_payload' => $cfdiPayload,
+                    'error_message' => is_string($result['error']) ? $result['error'] : json_encode($result['error']),
+                    'metadata' => [
+                        'folio_revertido' => $folio,
+                        'emisor_rfc' => $emisor->rfc ?? null,
+                        'receptor_rfc' => $receptorRfc,
+                    ],
+                ], 'error');
                 return [
                     'ok' => false,
                     'message' => 'Error al timbrar: ' . ($result['error'] ?? 'Error desconocido'),
@@ -471,11 +493,12 @@ class CfdiTimbradoService
                     ]);
                 }
             } catch (\Exception $e) {
-                Log::warning('CFDI: persistencia de cfdi_invoice_taxes falló (CFDI vigente, datos en request_json)', [
-                    'invoice_id' => $invoice->id,
+                LogFacturacion::timbrado('cfdi.timbrado.taxes_warning', [
+                    'shop_id' => $shop->id,
+                    'cfdi_invoice_id' => $invoice->id,
                     'uuid' => $uuid,
-                    'error' => $e->getMessage(),
-                ]);
+                    'error_message' => $e->getMessage(),
+                ], 'warning');
             }
 
             // === Actualizar receipt y emisor ===
@@ -513,12 +536,15 @@ class CfdiTimbradoService
                     );
                     $complementosIniciales[] = $resp;
                     if (!$resp['ok']) {
-                        Log::warning('Complemento consolidado inicial PPD falló', [
+                        LogFacturacion::complementoPago('cfdi.complemento_pago.initial_consolidado_warning', [
                             'shop_id' => $shop->id,
                             'receipt_id' => $receipt->id,
-                            'consolidated_ids' => $abonos->pluck('id')->all(),
-                            'error' => $resp['message'],
-                        ]);
+                            'cfdi_invoice_id' => $invoice->id,
+                            'error_message' => $resp['message'],
+                            'metadata' => [
+                                'consolidated_ids' => $abonos->pluck('id')->all(),
+                            ],
+                        ], 'warning');
                     }
                 } else {
                     // === Estrategia SEPARAR (default): un complemento por abono ===
@@ -541,22 +567,39 @@ class CfdiTimbradoService
                         $resp = $complementoService->emitir($receipt, $abono, $idx + 1);
                         $complementosIniciales[] = $resp;
                         if (!$resp['ok']) {
-                            Log::warning('Complemento inicial PPD falló', [
+                            LogFacturacion::complementoPago('cfdi.complemento_pago.initial_warning', [
                                 'shop_id' => $shop->id,
                                 'receipt_id' => $receipt->id,
-                                'partial_payment_id' => $abono->id,
-                                'error' => $resp['message'],
-                            ]);
+                                'cfdi_invoice_id' => $invoice->id,
+                                'error_message' => $resp['message'],
+                                'metadata' => [
+                                    'partial_payment_id' => $abono->id,
+                                ],
+                            ], 'warning');
                         }
                     }
                 }
             }
 
-            Log::info('CFDI Timbrado exitoso', [
+            LogFacturacion::timbrado('cfdi.timbrado.success', [
                 'shop_id' => $shop->id,
+                'cfdi_invoice_id' => $invoice->id,
                 'receipt_id' => $receipt->id,
                 'uuid' => $uuid,
-                'invoice_id' => $invoice->id,
+                'pipeline' => 'json',
+                'duration_ms' => (int) round((microtime(true) - $startedAt) * 1000),
+                'http_status' => 200,
+                'metadata' => [
+                    'emisor_rfc' => $emisor->rfc ?? null,
+                    'receptor_rfc' => $receptorRfc,
+                    'receptor_regimen' => $data['receptor_regimen_fiscal'] ?? null,
+                    'uso_cfdi' => $data['receptor_uso_cfdi'] ?? null,
+                    'total' => $total,
+                    'tipo_comprobante' => 'I',
+                    'metodo_pago' => $metodoPago,
+                    'serie' => $emisor->serie ?? 'A',
+                    'folio' => $folio,
+                ],
             ]);
 
             return [
@@ -571,12 +614,18 @@ class CfdiTimbradoService
             if ($folio !== null) {
                 $emisor->revertirFolio();
             }
-            Log::error('CFDI Timbrado exception', [
+            LogFacturacion::timbrado('cfdi.timbrado.error', [
                 'shop_id' => $shop->id,
                 'receipt_id' => $receipt->id,
-                'folio_revertido' => $folio,
-                'error' => $e->getMessage(),
-            ]);
+                'pipeline' => 'json',
+                'duration_ms' => (int) round((microtime(true) - $startedAt) * 1000),
+                'error_code' => 'exception',
+                'error_message' => $e->getMessage(),
+                'metadata' => [
+                    'folio_revertido' => $folio,
+                    'emisor_rfc' => $emisor->rfc ?? null,
+                ],
+            ], 'error');
             return [
                 'ok' => false,
                 'message' => 'Error al timbrar: ' . $e->getMessage(),
@@ -608,16 +657,16 @@ class CfdiTimbradoService
                     $invoice->xml_path = $path;
                 }
             } else {
-                Log::warning('CFDI: No se pudo descargar XML post-timbrado', [
-                    'invoice_id' => $invoice->id,
-                    'error' => $result['error'],
-                ]);
+                LogFacturacion::timbrado('cfdi.timbrado.xml_download_warning', [
+                    'cfdi_invoice_id' => $invoice->id,
+                    'error_message' => is_string($result['error']) ? $result['error'] : json_encode($result['error']),
+                ], 'warning');
             }
         } catch (\Exception $e) {
-            Log::warning('CFDI: Excepción al guardar XML localmente', [
-                'invoice_id' => $invoice->id,
-                'error' => $e->getMessage(),
-            ]);
+            LogFacturacion::timbrado('cfdi.timbrado.xml_local_warning', [
+                'cfdi_invoice_id' => $invoice->id,
+                'error_message' => $e->getMessage(),
+            ], 'warning');
         }
 
         // 2) PDF (opcional, requiere generador inyectado)
@@ -628,10 +677,10 @@ class CfdiTimbradoService
                 Storage::disk('cfdi')->put($path, $pdfContent);
                 $invoice->pdf_path = $path;
             } catch (\Exception $e) {
-                Log::warning('CFDI: Excepción al generar PDF localmente', [
-                    'invoice_id' => $invoice->id,
-                    'error' => $e->getMessage(),
-                ]);
+                LogFacturacion::timbrado('cfdi.timbrado.pdf_local_warning', [
+                    'cfdi_invoice_id' => $invoice->id,
+                    'error_message' => $e->getMessage(),
+                ], 'warning');
             }
         }
 

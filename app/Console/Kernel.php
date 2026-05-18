@@ -40,6 +40,9 @@ class Kernel extends ConsoleKernel
 
         // Verificar suscripciones vencidas (trials, grace periods, bloqueos)
         $schedule->command('subscriptions:check-expired')->dailyAt('02:00');
+
+        // Purga retención de cfdi_timbrado_logs (90 días default, configurable via CFDI_LOGS_RETENTION_DAYS)
+        $schedule->command('cfdi:purge-logs')->dailyAt('03:00');
     }
 
     /**

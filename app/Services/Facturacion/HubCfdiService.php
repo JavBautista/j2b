@@ -2,8 +2,8 @@
 
 namespace App\Services\Facturacion;
 
+use App\Services\Facturacion\Logging\LogFacturacion;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 use Exception;
 
 class HubCfdiService
@@ -130,6 +130,16 @@ class HubCfdiService
      */
     protected function request(string $method, string $endpoint, ?array $data = null): array
     {
+        $startedAt = microtime(true);
+        $url = $this->baseUrl . $endpoint;
+
+        LogFacturacion::hub('cfdi.hub.request', [
+            'method' => $method,
+            'url' => $url,
+            'endpoint' => $endpoint,
+            'request_payload' => $data,
+        ]);
+
         try {
             $retryConfig = config('hubcfdi.retry', ['times' => 2, 'sleep' => 1000]);
 
@@ -142,14 +152,6 @@ class HubCfdiService
                 ->timeout($this->timeout)
                 ->retry($retryConfig['times'], $retryConfig['sleep']);
 
-            $url = $this->baseUrl . $endpoint;
-
-            Log::info('HubCfdi Request', [
-                'method' => $method,
-                'url' => $url,
-                'payload_keys' => $data ? array_keys($data) : null,
-            ]);
-
             $response = match (strtoupper($method)) {
                 'GET' => $http->get($url, $data),
                 'POST' => $http->post($url, $data ?? []),
@@ -157,27 +159,35 @@ class HubCfdiService
                 default => throw new Exception("Método HTTP no soportado: {$method}"),
             };
 
+            $durationMs = (int) round((microtime(true) - $startedAt) * 1000);
+
             if (!$response->successful()) {
                 $errorBody = $response->json();
+                $errorMsg = $errorBody['message'] ?? $errorBody['Mensaje'] ?? $errorBody['error'] ?? $response->body();
 
-                Log::error('HubCfdi API Error', [
-                    'status' => $response->status(),
+                LogFacturacion::hub('cfdi.hub.api_error', [
                     'endpoint' => $endpoint,
-                    'error' => $errorBody ?? $response->body(),
-                ]);
+                    'http_status' => $response->status(),
+                    'duration_ms' => $durationMs,
+                    'request_payload' => $data,
+                    'response_payload' => is_array($errorBody) ? $errorBody : ['raw' => $response->body()],
+                    'error_message' => is_string($errorMsg) ? $errorMsg : json_encode($errorMsg),
+                ], 'error');
 
                 return [
                     'success' => false,
                     'data' => null,
-                    'error' => $errorBody['message'] ?? $errorBody['Mensaje'] ?? $errorBody['error'] ?? $response->body(),
+                    'error' => $errorMsg,
                 ];
             }
 
             $responseData = $response->json();
 
-            Log::info('HubCfdi Response Success', [
+            LogFacturacion::hub('cfdi.hub.response', [
                 'endpoint' => $endpoint,
-                'response_keys' => is_array($responseData) ? array_keys($responseData) : null,
+                'http_status' => $response->status(),
+                'duration_ms' => $durationMs,
+                'response_payload' => is_array($responseData) ? $responseData : ['raw' => $response->body()],
             ]);
 
             return [
@@ -187,6 +197,7 @@ class HubCfdiService
             ];
 
         } catch (Exception $e) {
+            $durationMs = (int) round((microtime(true) - $startedAt) * 1000);
             $errorMsg = $e->getMessage();
 
             // Extraer mensaje legible del JSON de la API si viene en la excepción
@@ -197,10 +208,13 @@ class HubCfdiService
                 }
             }
 
-            Log::error('HubCfdi Service Error', [
+            LogFacturacion::hub('cfdi.hub.api_error', [
                 'endpoint' => $endpoint,
-                'error' => $e->getMessage(),
-            ]);
+                'duration_ms' => $durationMs,
+                'request_payload' => $data,
+                'error_code' => 'exception',
+                'error_message' => $e->getMessage(),
+            ], 'error');
 
             return [
                 'success' => false,

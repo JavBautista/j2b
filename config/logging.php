@@ -113,6 +113,71 @@ return [
         'emergency' => [
             'path' => storage_path('logs/laravel.log'),
         ],
+
+        /*
+        |----------------------------------------------------------------------
+        | Canales dedicados de Facturación CFDI
+        |----------------------------------------------------------------------
+        | Plan: xdev/facturacion/PLAN_LOGS_FACTURACION.md
+        | El canal 'cfdi' es un stack que agrupa los 6 sub-canales por área.
+        | Cada sub-canal escribe a su propio archivo diario en storage/logs/cfdi/
+        | con retención de 30 días (archivo). La persistencia en BD vive en
+        | la tabla cfdi_timbrado_logs (retención configurable vía env).
+        */
+        'cfdi' => [
+            'driver' => 'stack',
+            'channels' => [
+                'cfdi_timbrado',
+                'cfdi_cancelacion',
+                'cfdi_complemento_pago',
+                'cfdi_retenciones',
+                'cfdi_implocal',
+                'cfdi_hub',
+            ],
+            'ignore_exceptions' => false,
+        ],
+
+        'cfdi_timbrado' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/cfdi/timbrado.log'),
+            'level' => env('LOG_LEVEL_CFDI', 'info'),
+            'days' => 30,
+        ],
+
+        'cfdi_cancelacion' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/cfdi/cancelacion.log'),
+            'level' => env('LOG_LEVEL_CFDI', 'info'),
+            'days' => 30,
+        ],
+
+        'cfdi_complemento_pago' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/cfdi/complemento_pago.log'),
+            'level' => env('LOG_LEVEL_CFDI', 'info'),
+            'days' => 30,
+        ],
+
+        'cfdi_retenciones' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/cfdi/retenciones.log'),
+            'level' => env('LOG_LEVEL_CFDI', 'info'),
+            'days' => 30,
+        ],
+
+        'cfdi_implocal' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/cfdi/implocal.log'),
+            'level' => env('LOG_LEVEL_CFDI', 'info'),
+            'days' => 30,
+        ],
+
+        'cfdi_hub' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/cfdi/hub.log'),
+            'level' => env('LOG_LEVEL_CFDI', 'info'),
+            'days' => 30,
+        ],
     ],
 
 ];

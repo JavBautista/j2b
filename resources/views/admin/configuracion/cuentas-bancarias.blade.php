@@ -4,7 +4,7 @@
     <x-admin.page-header
         title="Cuentas Bancarias"
         parent-label="Configuraciones"
-        :parent-route="route('admin.configurations.index')"
+        :parent-route="route('admin.configurations')"
     />
 @endsection
 

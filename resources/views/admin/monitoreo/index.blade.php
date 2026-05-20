@@ -18,12 +18,11 @@
 </div>
 
 {{-- Config inyectada en runtime (no se incrusta en el bundle compilado) --}}
-<script>
-    window.j2bConfig = window.j2bConfig || {};
-    window.j2bConfig.mapbox = @json([
+@php
+    $mapboxConfig = [
         'token' => config('services.mapbox.token'),
-    ]);
-    window.j2bConfig.firebase = @json([
+    ];
+    $firebaseConfig = [
         'apiKey' => config('services.firebase_web.api_key'),
         'authDomain' => config('services.firebase_web.auth_domain'),
         'databaseURL' => config('services.firebase_web.database_url'),
@@ -31,6 +30,11 @@
         'storageBucket' => config('services.firebase_web.storage_bucket'),
         'messagingSenderId' => config('services.firebase_web.messaging_sender_id'),
         'appId' => config('services.firebase_web.app_id'),
-    ]);
+    ];
+@endphp
+<script>
+    window.j2bConfig = window.j2bConfig || {};
+    window.j2bConfig.mapbox = @json($mapboxConfig);
+    window.j2bConfig.firebase = @json($firebaseConfig);
 </script>
 @endsection

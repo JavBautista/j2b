@@ -263,6 +263,32 @@
     </table>
     @endif
 
+    {{-- =============== DESGLOSE DE IMPUESTOS LOCALES (cedular, ISH, etc.) =============== --}}
+    @php $impuestosLocales = $requestData['impuestos_locales'] ?? []; @endphp
+    @if(!empty($impuestosLocales))
+    <table class="impuestos-table">
+        <thead>
+            <tr>
+                <th colspan="3">Desglose de Impuestos Locales (estatales/municipales)</th>
+            </tr>
+            <tr>
+                <th>Tipo / Concepto</th>
+                <th class="r">Tasa</th>
+                <th class="r">Importe</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach($impuestosLocales as $il)
+            <tr>
+                <td>{{ ($il['tipo'] ?? '') === 'retencion' ? 'Retención local' : 'Traslado local' }} &mdash; {{ $il['nombre'] ?? '' }}</td>
+                <td class="r">{{ number_format((float)($il['tasa_porcentaje'] ?? 0), 2) }}%</td>
+                <td class="r">${{ number_format((float)($il['importe'] ?? 0), 2) }}</td>
+            </tr>
+            @endforeach
+        </tbody>
+    </table>
+    @endif
+
     {{-- =============== TOTALES =============== --}}
     <table class="totales-row">
         <tr>
@@ -294,6 +320,19 @@
                         </tr>
                         @endforeach
                     @endif
+                    @foreach($impuestosLocales as $il)
+                        @if(($il['tipo'] ?? '') === 'retencion')
+                        <tr>
+                            <td class="tot-lbl" style="color:#b34700;">Ret. Local {{ $il['nombre'] ?? '' }} ({{ number_format((float)($il['tasa_porcentaje'] ?? 0), 2) }}%):</td>
+                            <td class="tot-val" style="color:#b34700;">-${{ number_format((float)($il['importe'] ?? 0), 2) }}</td>
+                        </tr>
+                        @else
+                        <tr>
+                            <td class="tot-lbl" style="color:#0077b3;">Tras. Local {{ $il['nombre'] ?? '' }} ({{ number_format((float)($il['tasa_porcentaje'] ?? 0), 2) }}%):</td>
+                            <td class="tot-val" style="color:#0077b3;">+${{ number_format((float)($il['importe'] ?? 0), 2) }}</td>
+                        </tr>
+                        @endif
+                    @endforeach
                     <tr class="tot-total">
                         <td class="tot-lbl">TOTAL:</td>
                         <td class="tot-val">${{ number_format($invoice->total, 2) }} {{ $requestData['moneda'] ?? 'MXN' }}</td>

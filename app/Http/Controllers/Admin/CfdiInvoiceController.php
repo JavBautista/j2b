@@ -478,8 +478,8 @@ class CfdiInvoiceController extends Controller
         $filename = "factura_{$invoice->serie}{$invoice->folio}.{$formato}";
         $pathColumn = "{$formato}_path";
 
-        // 1. Servir desde storage local si existe
-        if ($invoice->$pathColumn && Storage::disk('cfdi')->exists($invoice->$pathColumn)) {
+        // 1. Servir desde storage local si existe (solo XML; el PDF se regenera siempre desde la vista)
+        if ($formato === 'xml' && $invoice->$pathColumn && Storage::disk('cfdi')->exists($invoice->$pathColumn)) {
             $content = Storage::disk('cfdi')->get($invoice->$pathColumn);
 
             return response($content)
@@ -490,14 +490,8 @@ class CfdiInvoiceController extends Controller
         // 2. Fallback según formato
         try {
             if ($formato === 'pdf') {
-                // PDF: generar localmente con dompdf
+                // PDF: regenerar siempre desde la vista (representación visual, no documento legal)
                 $content = $this->generarPdf($invoice);
-
-                // Guardar para futuras descargas
-                $path = "{$shop->id}/{$invoice->uuid}.pdf";
-                Storage::disk('cfdi')->put($path, $content);
-                $invoice->pdf_path = $path;
-                $invoice->save();
             } else {
                 // XML: descargar de TBT API
                 $hubService = new HubCfdiService();
@@ -621,6 +615,10 @@ class CfdiInvoiceController extends Controller
 
         // Datos del request_json (conceptos, impuestos)
         $requestData = $invoice->request_json ?? [];
+        // Pipeline xml_compat guarda los atributos del comprobante anidados; la vista PDF los espera en root.
+        if (($invoice->pipeline_timbrado ?? 'json') === 'xml_compat' && isset($requestData['comprobante']) && is_array($requestData['comprobante'])) {
+            $requestData = array_merge($requestData['comprobante'], $requestData);
+        }
         $conceptos = $requestData['conceptos'] ?? [];
 
         // Datos del response_json (timbre fiscal)

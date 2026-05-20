@@ -318,6 +318,18 @@
                                                 </td>
                                                 <td class="text-end text-warning">−${{ formatNumber(retIvaDisplay) }}</td>
                                             </tr>
+                                            <tr v-for="(il, idx) in implocalRetenciones" :key="'il-ret-' + idx">
+                                                <td :colspan="colspanFooter" class="text-end text-warning">
+                                                    <strong>Ret. Local {{ il.nombre }} ({{ Number(il.tasa_porcentaje).toFixed(2) }}%):</strong>
+                                                </td>
+                                                <td class="text-end text-warning">−${{ formatNumber(il.importe) }}</td>
+                                            </tr>
+                                            <tr v-for="(il, idx) in implocalTraslados" :key="'il-tras-' + idx">
+                                                <td :colspan="colspanFooter" class="text-end text-info">
+                                                    <strong>Tras. Local {{ il.nombre }} ({{ Number(il.tasa_porcentaje).toFixed(2) }}%):</strong>
+                                                </td>
+                                                <td class="text-end text-info">+${{ formatNumber(il.importe) }}</td>
+                                            </tr>
                                             <tr>
                                                 <td :colspan="colspanFooter" class="text-end"><strong>Total CFDI:</strong></td>
                                                 <td class="text-end"><strong>${{ formatNumber(totalDisplay) }}</strong></td>
@@ -723,7 +735,19 @@ export default {
             const retIsrR = Math.round(retIsrTotal * 100) / 100;
             const retIvaR = Math.round(retIvaTotal * 100) / 100;
             const retTotalR = Math.round((retIsrR + retIvaR) * 100) / 100;
-            const totalR = Math.round((baseIvaR + ivaR - retTotalR) * 100) / 100;
+
+            // Impuestos locales (cedular, ISH, etc.): retenidos restan, trasladados suman al total
+            const implocal = this.impuestosLocales || [];
+            const implocalRetTotal = implocal
+                .filter(i => i.tipo === 'retencion')
+                .reduce((s, i) => s + (parseFloat(i.importe) || 0), 0);
+            const implocalTrasTotal = implocal
+                .filter(i => i.tipo === 'traslado')
+                .reduce((s, i) => s + (parseFloat(i.importe) || 0), 0);
+            const implocalRetR = Math.round(implocalRetTotal * 100) / 100;
+            const implocalTrasR = Math.round(implocalTrasTotal * 100) / 100;
+
+            const totalR = Math.round((baseIvaR + ivaR - retTotalR - implocalRetR + implocalTrasR) * 100) / 100;
 
             return {
                 facturables,
@@ -734,6 +758,8 @@ export default {
                 retIsr: retIsrR,
                 retIva: retIvaR,
                 retTotal: retTotalR,
+                implocalRet: implocalRetR,
+                implocalTras: implocalTrasR,
                 total: totalR,
                 factor,
             };
@@ -745,6 +771,12 @@ export default {
         retIvaDisplay() { return this.prorrateo.retIva; },
         retTotalDisplay() { return this.prorrateo.retTotal; },
         totalDisplay() { return this.prorrateo.total; },
+        implocalRetenciones() {
+            return (this.impuestosLocales || []).filter(i => i.tipo === 'retencion' && parseFloat(i.importe) > 0);
+        },
+        implocalTraslados() {
+            return (this.impuestosLocales || []).filter(i => i.tipo === 'traslado' && parseFloat(i.importe) > 0);
+        },
         // True si hay al menos una retención global activa con tasa > 0
         algunaRetencionActiva() {
             return (this.retIsrAplica && this.retIsrTasa > 0) ||

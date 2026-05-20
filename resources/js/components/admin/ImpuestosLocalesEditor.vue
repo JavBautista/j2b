@@ -108,11 +108,11 @@
                 </button>
 
                 <datalist id="implocal-nombres">
-                    <option value="CEDULAR">
-                    <option value="ISH">
-                    <option value="ISA">
-                    <option value="TURISMO">
-                    <option value="ESPECTACULOS">
+                    <option value="CEDULAR"></option>
+                    <option value="ISH"></option>
+                    <option value="ISA"></option>
+                    <option value="TURISMO"></option>
+                    <option value="ESPECTACULOS"></option>
                 </datalist>
 
                 <div v-if="defaults && defaults.length" class="mt-2">
@@ -148,6 +148,7 @@ export default {
             activo: (this.modelValue || []).length > 0,
             retenciones: [],
             traslados: [],
+            suppressEmit: false,
         };
     },
     computed: {
@@ -177,10 +178,15 @@ export default {
         },
         impuestos: {
             deep: true,
-            handler() { this.emitir(); },
+            handler() {
+                if (this.suppressEmit) return;
+                this.emitir();
+            },
         },
         modelValue(v) {
+            this.suppressEmit = true;
             this.cargarDesdeModel(v);
+            this.$nextTick(() => { this.suppressEmit = false; });
         },
     },
     mounted() {
@@ -190,7 +196,9 @@ export default {
         cargarDesdeModel(v) {
             this.retenciones = (v || []).filter(x => x.tipo === 'retencion').map(x => ({ ...x }));
             this.traslados = (v || []).filter(x => x.tipo === 'traslado').map(x => ({ ...x }));
-            this.activo = this.retenciones.length + this.traslados.length > 0;
+            if (this.retenciones.length + this.traslados.length > 0) {
+                this.activo = true;
+            }
         },
         agregar(tipo) {
             const linea = {

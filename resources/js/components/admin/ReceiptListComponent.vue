@@ -590,6 +590,15 @@ export default {
 
             if (!confirm2.isConfirmed) return;
 
+            Swal.fire({
+                title: 'Cancelando factura...',
+                text: 'Conectando con el SAT a través del PAC. Por favor no cierres esta ventana.',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => { Swal.showLoading(); },
+            });
+
             try {
                 const res = await axios.post('/admin/facturacion/cancelar', {
                     invoice_id: receipt.cfdi_invoice.id,

@@ -94,7 +94,7 @@ class ReceiptController extends Controller
 
         // Cuentas bancarias para depósito: solo se muestran si la nota tiene saldo pendiente
         // o es a crédito/PPD. La plantilla ya valida visualmente, pero filtramos aquí también.
-        $tienePendiente = ((float) $receipt->received < (float) $receipt->total)
+        $tienePendiente = Receipt::montoMenor($receipt->received, $receipt->total)
             || ((bool) ($receipt->credit ?? false) && !($receipt->credit_completed ?? false));
         $bankAccounts = $tienePendiente
             ? \App\Models\ShopBankAccount::where('shop_id', $receipt->shop_id)
@@ -231,7 +231,7 @@ class ReceiptController extends Controller
         $statusEnviado = $rcp['status'] ?? Receipt::STATUS_POR_COBRAR;
         $receivedEnviado = $rcp['received'] ?? 0;
         $totalEnviado = $rcp['total'] ?? 0;
-        if ($statusEnviado === Receipt::STATUS_PAGADA && $receivedEnviado < $totalEnviado) {
+        if ($statusEnviado === Receipt::STATUS_PAGADA && Receipt::montoMenor($receivedEnviado, $totalEnviado)) {
             return response()->json(['ok' => false, 'message' => 'No se puede crear la nota como PAGADA si el monto recibido es menor al total.'], 422);
         }
 
@@ -515,7 +515,7 @@ class ReceiptController extends Controller
         // T9: PAGADA exige received >= total (escenario B: update, fuente real $receipt->received de BD)
         $statusEnviado = $rcp['status'] ?? $receipt->status;
         $totalEnviado = $rcp['total'] ?? $receipt->total;
-        if ($statusEnviado === Receipt::STATUS_PAGADA && $receipt->received < $totalEnviado) {
+        if ($statusEnviado === Receipt::STATUS_PAGADA && Receipt::montoMenor($receipt->received, $totalEnviado)) {
             return response()->json(['ok' => false, 'message' => 'No se puede marcar como PAGADA si el monto recibido es menor al total.'], 422);
         }
 
@@ -745,7 +745,7 @@ class ReceiptController extends Controller
         }
 
         // Guard: coherencia status PAGADA ↔ pagos
-        if($new_status === Receipt::STATUS_PAGADA && $receipt->received < $receipt->total){
+        if($new_status === Receipt::STATUS_PAGADA && Receipt::montoMenor($receipt->received, $receipt->total)){
             return response()->json([
                 'ok'=>false,
                 'message'=>'No se puede marcar como PAGADA si el monto recibido es menor al total.'
@@ -804,7 +804,7 @@ class ReceiptController extends Controller
         // T9: PAGADA exige received >= total (escenario B: update, fuente real $receipt->received de BD)
         $statusEnviado = $rcp['status'] ?? $receipt->status;
         $totalEnviado = $rcp['total'] ?? $receipt->total;
-        if ($statusEnviado === Receipt::STATUS_PAGADA && $receipt->received < $totalEnviado) {
+        if ($statusEnviado === Receipt::STATUS_PAGADA && Receipt::montoMenor($receipt->received, $totalEnviado)) {
             return response()->json(['ok' => false, 'message' => 'No se puede marcar como PAGADA si el monto recibido es menor al total.'], 422);
         }
 
@@ -1025,7 +1025,7 @@ class ReceiptController extends Controller
 
         $randomPhrase = PdfPhrase::getRandom();
 
-        $tienePendiente = ((float) $receipt->received < (float) $receipt->total)
+        $tienePendiente = Receipt::montoMenor($receipt->received, $receipt->total)
             || ((bool) ($receipt->credit ?? false) && !($receipt->credit_completed ?? false));
         $bankAccounts = $tienePendiente
             ? \App\Models\ShopBankAccount::where('shop_id', $receipt->shop_id)

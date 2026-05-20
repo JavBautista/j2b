@@ -272,7 +272,7 @@ class ReceiptsController extends Controller
         $statusEnviado = $rcp['status'] ?? Receipt::STATUS_POR_COBRAR;
         $receivedEnviado = $rcp['received'] ?? 0;
         $totalEnviado = $rcp['total'] ?? 0;
-        if ($statusEnviado === Receipt::STATUS_PAGADA && $receivedEnviado < $totalEnviado) {
+        if ($statusEnviado === Receipt::STATUS_PAGADA && Receipt::montoMenor($receivedEnviado, $totalEnviado)) {
             return response()->json(['ok' => false, 'message' => 'No se puede crear la nota como PAGADA si el monto recibido es menor al total.'], 422);
         }
 
@@ -680,7 +680,7 @@ class ReceiptsController extends Controller
         // T9: PAGADA exige received >= total (escenario B: update, fuente real $receipt->received de BD)
         $statusEnviado = $rcp['status'] ?? $receipt->status;
         $totalEnviado = $rcp['total'] ?? $receipt->total;
-        if ($statusEnviado === Receipt::STATUS_PAGADA && $receipt->received < $totalEnviado) {
+        if ($statusEnviado === Receipt::STATUS_PAGADA && Receipt::montoMenor($receipt->received, $totalEnviado)) {
             return response()->json(['ok' => false, 'message' => 'No se puede marcar como PAGADA si el monto recibido es menor al total.'], 422);
         }
 

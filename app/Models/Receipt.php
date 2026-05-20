@@ -29,6 +29,19 @@ class Receipt extends Model
         ];
     }
 
+    // Comparación de montos en centavos enteros para evitar errores de redondeo float.
+    // Cliente reporta "ya está pagado" cuando 0.01 de diferencia detiene el flujo.
+    public static function montoMenor($a, $b): bool
+    {
+        return (int) round((float) $a * 100) < (int) round((float) $b * 100);
+    }
+
+    public static function montosIguales($a, $b): bool
+    {
+        return (int) round((float) $a * 100) === (int) round((float) $b * 100);
+    }
+
+
     public function detail(){
         return $this->hasMany(ReceiptDetail::class);
     }

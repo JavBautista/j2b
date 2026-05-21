@@ -43,11 +43,23 @@ class EquipmentController extends Controller
     }//index()
     
     public function store(Request $request){
-        
+
         $user = $request->user();
         $shop = $user->shop;
 
         $now = now();
+
+        if ($request->serial_number) {
+            $existe = RentDetail::where('shop_id', $shop->id)
+                ->where('serial_number', $request->serial_number)
+                ->exists();
+            if ($existe) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'Ya existe un equipo con ese número de serie en tu tienda.',
+                ]);
+            }
+        }
 
         $equipment = new RentDetail();
         $equipment->active = 1;
@@ -84,6 +96,20 @@ class EquipmentController extends Controller
 
     public function update(Request $request){
         $equipment = RentDetail::findOrFail($request->id);
+
+        if ($request->serial_number) {
+            $duplicado = RentDetail::where('shop_id', $equipment->shop_id)
+                ->where('serial_number', $request->serial_number)
+                ->where('id', '!=', $equipment->id)
+                ->exists();
+            if ($duplicado) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'Ya existe otro equipo con ese número de serie en tu tienda.',
+                ]);
+            }
+        }
+
         $now = now();
         $equipment->trademark = $request->trademark;
         $equipment->model    = $request->model;

@@ -15,16 +15,19 @@ class EquipmentController extends Controller
         $shop = $user->shop;
 
         $buscar = $request->buscar;
+        // Flag opt-in: el listado principal de equipos lo activa para encontrar
+        // duenos de seriales repetidos; los modales que asignan equipos a rentas NO.
+        $incluirNoDisponibles = filter_var($request->incluir_no_disponibles, FILTER_VALIDATE_BOOLEAN);
 
-        // Inicializamos la consulta base
         $query = RentDetail::with('images')
-            ->where('active', 1)
-            ->where('rent_id', 0)
             ->where('shop_id', $shop->id);
 
-        // Aplicar búsqueda si existe
+        if (!$incluirNoDisponibles) {
+            $query->where('active', 1)->where('rent_id', 0);
+        }
+
         if (!empty($buscar)) {
-            $terms = explode(' ', $buscar); // Dividir la búsqueda en palabras
+            $terms = explode(' ', $buscar);
             $query->where(function ($q) use ($terms) {
                 foreach ($terms as $term) {
                     $q->where(function ($subQuery) use ($term) {
@@ -50,13 +53,17 @@ class EquipmentController extends Controller
         $now = now();
 
         if ($request->serial_number) {
-            $existe = RentDetail::where('shop_id', $shop->id)
+            $existente = RentDetail::where('shop_id', $shop->id)
                 ->where('serial_number', $request->serial_number)
-                ->exists();
-            if ($existe) {
+                ->first(['id', 'trademark', 'model', 'serial_number', 'rent_id', 'active']);
+            if ($existente) {
+                $detalle = $existente->rent_id
+                    ? 'esta asignado a una renta'
+                    : ($existente->active ? 'esta disponible en tu catalogo' : 'esta dado de baja');
                 return response()->json([
                     'ok' => false,
-                    'message' => 'Ya existe un equipo con ese número de serie en tu tienda.',
+                    'message' => "Ya existe un equipo con ese numero de serie ({$detalle}).",
+                    'existing' => $existente,
                 ]);
             }
         }
@@ -101,11 +108,15 @@ class EquipmentController extends Controller
             $duplicado = RentDetail::where('shop_id', $equipment->shop_id)
                 ->where('serial_number', $request->serial_number)
                 ->where('id', '!=', $equipment->id)
-                ->exists();
+                ->first(['id', 'trademark', 'model', 'serial_number', 'rent_id', 'active']);
             if ($duplicado) {
+                $detalle = $duplicado->rent_id
+                    ? 'esta asignado a una renta'
+                    : ($duplicado->active ? 'esta disponible en tu catalogo' : 'esta dado de baja');
                 return response()->json([
                     'ok' => false,
-                    'message' => 'Ya existe otro equipo con ese número de serie en tu tienda.',
+                    'message' => "Ya existe otro equipo con ese numero de serie ({$detalle}).",
+                    'existing' => $duplicado,
                 ]);
             }
         }

@@ -13,12 +13,6 @@
             </div>
 
             <div v-if="activo">
-                <div class="alert alert-warning py-2 small mb-3">
-                    <i class="fa fa-exclamation-triangle me-1"></i>
-                    Las facturas con impuestos locales se timbran por un pipeline alterno.
-                    Limitaciones actuales: solo PUE, sin cortesías, sin descuento global, sin retenciones federales mezcladas.
-                </div>
-
                 <h6 class="mt-2"><i class="fa fa-minus-circle text-warning me-1"></i> Retenciones locales</h6>
                 <table class="table table-sm table-bordered mb-2" v-if="retenciones.length">
                     <thead class="bg-light">

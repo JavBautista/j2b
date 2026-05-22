@@ -386,10 +386,12 @@
                                         <li v-for="(w, i) in warningsRetencion" :key="i">{{ w }}</li>
                                     </ul>
                                 </div>
-                                <div v-if="algunaRetencionActiva && retTotalDisplay > 0" class="alert alert-info py-2 mt-3 mb-0 small">
+                                <div v-if="retenidoTotalDisplay > 0" class="alert alert-info py-2 mt-3 mb-0 small">
                                     <i class="fa fa-info-circle me-1"></i>
                                     El receptor te transferirá <strong>${{ formatNumber(totalDisplay) }}</strong>
-                                    y entregará al SAT en tu nombre <strong>${{ formatNumber(retTotalDisplay) }}</strong>
+                                    y entregará en tu nombre <strong>${{ formatNumber(retenidoTotalDisplay) }}</strong>
+                                    <span v-if="implocalRetDisplay > 0">al SAT y al gobierno estatal/municipal</span>
+                                    <span v-else>al SAT</span>
                                     (que tu contador acreditará).
                                     El saldo comercial del cliente sigue siendo
                                     <strong>${{ formatNumber(receiptData?.total || 0) }}</strong>.
@@ -770,6 +772,11 @@ export default {
         retIsrDisplay() { return this.prorrateo.retIsr; },
         retIvaDisplay() { return this.prorrateo.retIva; },
         retTotalDisplay() { return this.prorrateo.retTotal; },
+        implocalRetDisplay() { return this.prorrateo.implocalRet; },
+        // Total que el receptor retiene y entera (SAT federales + gobiernos estatales locales)
+        retenidoTotalDisplay() {
+            return Math.round((this.prorrateo.retTotal + this.prorrateo.implocalRet) * 100) / 100;
+        },
         totalDisplay() { return this.prorrateo.total; },
         implocalRetenciones() {
             return (this.impuestosLocales || []).filter(i => i.tipo === 'retencion' && parseFloat(i.importe) > 0);

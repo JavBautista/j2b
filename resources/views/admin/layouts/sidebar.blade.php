@@ -28,6 +28,11 @@
                 </a>
             </li>
             <li class="nav-item">
+                <a href="{{ route('admin.suppliers') }}" class="nav-link">
+                    <i class="fa fa-handshake-o"></i> Proveedores
+                </a>
+            </li>
+            <li class="nav-item">
                 <a href="{{ route('admin.clients') }}" class="nav-link">
                     <i class="fa fa-users"></i> Clientes
                 </a>

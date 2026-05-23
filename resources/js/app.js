@@ -43,6 +43,7 @@ import ClientImportComponent from './components/admin/ClientImportComponent.vue'
 import CategoriesComponent from './components/admin/CategoriesComponent.vue';
 import ServicesComponent from './components/admin/ServicesComponent.vue';
 import EquipmentsComponent from './components/admin/EquipmentsComponent.vue';
+import SuppliersComponent from './components/admin/SuppliersComponent.vue';
 import AdminUsersComponent from './components/admin/UsersComponent.vue';
 import ReportsComponent from './components/admin/ReportsComponent.vue';
 import GastosComponent from './components/admin/GastosComponent.vue';
@@ -110,6 +111,7 @@ app.component('client-import-component', ClientImportComponent);
 app.component('categories-component', CategoriesComponent);
 app.component('services-component', ServicesComponent);
 app.component('equipments-component', EquipmentsComponent);
+app.component('suppliers-component', SuppliersComponent);
 app.component('ai-settings-component', AiSettingsComponent);
 app.component('ai-indexing-component', AiIndexingComponent);
 app.component('cfdi-config-component', CfdiConfigComponent);

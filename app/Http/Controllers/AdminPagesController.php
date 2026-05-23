@@ -97,6 +97,13 @@ class AdminPagesController extends Controller
         return view('admin.clients.index', compact('shop', 'isLimitedUser'));
     }
 
+    public function suppliers(){
+        $user = Auth::user();
+        $shop = $user->shop;
+        $isLimitedUser = $user->isLimitedAdmin();
+        return view('admin.suppliers.index', compact('shop', 'isLimitedUser'));
+    }
+
     public function clientRentas(\App\Models\Client $client){
         $user = Auth::user();
         $shop = $user->shop;

@@ -442,6 +442,14 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         // Rutas AJAX para proveedores (modal de selección)
         Route::get('/admin/suppliers/search', [SuppliersController::class, 'search'])->name('admin.suppliers.search');
 
+        // CRUD admin web de proveedores (consumido por SuppliersComponent.vue)
+        Route::get('/admin/suppliers', [AdminPagesController::class, 'suppliers'])->name('admin.suppliers');
+        Route::get('/admin/suppliers/get', [SuppliersController::class, 'index'])->name('admin.suppliers.get');
+        Route::post('/admin/suppliers/store',   [SuppliersController::class, 'store'])->name('admin.suppliers.store');
+        Route::put('/admin/suppliers/update',   [SuppliersController::class, 'update'])->name('admin.suppliers.update');
+        Route::put('/admin/suppliers/inactive', [SuppliersController::class, 'inactive'])->name('admin.suppliers.inactive');
+        Route::put('/admin/suppliers/active',   [SuppliersController::class, 'active'])->name('admin.suppliers.active');
+
         // Usuario APP Cliente
         Route::get('/admin/clients/verify-user-email', [ClientsController::class, 'verifyUserEmail'])->name('admin.clients.verify-user-email');
         Route::get('/admin/clients/{client}/get-user-app', [ClientsController::class, 'getClientUserApp'])->name('admin.clients.get-user-app');

@@ -31,6 +31,11 @@ class CfdiInvoice extends Model
         return $this->belongsTo(Receipt::class);
     }
 
+    public function clientFiscalData()
+    {
+        return $this->belongsTo(ClientFiscalData::class, 'client_fiscal_data_id');
+    }
+
     public function complementos()
     {
         return $this->hasMany(CfdiPagoComplemento::class);

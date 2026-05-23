@@ -310,6 +310,7 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
             Route::get('/admin/configurations/receipt-settings', [App\Http\Controllers\Admin\ReceiptSettingsController::class, 'index'])->name('admin.configurations.receipt_settings');
             Route::get('/admin/configurations/receipt-settings/get', [App\Http\Controllers\Admin\ReceiptSettingsController::class, 'get']);
             Route::post('/admin/configurations/receipt-settings/save', [App\Http\Controllers\Admin\ReceiptSettingsController::class, 'save']);
+            Route::post('/admin/configurations/receipt-settings/template', [App\Http\Controllers\Admin\ReceiptSettingsController::class, 'saveTemplate']);
             Route::get('/admin/configurations/receipt-settings/qr-preview', [App\Http\Controllers\Admin\ReceiptSettingsController::class, 'qrPreview']);
 
             // Seguimiento de Servicio (Service Tracking)

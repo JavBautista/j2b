@@ -693,7 +693,7 @@ class CfdiInvoiceController extends Controller
         // Datos adicionales del response_json
         $responseData = $invoice->response_json ?? [];
 
-        $pdf = Pdf::loadView('cfdi.pdf-factura', [
+        $pdf = Pdf::loadView($invoice->shop->pdfView('factura'), [
             'invoice' => $invoice,
             'emisor' => $emisor,
             'logoBase64' => $logoBase64,

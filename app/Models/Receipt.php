@@ -58,6 +58,10 @@ class Receipt extends Model
         return $this->belongsTo(Shop::class);
     }
 
+    public function user(){
+        return $this->belongsTo(User::class);
+    }
+
     public function infoExtra()
     {
         return $this->hasMany(ReceiptInfoExtra::class, 'receipt_id');

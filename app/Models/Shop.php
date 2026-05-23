@@ -34,6 +34,29 @@ class Shop extends Model
         return $this->hasMany(ExtraFieldShop::class);
     }
 
+    /**
+     * Devuelve la vista Blade correcta según la plantilla PDF elegida por la tienda.
+     * $tipo: 'receipt' (cotización/nota venta) | 'factura' (CFDI) | 'complemento' (REP)
+     */
+    public function pdfView(string $tipo): string
+    {
+        $map = [
+            'j2b' => [
+                'receipt'     => 'receipt_rent_pdf',
+                'factura'     => 'cfdi.pdf-factura',
+                'complemento' => 'cfdi.pdf-complemento',
+            ],
+            'comyser' => [
+                'receipt'     => 'pdf_templates.comyser.receipt',
+                'factura'     => 'pdf_templates.comyser.factura',
+                'complemento' => 'cfdi.pdf-complemento',
+            ],
+        ];
+
+        $tpl = $this->pdf_template ?: 'j2b';
+        return $map[$tpl][$tipo] ?? $map['j2b'][$tipo];
+    }
+
     public function contractTemplates()
     {
         return $this->hasMany(ContractTemplate::class);

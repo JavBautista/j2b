@@ -49,7 +49,33 @@ class ReceiptSettingsController extends Controller
             'url_sources' => $urlSources,
             'shop_name' => $shop->name,
             'logo_url' => $logoUrl,
+            'pdf_template' => $shop->pdf_template ?: 'j2b',
+            'pdf_templates_disponibles' => $this->templatesDisponibles(),
         ]);
+    }
+
+    /**
+     * Catálogo de plantillas PDF disponibles. Cada item incluye el preview en /public.
+     * Agregar nuevas plantillas aquí + en Shop::pdfView().
+     */
+    private function templatesDisponibles(): array
+    {
+        return [
+            [
+                'key' => 'j2b',
+                'label' => 'J2 Biznes (estándar)',
+                'description' => 'Diseño moderno y compacto. Incluye QR, logo y tabla con imágenes opcionales.',
+                'preview_cotizacion' => null, // placeholder CSS en frontend
+                'preview_factura' => null,
+            ],
+            [
+                'key' => 'comyser',
+                'label' => 'Comyser (clásico)',
+                'description' => 'Diseño tradicional con cabecera azul, tabla con bordes y total en letra.',
+                'preview_cotizacion' => asset('images/pdf_templates/comyser-cotizacion.png'),
+                'preview_factura' => asset('images/pdf_templates/comyser-factura.png'),
+            ],
+        ];
     }
 
     public function save(Request $request)
@@ -61,6 +87,7 @@ class ReceiptSettingsController extends Controller
             'qr_url_source' => 'required|in:web,facebook,instagram,twitter,pinterest,video_channel',
             'show_logo' => 'required|boolean',
             'show_signature' => 'required|boolean',
+            'pdf_template' => 'nullable|in:j2b,comyser',
         ]);
 
         $shop = $request->user()->shop;
@@ -75,10 +102,38 @@ class ReceiptSettingsController extends Controller
             ]
         );
 
+        if ($request->filled('pdf_template')) {
+            $shop->pdf_template = $request->pdf_template;
+            $shop->save();
+        }
+
         return response()->json([
             'ok' => true,
             'message' => 'Configuración de recibos guardada',
             'settings' => $settings,
+            'pdf_template' => $shop->pdf_template,
+        ]);
+    }
+
+    /**
+     * Auto-guardar SOLO la plantilla PDF al hacer click en el selector visual.
+     * Endpoint ligero para no exigir todo el form como `save()`.
+     */
+    public function saveTemplate(Request $request)
+    {
+        if (!$request->ajax()) return redirect('/');
+
+        $request->validate([
+            'pdf_template' => 'required|in:j2b,comyser',
+        ]);
+
+        $shop = $request->user()->shop;
+        $shop->pdf_template = $request->pdf_template;
+        $shop->save();
+
+        return response()->json([
+            'ok' => true,
+            'pdf_template' => $shop->pdf_template,
         ]);
     }
 

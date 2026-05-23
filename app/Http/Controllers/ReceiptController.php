@@ -104,7 +104,7 @@ class ReceiptController extends Controller
                 ->get()
             : collect();
 
-        $pdf = PDF::loadView('receipt_rent_pdf', [
+        $pdf = PDF::loadView($receipt->shop->pdfView('receipt'), [
             'receipt' => $receipt,
             'withImages' => $withImages,
             'receiptSettings' => $receiptSettings,
@@ -1035,7 +1035,7 @@ class ReceiptController extends Controller
                 ->get()
             : collect();
 
-        $pdf = PDF::loadView('receipt_rent_pdf',[
+        $pdf = PDF::loadView($receipt->shop->pdfView('receipt'),[
             'receipt'=>$receipt,
             'receiptSettings' => $receiptSettings,
             'qrImage' => $qrImage,

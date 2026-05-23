@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\HandlesSerialConflict;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\RentDetail;
@@ -11,6 +12,8 @@ use App\Services\ImageService;
 
 class EquipmentsController extends Controller
 {
+    use HandlesSerialConflict;
+
     /**
      * Página principal de equipos (vista Blade con componente Vue)
      */
@@ -24,7 +27,6 @@ class EquipmentsController extends Controller
 
     /**
      * Obtener equipos paginados con filtros (JSON para Vue)
-     * Equipos son rent_details donde rent_id = 0 (inventario)
      */
     public function get(Request $request)
     {
@@ -32,11 +34,20 @@ class EquipmentsController extends Controller
         $shop = $user->shop;
 
         $buscar = $request->buscar;
-        $filtroActivo = $request->filtro_activo ?? 'TODOS';
+        $filtroActivo = $request->filtro_activo ?? 'ACTIVOS';
+        $filtroUbicacion = $request->filtro_ubicacion ?? 'INVENTARIO';
+        $buscarCliente = $request->buscar_cliente;
 
-        $query = RentDetail::with('images')
-            ->where('shop_id', $shop->id)
-            ->where('rent_id', 0); // Solo equipos de inventario
+        $query = RentDetail::with(['images', 'rent.client'])
+            ->where('shop_id', $shop->id);
+
+        // Filtro por ubicación
+        if ($filtroUbicacion === 'INVENTARIO') {
+            $query->where('rent_id', 0);
+        } elseif ($filtroUbicacion === 'RENTADOS') {
+            $query->where('rent_id', '>', 0);
+        }
+        // 'TODOS' no aplica filtro de ubicación
 
         // Búsqueda por marca, modelo o número de serie
         if (!empty($buscar)) {
@@ -49,6 +60,13 @@ class EquipmentsController extends Controller
                                  ->orWhere('serial_number', 'like', "%$term%");
                     });
                 }
+            });
+        }
+
+        // Búsqueda por cliente (solo aplica cuando hay equipos rentados en el resultado)
+        if (!empty($buscarCliente)) {
+            $query->whereHas('rent.client', function ($q) use ($buscarCliente) {
+                $q->where('name', 'like', "%$buscarCliente%");
             });
         }
 
@@ -80,6 +98,12 @@ class EquipmentsController extends Controller
         $shop = $user->shop;
         $now = now();
 
+        // Pre-check de serial duplicado con mensaje detallado
+        if ($request->filled('serial_number')) {
+            $conflictResp = $this->serialConflictResponse($shop->id, $request->serial_number, null);
+            if ($conflictResp) return $conflictResp;
+        }
+
         $equipment = new RentDetail();
         $equipment->active = 1;
         $equipment->rent_id = 0; // Inventario
@@ -102,8 +126,13 @@ class EquipmentsController extends Controller
         $equipment->cost = $request->cost ?? 0;
         $equipment->retail = $request->retail ?? 0;
         $equipment->wholesale = $request->wholesale ?? 0;
-        $equipment->type_sale = $request->type_sale;
-        $equipment->save();
+        $equipment->type_sale = $request->type_sale ?? 0;
+
+        try {
+            $equipment->save();
+        } catch (\Illuminate\Database\QueryException $e) {
+            return $this->handleDuplicateSerialException($e, (string) $request->serial_number);
+        }
 
         $equipment->load('images');
 
@@ -133,6 +162,12 @@ class EquipmentsController extends Controller
             ->where('rent_id', 0)
             ->findOrFail($request->id);
 
+        // Pre-check de serial duplicado con mensaje detallado (ignora propio id)
+        if ($request->filled('serial_number')) {
+            $conflictResp = $this->serialConflictResponse($shop->id, $request->serial_number, (int) $equipment->id);
+            if ($conflictResp) return $conflictResp;
+        }
+
         $equipment->trademark = $request->trademark;
         $equipment->model = $request->model;
         $equipment->serial_number = $request->serial_number;
@@ -151,8 +186,13 @@ class EquipmentsController extends Controller
         $equipment->cost = $request->cost ?? 0;
         $equipment->retail = $request->retail ?? 0;
         $equipment->wholesale = $request->wholesale ?? 0;
-        $equipment->type_sale = $request->type_sale;
-        $equipment->save();
+        $equipment->type_sale = $request->type_sale ?? 0;
+
+        try {
+            $equipment->save();
+        } catch (\Illuminate\Database\QueryException $e) {
+            return $this->handleDuplicateSerialException($e, (string) $request->serial_number);
+        }
 
         $equipment->load('images');
 

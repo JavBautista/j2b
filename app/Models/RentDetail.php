@@ -20,4 +20,8 @@ class RentDetail extends Model
         return $this->hasMany(RentDetailImage::class);
     }
 
+    public function rent(){
+        return $this->belongsTo(Rent::class);
+    }
+
 }

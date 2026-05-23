@@ -91,7 +91,7 @@ class EquipmentController extends Controller
         $equipment->cost = $request->cost;
         $equipment->retail = $request->retail;
         $equipment->wholesale = $request->wholesale;
-        $equipment->type_sale = $request->type_sale;
+        $equipment->type_sale = $request->type_sale ?? 0;
 
         $equipment->save();
 
@@ -141,7 +141,7 @@ class EquipmentController extends Controller
         $equipment->cost = $request->cost;
         $equipment->retail = $request->retail;
         $equipment->wholesale = $request->wholesale;
-        $equipment->type_sale = $request->type_sale;
+        $equipment->type_sale = $request->type_sale ?? 0;
 
         $equipment->save();
         return response()->json([

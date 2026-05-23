@@ -10,17 +10,29 @@
             </div>
             <div class="card-body">
                 <!-- Filtros y búsqueda -->
-                <div class="form-group row mb-3">
-                    <div class="col-md-10">
-                        <div class="input-group">
-                            <input type="text" v-model="buscar" class="form-control" placeholder="Buscar por marca, modelo o número de serie..." @keyup.enter="loadEquipments(1)">
-                            <select class="form-control col-md-2" v-model="filtroActivo">
-                                <option value="TODOS">Todos</option>
-                                <option value="ACTIVOS">Activos</option>
-                                <option value="INACTIVOS">Inactivos</option>
-                            </select>
-                            <button type="submit" @click="loadEquipments(1)" class="btn btn-primary"><i class="fa fa-search"></i> Buscar</button>
-                        </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-md-4">
+                        <input type="text" v-model="buscar" class="form-control" placeholder="Marca, modelo o N° serie..." @keyup.enter="loadEquipments(1)">
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-control" v-model="filtroUbicacion" @change="loadEquipments(1)">
+                            <option value="INVENTARIO">En inventario</option>
+                            <option value="RENTADOS">Rentados</option>
+                            <option value="TODOS">Todos (inventario + rentados)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <select class="form-control" v-model="filtroActivo" @change="loadEquipments(1)">
+                            <option value="ACTIVOS">Activos</option>
+                            <option value="INACTIVOS">Inactivos</option>
+                            <option value="TODOS">Todos los estados</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <button type="submit" @click="loadEquipments(1)" class="btn btn-primary w-100"><i class="fa fa-search"></i> Buscar</button>
+                    </div>
+                    <div v-if="filtroUbicacion === 'RENTADOS' || filtroUbicacion === 'TODOS'" class="col-md-6">
+                        <input type="text" v-model="buscarCliente" class="form-control" placeholder="Filtrar por cliente (nombre)..." @keyup.enter="loadEquipments(1)">
                     </div>
                 </div>
 
@@ -36,6 +48,7 @@
                                 <th class="text-right">Renta</th>
                                 <th class="text-center">Mono</th>
                                 <th class="text-center">Color</th>
+                                <th>Ubicación</th>
                                 <th>Estado</th>
                                 <th>Acciones</th>
                             </tr>
@@ -54,6 +67,13 @@
                                 <td class="text-center">
                                     <span v-if="equipment.color" class="badge badge-success">Sí</span>
                                     <span v-else class="badge badge-secondary">No</span>
+                                </td>
+                                <td>
+                                    <span v-if="equipment.rent_id == 0" class="badge bg-secondary">Inventario</span>
+                                    <span v-else-if="equipment.rent && equipment.rent.client" class="badge bg-warning text-dark" :title="'Renta #' + (equipment.rent.folio || equipment.rent.id)">
+                                        <i class="fa fa-user"></i> {{ equipment.rent.client.name }}
+                                    </span>
+                                    <span v-else class="badge bg-warning text-dark">Rentado</span>
                                 </td>
                                 <td>
                                     <span v-if="equipment.active" class="badge badge-success">Activo</span>
@@ -125,6 +145,20 @@
                     <form @submit.prevent="guardarEquipo">
                         <p><em><strong class="text text-danger">* Campos obligatorios</strong></em></p>
 
+                        <!-- Tipo de Equipo (Renta / Venta) -->
+                        <div class="alert alert-light border d-flex align-items-center justify-content-between mb-3" style="background-color: #f8f9fa;">
+                            <div>
+                                <h6 class="mb-1"><i class="fa fa-tag text-primary"></i> Tipo de Equipo</h6>
+                                <small class="text-muted">Activa si es para venta, desactiva para renta</small>
+                            </div>
+                            <div class="form-check form-switch" style="transform: scale(1.4); transform-origin: right center; padding-right: 1rem;">
+                                <input type="checkbox" class="form-check-input" v-model="formEquipment.type_sale" :true-value="1" :false-value="0" id="checkTypeSale" role="switch">
+                                <label class="form-check-label ms-2 fw-bold" for="checkTypeSale" :class="formEquipment.type_sale === 1 ? 'text-success' : 'text-info'">
+                                    {{ formEquipment.type_sale === 1 ? 'Para venta' : 'Para renta' }}
+                                </label>
+                            </div>
+                        </div>
+
                         <!-- Información básica -->
                         <h6 class="text-muted mb-3">Información del Equipo</h6>
                         <div class="form-group row">
@@ -139,11 +173,30 @@
                         </div>
                         <div class="form-group row">
                             <label class="col-md-3 col-form-label">N° Serie</label>
-                            <div class="col-md-4">
+                            <div class="col-md-9">
                                 <input type="text" class="form-control" v-model="formEquipment.serial_number">
                             </div>
-                            <label class="col-md-2 col-form-label">Precio Renta</label>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-md-3 col-form-label">Descripción</label>
+                            <div class="col-md-9">
+                                <textarea class="form-control" v-model="formEquipment.description" rows="2"></textarea>
+                            </div>
+                        </div>
+
+                        <hr>
+                        <!-- Precios -->
+                        <h6 class="text-muted mb-3">Precios</h6>
+                        <div class="form-group row">
+                            <label class="col-md-3 col-form-label">Costo de compra</label>
                             <div class="col-md-3">
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" step="0.01" class="form-control" v-model="formEquipment.cost" min="0">
+                                </div>
+                            </div>
+                            <label class="col-md-2 col-form-label">Precio Renta</label>
+                            <div class="col-md-4">
                                 <div class="input-group">
                                     <span class="input-group-text">$</span>
                                     <input type="number" step="0.01" class="form-control" v-model="formEquipment.rent_price" min="0">
@@ -151,9 +204,19 @@
                             </div>
                         </div>
                         <div class="form-group row">
-                            <label class="col-md-3 col-form-label">Descripción</label>
-                            <div class="col-md-9">
-                                <textarea class="form-control" v-model="formEquipment.description" rows="2"></textarea>
+                            <label class="col-md-3 col-form-label">Menudeo (Venta)</label>
+                            <div class="col-md-3">
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" step="0.01" class="form-control" v-model="formEquipment.retail" min="0">
+                                </div>
+                            </div>
+                            <label class="col-md-2 col-form-label">Mayoreo (Venta)</label>
+                            <div class="col-md-4">
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" step="0.01" class="form-control" v-model="formEquipment.wholesale" min="0">
+                                </div>
                             </div>
                         </div>
 
@@ -212,44 +275,6 @@
                             <label class="col-md-3 col-form-label">Contador actual</label>
                             <div class="col-md-3">
                                 <input type="number" class="form-control" v-model="formEquipment.counter_color" min="0">
-                            </div>
-                        </div>
-
-                        <hr>
-                        <!-- Precios de Venta -->
-                        <h6 class="text-muted mb-3">Precios de Venta (Opcional)</h6>
-                        <div class="form-group row">
-                            <label class="col-md-3 col-form-label">Costo</label>
-                            <div class="col-md-3">
-                                <div class="input-group">
-                                    <span class="input-group-text">$</span>
-                                    <input type="number" step="0.01" class="form-control" v-model="formEquipment.cost" min="0">
-                                </div>
-                            </div>
-                            <label class="col-md-2 col-form-label">Precio Venta</label>
-                            <div class="col-md-4">
-                                <div class="input-group">
-                                    <span class="input-group-text">$</span>
-                                    <input type="number" step="0.01" class="form-control" v-model="formEquipment.retail" min="0">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="form-group row">
-                            <label class="col-md-3 col-form-label">Mayoreo</label>
-                            <div class="col-md-3">
-                                <div class="input-group">
-                                    <span class="input-group-text">$</span>
-                                    <input type="number" step="0.01" class="form-control" v-model="formEquipment.wholesale" min="0">
-                                </div>
-                            </div>
-                            <label class="col-md-2 col-form-label">Tipo Venta</label>
-                            <div class="col-md-4">
-                                <select class="form-control" v-model="formEquipment.type_sale">
-                                    <option value="">Sin especificar</option>
-                                    <option value="nuevo">Nuevo</option>
-                                    <option value="usado">Usado</option>
-                                    <option value="remanufacturado">Remanufacturado</option>
-                                </select>
                             </div>
                         </div>
                     </form>
@@ -338,7 +363,9 @@ export default {
             offset: 3,
             loading: false,
             buscar: '',
-            filtroActivo: 'TODOS',
+            filtroActivo: 'ACTIVOS',
+            filtroUbicacion: 'INVENTARIO',
+            buscarCliente: '',
 
             // Modal
             modalEditar: false,
@@ -362,7 +389,7 @@ export default {
                 cost: 0,
                 retail: 0,
                 wholesale: 0,
-                type_sale: ''
+                type_sale: 0
             },
 
             // Imágenes
@@ -408,7 +435,14 @@ export default {
         loadEquipments(page) {
             let me = this;
             me.loading = true;
-            var url = `/admin/equipments/get?page=${page}&buscar=${me.buscar}&filtro_activo=${me.filtroActivo}`;
+            const params = new URLSearchParams({
+                page: page,
+                buscar: me.buscar,
+                filtro_activo: me.filtroActivo,
+                filtro_ubicacion: me.filtroUbicacion,
+                buscar_cliente: me.buscarCliente,
+            });
+            var url = `/admin/equipments/get?${params.toString()}`;
             axios.get(url).then(function(response) {
                 var respuesta = response.data;
                 me.arrayEquipments = respuesta.data;
@@ -467,7 +501,7 @@ export default {
                     cost: 0,
                     retail: 0,
                     wholesale: 0,
-                    type_sale: ''
+                    type_sale: 0
                 };
                 this.errorForm = false;
                 this.erroresForm = [];
@@ -492,7 +526,7 @@ export default {
                     cost: equipment.cost || 0,
                     retail: equipment.retail || 0,
                     wholesale: equipment.wholesale || 0,
-                    type_sale: equipment.type_sale || ''
+                    type_sale: equipment.type_sale == 1 ? 1 : 0
                 };
                 this.errorForm = false;
                 this.erroresForm = [];
@@ -528,10 +562,12 @@ export default {
                 }
             }).catch(function(error) {
                 me.errorForm = true;
-                if (error.response && error.response.data.errors) {
+                if (error.response && error.response.data && error.response.data.errors) {
                     me.erroresForm = Object.values(error.response.data.errors).flat();
+                } else if (error.response && error.response.data && error.response.data.message) {
+                    me.erroresForm = [error.response.data.message];
                 } else {
-                    me.erroresForm = ['Error al guardar el equipo'];
+                    me.erroresForm = ['Error al guardar el equipo. Intenta de nuevo o contacta a soporte.'];
                 }
             }).finally(function() {
                 me.guardando = false;

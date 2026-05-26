@@ -677,6 +677,8 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
             Route::put('/admin/users/collaborators/update', [AdminUsersController::class, 'updateCollaborator']);
             Route::put('/admin/users/collaborators/{id}/activate', [AdminUsersController::class, 'activateCollaborator']);
             Route::put('/admin/users/collaborators/{id}/deactivate', [AdminUsersController::class, 'deactivateCollaborator']);
+            // Reset contraseña (admins y colaboradores)
+            Route::put('/admin/users/reset-password', [AdminUsersController::class, 'resetPassword']);
         }); // ./Users (full.admin)
 
         // Gastos

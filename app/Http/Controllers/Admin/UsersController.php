@@ -410,4 +410,38 @@ class UsersController extends Controller
             'message' => 'Colaborador dado de baja correctamente'
         ]);
     }
+
+    // ========== RESET DE CONTRASEÑA ==========
+
+    public function resetPassword(Request $request)
+    {
+        if (!$request->ajax()) return redirect('/');
+
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'password' => 'required|min:8',
+            'password_confirmation' => 'required|same:password'
+        ]);
+
+        $authUser = Auth::user();
+        $targetUser = User::findOrFail($request->user_id);
+
+        // Verificar que el usuario pertenezca a la misma tienda
+        if ($targetUser->shop_id !== $authUser->shop_id) {
+            return response()->json(['error' => 'No autorizado'], 403);
+        }
+
+        // No permitir resetearse a sí mismo desde aquí
+        if ($targetUser->id === $authUser->id) {
+            return response()->json(['error' => 'No puedes resetear tu propia contraseña desde aquí'], 403);
+        }
+
+        $targetUser->password = Hash::make($request->password);
+        $targetUser->save();
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Contraseña actualizada correctamente'
+        ]);
+    }
 }

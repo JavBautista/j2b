@@ -96,11 +96,11 @@
                 <!-- VISTA CARDS -->
                 <div class="row" v-if="!loading && vistaActual === 'cards'">
                     <div class="col-md-4 col-lg-3 mb-4" v-for="user in currentList" :key="user.id">
-                        <div class="card user-card h-100" :class="{'inactive-card': !user.active}">
+                        <div class="card user-card h-100" :class="{'inactive-card': !userActivo(user)}">
                             <div class="card-header d-flex justify-content-between align-items-center">
                                 <div>
-                                    <span class="badge" :class="user.active ? 'bg-success' : 'bg-danger'">
-                                        {{ user.active ? 'ACTIVO' : 'BAJA' }}
+                                    <span class="badge" :class="userActivo(user) ? 'bg-success' : 'bg-danger'">
+                                        {{ userActivo(user) ? 'ACTIVO' : 'BAJA' }}
                                     </span>
                                     <span v-if="tabActivo === 'admins' && user.user && user.user.limited" class="badge bg-warning ms-1">
                                         LIMITADO
@@ -120,12 +120,15 @@
                                         <li><a class="dropdown-item" href="#" @click.prevent="abrirModalEditar(user)">
                                             <i class="fa fa-edit text-primary"></i> Editar
                                         </a></li>
+                                        <li><a class="dropdown-item" href="#" @click.prevent="resetearPassword(user)">
+                                            <i class="fa fa-key text-warning"></i> Resetear contraseña
+                                        </a></li>
                                         <li v-if="tabActivo === 'admins'"><a class="dropdown-item" href="#" @click.prevent="confirmarToggleLimited(user)">
                                             <i class="fa fa-lock text-warning"></i>
                                             {{ user.user && user.user.limited ? 'Quitar límite' : 'Limitar privilegios' }}
                                         </a></li>
                                         <li><hr class="dropdown-divider"></li>
-                                        <li v-if="user.active"><a class="dropdown-item" href="#" @click.prevent="confirmarDesactivar(user)">
+                                        <li v-if="userActivo(user)"><a class="dropdown-item" href="#" @click.prevent="confirmarDesactivar(user)">
                                             <i class="fa fa-ban text-danger"></i> Dar de baja
                                         </a></li>
                                         <li v-else><a class="dropdown-item" href="#" @click.prevent="confirmarActivar(user)">
@@ -190,8 +193,8 @@
                                 <td>{{ user.email }}</td>
                                 <td>{{ user.movil || '-' }}</td>
                                 <td>
-                                    <span class="badge" :class="user.active ? 'bg-success' : 'bg-danger'">
-                                        {{ user.active ? 'ACTIVO' : 'BAJA' }}
+                                    <span class="badge" :class="userActivo(user) ? 'bg-success' : 'bg-danger'">
+                                        {{ userActivo(user) ? 'ACTIVO' : 'BAJA' }}
                                     </span>
                                 </td>
                                 <td v-if="tabActivo === 'admins'">
@@ -206,7 +209,10 @@
                                         <button class="btn btn-outline-primary" @click="abrirModalEditar(user)" title="Editar">
                                             <i class="fa fa-edit"></i>
                                         </button>
-                                        <button v-if="user.active" class="btn btn-outline-danger" @click="confirmarDesactivar(user)" title="Dar de baja">
+                                        <button class="btn btn-outline-warning" @click="resetearPassword(user)" title="Resetear contraseña">
+                                            <i class="fa fa-key"></i>
+                                        </button>
+                                        <button v-if="userActivo(user)" class="btn btn-outline-danger" @click="confirmarDesactivar(user)" title="Dar de baja">
                                             <i class="fa fa-ban"></i>
                                         </button>
                                         <button v-else class="btn btn-outline-success" @click="confirmarActivar(user)" title="Dar de alta">
@@ -1191,7 +1197,154 @@ export default {
                 });
         },
 
+        // ========== RESET CONTRASEÑA ==========
+        resetearPassword(user) {
+            const userId = user.user_id || (user.user ? user.user.id : null);
+            if (!userId) {
+                Swal.fire('Error', 'No se encontró el usuario de acceso asociado', 'error');
+                return;
+            }
+
+            Swal.fire({
+                title: 'Resetear Contraseña',
+                html: `
+                    <p class="text-muted mb-3">Usuario: <strong>${user.name}</strong></p>
+                    <div class="form-group text-start">
+                        <label for="swal-password" class="fw-bold">Nueva Contraseña</label>
+                        <div class="input-group">
+                            <input type="text" id="swal-password" class="form-control" placeholder="Mínimo 8 caracteres">
+                            <button class="btn btn-primary" type="button" id="btn-generar" title="Generar contraseña">
+                                <i class="fa fa-random"></i>
+                            </button>
+                            <button class="btn btn-secondary" type="button" id="btn-copiar" title="Copiar">
+                                <i class="fa fa-copy"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-group text-start mt-3">
+                        <label for="swal-password-confirm" class="fw-bold">Confirmar Contraseña</label>
+                        <input type="text" id="swal-password-confirm" class="form-control">
+                    </div>
+                    <p class="text-muted small mt-2">
+                        <i class="fa fa-info-circle"></i> Usa el botón <i class="fa fa-random"></i> para generar una contraseña aleatoria segura
+                    </p>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'Actualizar Contraseña',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#6c757d',
+                width: '500px',
+                didOpen: () => {
+                    const btnGenerar = document.getElementById('btn-generar');
+                    const btnCopiar = document.getElementById('btn-copiar');
+                    const inputPassword = document.getElementById('swal-password');
+                    const inputConfirm = document.getElementById('swal-password-confirm');
+
+                    btnGenerar.addEventListener('click', () => {
+                        const password = this.generarPasswordAleatorio();
+                        inputPassword.value = password;
+                        inputConfirm.value = password;
+                    });
+
+                    btnCopiar.addEventListener('click', () => {
+                        const password = inputPassword.value;
+                        if (password) {
+                            this.copiarAlPortapapeles(password, btnCopiar);
+                        } else {
+                            Swal.showValidationMessage('Genera o escribe una contraseña primero');
+                        }
+                    });
+                },
+                preConfirm: () => {
+                    const password = document.getElementById('swal-password').value;
+                    const passwordConfirm = document.getElementById('swal-password-confirm').value;
+
+                    if (!password) {
+                        Swal.showValidationMessage('Ingresa la nueva contraseña');
+                        return false;
+                    }
+                    if (password.length < 8) {
+                        Swal.showValidationMessage('La contraseña debe tener al menos 8 caracteres');
+                        return false;
+                    }
+                    if (password !== passwordConfirm) {
+                        Swal.showValidationMessage('Las contraseñas no coinciden');
+                        return false;
+                    }
+                    return { password, password_confirmation: passwordConfirm };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    axios.put('/admin/users/reset-password', {
+                        user_id: userId,
+                        password: result.value.password,
+                        password_confirmation: result.value.password_confirmation
+                    })
+                    .then(response => {
+                        Swal.fire({
+                            icon: 'success',
+                            title: '¡Contraseña Actualizada!',
+                            html: `
+                                <p>La nueva contraseña es:</p>
+                                <h4 class="text-primary"><strong>${result.value.password}</strong></h4>
+                                <p class="text-muted">Comparte esta contraseña con el usuario</p>
+                            `,
+                            confirmButtonText: 'Entendido'
+                        });
+                    })
+                    .catch(error => {
+                        let errorMsg = 'Ocurrió un error al actualizar la contraseña.';
+                        if (error.response && error.response.data) {
+                            if (error.response.data.errors) {
+                                errorMsg = Object.values(error.response.data.errors).flat().join('<br>');
+                            } else if (error.response.data.error) {
+                                errorMsg = error.response.data.error;
+                            }
+                        }
+                        Swal.fire('Error', errorMsg, 'error');
+                    });
+                }
+            });
+        },
+
+        generarPasswordAleatorio() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%&*';
+            let password = '';
+            for (let i = 0; i < 12; i++) {
+                password += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return password;
+        },
+
+        copiarAlPortapapeles(texto, btnElement) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(texto).then(() => {
+                    const iconoOriginal = btnElement.innerHTML;
+                    btnElement.innerHTML = '<i class="fa fa-check"></i>';
+                    btnElement.classList.add('btn-success');
+                    btnElement.classList.remove('btn-secondary');
+                    setTimeout(() => {
+                        btnElement.innerHTML = iconoOriginal;
+                        btnElement.classList.remove('btn-success');
+                        btnElement.classList.add('btn-secondary');
+                    }, 1500);
+                });
+            } else {
+                const textarea = document.createElement('textarea');
+                textarea.value = texto;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+            }
+        },
+
         // ========== HELPERS ==========
+        userActivo(user) {
+            return user.user ? !!user.user.active : !!user.active;
+        },
+
         generarSlug(texto) {
             if (!texto) return '';
             return texto

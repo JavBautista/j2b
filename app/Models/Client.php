@@ -56,4 +56,8 @@ class Client extends Model
     public function defaultFiscalData(){
         return $this->hasOne(ClientFiscalData::class)->where('is_default', true)->where('active', true);
     }
+
+    public function user(){
+        return $this->belongsTo(User::class);
+    }
 }

@@ -95,6 +95,13 @@
                                             <i class="fa fa-pencil-square-o text-success"></i> Generar Recibo
                                         </a></li>
                                         <li><hr class="dropdown-divider"></li>
+                                        <li v-if="!client.user_id"><a class="dropdown-item" href="#" @click.prevent="abrirModalUserApp(client)">
+                                            <i class="fa fa-mobile text-success"></i> Crear Usuario APP
+                                        </a></li>
+                                        <li v-if="client.user_id"><a class="dropdown-item" href="#" @click.prevent="resetearPasswordClienteApp(client)">
+                                            <i class="fa fa-key text-warning"></i> Resetear Contraseña APP
+                                        </a></li>
+                                        <li><hr class="dropdown-divider"></li>
                                         <template v-if="!isLimitedUser">
                                             <template v-if="client.active">
                                                 <li><a class="dropdown-item" href="#" @click.prevent="actualizarAInactivo(client.id)">
@@ -144,7 +151,10 @@
                                     <span v-if="client.location_latitude" class="badge bg-success me-1" title="Tiene ubicación GPS">
                                         <i class="fa fa-map-marker"></i>
                                     </span>
-                                    <span v-if="client.user_id" class="badge bg-primary me-1" title="Tiene usuario APP">
+                                    <span v-if="client.user && client.user.email" class="badge bg-primary me-1" :title="client.user.email">
+                                        <i class="fa fa-mobile"></i> {{ client.user.email }}
+                                    </span>
+                                    <span v-else-if="client.user_id" class="badge bg-primary me-1" title="Tiene usuario APP">
                                         <i class="fa fa-mobile"></i>
                                     </span>
                                     <span v-if="client.location_image" class="badge bg-info me-1" title="Tiene imagen de referencia">
@@ -187,7 +197,13 @@
                                     <span v-if="client.location_latitude" class="badge bg-success ms-1" title="GPS"><i class="fa fa-map-marker"></i></span>
                                     <span v-if="client.user_id" class="badge bg-primary ms-1" title="Usuario APP"><i class="fa fa-mobile"></i></span>
                                 </td>
-                                <td>{{ client.email || '-' }}</td>
+                                <td>
+                                    {{ client.email || '-' }}
+                                    <br v-if="client.user && client.user.email">
+                                    <small v-if="client.user && client.user.email" class="text-primary">
+                                        <i class="fa fa-mobile"></i> {{ client.user.email }}
+                                    </small>
+                                </td>
                                 <td>{{ client.company || '-' }}</td>
                                 <td>{{ client.movil || '-' }}</td>
                                 <td><span class="badge badge-info">Nv{{ client.level || 1 }}</span></td>
@@ -212,6 +228,12 @@
                                         <a class="btn btn-secondary btn-sm" :href="`/admin/clients/${client.id}/contracts`" title="Contratos">
                                             <i class="fa fa-folder-open"></i>
                                         </a>
+                                        <button v-if="!client.user_id" class="btn btn-outline-success btn-sm" @click="abrirModalUserApp(client)" title="Crear Usuario APP">
+                                            <i class="fa fa-mobile"></i>
+                                        </button>
+                                        <button v-if="client.user_id" class="btn btn-outline-warning btn-sm" @click="resetearPasswordClienteApp(client)" title="Resetear Contraseña APP">
+                                            <i class="fa fa-key"></i>
+                                        </button>
                                         <template v-if="!isLimitedUser">
                                             <button v-if="client.active" class="btn btn-danger btn-sm" @click="actualizarAInactivo(client.id)" title="Desactivar">
                                                 <i class="fa fa-toggle-off"></i>
@@ -383,7 +405,10 @@
                                 <div class="card-body">
                                     <div v-if="clienteDetalle.user_id">
                                         <span class="badge badge-success"><i class="fa fa-check"></i> Tiene usuario APP</span>
-                                        <p class="mt-2 mb-0">ID Usuario: {{ clienteDetalle.user_id }}</p>
+                                        <p class="mt-2 mb-0" v-if="clienteDetalleUserEmail">
+                                            <i class="fa fa-envelope text-muted"></i>
+                                            <code>{{ clienteDetalleUserEmail }}</code>
+                                        </p>
                                     </div>
                                     <div v-else>
                                         <span class="badge badge-secondary">Sin usuario APP</span>
@@ -554,7 +579,7 @@
                             <label><strong>Usuario</strong></label>
                             <div class="input-group">
                                 <input type="text" class="form-control" v-model="userAppUsername" placeholder="nombre_usuario" @input="userAppUsername = userAppUsername.toLowerCase().replace(/[^a-z0-9_]/g, '')">
-                                <span class="input-group-text">@{{ shop.slug }}.app</span>
+                                <span class="input-group-text">@{{ shopSlug }}.app</span>
                             </div>
                             <small class="text-muted">Solo letras minúsculas, números y guión bajo</small>
                         </div>
@@ -1384,6 +1409,7 @@ export default {
                 // Modal detalle
                 modalDetalle: 0,
                 clienteDetalle: null,
+                clienteDetalleUserEmail: null,
 
                 // Modal Usuario APP
                 modalUserApp: 0,
@@ -1491,6 +1517,15 @@ export default {
             }
         },
         computed:{
+            shopSlug() {
+                if (this.shop.slug) return this.shop.slug;
+                return this.shop.name
+                    .toLowerCase()
+                    .normalize('NFD')
+                    .replace(/[̀-ͯ]/g, '')
+                    .replace(/[^a-z0-9]+/g, '-')
+                    .replace(/^-+|-+$/g, '');
+            },
             isActived: function(){
                 return this.pagination.current_page;
             },
@@ -1773,11 +1808,21 @@ export default {
             // Modal Detalle
             abrirModalDetalle(client) {
                 this.clienteDetalle = client;
+                this.clienteDetalleUserEmail = null;
                 this.modalDetalle = 1;
+
+                if (client.user_id) {
+                    axios.get(`/admin/clients/${client.id}/get-user-app`).then(response => {
+                        if (response.data.ok && response.data.user) {
+                            this.clienteDetalleUserEmail = response.data.user.email;
+                        }
+                    });
+                }
             },
             cerrarModalDetalle() {
                 this.modalDetalle = 0;
                 this.clienteDetalle = null;
+                this.clienteDetalleUserEmail = null;
             },
             // Utilidades
             truncateText(text, length) {
@@ -1861,7 +1906,16 @@ export default {
                     password: this.userAppPassword
                 }).then(response => {
                     if (response.data.ok) {
-                        Swal.fire('Éxito', response.data.message, 'success');
+                        Swal.fire({
+                            icon: 'success',
+                            title: '¡Usuario APP creado!',
+                            html: `
+                                <p>El usuario de acceso a la app es:</p>
+                                <h5 class="text-primary"><strong>${response.data.user.email}</strong></h5>
+                                <p class="text-muted">Comparte estas credenciales con el cliente</p>
+                            `,
+                            confirmButtonText: 'Entendido'
+                        });
                         me.clienteUserApp.user_id = response.data.user.id;
                         me.cerrarModalUserApp();
                         me.loadClients(me.pagination.current_page, me.buscar, me.criterio, me.estatus);
@@ -1912,6 +1966,120 @@ export default {
                                 me.userAppPasswordConfirm = '';
                             }
                         }).catch(error => {
+                            Swal.fire('Error', error.response?.data?.message || 'Error al cambiar contraseña', 'error');
+                        });
+                    }
+                });
+            },
+
+            resetearPasswordClienteApp(client) {
+                const userEmail = client.user ? client.user.email : '';
+                Swal.fire({
+                    title: 'Resetear Contraseña APP',
+                    html: `
+                        <p class="text-muted mb-2">Cliente: <strong>${client.name}</strong></p>
+                        ${userEmail ? `<p class="mb-3"><i class="fa fa-mobile text-primary"></i> Usuario APP: <code>${userEmail}</code></p>` : ''}
+                        <div class="form-group text-start">
+                            <label for="swal-password" class="fw-bold">Nueva Contraseña</label>
+                            <div class="input-group">
+                                <input type="text" id="swal-password" class="form-control" placeholder="Mínimo 8 caracteres">
+                                <button class="btn btn-primary" type="button" id="btn-generar" title="Generar contraseña">
+                                    <i class="fa fa-random"></i>
+                                </button>
+                                <button class="btn btn-secondary" type="button" id="btn-copiar" title="Copiar">
+                                    <i class="fa fa-copy"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="form-group text-start mt-3">
+                            <label for="swal-password-confirm" class="fw-bold">Confirmar Contraseña</label>
+                            <input type="text" id="swal-password-confirm" class="form-control">
+                        </div>
+                        <p class="text-muted small mt-2">
+                            <i class="fa fa-info-circle"></i> Usa el botón <i class="fa fa-random"></i> para generar una contraseña aleatoria segura
+                        </p>
+                    `,
+                    showCancelButton: true,
+                    confirmButtonText: 'Actualizar Contraseña',
+                    cancelButtonText: 'Cancelar',
+                    confirmButtonColor: '#28a745',
+                    cancelButtonColor: '#6c757d',
+                    width: '500px',
+                    didOpen: () => {
+                        const btnGenerar = document.getElementById('btn-generar');
+                        const btnCopiar = document.getElementById('btn-copiar');
+                        const inputPassword = document.getElementById('swal-password');
+                        const inputConfirm = document.getElementById('swal-password-confirm');
+
+                        btnGenerar.addEventListener('click', () => {
+                            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%&*';
+                            let password = '';
+                            for (let i = 0; i < 12; i++) {
+                                password += chars.charAt(Math.floor(Math.random() * chars.length));
+                            }
+                            inputPassword.value = password;
+                            inputConfirm.value = password;
+                        });
+
+                        btnCopiar.addEventListener('click', () => {
+                            const password = inputPassword.value;
+                            if (password) {
+                                if (navigator.clipboard && navigator.clipboard.writeText) {
+                                    navigator.clipboard.writeText(password).then(() => {
+                                        const iconoOriginal = btnCopiar.innerHTML;
+                                        btnCopiar.innerHTML = '<i class="fa fa-check"></i>';
+                                        btnCopiar.classList.add('btn-success');
+                                        btnCopiar.classList.remove('btn-secondary');
+                                        setTimeout(() => {
+                                            btnCopiar.innerHTML = iconoOriginal;
+                                            btnCopiar.classList.remove('btn-success');
+                                            btnCopiar.classList.add('btn-secondary');
+                                        }, 1500);
+                                    });
+                                }
+                            } else {
+                                Swal.showValidationMessage('Genera o escribe una contraseña primero');
+                            }
+                        });
+                    },
+                    preConfirm: () => {
+                        const password = document.getElementById('swal-password').value;
+                        const passwordConfirm = document.getElementById('swal-password-confirm').value;
+
+                        if (!password) {
+                            Swal.showValidationMessage('Ingresa la nueva contraseña');
+                            return false;
+                        }
+                        if (password.length < 8) {
+                            Swal.showValidationMessage('La contraseña debe tener al menos 8 caracteres');
+                            return false;
+                        }
+                        if (password !== passwordConfirm) {
+                            Swal.showValidationMessage('Las contraseñas no coinciden');
+                            return false;
+                        }
+                        return { password };
+                    }
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        axios.put(`/admin/clients/${client.id}/update-user-app`, {
+                            password: result.value.password
+                        })
+                        .then(response => {
+                            if (response.data.ok) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: '¡Contraseña Actualizada!',
+                                    html: `
+                                        <p>La nueva contraseña APP es:</p>
+                                        <h4 class="text-primary"><strong>${result.value.password}</strong></h4>
+                                        <p class="text-muted">Comparte esta contraseña con el cliente</p>
+                                    `,
+                                    confirmButtonText: 'Entendido'
+                                });
+                            }
+                        })
+                        .catch(error => {
                             Swal.fire('Error', error.response?.data?.message || 'Error al cambiar contraseña', 'error');
                         });
                     }
@@ -2437,10 +2605,10 @@ export default {
         border-radius: 12px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         transition: all 0.3s ease;
+        overflow: visible;
     }
 
     .client-card:hover {
-        transform: translateY(-2px);
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
     }
 
@@ -2525,6 +2693,7 @@ export default {
         border: none;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         border-radius: 8px;
+        z-index: 1050;
     }
 
     .client-card .dropdown-item {

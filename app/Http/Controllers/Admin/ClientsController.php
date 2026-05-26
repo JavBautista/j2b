@@ -8,6 +8,7 @@ use App\Models\ContractTemplate;
 use App\Models\Contract;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use App\Services\ImageService;
 
 class ClientsController extends Controller
@@ -43,7 +44,7 @@ class ClientsController extends Controller
             }
         }
 
-        $clients = $query->withCount('rents')->orderBy('id', 'desc')->paginate(12);
+        $clients = $query->with('user:id,email')->withCount('rents')->orderBy('id', 'desc')->paginate(12);
 
         $response = $clients->toArray();
         $response['pagination'] = [
@@ -671,8 +672,8 @@ class ClientsController extends Controller
             'password' => 'required|string|min:8'
         ]);
 
-        // Generar email basado en username y shop slug
-        $email = strtolower($request->username) . '@' . $shop->slug . '.app';
+        // Generar email basado en username y shop name (slug dinámico)
+        $email = strtolower($request->username) . '@' . Str::slug($shop->name) . '.app';
 
         // Verificar que el email no exista
         if (\App\Models\User::where('email', $email)->exists()) {

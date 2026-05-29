@@ -18,6 +18,8 @@ use Barryvdh\DomPDF\Facade\Pdf as PDF;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use App\Services\Receipts\ReceiptTaxCalculator;
 
 class ReceiptController extends Controller
 {
@@ -227,29 +229,78 @@ class ReceiptController extends Controller
         $rcp = $request->receipt;
         $date_today     = Carbon::now();
 
+        $detailList = is_string($request->detail) ? json_decode($request->detail) : $request->detail;
+        $itemsValidar = is_array($detailList) ? $detailList : (is_object($detailList) ? (array) $detailList : []);
+
+        // Recálculo de IVA/subtotal/total en backend (fuente de verdad: Shop.tax_rate).
+        // No confiamos en los valores enviados por el cliente: pueden venir desfasados
+        // si el dispositivo tiene cache vieja de tax_rate o si fueron manipulados.
+        $itemsCalc = array_map(function($it) {
+            $o = is_array($it) ? $it : (array) $it;
+            return [
+                'qty'              => $o['qty'] ?? 0,
+                'price'            => $o['cost'] ?? 0,
+                'discount'         => $o['discount'] ?? 0,
+                'is_complimentary' => !empty($o['is_complimentary']),
+            ];
+        }, $itemsValidar);
+
+        $aplicarIva = floatval($rcp['iva'] ?? 0) > 0;
+        $calc = ReceiptTaxCalculator::calcular(
+            $shop,
+            $itemsCalc,
+            floatval($rcp['discount'] ?? 0),
+            $aplicarIva
+        );
+
+        $cmp = ReceiptTaxCalculator::compararConCliente(
+            $calc,
+            floatval($rcp['subtotal'] ?? 0),
+            floatval($rcp['iva'] ?? 0),
+            floatval($rcp['total'] ?? 0)
+        );
+        if ($cmp['discrepancia']) {
+            Log::warning('[ReceiptTaxRecalc] store() discrepancia cliente vs backend', [
+                'shop_id'       => $shop->id,
+                'user_id'       => $user->id ?? null,
+                'tax_rate_shop' => $shop->getTaxRate(),
+                'cliente'       => [
+                    'subtotal' => $rcp['subtotal'] ?? null,
+                    'iva'      => $rcp['iva'] ?? null,
+                    'total'    => $rcp['total'] ?? null,
+                    'discount' => $rcp['discount'] ?? null,
+                ],
+                'backend'       => [
+                    'subtotal' => $calc['subtotal'],
+                    'iva'      => $calc['iva'],
+                    'total'    => $calc['total'],
+                    'discount' => $calc['descuento_global'],
+                ],
+                'deltas'        => $cmp['deltas'],
+            ]);
+        }
+
         // T9: PAGADA exige received >= total (escenario A: store, sin partial_payments aún)
+        // Se valida contra el total recalculado en backend, no contra el enviado por cliente.
         $statusEnviado = $rcp['status'] ?? Receipt::STATUS_POR_COBRAR;
-        $receivedEnviado = $rcp['received'] ?? 0;
-        $totalEnviado = $rcp['total'] ?? 0;
-        if ($statusEnviado === Receipt::STATUS_PAGADA && Receipt::montoMenor($receivedEnviado, $totalEnviado)) {
+        $receivedEnviado = floatval($rcp['received'] ?? 0);
+        if ($statusEnviado === Receipt::STATUS_PAGADA && Receipt::montoMenor($receivedEnviado, $calc['total'])) {
             return response()->json(['ok' => false, 'message' => 'No se puede crear la nota como PAGADA si el monto recibido es menor al total.'], 422);
         }
 
-        // T8: total >= 0 + regla cortesías
-        if ($totalEnviado < 0) {
+        // T8: total >= 0 + regla cortesías (todo contra total recalculado)
+        if ($calc['total'] < 0) {
             return response()->json(['ok' => false, 'message' => 'No se puede guardar una nota con total negativo.'], 422);
         }
-        $detailList = is_string($request->detail) ? json_decode($request->detail) : $request->detail;
-        $itemsValidar = is_array($detailList) ? $detailList : (is_object($detailList) ? (array) $detailList : []);
         if (count($itemsValidar) > 0) {
             $hayNoCortesia = false;
             foreach ($itemsValidar as $d) {
                 if (empty($d->is_complimentary)) { $hayNoCortesia = true; break; }
             }
-            if ($totalEnviado == 0 && $hayNoCortesia) {
+            if ($calc['total'] == 0 && $hayNoCortesia) {
                 return response()->json(['ok' => false, 'message' => 'Una nota con total $0 requiere que todos los ítems sean cortesía.'], 422);
             }
-            if ($totalEnviado > 0 && !$hayNoCortesia) {
+            if ($calc['total'] > 0 && !$hayNoCortesia) {
                 return response()->json(['ok' => false, 'message' => 'Una nota con total mayor a $0 debe incluir al menos un ítem que no sea cortesía.'], 422);
             }
         }
@@ -264,9 +315,8 @@ class ReceiptController extends Controller
         $finished=0;
         //Solo si no es cotizacion avaluaremos si estara finalizada o no
         if(!$es_cotizacion){
-            //calculamos si el pago recibido es mayor o igual que el total de la nota
-            //finalizamos la nota, si no se tomara como un abono
-            $finished = ($rcp['received'] >= $rcp['total'])?1:0;
+            //calculamos si el pago recibido es mayor o igual que el total RECALCULADO de la nota
+            $finished = ($receivedEnviado >= $calc['total'])?1:0;
         }
 
         $rent_periodo='';
@@ -326,12 +376,12 @@ class ReceiptController extends Controller
 
         $receipt->description = $rcp['description'];
         $receipt->observation = $rcp['observation'];
-        $receipt->discount    = $rcp['discount'];
         $receipt->discount_concept = $rcp['discount_concept'];
-        //---
-        $receipt->subtotal    = $rcp['subtotal'];
-        $receipt->total       = $rcp['total'];
-        $receipt->iva         = $rcp['iva'];
+
+        $receipt->subtotal    = $calc['subtotal'];
+        $receipt->iva         = $calc['iva'];
+        $receipt->total       = $calc['total'];
+        $receipt->discount    = $calc['descuento_global'];
         $receipt->finished    = $finished;
 
         //Campos para ventas (Renta o Ventas)
@@ -415,7 +465,7 @@ class ReceiptController extends Controller
         //Guardaremos el detalle de la nota
         $details = json_decode($request->detail);
 
-        foreach($details as $data){
+        foreach($details as $idx => $data){
             // Variable para guardar el costo del producto (para reportes de utilidad)
             $product_cost = 0;
 
@@ -460,7 +510,8 @@ class ReceiptController extends Controller
             $detail->discount    = $data->discount;
             $detail->discount_concept = $data->discount_concept;
             $detail->is_complimentary = $isComplimentary;
-            $detail->subtotal    = $isComplimentary ? 0 : $data->subtotal;
+            // Subtotal de línea recalculado por backend (cortesía=0, demás = qty*price - discount)
+            $detail->subtotal    = $calc['detail_subtotals'][$idx] ?? 0;
             $detail->save();
         }//.foreach
 
@@ -499,41 +550,88 @@ class ReceiptController extends Controller
         //Obtenemos el valor que nos dira si es una credito, si no existe ponemos en 0 el valor
         $es_credito  = isset($rcp['credit'])?$rcp['credit']:0;
 
+        //ACtualizamos todos los datos de la NOTA,
+        //deben de venir desde la APP con algun valor
+        $receipt = Receipt::findOrFail($rcp['receipt_id']);
+        $shop = $receipt->shop;
+
+        $detailList = is_string($request->detail) ? json_decode($request->detail) : $request->detail;
+        $itemsValidar = is_array($detailList) ? $detailList : (is_object($detailList) ? (array) $detailList : []);
+
+        // Recálculo de IVA/subtotal/total en backend (fuente de verdad: Shop.tax_rate).
+        $itemsCalc = array_map(function($it) {
+            $o = is_array($it) ? $it : (array) $it;
+            return [
+                'qty'              => $o['qty'] ?? 0,
+                'price'            => $o['cost'] ?? 0,
+                'discount'         => $o['discount'] ?? 0,
+                'is_complimentary' => !empty($o['is_complimentary']),
+            ];
+        }, $itemsValidar);
+
+        $aplicarIva = floatval($rcp['iva'] ?? 0) > 0;
+        $calc = ReceiptTaxCalculator::calcular(
+            $shop,
+            $itemsCalc,
+            floatval($rcp['discount'] ?? 0),
+            $aplicarIva
+        );
+
+        $cmp = ReceiptTaxCalculator::compararConCliente(
+            $calc,
+            floatval($rcp['subtotal'] ?? 0),
+            floatval($rcp['iva'] ?? 0),
+            floatval($rcp['total'] ?? 0)
+        );
+        if ($cmp['discrepancia']) {
+            Log::warning('[ReceiptTaxRecalc] updateReceiptVentas() discrepancia cliente vs backend', [
+                'receipt_id'    => $receipt->id,
+                'shop_id'       => $shop->id,
+                'tax_rate_shop' => $shop->getTaxRate(),
+                'cliente'       => [
+                    'subtotal' => $rcp['subtotal'] ?? null,
+                    'iva'      => $rcp['iva'] ?? null,
+                    'total'    => $rcp['total'] ?? null,
+                    'discount' => $rcp['discount'] ?? null,
+                ],
+                'backend'       => [
+                    'subtotal' => $calc['subtotal'],
+                    'iva'      => $calc['iva'],
+                    'total'    => $calc['total'],
+                    'discount' => $calc['descuento_global'],
+                ],
+                'deltas'        => $cmp['deltas'],
+            ]);
+        }
+
         //La nota no sera finalizada por default (en caso que sea cotizacion se quedara como 0)
         $finished=0;
         //Solo si no es cotizacion avaluaremos si estara finalizada o no
         if(!$es_cotizacion){
-            //calculamos si el pago recibido es mayor o igual que el total de la nota
-            //finalizamos la nota, si no se tomara como un abono
-            $finished = ($rcp['received'] >= $rcp['total'])?1:0;
+            //calculamos si el pago recibido es mayor o igual que el total RECALCULADO
+            $finished = (floatval($rcp['received'] ?? 0) >= $calc['total'])?1:0;
         }
 
-        //ACtualizamos todos los datos de la NOTA,
-        //deben de venir desde la APP con algun valor
-        $receipt = Receipt::findOrFail($rcp['receipt_id']);
-
         // T9: PAGADA exige received >= total (escenario B: update, fuente real $receipt->received de BD)
+        // Se valida contra el total recalculado en backend.
         $statusEnviado = $rcp['status'] ?? $receipt->status;
-        $totalEnviado = $rcp['total'] ?? $receipt->total;
-        if ($statusEnviado === Receipt::STATUS_PAGADA && Receipt::montoMenor($receipt->received, $totalEnviado)) {
+        if ($statusEnviado === Receipt::STATUS_PAGADA && Receipt::montoMenor($receipt->received, $calc['total'])) {
             return response()->json(['ok' => false, 'message' => 'No se puede marcar como PAGADA si el monto recibido es menor al total.'], 422);
         }
 
-        // T8: total >= 0 + regla cortesías
-        if ($totalEnviado < 0) {
+        // T8: total >= 0 + regla cortesías (contra total recalculado)
+        if ($calc['total'] < 0) {
             return response()->json(['ok' => false, 'message' => 'No se puede guardar una nota con total negativo.'], 422);
         }
-        $detailList = is_string($request->detail) ? json_decode($request->detail) : $request->detail;
-        $itemsValidar = is_array($detailList) ? $detailList : (is_object($detailList) ? (array) $detailList : []);
         if (count($itemsValidar) > 0) {
             $hayNoCortesia = false;
             foreach ($itemsValidar as $d) {
                 if (empty($d->is_complimentary)) { $hayNoCortesia = true; break; }
             }
-            if ($totalEnviado == 0 && $hayNoCortesia) {
+            if ($calc['total'] == 0 && $hayNoCortesia) {
                 return response()->json(['ok' => false, 'message' => 'Una nota con total $0 requiere que todos los ítems sean cortesía.'], 422);
             }
-            if ($totalEnviado > 0 && !$hayNoCortesia) {
+            if ($calc['total'] > 0 && !$hayNoCortesia) {
                 return response()->json(['ok' => false, 'message' => 'Una nota con total mayor a $0 debe incluir al menos un ítem que no sea cortesía.'], 422);
             }
         }
@@ -551,12 +649,12 @@ class ReceiptController extends Controller
         }
 
         $receipt->description = $rcp['description'];
-        $receipt->discount    = $rcp['discount'];
         $receipt->discount_concept = $rcp['discount_concept'];
-        //---
-        $receipt->subtotal    = $rcp['subtotal'];
-        $receipt->total       = $rcp['total'];
-        $receipt->iva         = $rcp['iva'];
+        //--- Valores recalculados en backend (fuente de verdad: Shop.tax_rate)
+        $receipt->subtotal    = $calc['subtotal'];
+        $receipt->iva         = $calc['iva'];
+        $receipt->total       = $calc['total'];
+        $receipt->discount    = $calc['descuento_global'];
         $receipt->finished    = $finished;
 
         //Campos para ventas (Renta o Ventas)
@@ -646,7 +744,7 @@ class ReceiptController extends Controller
         ReceiptDetail::where('receipt_id', $receipt->id)->delete();
         //Guardaremos el detalle de la nota
         $details = json_decode($request->detail);
-        foreach($details as $data){
+        foreach($details as $idx => $data){
             // Variable para guardar el costo del producto (para reportes de utilidad)
             $product_cost = 0;
 
@@ -691,7 +789,8 @@ class ReceiptController extends Controller
             $detail->discount    = $data->discount;
             $detail->discount_concept = $data->discount_concept;
             $detail->is_complimentary = $isComplimentary;
-            $detail->subtotal    = $isComplimentary ? 0 : $data->subtotal;
+            // Subtotal de línea recalculado por backend
+            $detail->subtotal    = $calc['detail_subtotals'][$idx] ?? 0;
             $detail->save();
         }//.foreach
 
@@ -800,54 +899,125 @@ class ReceiptController extends Controller
         $rcp = $request->receipt;
 
         $receipt = Receipt::findOrFail($rcp['id']);
+        $shop = $receipt->shop;
 
-        // T9: PAGADA exige received >= total (escenario B: update, fuente real $receipt->received de BD)
-        $statusEnviado = $rcp['status'] ?? $receipt->status;
-        $totalEnviado = $rcp['total'] ?? $receipt->total;
-        if ($statusEnviado === Receipt::STATUS_PAGADA && Receipt::montoMenor($receipt->received, $totalEnviado)) {
-            return response()->json(['ok' => false, 'message' => 'No se puede marcar como PAGADA si el monto recibido es menor al total.'], 422);
-        }
-
-        // T8: total >= 0 + regla cortesías (validar contra detail de BD porque updateInfo recibe detail parcial)
-        if ($totalEnviado < 0) {
-            return response()->json(['ok' => false, 'message' => 'No se puede guardar una nota con total negativo.'], 422);
-        }
-        $detailsBd = $receipt->detail()->get();
-        if ($detailsBd->count() > 0) {
-            $hayNoCortesia = $detailsBd->where('is_complimentary', false)->count() > 0;
-            if ($totalEnviado == 0 && $hayNoCortesia) {
-                return response()->json(['ok' => false, 'message' => 'Una nota con total $0 requiere que todos los ítems sean cortesía.'], 422);
-            }
-            if ($totalEnviado > 0 && !$hayNoCortesia) {
-                return response()->json(['ok' => false, 'message' => 'Una nota con total mayor a $0 debe incluir al menos un ítem que no sea cortesía.'], 422);
-            }
-        }
-
-        $receipt->status      = $rcp['status'];
-        $receipt->payment     = $rcp['payment'];
-        $receipt->subtotal    = $rcp['subtotal'];
-        $receipt->discount    = $rcp['discount'];
-        $receipt->received    = $rcp['received'];
-        $receipt->total       = $rcp['total'];
-        $receipt->description = $rcp['description'];
-        $receipt->observation = $rcp['observation'];
-
-        // T12: Si pasa a PAGADA, forzar credit=0 + credit_completed=1
-        if ($receipt->status === Receipt::STATUS_PAGADA && $receipt->credit) {
-            $receipt->credit = 0;
-            $receipt->credit_completed = 1;
-        }
-
-        $receipt->save();
-
+        // updateInfo recibe detail PARCIAL (solo items modificados). Para recalcular el
+        // total correctamente: (1) aplicamos subtotal recalculado a cada item enviado,
+        // (2) reagregamos todos los items del detail en BD, (3) recalculamos el receipt
+        // completo. Todo dentro de transacción para mantener consistencia.
         $details = json_decode($request->detail);
 
-        foreach($details as $data){
-            $detail = ReceiptDetail::findOrFail($data->id);
-            $detail->qty         = $data->qty;
-            $detail->price       = $data->price;
-            $detail->subtotal    = $data->subtotal;
-            $detail->save();
+        DB::beginTransaction();
+        try {
+            // 1. Actualizar cada item enviado con subtotal recalculado
+            if (is_array($details) || is_object($details)) {
+                foreach($details as $data){
+                    $detail = ReceiptDetail::findOrFail($data->id);
+                    $detail->qty   = $data->qty;
+                    $detail->price = $data->price;
+
+                    $isComp = $detail->is_complimentary || !empty($data->is_complimentary);
+                    $qty    = max(0.0, (float) $data->qty);
+                    $price  = max(0.0, (float) $data->price);
+                    $disc   = max(0.0, (float) ($detail->discount ?? 0));
+                    $neto   = max(0.0, $qty * $price - $disc);
+                    $detail->subtotal = $isComp ? 0.0 : round($neto, 2);
+                    $detail->save();
+                }
+            }
+
+            // 2. Recalcular receipt completo usando TODOS los items en BD
+            $itemsBd = ReceiptDetail::where('receipt_id', $receipt->id)->get();
+            $itemsCalc = $itemsBd->map(function($d){
+                return [
+                    'qty'              => $d->qty,
+                    'price'            => $d->price,
+                    'discount'         => $d->discount ?? 0,
+                    'is_complimentary' => (bool) $d->is_complimentary,
+                ];
+            })->toArray();
+
+            // aplicarIva: preserva el estado actual del receipt (updateInfo no lo toca explícitamente)
+            $aplicarIva = floatval($receipt->iva ?? 0) > 0;
+            $calc = ReceiptTaxCalculator::calcular(
+                $shop,
+                $itemsCalc,
+                floatval($rcp['discount'] ?? 0),
+                $aplicarIva
+            );
+
+            $cmp = ReceiptTaxCalculator::compararConCliente(
+                $calc,
+                floatval($rcp['subtotal'] ?? 0),
+                floatval($receipt->iva ?? 0),
+                floatval($rcp['total'] ?? 0)
+            );
+            if ($cmp['discrepancia']) {
+                Log::warning('[ReceiptTaxRecalc] updateInfo() discrepancia cliente vs backend', [
+                    'receipt_id'    => $receipt->id,
+                    'shop_id'       => $shop->id,
+                    'tax_rate_shop' => $shop->getTaxRate(),
+                    'cliente'       => [
+                        'subtotal' => $rcp['subtotal'] ?? null,
+                        'total'    => $rcp['total'] ?? null,
+                        'discount' => $rcp['discount'] ?? null,
+                    ],
+                    'backend'       => [
+                        'subtotal' => $calc['subtotal'],
+                        'iva'      => $calc['iva'],
+                        'total'    => $calc['total'],
+                        'discount' => $calc['descuento_global'],
+                    ],
+                    'deltas'        => $cmp['deltas'],
+                ]);
+            }
+
+            // 3. Validaciones T8/T9 contra total recalculado. Si fallan: rollback.
+            $statusEnviado = $rcp['status'] ?? $receipt->status;
+            $errorMsg = null;
+            if ($statusEnviado === Receipt::STATUS_PAGADA && Receipt::montoMenor($receipt->received, $calc['total'])) {
+                $errorMsg = 'No se puede marcar como PAGADA si el monto recibido es menor al total.';
+            } elseif ($calc['total'] < 0) {
+                $errorMsg = 'No se puede guardar una nota con total negativo.';
+            } elseif ($itemsBd->count() > 0) {
+                $hayNoCortesia = $itemsBd->where('is_complimentary', false)->count() > 0;
+                if ($calc['total'] == 0 && $hayNoCortesia) {
+                    $errorMsg = 'Una nota con total $0 requiere que todos los ítems sean cortesía.';
+                } elseif ($calc['total'] > 0 && !$hayNoCortesia) {
+                    $errorMsg = 'Una nota con total mayor a $0 debe incluir al menos un ítem que no sea cortesía.';
+                }
+            }
+            if ($errorMsg !== null) {
+                DB::rollBack();
+                return response()->json(['ok' => false, 'message' => $errorMsg], 422);
+            }
+
+            // 4. Aplicar al receipt
+            $receipt->status      = $rcp['status'];
+            $receipt->payment     = $rcp['payment'];
+            $receipt->subtotal    = $calc['subtotal'];
+            $receipt->iva         = $calc['iva'];
+            $receipt->total       = $calc['total'];
+            $receipt->discount    = $calc['descuento_global'];
+            $receipt->received    = $rcp['received'];
+            $receipt->description = $rcp['description'];
+            $receipt->observation = $rcp['observation'];
+
+            // T12: Si pasa a PAGADA, forzar credit=0 + credit_completed=1
+            if ($receipt->status === Receipt::STATUS_PAGADA && $receipt->credit) {
+                $receipt->credit = 0;
+                $receipt->credit_completed = 1;
+            }
+
+            $receipt->save();
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('[ReceiptTaxRecalc] updateInfo() excepción en transacción', [
+                'receipt_id' => $receipt->id,
+                'error'      => $e->getMessage(),
+            ]);
+            return response()->json(['ok' => false, 'message' => 'Error al actualizar la nota.'], 500);
         }
 
         return response()->json([

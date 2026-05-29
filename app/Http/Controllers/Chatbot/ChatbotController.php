@@ -13,6 +13,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Log;
+use App\Services\Receipts\ReceiptTaxCalculator;
 
 class ChatbotController extends Controller
 {
@@ -108,23 +110,7 @@ class ChatbotController extends Controller
             $nuevo_folio = $ultimo_folio + 1;
         }
 
-        //Guardamos todos los datos de la NOTA, deben de venir desde la APP con algun valor
-        $receipt = new Receipt();
-        $receipt->folio = $nuevo_folio;
-        $receipt->shop_id     = $shop->id;
-        $receipt->client_id   = $rcp['client_id'];
-        $receipt->type        = 'venta';
-        $receipt->observation = $rcp['observation'];
-        $receipt->subtotal    = $rcp['total'];//en este caso especifico el total es le subtotal
-        $receipt->total       = $rcp['total'];
-        $receipt->finished    = 0;
-        $receipt->status      = 'NUEVA COMPRA';
-        $receipt->origin      = 'CHATBOT';
-        $receipt->save();
-
         //Guardaremos el detalle de la nota
-        //$details = json_decode($request->detail);
-
         $details = $request->detail;
 
         if (!is_array($details)) {
@@ -134,6 +120,7 @@ class ChatbotController extends Controller
             ], 400);
         }
 
+        // Validamos items antes de crear el receipt (evita receipt huérfano sin detail)
         foreach ($details as $data) {
             if (!is_object((object)$data) || !isset($data['id'])) {
                 return response()->json([
@@ -141,7 +128,54 @@ class ChatbotController extends Controller
                     'message' => 'Cada detalle debe ser un objeto con las propiedades necesarias.',
                 ], 400);
             }
+        }
 
+        // Recálculo backend: chatbot NO aplica IVA (aplicarIva=false hardcoded).
+        // Total = Σ subtotal por línea = Σ (qty * cost).
+        $itemsCalc = array_map(function($d){
+            return [
+                'qty'              => $d['qty'] ?? 0,
+                'price'            => $d['cost'] ?? 0,
+                'discount'         => 0,
+                'is_complimentary' => false,
+            ];
+        }, $details);
+
+        $calc = ReceiptTaxCalculator::calcular($shop, $itemsCalc, 0.0, false);
+
+        $cmp = ReceiptTaxCalculator::compararConCliente(
+            $calc,
+            floatval($rcp['total'] ?? 0),
+            0.0,
+            floatval($rcp['total'] ?? 0)
+        );
+        if ($cmp['discrepancia']) {
+            Log::warning('[ReceiptTaxRecalc] Chatbot::receiptStore() discrepancia cliente vs backend', [
+                'shop_id'       => $shop->id,
+                'tax_rate_shop' => $shop->getTaxRate(),
+                'cliente_total' => $rcp['total'] ?? null,
+                'backend_total' => $calc['total'],
+                'deltas'        => $cmp['deltas'],
+            ]);
+        }
+
+        //Guardamos todos los datos de la NOTA, deben de venir desde la APP con algun valor
+        $receipt = new Receipt();
+        $receipt->folio = $nuevo_folio;
+        $receipt->shop_id     = $shop->id;
+        $receipt->client_id   = $rcp['client_id'];
+        $receipt->type        = 'venta';
+        $receipt->observation = $rcp['observation'];
+        // Valores recalculados en backend (chatbot sin IVA → subtotal = total)
+        $receipt->subtotal    = $calc['subtotal'];
+        $receipt->iva         = 0;
+        $receipt->total       = $calc['total'];
+        $receipt->finished    = 0;
+        $receipt->status      = 'NUEVA COMPRA';
+        $receipt->origin      = 'CHATBOT';
+        $receipt->save();
+
+        foreach ($details as $idx => $data) {
             $detail = new ReceiptDetail();
             $detail->receipt_id  = $receipt->id;
             $detail->product_id  = $data['id'];
@@ -149,7 +183,8 @@ class ChatbotController extends Controller
             $detail->descripcion = $data['name'] ?? '';
             $detail->qty         = $data['qty'] ?? 0;
             $detail->price       = $data['cost'] ?? 0;
-            $detail->subtotal    = $data['subtotal'] ?? 0;
+            // Subtotal de línea recalculado por backend
+            $detail->subtotal    = $calc['detail_subtotals'][$idx] ?? 0;
             $detail->image       = $data['image'] ?? null;
             $detail->save();
         }

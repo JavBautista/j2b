@@ -500,6 +500,17 @@
                                     </div>
                                     <small class="text-muted d-block mb-3">Adeudo actual: {{ formatCurrency(adeudo) }}</small>
 
+                                    <!-- Fecha real del pago (FechaPago del complemento PPD) -->
+                                    <label class="form-label small">Fecha de pago <span class="text-danger">*</span></label>
+                                    <input
+                                        type="date"
+                                        class="form-control form-control-sm mb-1"
+                                        v-model="nuevoAbono.payment_date"
+                                        :min="minFechaPago"
+                                        :max="hoyISO"
+                                    >
+                                    <small class="text-muted d-block mb-3">Fecha real en que recibiste el dinero. Va al complemento de pago del SAT.</small>
+
                                     <!-- Forma de pago SAT -->
                                     <label class="form-label small">Forma de pago <span class="text-danger">*</span></label>
                                     <select class="form-select form-select-sm mb-3" v-model="nuevoAbono.payment_method">
@@ -560,7 +571,7 @@
                                     <button
                                         class="btn btn-success btn-sm"
                                         @click="agregarAbono"
-                                        :disabled="!nuevoAbono.amount || nuevoAbono.amount <= 0 || agregandoAbono"
+                                        :disabled="!nuevoAbono.amount || nuevoAbono.amount <= 0 || !nuevoAbono.payment_date || agregandoAbono"
                                     >
                                         <span v-if="agregandoAbono"><i class="fa fa-spinner fa-spin me-1"></i>Guardando...</span>
                                         <span v-else><i class="fa fa-check me-1"></i>Agregar</span>
@@ -620,6 +631,18 @@
                                 {{ formatCurrency(totalPagado) }}
                                 <small class="text-muted fw-normal">(suma de abonos)</small>
                             </div>
+                        </div>
+
+                        <!-- Fecha del pago inicial: solo al crear y si hay monto recibido -->
+                        <div v-if="isCreateMode && receipt.received > 0" class="mb-3">
+                            <label class="form-label small">Fecha del pago recibido</label>
+                            <input
+                                type="date"
+                                class="form-control form-control-sm"
+                                v-model="receipt.payment_date"
+                                :max="hoyISO"
+                            >
+                            <small class="text-muted">Fecha real en que recibiste este pago (va al complemento SAT).</small>
                         </div>
 
                         <!-- Crédito -->
@@ -941,6 +964,7 @@ export default {
                 subtotal: 0,
                 discount: 0,
                 received: 0,
+                payment_date: this.getHoyISO(),
                 total: 0,
                 iva: 0,
                 quotation: false,
@@ -993,6 +1017,17 @@ export default {
         },
         abonoEsBancarizado() {
             return ['02','03','04','05','06','28','29'].includes(this.nuevoAbono.payment_method);
+        },
+        hoyISO() {
+            return this.getHoyISO();
+        },
+        // Fecha mínima del pago: no puede ser anterior a la creación de la nota
+        // (el backend valida además que no sea anterior a la emisión del CFDI).
+        minFechaPago() {
+            if (this.receiptOriginal && this.receiptOriginal.created_at) {
+                return String(this.receiptOriginal.created_at).slice(0, 10);
+            }
+            return null;
         },
         puedeGuardar() {
             return this.client && this.items.length > 0;
@@ -1873,9 +1908,16 @@ export default {
         },
 
         // ==================== PAGOS PARCIALES / ABONOS ====================
+        getHoyISO() {
+            const d = new Date();
+            const off = d.getTimezoneOffset();
+            return new Date(d.getTime() - off * 60000).toISOString().slice(0, 10);
+        },
+
         crearAbonoVacio() {
             return {
                 amount: 0,
+                payment_date: this.getHoyISO(),
                 payment_method: '01',
                 shop_bank_account_id: null,
                 bank_ord_code: '',
@@ -1926,6 +1968,10 @@ export default {
 
         async agregarAbono() {
             if (!this.nuevoAbono.amount || this.nuevoAbono.amount <= 0) return;
+            if (!this.nuevoAbono.payment_date) {
+                Swal.fire('Falta la fecha', 'Indica la fecha real en que recibiste el pago.', 'warning');
+                return;
+            }
 
             this.agregandoAbono = true;
             try {
@@ -1933,6 +1979,7 @@ export default {
                 const bancarizada = ['02','03','04','05','06','28','29'].includes(this.nuevoAbono.payment_method);
                 const payload = {
                     amount: this.nuevoAbono.amount,
+                    payment_date: this.nuevoAbono.payment_date,
                     payment_method: this.nuevoAbono.payment_method,
                 };
                 if (bancarizada) {
@@ -2121,7 +2168,10 @@ export default {
         // ==================== UTILIDADES ====================
         formatDate(dateStr) {
             if (!dateStr) return '';
-            const d = new Date(dateStr);
+            const s = String(dateStr);
+            // Fecha pura YYYY-MM-DD: construir como local para no correr el día por interpretación UTC.
+            const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            const d = m ? new Date(+m[1], +m[2] - 1, +m[3]) : new Date(s.replace(' ', 'T'));
             return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
         },
         formatCurrency(amount) {

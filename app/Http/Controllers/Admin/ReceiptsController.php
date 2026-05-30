@@ -368,11 +368,17 @@ class ReceiptsController extends Controller
             // Determinar tipo de pago: 'unico' si paga todo, 'inicial' si es parcial
             $payment_type = ($monto_a_registrar >= $receipt->total) ? 'unico' : 'inicial';
 
+            // Fecha real del pago (nota recién creada → solo valida no-futura).
+            $fecha_pago = \App\Services\Pagos\PaymentDateResolver::resolver(
+                $request->input('payment_date') ?? ($rcp['payment_date'] ?? null),
+                $receipt
+            );
+
             $partial = new PartialPayments();
             $partial->receipt_id = $receipt->id;
             $partial->amount = $monto_a_registrar;
             $partial->payment_type = $payment_type;
-            $partial->payment_date = $date_today;
+            $partial->payment_date = $fecha_pago;
             $partial->save();
         }
 
@@ -895,6 +901,7 @@ class ReceiptsController extends Controller
         // Validación campos opcionales por-abono (Pagos 2.0)
         $request->validate([
             'amount'                => 'required|numeric|min:0.01',
+            'payment_date'          => 'nullable|date',
             'payment_method'        => 'nullable|string|in:01,02,03,04,05,06,28,29,99',
             'shop_bank_account_id'  => 'nullable|integer|exists:shop_bank_accounts,id',
             'bank_ord_code'         => 'nullable|string|max:10',
@@ -902,6 +909,9 @@ class ReceiptsController extends Controller
             'is_foreign_bank_ord'   => 'nullable|boolean',
             'num_operacion'         => 'nullable|string|max:100',
         ]);
+
+        // Fecha real del pago (FechaPago del complemento PPD). Valida no-futura y no-anterior a la factura.
+        $fecha_pago = \App\Services\Pagos\PaymentDateResolver::resolver($request->payment_date, $receipt);
 
         $suma_actual = $receipt->partialPayments->sum('amount');
         $nueva_suma = $suma_actual + $request->amount;
@@ -913,7 +923,7 @@ class ReceiptsController extends Controller
         $payment->receipt_id = $receipt->id;
         $payment->amount = $request->amount;
         $payment->payment_type = $payment_type;
-        $payment->payment_date = now();
+        $payment->payment_date = $fecha_pago;
         $payment->payment_method = $request->payment_method ?? '99';
         $payment->shop_bank_account_id = $request->shop_bank_account_id;
         $payment->bank_ord_code = $request->bank_ord_code;

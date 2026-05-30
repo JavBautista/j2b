@@ -25,6 +25,7 @@ class PartialPaymentsController extends Controller
         $request->validate([
             'receipt_id'            => 'required|integer|exists:receipts,id',
             'amount'                => 'required|numeric|min:0.01',
+            'payment_date'          => 'nullable|date',
             'payment_method'        => 'nullable|string|in:01,02,03,04,05,06,28,29,99',
             'shop_bank_account_id'  => 'nullable|integer|exists:shop_bank_accounts,id',
             'bank_ord_code'         => 'nullable|string|max:10',
@@ -37,6 +38,9 @@ class PartialPaymentsController extends Controller
         $receipt = Receipt::with('partialPayments')->findOrFail($request->receipt_id);
         $suma_actual = $receipt->partialPayments->sum('amount');
 
+        // Fecha real del pago (FechaPago del complemento PPD). Valida no-futura y no-anterior a la factura.
+        $fecha_pago = \App\Services\Pagos\PaymentDateResolver::resolver($request->payment_date, $receipt);
+
         // Calcular nueva suma después de este pago
         $nueva_suma = $suma_actual + $request->amount;
 
@@ -48,7 +52,7 @@ class PartialPaymentsController extends Controller
         $payment->receipt_id = $request->receipt_id;
         $payment->amount = $request->amount;
         $payment->payment_type = $payment_type;
-        $payment->payment_date = $date_today;
+        $payment->payment_date = $fecha_pago;
         $payment->payment_method = $request->payment_method ?? '99';
         $payment->shop_bank_account_id = $request->shop_bank_account_id;
         $payment->bank_ord_code = $request->bank_ord_code;

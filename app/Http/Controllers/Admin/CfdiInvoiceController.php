@@ -877,6 +877,42 @@ class CfdiInvoiceController extends Controller
             ->orderBy('id')
             ->get();
 
+        // Enriquecer cada complemento con la fecha real del pago (del abono asociado),
+        // que es la fiscalmente relevante (FechaPago del XML), no la fecha de emisión.
+        $idsAbonos = $complementos->flatMap(function ($c) {
+            $ids = [];
+            if ($c->partial_payment_id) {
+                $ids[] = $c->partial_payment_id;
+            }
+            if (!empty($c->consolidated_partial_payment_ids)) {
+                $cons = is_array($c->consolidated_partial_payment_ids)
+                    ? $c->consolidated_partial_payment_ids
+                    : json_decode($c->consolidated_partial_payment_ids, true);
+                $ids = array_merge($ids, (array) $cons);
+            }
+            return $ids;
+        })->filter()->unique()->values()->all();
+
+        $fechasAbono = \App\Models\PartialPayments::whereIn('id', $idsAbonos)
+            ->pluck('payment_date', 'id'); // strings 'Y-m-d' (columna date)
+
+        $complementosOut = $complementos->map(function ($c) use ($fechasAbono) {
+            $arr = $c->toArray();
+            $fecha = null;
+            if ($c->partial_payment_id && $fechasAbono->has($c->partial_payment_id)) {
+                $fecha = $fechasAbono->get($c->partial_payment_id);
+            } elseif (!empty($c->consolidated_partial_payment_ids)) {
+                $cons = is_array($c->consolidated_partial_payment_ids)
+                    ? $c->consolidated_partial_payment_ids
+                    : json_decode($c->consolidated_partial_payment_ids, true);
+                // Consolidado: usar la fecha del último pago incluido.
+                $fechas = collect((array) $cons)->map(fn ($id) => $fechasAbono->get($id))->filter();
+                $fecha = $fechas->max();
+            }
+            $arr['fecha_pago'] = $fecha ? substr((string) $fecha, 0, 10) : null;
+            return $arr;
+        });
+
         return response()->json([
             'ok' => true,
             'invoice' => [
@@ -892,7 +928,7 @@ class CfdiInvoiceController extends Controller
                 'status' => $invoice->status,
             ],
             'saldo_insoluto' => (float) $invoice->saldoInsoluto(),
-            'complementos' => $complementos,
+            'complementos' => $complementosOut,
             'receipt_total_comercial' => (float) $receipt->total,
         ]);
     }

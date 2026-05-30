@@ -439,11 +439,17 @@ class ReceiptController extends Controller
             // Determinar tipo de pago: 'unico' si paga todo, 'inicial' si es parcial
             $payment_type = ($monto_a_registrar >= $receipt->total) ? 'unico' : 'inicial';
 
+            // Fecha real del pago (nota recién creada → solo valida no-futura).
+            $fecha_pago = \App\Services\Pagos\PaymentDateResolver::resolver(
+                $request->input('payment_date') ?? ($rcp['payment_date'] ?? null),
+                $receipt
+            );
+
             $partial = new PartialPayments();
             $partial->receipt_id = $receipt->id;
             $partial->amount = $monto_a_registrar;
             $partial->payment_type = $payment_type;
-            $partial->payment_date = $date_today;
+            $partial->payment_date = $fecha_pago;
             $partial->save();
         }//.if(Pagos - Centralización de ingresos)
 

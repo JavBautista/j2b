@@ -109,7 +109,7 @@ class CfdiComplementoPagoService
             $folio = $emisor->siguienteFolioComplemento();
             $fechaEmision = Carbon::now('America/Mexico_City')->format('Y-m-d H:i:s');
             $fechaPago = $abono->payment_date
-                ? Carbon::parse($abono->payment_date, 'America/Mexico_City')->format('Y-m-d\TH:i:s')
+                ? $this->fechaPagoXml($abono->payment_date)
                 : Carbon::now('America/Mexico_City')->format('Y-m-d\TH:i:s');
 
             // Forma de pago: prioridad al abono (cada abono PPD puede tener forma distinta).
@@ -412,7 +412,7 @@ class CfdiComplementoPagoService
         try {
             $folio = $emisor->siguienteFolioComplemento();
             $fechaEmision = Carbon::now('America/Mexico_City')->format('Y-m-d H:i:s');
-            $fechaPago = Carbon::parse($fechaPagoSrc, 'America/Mexico_City')->format('Y-m-d\TH:i:s');
+            $fechaPago = $this->fechaPagoXml($fechaPagoSrc);
 
             $formaPago = $datos['payment_method'];
             $esBancarizada = in_array($formaPago, ['02','03','04','05','06','28','29'], true);
@@ -1033,5 +1033,16 @@ class CfdiComplementoPagoService
                 'metadata' => ['complemento_id' => $complemento->id],
             ], 'warning');
         }
+    }
+
+    /**
+     * Normaliza la FechaPago del complemento al mediodía del día indicado.
+     * Toma solo el día (la columna payment_date es DATE) y fija 12:00:00 para que
+     * ninguna conversión de zona horaria pueda correr la fecha a otro día.
+     */
+    private function fechaPagoXml($src): string
+    {
+        $dia = substr((string) $src, 0, 10); // 'Y-m-d'
+        return Carbon::parse($dia . ' 12:00:00', 'America/Mexico_City')->format('Y-m-d\TH:i:s');
     }
 }

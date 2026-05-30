@@ -70,8 +70,11 @@
                             <div class="saldo-text">
                                 Saldo restante: <strong>{{ formatCurrency(c.imp_saldo_insoluto) }}</strong>
                             </div>
+                            <div class="fecha-text" v-if="c.fecha_pago">
+                                <i class="fa fa-money me-1"></i>Pago: {{ formatDate(c.fecha_pago) }}
+                            </div>
                             <div class="fecha-text">
-                                <i class="fa fa-calendar-o me-1"></i>{{ formatDate(c.fecha_timbrado || c.fecha_emision) }}
+                                <i class="fa fa-calendar-o me-1"></i>Emitido: {{ formatDate(c.fecha_timbrado || c.fecha_emision) }}
                             </div>
                         </div>
                         <div class="acciones-col">
@@ -233,7 +236,10 @@ export default {
         },
         formatDate(dateStr) {
             if (!dateStr) return '';
-            const d = new Date(dateStr);
+            const s = String(dateStr);
+            // Fecha pura YYYY-MM-DD: construir como local para no correr el día por interpretación UTC.
+            const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            const d = m ? new Date(+m[1], +m[2] - 1, +m[3]) : new Date(s.replace(' ', 'T'));
             return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
         },
     },

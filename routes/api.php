@@ -546,6 +546,7 @@ Route::group([
         Route::post('administrator/active','App\Http\Controllers\AdministratorController@active');
         Route::post('administrator/inactive','App\Http\Controllers\AdministratorController@inactive');
         Route::post('administrator/update-lmited','App\Http\Controllers\AdministratorController@updateLimited');
+        Route::post('user/reset-password-admin','App\Http\Controllers\AdministratorController@resetPasswordAdmin');
 
         /*ROUTES APP-CLIENTS*/
         // DEPRECATED: Rutas antiguas de client-services (usar tasks/client/* en su lugar)

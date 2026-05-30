@@ -174,6 +174,34 @@ class AdministratorController extends Controller
         ]);
     }
 
+    public function resetPasswordAdmin(Request $request)
+    {
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'password' => 'required|min:8',
+            'password_confirmation' => 'required|same:password'
+        ]);
+
+        $authUser = $request->user();
+        $targetUser = User::findOrFail($request->user_id);
+
+        if ($targetUser->shop_id !== $authUser->shop_id) {
+            return response()->json(['error' => 'No autorizado'], 403);
+        }
+
+        if ($targetUser->id === $authUser->id) {
+            return response()->json(['error' => 'No puedes resetear tu propia contraseña desde aquí'], 403);
+        }
+
+        $targetUser->password = Hash::make($request->password);
+        $targetUser->save();
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Contraseña actualizada correctamente'
+        ]);
+    }
+
     public function updateLimited(Request $request)
     {
         $administrator = Administrator::findOrFail($request->id);

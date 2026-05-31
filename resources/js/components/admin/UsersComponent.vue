@@ -110,6 +110,7 @@
                                     <button class="btn btn-sm btn-outline-dark dropdown-toggle"
                                             type="button"
                                             data-bs-toggle="dropdown"
+                                            data-bs-display="static"
                                             aria-expanded="false">
                                         <i class="fa fa-ellipsis-v"></i>
                                     </button>
@@ -250,7 +251,7 @@
 
     <!-- MODAL VER DETALLE -->
     <div class="modal fade" :class="{show: modalVer}" :style="{display: modalVer ? 'block' : 'none'}" tabindex="-1" v-if="modalVer">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">
@@ -370,7 +371,7 @@
 
     <!-- MODAL CREAR -->
     <div class="modal fade" :class="{show: modalCrear}" :style="{display: modalCrear ? 'block' : 'none'}" tabindex="-1" v-if="modalCrear">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">
@@ -511,7 +512,7 @@
 
     <!-- MODAL EDITAR -->
     <div class="modal fade" :class="{show: modalEditar}" :style="{display: modalEditar ? 'block' : 'none'}" tabindex="-1" v-if="modalEditar">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">
@@ -1386,16 +1387,15 @@ export default {
 </script>
 
 <style scoped>
+/* Modal con scroll interno (modal-dialog-scrollable): header y footer fijos,
+   el body scrollea. NO usar position:absolute en .modal-content porque rompe
+   el cálculo de altura y el modal crece sin límite (botón Guardar fuera de pantalla). */
 .modal-content{
     width: 100% !important;
-    position: absolute !important;
 }
-.mostrar{
-    display: list-item !important;
-    opacity: 1 !important;
-    position: fixed !important;
-    background-color: #3c29297a !important;
-    overflow: scroll;
+/* Asegura que el modal pueda scrollear el overlay si el contenido excede el viewport. */
+.modal{
+    overflow-y: auto !important;
 }
 
 /* Estilos para Cards de Usuarios - igual que Tasks */
@@ -1404,6 +1404,18 @@ export default {
     border-radius: 12px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     transition: all 0.3s ease;
+    overflow: visible;
+}
+
+/* Dropdown de acciones: con data-bs-display="static" se posiciona pegado al botón
+   (sin Popper), evitando que se vaya a la esquina con zoom/resolución pequeña. */
+.user-card .dropdown-menu {
+    border: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border-radius: 8px;
+    z-index: 1050;
+}
+.user-card .card-header {
     overflow: visible;
 }
 

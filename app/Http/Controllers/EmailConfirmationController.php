@@ -112,6 +112,9 @@ class EmailConfirmationController extends Controller
                     'subscription_status' => 'trial'
                 ]);
 
+                // Catálogo de tasas: sembrar la tasa default para que la nueva tienda no quede sin catálogo.
+                \App\Models\ShopTaxRate::seedDefaultForShop($shop);
+
                 // 4. Crear usuario asociado a la tienda
                 $user = User::create([
                     'shop_id' => $shop->id,

@@ -386,7 +386,7 @@
                         <span>-{{ formatCurrency(descuentoMonto) }}</span>
                     </div>
 
-                    <!-- IVA -->
+                    <!-- IVA / Impuesto -->
                     <div class="form-check mb-2">
                         <input
                             class="form-check-input"
@@ -397,11 +397,24 @@
                             :disabled="isViewMode"
                         >
                         <label class="form-check-label" for="toggleIVA">
-                            Agregar {{ $shopTaxName || 'IVA' }} ({{ $shopTaxRate }}%)
+                            Agregar impuesto
                         </label>
                     </div>
+                    <!-- Selector de tasa (catálogo de la tienda). La tasa elegida se congela en la nota. -->
+                    <div v-if="conIVA && taxRates.length" class="mb-2">
+                        <select
+                            class="form-select form-select-sm"
+                            v-model="selectedTaxRateId"
+                            @change="calcularTotales"
+                            :disabled="isViewMode"
+                        >
+                            <option v-for="t in taxRates" :key="t.id" :value="t.id">
+                                {{ t.name }} ({{ formatTasa(t.rate) }}%)
+                            </option>
+                        </select>
+                    </div>
                     <div v-if="conIVA" class="d-flex justify-content-between mb-2">
-                        <span>{{ $shopTaxName || 'IVA' }}:</span>
+                        <span>{{ tasaSeleccionada ? tasaSeleccionada.name : ($shopTaxName || 'IVA') }}:</span>
                         <span>{{ formatCurrency(ivaMonto) }}</span>
                     </div>
 
@@ -918,6 +931,10 @@ export default {
             conIVA: false,
             esCredito: false,
 
+            // Catálogo de tasas de impuesto (selector por nota). selectedTaxRateId se congela en la nota.
+            taxRates: [],
+            selectedTaxRateId: null,
+
             // Modales
             showModalCliente: false,
             showModalProducto: false,
@@ -1006,6 +1023,17 @@ export default {
         }
     },
     computed: {
+        // Tasa elegida en el selector (objeto del catálogo) y su decimal para cálculos.
+        tasaSeleccionada() {
+            return this.taxRates.find(t => t.id === this.selectedTaxRateId) || null;
+        },
+        tasaSeleccionadaDecimal() {
+            if (this.tasaSeleccionada) {
+                return parseFloat(this.tasaSeleccionada.rate) / 100;
+            }
+            // Fallback a la tasa global de la tienda (notas sin catálogo cargado).
+            return this.$taxDecimal;
+        },
         isCreateMode() {
             return this.receiptId === null;
         },
@@ -1052,7 +1080,7 @@ export default {
             return this.cotizacion ? 'Actualizar Cotización' : 'Actualizar Nota de Venta';
         }
     },
-    mounted() {
+    async mounted() {
         // Usuarios limitados no pueden crear ni editar
         if (this.userLimited && !this.readOnly) {
             Swal.fire('Acceso denegado', 'No tienes permisos para crear o editar notas de venta', 'warning');
@@ -1061,6 +1089,8 @@ export default {
         }
 
         this.loadExtraFields();
+        // Cargar catálogo de tasas ANTES del receipt para poder preseleccionar la del snapshot.
+        await this.cargarTaxRates();
 
         if (this.receiptId) {
             this.loadReceiptData();
@@ -1076,6 +1106,28 @@ export default {
         }
     },
     methods: {
+        // ==================== TASAS DE IMPUESTO ====================
+        async cargarTaxRates() {
+            try {
+                const res = await axios.get('/admin/configuracion/tasas-impuesto/data');
+                if (res.data.ok) {
+                    this.taxRates = (res.data.rates || []).filter(t => t.active);
+                    // Preseleccionar la default si aún no hay selección.
+                    if (!this.selectedTaxRateId && this.taxRates.length) {
+                        const def = this.taxRates.find(t => t.is_default) || this.taxRates[0];
+                        this.selectedTaxRateId = def.id;
+                    }
+                }
+            } catch (e) {
+                console.error('No se pudieron cargar las tasas de impuesto', e);
+            }
+        },
+
+        formatTasa(rate) {
+            const n = parseFloat(rate);
+            return Number.isInteger(n) ? n.toString() : n.toString().replace(/\.?0+$/, '');
+        },
+
         // ==================== CARGA DE DATOS ====================
         async loadReceiptData() {
             this.isLoading = true;
@@ -1265,6 +1317,12 @@ export default {
             this.cotizacion = r.quotation === 1 || r.quotation === true;
             this.cotizacionOriginal = this.cotizacion;
             this.conIVA = r.iva > 0;
+            // Preseleccionar la tasa congelada en la nota (snapshot). Si no coincide ninguna
+            // activa del catálogo, se conserva la default ya elegida en cargarTaxRates().
+            if (r.tax_rate !== null && r.tax_rate !== undefined) {
+                const match = this.taxRates.find(t => parseFloat(t.rate) === parseFloat(r.tax_rate));
+                if (match) this.selectedTaxRateId = match.id;
+            }
             this.esCredito = r.credit === 1 || r.credit === true;
 
             // Preservar tipo y rent_id del recibo original
@@ -1652,9 +1710,9 @@ export default {
             // Base después de descuento
             let base = this.subtotal - this.descuentoMonto;
 
-            // IVA
+            // IVA (usa la tasa elegida en el selector; fallback a la tasa de la tienda)
             if (this.conIVA) {
-                this.ivaMonto = base * this.$taxDecimal;
+                this.ivaMonto = base * this.tasaSeleccionadaDecimal;
             } else {
                 this.ivaMonto = 0;
             }
@@ -1668,6 +1726,8 @@ export default {
             this.receipt.discount_concept = this.descuentoGeneralTipo;
             this.receipt.iva = this.ivaMonto;
             this.receipt.total = this.total;
+            // Snapshot: la tasa elegida viaja al backend, que la congela en la nota.
+            this.receipt.tax_rate_id = this.selectedTaxRateId;
         },
 
         // ==================== CAMBIO COTIZACIÓN ====================

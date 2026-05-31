@@ -20,6 +20,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Services\Receipts\ReceiptTaxCalculator;
+use App\Models\ShopTaxRate;
 
 class ReceiptController extends Controller
 {
@@ -246,11 +247,14 @@ class ReceiptController extends Controller
         }, $itemsValidar);
 
         $aplicarIva = floatval($rcp['iva'] ?? 0) > 0;
+        // Tasa elegida para esta nota (catálogo de la tienda). Snapshot: se congela en la nota.
+        $taxRateModel = ShopTaxRate::resolveForShop($shop, $rcp['tax_rate_id'] ?? null);
         $calc = ReceiptTaxCalculator::calcular(
             $shop,
             $itemsCalc,
             floatval($rcp['discount'] ?? 0),
-            $aplicarIva
+            $aplicarIva,
+            $taxRateModel ? (float) $taxRateModel->rate : null
         );
 
         $cmp = ReceiptTaxCalculator::compararConCliente(
@@ -382,6 +386,9 @@ class ReceiptController extends Controller
         $receipt->iva         = $calc['iva'];
         $receipt->total       = $calc['total'];
         $receipt->discount    = $calc['descuento_global'];
+        // Snapshot fiscal: tasa y nombre del impuesto al momento de la venta.
+        $receipt->tax_rate    = $taxRateModel ? $taxRateModel->rate : $shop->getTaxRate();
+        $receipt->tax_name    = $shop->tax_name;
         $receipt->finished    = $finished;
 
         //Campos para ventas (Renta o Ventas)
@@ -576,11 +583,14 @@ class ReceiptController extends Controller
         }, $itemsValidar);
 
         $aplicarIva = floatval($rcp['iva'] ?? 0) > 0;
+        // Tasa elegida para esta nota (catálogo de la tienda). Snapshot: se congela en la nota.
+        $taxRateModel = ShopTaxRate::resolveForShop($shop, $rcp['tax_rate_id'] ?? null);
         $calc = ReceiptTaxCalculator::calcular(
             $shop,
             $itemsCalc,
             floatval($rcp['discount'] ?? 0),
-            $aplicarIva
+            $aplicarIva,
+            $taxRateModel ? (float) $taxRateModel->rate : null
         );
 
         $cmp = ReceiptTaxCalculator::compararConCliente(
@@ -661,6 +671,9 @@ class ReceiptController extends Controller
         $receipt->iva         = $calc['iva'];
         $receipt->total       = $calc['total'];
         $receipt->discount    = $calc['descuento_global'];
+        // Snapshot fiscal: tasa y nombre del impuesto al momento de la venta.
+        $receipt->tax_rate    = $taxRateModel ? $taxRateModel->rate : $shop->getTaxRate();
+        $receipt->tax_name    = $shop->tax_name;
         $receipt->finished    = $finished;
 
         //Campos para ventas (Renta o Ventas)
@@ -945,11 +958,13 @@ class ReceiptController extends Controller
 
             // aplicarIva: preserva el estado actual del receipt (updateInfo no lo toca explícitamente)
             $aplicarIva = floatval($receipt->iva ?? 0) > 0;
+            // Tasa: se preserva la del snapshot del receipt (updateInfo no cambia la tasa).
             $calc = ReceiptTaxCalculator::calcular(
                 $shop,
                 $itemsCalc,
                 floatval($rcp['discount'] ?? 0),
-                $aplicarIva
+                $aplicarIva,
+                $receipt->effectiveTaxRate()
             );
 
             $cmp = ReceiptTaxCalculator::compararConCliente(

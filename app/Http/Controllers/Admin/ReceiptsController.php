@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Receipt;
+use App\Models\ShopTaxRate;
 use App\Models\ReceiptDetail;
 use App\Models\ReceiptInfoExtra;
 use App\Models\PartialPayments;
@@ -326,6 +327,10 @@ class ReceiptsController extends Controller
         $receipt->subtotal = $rcp['subtotal'] ?? 0;
         $receipt->total = $rcp['total'] ?? 0;
         $receipt->iva = $rcp['iva'] ?? 0;
+        // Snapshot fiscal: tasa y nombre del impuesto elegidos al momento de la venta.
+        $taxRateModel = ShopTaxRate::resolveForShop($shop, $rcp['tax_rate_id'] ?? null);
+        $receipt->tax_rate = $taxRateModel ? $taxRateModel->rate : $shop->getTaxRate();
+        $receipt->tax_name = $shop->tax_name;
         $receipt->finished = $finished;
         $receipt->status = $rcp['status'] ?? Receipt::STATUS_POR_COBRAR;
         $receipt->payment = $rcp['payment'] ?? 'EFECTIVO';
@@ -761,6 +766,10 @@ class ReceiptsController extends Controller
         $receipt->subtotal = $rcp['subtotal'] ?? 0;
         $receipt->total = $rcp['total'] ?? 0;
         $receipt->iva = $rcp['iva'] ?? 0;
+        // Snapshot fiscal: tasa y nombre del impuesto elegidos al momento de la venta.
+        $taxRateModel = ShopTaxRate::resolveForShop($shop, $rcp['tax_rate_id'] ?? null);
+        $receipt->tax_rate = $taxRateModel ? $taxRateModel->rate : $shop->getTaxRate();
+        $receipt->tax_name = $shop->tax_name;
         $receipt->finished = $finished;
         $receipt->status = $rcp['status'] ?? Receipt::STATUS_POR_COBRAR;
         $receipt->payment = $rcp['payment'] ?? 'EFECTIVO';

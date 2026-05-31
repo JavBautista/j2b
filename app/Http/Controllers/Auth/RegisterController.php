@@ -117,6 +117,9 @@ class RegisterController extends Controller
                     'subscription_status' => 'trial'
                 ]);
 
+                // Catálogo de tasas: sembrar la tasa default para que la nueva tienda no quede sin catálogo.
+                \App\Models\ShopTaxRate::seedDefaultForShop($shop);
+
                 $user = User::create([
                     'shop_id' => $shop->id,
                     'name' => $data['name'],

@@ -108,6 +108,9 @@ class ShopsController extends Controller
         $shop->tax_name = $request->has('tax_name') ? $request->tax_name : 'IVA';
         $shop->tax_rate = $request->tax_rate ?? 16.00;
         $shop->save();
+
+        // Catálogo de tasas: sembrar la tasa default para que la nueva tienda no quede sin catálogo.
+        \App\Models\ShopTaxRate::seedDefaultForShop($shop);
     }//store()
 
     public function update(Request $request)

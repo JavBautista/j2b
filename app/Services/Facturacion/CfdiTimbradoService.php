@@ -31,6 +31,23 @@ class CfdiTimbradoService
     }
 
     /**
+     * Traduce errores conocidos del PAC a mensajes accionables para el usuario.
+     * El error crudo igual queda en el log (cfdi.timbrado.error) para diagnóstico.
+     */
+    private function mensajeErrorAmigable(string $errorRaw): string
+    {
+        // 8% región fronteriza: el emisor no está habilitado para el estímulo fiscal fronterizo.
+        if (mb_stripos($errorRaw, 'franja fronteriza') !== false || mb_stripos($errorRaw, 'fronteriza') !== false) {
+            return 'El SAT rechazó la tasa del 8% (estímulo de la región fronteriza). Tu emisor no está '
+                . 'habilitado para esta tasa: su domicilio fiscal debe estar en la región fronteriza y estar '
+                . 'inscrito en el "Padrón de beneficiarios del estímulo fiscal para la región fronteriza". '
+                . 'Si no aplicas a ese estímulo, factura esta nota con IVA 16%.';
+        }
+
+        return 'Error al timbrar: ' . ($errorRaw !== '' ? $errorRaw : 'Error desconocido');
+    }
+
+    /**
      * @param Receipt     $receipt  Con detail.product precargado
      * @param Shop        $shop
      * @param CfdiEmisor  $emisor
@@ -42,6 +59,21 @@ class CfdiTimbradoService
      */
     public function emitir(Receipt $receipt, Shop $shop, CfdiEmisor $emisor, array $data): array
     {
+        // Validación SAT: la tasa de IVA trasladado debe estar en el catálogo c_TasaOCuota.
+        // En México solo son válidas 16%, 8% y 0%. Avisamos ANTES de llamar al PAC para no
+        // devolver un error técnico críptico. Solo aplica si la nota lleva IVA.
+        if ($receipt->iva > 0) {
+            $tasaEfectiva = round($receipt->effectiveTaxRate(), 2);
+            if (!in_array($tasaEfectiva, [0.0, 8.0, 16.0])) {
+                $tasaTxt = rtrim(rtrim(number_format($tasaEfectiva, 2, '.', ''), '0'), '.');
+                return [
+                    'ok' => false,
+                    'message' => "La tasa de impuesto de esta nota ({$tasaTxt}%) no es válida para facturación CFDI en México. El SAT solo permite 16%, 8% o 0%.",
+                    'status' => 422,
+                ];
+            }
+        }
+
         // Router pipeline: facturas con impuestos locales toman el pipeline XML
         // alterno (TimbraCFDI compat). El JSON path queda INTACTO para todo lo demás.
         // Invariante crítico — ver xdev/facturacion/PLAN_IMPUESTOS_LOCALES.md §0.5.1.
@@ -97,8 +129,10 @@ class CfdiTimbradoService
 
             // === PASO 1: pre-calcular items facturables con valores brutos sin IVA ===
             $tieneIva = $receipt->iva > 0;
-            $taxDecimal = $shop->getTaxDecimal();
-            $taxDivisor = $shop->getTaxDivisor();
+            // Snapshot fiscal: usa la tasa congelada en la nota, no la actual de la tienda.
+            // Notas históricas (sin snapshot) caen a la tasa de la tienda vía effectiveTaxRate().
+            $taxDecimal = $receipt->getTaxDecimal();
+            $taxDivisor = $receipt->getTaxDivisor();
             $conceptosCortesia = [];
             $facturables = [];
 
@@ -193,7 +227,7 @@ class CfdiTimbradoService
                             'base' => $fmt($base),
                             'impuesto' => '002',
                             'tipo_factor' => 'Tasa',
-                            'tasa_cuota' => $shop->getTaxSatRate(),
+                            'tasa_cuota' => $receipt->getTaxSatRate(),
                             'importe' => $fmt($ivaItem),
                         ]],
                     ],
@@ -318,7 +352,7 @@ class CfdiTimbradoService
                     'base' => $fmt($baseIvaGlobal),
                     'impuesto' => '002',
                     'tipo_factor' => 'Tasa',
-                    'tasa_cuota' => $shop->getTaxSatRate(),
+                    'tasa_cuota' => $receipt->getTaxSatRate(),
                     'importe' => $fmt($ivaTotal),
                 ]],
             ];
@@ -356,9 +390,10 @@ class CfdiTimbradoService
                         'receptor_rfc' => $receptorRfc,
                     ],
                 ], 'error');
+                $errorRaw = is_string($result['error']) ? $result['error'] : json_encode($result['error']);
                 return [
                     'ok' => false,
-                    'message' => 'Error al timbrar: ' . ($result['error'] ?? 'Error desconocido'),
+                    'message' => $this->mensajeErrorAmigable($errorRaw),
                     'status' => 422,
                 ];
             }

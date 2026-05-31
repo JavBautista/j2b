@@ -58,6 +58,33 @@ class Receipt extends Model
         return $this->belongsTo(Shop::class);
     }
 
+    /**
+     * Tasa de impuesto efectiva de la nota (snapshot). Si la nota no tiene
+     * tasa congelada (histórica), cae a la tasa actual de la tienda.
+     */
+    public function effectiveTaxRate(): float
+    {
+        if ($this->tax_rate !== null) {
+            return (float) $this->tax_rate;
+        }
+        return $this->shop ? $this->shop->getTaxRate() : 16.00;
+    }
+
+    public function getTaxDecimal(): float
+    {
+        return $this->effectiveTaxRate() / 100;
+    }
+
+    public function getTaxDivisor(): float
+    {
+        return 1 + $this->getTaxDecimal();
+    }
+
+    public function getTaxSatRate(): string
+    {
+        return number_format($this->getTaxDecimal(), 6);
+    }
+
     public function user(){
         return $this->belongsTo(User::class);
     }

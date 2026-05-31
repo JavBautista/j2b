@@ -17,6 +17,7 @@ class ReceiptTaxCalculator
      *                      Soporta arrays asociativos u objetos stdClass.
      * @param float $descuentoGlobal  Descuento aplicado al subtotal (no por línea).
      * @param bool  $aplicarIva  Si la nota lleva IVA o no (el monto se calcula aquí).
+     * @param float|null $taxRate  Tasa en porcentaje (ej. 16, 8, 0). Si es null usa la de la tienda.
      * @return array{
      *   subtotal: float,
      *   iva: float,
@@ -26,7 +27,7 @@ class ReceiptTaxCalculator
      *   aplicar_iva: bool
      * }
      */
-    public static function calcular(Shop $shop, array $items, float $descuentoGlobal, bool $aplicarIva): array
+    public static function calcular(Shop $shop, array $items, float $descuentoGlobal, bool $aplicarIva, ?float $taxRate = null): array
     {
         $detailSubtotals = [];
         $subtotal = 0.0;
@@ -60,7 +61,8 @@ class ReceiptTaxCalculator
 
         $baseNeta = round($subtotal - $descuentoGlobal, 2);
 
-        $iva = $aplicarIva ? round($baseNeta * $shop->getTaxDecimal(), 2) : 0.0;
+        $taxDecimal = $taxRate !== null ? ($taxRate / 100) : $shop->getTaxDecimal();
+        $iva = $aplicarIva ? round($baseNeta * $taxDecimal, 2) : 0.0;
 
         $total = round($baseNeta + $iva, 2);
 

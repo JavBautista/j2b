@@ -177,6 +177,19 @@ class CfdiInvoiceController extends Controller
             return response()->json(['ok' => false, 'message' => 'No se puede facturar una nota con total $0 (cortesía total).'], 422);
         }
 
+        // Validación SAT: la tasa de IVA debe estar en el catálogo c_TasaOCuota (México: 16%, 8%, 0%).
+        // Se valida ANTES de abrir el formulario para no hacer perder tiempo al usuario.
+        if ($receipt->iva > 0) {
+            $tasaEfectiva = round($receipt->effectiveTaxRate(), 2);
+            if (!in_array($tasaEfectiva, [0.0, 8.0, 16.0])) {
+                $tasaTxt = rtrim(rtrim(number_format($tasaEfectiva, 2, '.', ''), '0'), '.');
+                return response()->json([
+                    'ok' => false,
+                    'message' => "Esta nota tiene una tasa de impuesto de {$tasaTxt}%, que no es válida para facturación CFDI en México. El SAT solo permite 16%, 8% o 0%. Edita la nota y elige una tasa válida.",
+                ], 422);
+            }
+        }
+
         return response()->json([
             'ok' => true,
             'receipt' => $receipt,

@@ -353,6 +353,16 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
             Route::patch('/admin/configuracion/cuentas-bancarias/{id}/set-default', [\App\Http\Controllers\ShopBankAccountController::class, 'setDefault'])->name('admin.bank-accounts.set-default');
         }); // ./Cuentas bancarias escritura (full.admin)
 
+        // Catálogo de tasas de impuesto de la tienda — selector de tasa por nota + snapshot fiscal
+        Route::get('/admin/configuracion/tasas-impuesto', [\App\Http\Controllers\ShopTaxRateController::class, 'page'])->name('admin.tax-rates.page');
+        Route::get('/admin/configuracion/tasas-impuesto/data', [\App\Http\Controllers\ShopTaxRateController::class, 'index'])->name('admin.tax-rates.index');
+        Route::group(['middleware' => ['full.admin']], function () {
+            Route::post('/admin/configuracion/tasas-impuesto', [\App\Http\Controllers\ShopTaxRateController::class, 'store'])->name('admin.tax-rates.store');
+            Route::put('/admin/configuracion/tasas-impuesto/{id}', [\App\Http\Controllers\ShopTaxRateController::class, 'update'])->name('admin.tax-rates.update');
+            Route::delete('/admin/configuracion/tasas-impuesto/{id}', [\App\Http\Controllers\ShopTaxRateController::class, 'destroy'])->name('admin.tax-rates.destroy');
+            Route::patch('/admin/configuracion/tasas-impuesto/{id}/set-default', [\App\Http\Controllers\ShopTaxRateController::class, 'setDefault'])->name('admin.tax-rates.set-default');
+        }); // ./Tasas de impuesto escritura (full.admin)
+
         // Facturación CFDI - Facturas Emitidas
         Route::get('/admin/facturacion/facturas', [App\Http\Controllers\Admin\CfdiInvoiceController::class, 'indexFacturas'])->name('admin.cfdi.facturas');
         Route::get('/admin/facturacion/facturas/get', [App\Http\Controllers\Admin\CfdiInvoiceController::class, 'getFacturas']);

@@ -303,7 +303,7 @@
                                                 <td class="text-end text-danger">−${{ formatNumber(descuentoDisplay) }}</td>
                                             </tr>
                                             <tr>
-                                                <td :colspan="colspanFooter" class="text-end"><strong>{{ $shopTaxName || 'IVA' }} ({{ $shopTaxRate }}%):</strong></td>
+                                                <td :colspan="colspanFooter" class="text-end"><strong>{{ tasaNotaNombre }} ({{ tasaNotaPct }}%):</strong></td>
                                                 <td class="text-end">${{ formatNumber(ivaDisplay) }}</td>
                                             </tr>
                                             <tr v-if="retIsrAplica && prorrateo.retIsr > 0">
@@ -608,6 +608,18 @@ export default {
         };
     },
     computed: {
+        // Tasa/nombre del impuesto CONGELADOS en la nota (snapshot), para el desglose.
+        // Fallback a la config de la tienda en notas históricas sin snapshot.
+        tasaNotaPct() {
+            if (this.receiptData && this.receiptData.tax_rate !== null && this.receiptData.tax_rate !== undefined) {
+                const n = parseFloat(this.receiptData.tax_rate);
+                return Number.isInteger(n) ? n.toString() : n.toString().replace(/\.?0+$/, '');
+            }
+            return this.$shopTaxRate;
+        },
+        tasaNotaNombre() {
+            return (this.receiptData && this.receiptData.tax_name) ? this.receiptData.tax_name : (this.$shopTaxName || 'IVA');
+        },
         metodoPagoLabel() {
             return this.metodoPago === 'PPD'
                 ? 'PPD - Pago en Parcialidades o Diferido'
@@ -638,8 +650,12 @@ export default {
                 return { facturables: [], subtotal: 0, descuento: 0, baseIva: 0, iva: 0, total: 0, factor: 0 };
             }
             const tieneIva = this.receiptData.iva > 0;
-            const divisor = this.$taxDivisor;
-            const decimal = divisor - 1;
+            // Usa la tasa CONGELADA en la nota (snapshot) para que la previsualización
+            // coincida con el timbrado. Fallback a la tasa de la tienda en notas históricas.
+            const decimal = (this.receiptData.tax_rate !== null && this.receiptData.tax_rate !== undefined)
+                ? parseFloat(this.receiptData.tax_rate) / 100
+                : (this.$taxDivisor - 1);
+            const divisor = 1 + decimal;
 
             // Lookup de aplica_retencion por detail_id desde conceptosSat (marcable por usuario)
             const aplicaRetById = {};
@@ -830,10 +846,23 @@ export default {
         },
     },
     methods: {
-        abrir() {
+        async abrir() {
             this.resetForm();
+            // Cargar datos ANTES de mostrar el modal: si la nota no se puede facturar
+            // (tasa inválida, cotización, ya facturada, total $0…) avisamos con un SweetAlert
+            // y NO abrimos el formulario, para no hacer perder tiempo al usuario.
+            Swal.fire({ title: 'Validando nota...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            const ok = await this.cargarDatos();
+            Swal.close();
+            if (!ok) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'No se puede facturar esta nota',
+                    text: this.error || 'La nota no cumple los requisitos para facturarse.',
+                });
+                return;
+            }
             this.showModal = true;
-            this.cargarDatos();
         },
         cerrar() {
             if (this.timbradoExitoso) {
@@ -905,11 +934,14 @@ export default {
                     if (this.metodoPago === 'PPD') {
                         this.formaPago = '99';
                     }
+                    return true;
                 } else {
                     this.error = res.data.message;
+                    return false;
                 }
             } catch (e) {
                 this.error = e.response?.data?.message || 'Error al cargar datos';
+                return false;
             } finally {
                 this.cargando = false;
             }

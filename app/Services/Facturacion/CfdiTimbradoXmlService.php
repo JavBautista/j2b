@@ -96,9 +96,10 @@ class CfdiTimbradoXmlService
 
             // === PASO 1: pre-calcular items facturables con valores brutos sin IVA ===
             $tieneIva = $receipt->iva > 0;
-            $taxDecimal = $shop->getTaxDecimal();
-            $taxDivisor = $shop->getTaxDivisor();
-            $taxSatRate = $shop->getTaxSatRate();
+            // Snapshot fiscal: tasa congelada en la nota (fallback a tienda en notas históricas).
+            $taxDecimal = $receipt->getTaxDecimal();
+            $taxDivisor = $receipt->getTaxDivisor();
+            $taxSatRate = $receipt->getTaxSatRate();
             $conceptosCortesia = [];
             $facturables = [];
 

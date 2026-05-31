@@ -61,6 +61,7 @@ import CfdiBitacoraComponent from './components/admin/CfdiBitacoraComponent.vue'
 import ImpuestosLocalesEditor from './components/admin/ImpuestosLocalesEditor.vue';
 import RetencionesReporteComponent from './components/admin/RetencionesReporteComponent.vue';
 import ShopBankAccountsComponent from './components/admin/ShopBankAccountsComponent.vue';
+import ShopTaxRatesComponent from './components/admin/ShopTaxRatesComponent.vue';
 import ReceiptSettingsComponent from './components/admin/ReceiptSettingsComponent.vue';
 import ServiceTrackingConfigComponent from './components/admin/ServiceTrackingConfigComponent.vue';
 import MonitoreoComponent from './components/admin/MonitoreoComponent.vue';
@@ -120,6 +121,7 @@ app.component('cfdi-bitacora-component', CfdiBitacoraComponent);
 app.component('impuestos-locales-editor', ImpuestosLocalesEditor);
 app.component('retenciones-reporte-component', RetencionesReporteComponent);
 app.component('shop-bank-accounts-component', ShopBankAccountsComponent);
+app.component('shop-tax-rates-component', ShopTaxRatesComponent);
 app.component('receipt-settings-component', ReceiptSettingsComponent);
 app.component('service-tracking-config-component', ServiceTrackingConfigComponent);
 app.component('monitoreo-component', MonitoreoComponent);

@@ -201,6 +201,21 @@ class Shop extends Model
         return $this->currency ?? 'MXN';
     }
 
+    public function taxRates()
+    {
+        return $this->hasMany(ShopTaxRate::class);
+    }
+
+    /**
+     * Tasa marcada como default del catálogo. Fallback a una instancia virtual
+     * con la tasa del shop si la tienda aún no tiene catálogo seedeado.
+     */
+    public function defaultTaxRate(): ?ShopTaxRate
+    {
+        return $this->taxRates()->where('active', true)->where('is_default', true)->first()
+            ?? $this->taxRates()->where('active', true)->first();
+    }
+
     public function getTaxRate(): float
     {
         return $this->tax_rate ?? 16.00;

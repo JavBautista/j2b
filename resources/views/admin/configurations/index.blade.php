@@ -85,6 +85,30 @@
             </div>
         </div>
 
+        <!-- Tasas de Impuesto -->
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card shadow-sm border-0 hover-config-card h-100">
+                <div class="card-body text-center p-4">
+                    <div class="config-icon mb-3">
+                        <i class="fas fa-percent fa-3x text-primary"></i>
+                    </div>
+                    <h5 class="card-title mb-2">Tasas de Impuesto</h5>
+                    <p class="card-text text-muted mb-3">Define las tasas que puedes elegir al crear una nota (ej. 16%, Frontera 8%, Exento)</p>
+                    <div class="d-flex justify-content-center">
+                        <a href="{{ route('admin.tax-rates.page') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-arrow-right me-1"></i>Administrar
+                        </a>
+                    </div>
+                </div>
+                <div class="card-footer bg-light text-center border-0">
+                    <small class="text-muted">
+                        <i class="fas fa-check-circle text-success me-1"></i>
+                        {{ auth()->user()->shop->taxRates()->where('active', true)->count() }} tasa(s) activa(s)
+                    </small>
+                </div>
+            </div>
+        </div>
+
         <!-- Recibos PDF -->
         <div class="col-md-6 col-lg-4 mb-4">
             <div class="card shadow-sm border-0 hover-config-card h-100">

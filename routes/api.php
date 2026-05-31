@@ -210,6 +210,9 @@ Route::group([
         Route::post('shop/delete-logo','App\Http\Controllers\ShopController@deleteLogo');
         Route::get('shop/currency-settings','App\Http\Controllers\ShopController@getCurrencySettings');
         Route::put('shop/currency-settings','App\Http\Controllers\ShopController@updateCurrencySettings');
+        // Catálogo de tasas de impuesto de la tienda (lectura) — selector de tasa por nota en Ionic.
+        // El controlador resuelve la tienda vía $request->user()->shop (funciona con JWT).
+        Route::get('shop/tax-rates','App\Http\Controllers\ShopTaxRateController@index');
 
         /*RECIBOS*/
         Route::get('receipt/all',[ReceiptController::class,'getAll']);

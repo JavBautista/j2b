@@ -773,6 +773,13 @@ class TaskController extends Controller
                 ], 403);
             }
 
+            // Si se reasigna a OTRO colaborador y la tarea estaba en curso, cancelar el
+            // tracking del anterior para que el nuevo pueda iniciar el suyo (si no, queda
+            // "tracking activo" y nadie puede iniciarlo ni cerrarlo).
+            if ($task->tracking_active && $task->assigned_user_id != $request->user_id) {
+                app(\App\Services\TaskTrackingService::class)->cancelTracking($task, 'reasignación');
+            }
+
             // Asignar el colaborador
             $task->assigned_user_id = $request->user_id;
             $task->save();
@@ -814,6 +821,10 @@ class TaskController extends Controller
 
             // Guardar nombre del colaborador anterior para el log
             $previousAssignedName = $task->assignedUser ? $task->assignedUser->name : 'Sin asignar';
+
+            // Si la tarea está en curso (tracking activo), cancelarlo para que no quede
+            // colgada en "en progreso" sin colaborador asignado.
+            app(\App\Services\TaskTrackingService::class)->cancelTracking($task, 'desasignación');
 
             // Desasignar
             $task->assigned_user_id = null;

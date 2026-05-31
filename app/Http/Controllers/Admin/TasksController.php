@@ -475,6 +475,12 @@ class TasksController extends Controller
         // Verificar que el colaborador pertenezca a la misma tienda
         $collaborator = User::where('shop_id', $shop->id)->findOrFail($request->user_id);
 
+        // Si se reasigna a OTRO colaborador y la tarea estaba en curso, cancelar el
+        // tracking del anterior para que el nuevo pueda iniciar el suyo.
+        if ($task->tracking_active && $task->assigned_user_id != $collaborator->id) {
+            app(\App\Services\TaskTrackingService::class)->cancelTracking($task, 'reasignación');
+        }
+
         $task->assigned_user_id = $collaborator->id;
         $task->save();
 
@@ -501,6 +507,10 @@ class TasksController extends Controller
         $task = Task::where('shop_id', $shop->id)->findOrFail($id);
 
         $previousUser = $task->assignedUser ? $task->assignedUser->name : 'N/A';
+
+        // Si la tarea está en curso (tracking activo), cancelarlo para que no quede
+        // colgada en "en progreso" sin colaborador asignado.
+        app(\App\Services\TaskTrackingService::class)->cancelTracking($task, 'desasignación');
 
         $task->assigned_user_id = null;
         $task->save();

@@ -244,6 +244,52 @@ class TaskTrackingService
     }
 
     /**
+     * Cancela el tracking activo de una tarea SIN coordenada final (p.ej. al desasignar
+     * o reasignar el colaborador desde el panel). Apaga el tracking en MySQL y limpia
+     * Firebase para que la tarea no quede colgada en "en progreso". NO guarda histórico:
+     * la ruta parcial recorrida se descarta.
+     *
+     * Es defensivo: si la tarea no tiene tracking activo, no hace nada. Los fallos de
+     * Firebase no interrumpen la operación (lo crítico, apagar tracking_active en BD,
+     * ya ocurrió); solo se loguean.
+     *
+     * @return bool true si había tracking activo y se canceló; false si no había nada que cancelar.
+     */
+    public function cancelTracking(Task $task, string $motivo = 'desasignación'): bool
+    {
+        if (!$task->tracking_active) {
+            return false;
+        }
+
+        $previousUserId = $task->assigned_user_id;
+
+        // Apagar tracking en MySQL (lo crítico para destrabar la tarea).
+        $task->update([
+            'tracking_active' => false,
+            'tracking_finished_at' => now(),
+        ]);
+
+        // Limpiar Firebase sin romper la operación si falla o si el nodo ya no existe.
+        try {
+            $this->firebase->remove("tracking/shop_{$task->shop_id}/tasks_active/task_{$task->id}");
+            if ($previousUserId) {
+                $this->firebase->update(
+                    "tracking/shop_{$task->shop_id}/users_online/user_{$previousUserId}",
+                    ['last_activity' => now()->toIso8601String(), 'active_task_id' => null]
+                );
+            }
+        } catch (\Exception $e) {
+            \Log::warning('cancelTracking: fallo limpiando Firebase (tracking ya apagado en BD)', [
+                'task_id' => $task->id,
+                'motivo'  => $motivo,
+                'error'   => $e->getMessage(),
+            ]);
+        }
+
+        return true;
+    }
+
+    /**
      * Calcular distancia total usando fórmula Haversine
      */
     protected function calculateTotalDistance(array $points): float

@@ -55,6 +55,9 @@ Route::post('reset-password', [\App\Http\Controllers\AuthController::class, 'pro
 
 Route::get('/', [HomeController::class, 'index']);
 
+// Página dedicada del producto hermano J2Doctor (promo + handoff a j2doctor.com)
+Route::view('/j2doctor', 'web.j2doctor')->name('j2doctor');
+
 // Formulario de Contacto (público)
 Route::post('/contact', [ContactController::class, 'store'])->name('contact.store');
 

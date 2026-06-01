@@ -2432,3 +2432,208 @@ img.lazy-placeholder::before {
     white-space: nowrap;
     border: 0;
 }
+
+/* ============================================================
+   J2DOCTOR — Ecosistema (sección teaser + página dedicada)
+   Acento propio cyan/azul para diferenciar del verde de J2Biznes.
+   ============================================================ */
+:root {
+    --j2d-accent: #22d3ee;
+    --j2d-gradient: linear-gradient(135deg, #00ccff 0%, #0099ff 100%);
+    --j2d-glow: 0 0 24px rgba(34, 211, 238, 0.25);
+}
+
+.j2d-accent { color: var(--j2d-accent); }
+
+.ecosystem-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.35rem 0.9rem;
+    border: 1px solid rgba(34, 211, 238, 0.4);
+    border-radius: 999px;
+    color: var(--j2d-accent);
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    background: rgba(34, 211, 238, 0.08);
+}
+
+/* Sección teaser dentro del landing */
+.ecosystem-promo {
+    padding: 5rem 0;
+    background: var(--bg-secondary);
+}
+
+.j2doctor-card {
+    max-width: 900px;
+    margin: 2.5rem auto 0;
+    padding: 2.5rem;
+    border-radius: 20px;
+    background: linear-gradient(135deg, rgba(0, 204, 255, 0.06), rgba(0, 153, 255, 0.03));
+    border: 1px solid rgba(34, 211, 238, 0.25);
+    box-shadow: var(--j2d-glow);
+    text-align: center;
+}
+
+.j2doctor-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    margin-bottom: 1.25rem;
+}
+
+.j2doctor-logo-img { width: 44px; height: 44px; object-fit: contain; }
+
+.j2doctor-logo-text {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--text-white);
+    letter-spacing: -0.02em;
+}
+
+.j2doctor-card h3 {
+    font-size: 1.7rem;
+    color: var(--text-white);
+    margin-bottom: 0.75rem;
+}
+
+.j2doctor-lead {
+    color: var(--text-secondary);
+    max-width: 640px;
+    margin: 0 auto 2rem;
+    font-size: 1.05rem;
+    line-height: 1.6;
+}
+
+.j2doctor-benefits {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+    text-align: left;
+}
+
+.j2doctor-benefit {
+    padding: 1.25rem;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-color);
+}
+
+.j2doctor-benefit i {
+    font-size: 1.5rem;
+    color: var(--j2d-accent);
+    margin-bottom: 0.6rem;
+    display: block;
+}
+
+.j2doctor-benefit h4 { color: var(--text-white); font-size: 1.05rem; margin-bottom: 0.4rem; }
+.j2doctor-benefit p { color: var(--text-light); font-size: 0.92rem; line-height: 1.5; margin: 0; }
+
+.j2doctor-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.j2d-actions-center { justify-content: center; }
+
+.btn-j2d-primary,
+.btn-j2d-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.85rem 1.75rem;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 1rem;
+    text-decoration: none;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    cursor: pointer;
+}
+
+.btn-j2d-primary {
+    background: var(--j2d-gradient);
+    color: #03212b;
+    border: none;
+}
+
+.btn-j2d-primary:hover { transform: translateY(-2px); box-shadow: var(--j2d-glow); }
+
+.btn-j2d-secondary {
+    background: transparent;
+    color: var(--j2d-accent);
+    border: 1px solid rgba(34, 211, 238, 0.5);
+}
+
+.btn-j2d-secondary:hover { background: rgba(34, 211, 238, 0.1); transform: translateY(-2px); }
+
+/* Página dedicada /j2doctor */
+.j2d-page-hero {
+    padding: 9rem 0 4rem; /* compensa el header fixed (~72px) + aire para el badge */
+    text-align: center;
+    background: var(--gradient-dark);
+}
+
+.j2d-page-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    margin: 1rem 0 1.5rem;
+}
+
+.j2d-page-hero h1 {
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    color: var(--text-white);
+    max-width: 800px;
+    margin: 0 auto 1rem;
+    line-height: 1.1;
+}
+
+.j2d-page-lead {
+    color: var(--text-secondary);
+    max-width: 620px;
+    margin: 0 auto 2rem;
+    font-size: 1.1rem;
+    line-height: 1.6;
+}
+
+.j2d-section { padding: 4rem 0; }
+.j2d-section-alt { background: var(--bg-secondary); }
+
+.j2d-step-number { background: var(--j2d-gradient) !important; color: #03212b !important; }
+.j2d-step-icon { color: var(--j2d-accent) !important; }
+
+.j2d-cta {
+    padding: 5rem 0;
+    text-align: center;
+    background: linear-gradient(135deg, rgba(0, 204, 255, 0.08), rgba(0, 153, 255, 0.04));
+    border-top: 1px solid rgba(34, 211, 238, 0.2);
+}
+
+.j2d-cta h2 { color: var(--text-white); font-size: 2rem; margin-bottom: 0.75rem; }
+.j2d-cta p { color: var(--text-secondary); margin-bottom: 1.5rem; }
+.j2d-cta-note { color: var(--text-light); font-size: 0.9rem; margin-top: 1.25rem; }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .j2doctor-benefits { grid-template-columns: 1fr; }
+    .j2doctor-card { padding: 1.75rem; }
+    .j2doctor-actions { flex-direction: column; }
+    .btn-j2d-primary, .btn-j2d-secondary { justify-content: center; width: 100%; }
+}
+
+/* ------------------------------------------------------------
+   Ajuste navbar: dar cabida al ítem "Ecosistema" (7 ítems) sin
+   amontonar. Más ancho útil, menos gap y textos que no se parten.
+   ------------------------------------------------------------ */
+.nav { max-width: 1320px; gap: 1.5rem; }
+.nav-links { gap: 1.4rem; flex-wrap: nowrap; }
+.nav-links a { white-space: nowrap; }
+.logo-text { white-space: nowrap; }
+.header-actions .login-btn,
+.header-actions .cta-button { white-space: nowrap; }

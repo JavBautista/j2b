@@ -413,6 +413,54 @@
         </div>
     </section>
 
+    <!-- Ecosistema J2 — J2Doctor -->
+    <section id="ecosistema" class="ecosystem-promo">
+        <div class="container">
+            <div class="section-header scroll-reveal">
+                <span class="ecosystem-eyebrow"><i class="fas fa-layer-group"></i> Ecosistema J2 · Producto hermano</span>
+                <h2>Conoce <span class="j2d-accent">J2Doctor</span></h2>
+                <p>La comunidad con IA para técnicos de copiadoras. Si das servicio técnico, esto es para ti.</p>
+            </div>
+
+            <div class="j2doctor-card scroll-reveal">
+                <div class="j2doctor-card-head">
+                    <img src="{{ asset('img/j2b_60px.png') }}" alt="J2Doctor" class="j2doctor-logo-img">
+                    <span class="j2doctor-logo-text">J2<span class="j2d-accent">Doctor</span></span>
+                </div>
+
+                <h3>Encuentra soluciones a problemas <span class="j2d-accent">reales</span> de copiadoras</h3>
+                <p class="j2doctor-lead">Captura un caso, la IA lo procesa y te muestra cómo otros técnicos ya lo resolvieron. Construye tu reputación validando soluciones.</p>
+
+                <div class="j2doctor-benefits">
+                    <div class="j2doctor-benefit">
+                        <i class="fas fa-bolt"></i>
+                        <h4>Captura y la IA procesa</h4>
+                        <p>Describe la falla; la IA la normaliza y la agrupa con casos similares al instante.</p>
+                    </div>
+                    <div class="j2doctor-benefit">
+                        <i class="fas fa-check-double"></i>
+                        <h4>Soluciones validadas</h4>
+                        <p>Mira cómo otros técnicos ya lo resolvieron, rankeado por nivel de confianza.</p>
+                    </div>
+                    <div class="j2doctor-benefit">
+                        <i class="fas fa-medal"></i>
+                        <h4>Construye reputación</h4>
+                        <p>Valida si te funcionó (sí / parcial / no) y gana reputación en la comunidad.</p>
+                    </div>
+                </div>
+
+                <div class="j2doctor-actions">
+                    <a href="{{ url('/j2doctor') }}" class="btn-j2d-primary">
+                        <i class="fas fa-circle-info"></i> Conoce más
+                    </a>
+                    <a href="https://j2doctor.com" target="_blank" rel="noopener" class="btn-j2d-secondary">
+                        Ir a J2Doctor <i class="fas fa-arrow-up-right-from-square"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- FAQ Section -->
     <section id="faq" class="faq">
         <div class="container">

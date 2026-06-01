@@ -73,6 +73,7 @@
                 <li><a href="#caracteristicas" class="nav-link">Características</a></li>
                 <li><a href="#precios" class="nav-link">Precios</a></li>
                 <li><a href="#testimonios" class="nav-link">Testimonios</a></li>
+                <li><a href="#ecosistema" class="nav-link">Ecosistema</a></li>
                 <li><a href="#faq" class="nav-link">FAQ</a></li>
                 <li><a href="#contacto" class="nav-link">Contacto</a></li>
             </ul>
@@ -146,6 +147,7 @@
                 <ul>
                     <li><a href="#caracteristicas">Características</a></li>
                     <li><a href="#precios">Precios</a></li>
+                    <li><a href="{{ url('/j2doctor') }}">J2Doctor (para técnicos)</a></li>
                     <li><a href="#faq">Preguntas Frecuentes</a></li>
                     <li><a href="#actualizaciones">Novedades</a></li>
                     <li><a href="#seguridad">Seguridad</a></li>

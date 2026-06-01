@@ -213,6 +213,14 @@ Route::group([
         // Catálogo de tasas de impuesto de la tienda (lectura) — selector de tasa por nota en Ionic.
         // El controlador resuelve la tienda vía $request->user()->shop (funciona con JWT).
         Route::get('shop/tax-rates','App\Http\Controllers\ShopTaxRateController@index');
+        // Escritura (CRUD desde Configuraciones de la app). Gate full.admin: igual que la web,
+        // bloquea a admins limitados (limited=1) y colaboradores. Reutiliza el mismo controlador.
+        Route::group(['middleware' => ['full.admin']], function () {
+            Route::post('shop/tax-rates','App\Http\Controllers\ShopTaxRateController@store');
+            Route::put('shop/tax-rates/{id}','App\Http\Controllers\ShopTaxRateController@update');
+            Route::delete('shop/tax-rates/{id}','App\Http\Controllers\ShopTaxRateController@destroy');
+            Route::patch('shop/tax-rates/{id}/set-default','App\Http\Controllers\ShopTaxRateController@setDefault');
+        });
 
         /*RECIBOS*/
         Route::get('receipt/all',[ReceiptController::class,'getAll']);

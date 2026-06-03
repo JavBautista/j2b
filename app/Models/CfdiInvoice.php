@@ -12,6 +12,8 @@ class CfdiInvoice extends Model
         'fecha_emision' => 'datetime',
         'fecha_timbrado' => 'datetime',
         'fecha_cancelacion' => 'datetime',
+        'fecha_solicitud_cancelacion' => 'datetime',
+        'ultima_consulta_cancelacion' => 'datetime',
         'request_json' => 'json',
         'response_json' => 'json',
     ];

@@ -417,15 +417,31 @@ class CfdiInvoiceController extends Controller
                 ]);
             }
 
-            // Actualizar factura
-            $invoice->update([
-                'status' => 'cancelada',
-                'motivo_cancelacion' => $request->motivo,
-                'fecha_cancelacion' => Carbon::now('America/Mexico_City'),
-            ]);
+            // Interpretar la respuesta del SAT/HUB: ¿cancelación FINAL o quedó EN PROCESO?
+            // (regla SAT: facturas que requieren aceptación del receptor esperan hasta 3 días hábiles).
+            $interpret = CfdiCancelacionService::interpretarRespuesta($result['data'] ?? null);
+            $ahora = Carbon::now('America/Mexico_City');
+            $esFinal = $interpret['final'];
 
-            // Revertir receipt
-            if ($invoice->receipt_id) {
+            $datosCancelacion = [
+                'motivo_cancelacion' => $request->motivo,
+                'folio_sustitucion' => $request->folio_sustitucion,
+                'fecha_solicitud_cancelacion' => $ahora,
+                'estatus_cancelacion_sat' => $interpret['estatus_cancelacion_sat'],
+                'estatus_uuid_sat' => $interpret['estatus_uuid_sat'],
+                'cancelacion_status' => $interpret['cancelacion_status'] ?? ($esFinal ? 'aceptada' : null),
+            ];
+
+            // Solo se marca CANCELADA cuando es final (aceptada o respuesta ambigua → comportamiento previo).
+            // Si quedó EN PROCESO / RECHAZADA, el CFDI sigue VIGENTE ante el SAT: no revertir el receipt.
+            if ($esFinal) {
+                $datosCancelacion['status'] = 'cancelada';
+                $datosCancelacion['fecha_cancelacion'] = $ahora;
+            }
+
+            $invoice->update($datosCancelacion);
+
+            if ($esFinal && $invoice->receipt_id) {
                 $receipt = Receipt::find($invoice->receipt_id);
                 if ($receipt) {
                     $receipt->is_tax_invoiced = false;
@@ -433,21 +449,42 @@ class CfdiInvoiceController extends Controller
                 }
             }
 
-            LogFacturacion::cancelacion('cfdi.cancelacion.success', [
+            // Loguear SIEMPRE la respuesta cruda + interpretación (desbloquea afinar el shape real).
+            LogFacturacion::cancelacion('cfdi.cancelacion.result', [
                 'shop_id' => $shop->id,
                 'cfdi_invoice_id' => $invoice->id,
                 'uuid' => $invoice->uuid,
                 'duration_ms' => (int) round((microtime(true) - $startedAt) * 1000),
                 'http_status' => 200,
+                // Badge de la bitácora: éxito (verde) si fue final, warning si quedó en proceso/rechazada.
+                'status' => $esFinal ? 'success' : 'warning',
                 'metadata' => [
                     'motivo' => $request->motivo,
                     'folio_sustitucion' => $request->folio_sustitucion,
+                    'cancelacion_status' => $datosCancelacion['cancelacion_status'],
+                    'es_final' => $esFinal,
+                    'reconocido' => $interpret['reconocido'],
+                    'estatus_uuid_sat' => $interpret['estatus_uuid_sat'],
+                    'estatus_cancelacion_sat' => $interpret['estatus_cancelacion_sat'],
+                    'respuesta_cruda' => $result['data'] ?? null,
                 ],
-            ]);
+            ], $esFinal ? 'info' : 'warning');
+
+            if ($esFinal) {
+                return response()->json([
+                    'ok' => true,
+                    'message' => 'Factura cancelada exitosamente',
+                    'cancelacion_status' => $datosCancelacion['cancelacion_status'],
+                ]);
+            }
 
             return response()->json([
                 'ok' => true,
-                'message' => 'Factura cancelada exitosamente',
+                'en_proceso' => true,
+                'cancelacion_status' => $datosCancelacion['cancelacion_status'],
+                'message' => $interpret['cancelacion_status'] === 'en_proceso'
+                    ? 'La cancelación quedó EN PROCESO ante el SAT: el receptor debe aceptarla (hasta 3 días hábiles). La factura sigue vigente hasta que el SAT confirme.'
+                    : 'El SAT no aceptó la cancelación (' . ($interpret['estatus_cancelacion_sat'] ?: $interpret['cancelacion_status']) . '). La factura sigue vigente.',
             ]);
 
         } catch (\Exception $e) {

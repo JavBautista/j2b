@@ -399,6 +399,7 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
 
         Route::get('/admin/sat/product-codes', [App\Http\Controllers\Admin\SatCatalogController::class, 'productCodes']);
         Route::get('/admin/sat/unit-codes', [App\Http\Controllers\Admin\SatCatalogController::class, 'unitCodes']);
+        Route::get('/admin/sat/fiscal-catalogs', [App\Http\Controllers\Admin\SatCatalogController::class, 'fiscalCatalogs'])->name('admin.sat.fiscal-catalogs');
 
         Route::get('/admin/contracts', [AdminPagesController::class, 'contracts'])->name('admin.contracts');
 

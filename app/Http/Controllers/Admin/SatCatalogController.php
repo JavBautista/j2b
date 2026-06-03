@@ -5,10 +5,20 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\SatProductCode;
 use App\Models\SatUnitCode;
+use App\Services\Facturacion\SatCatalogService;
 use Illuminate\Http\Request;
 
 class SatCatalogController extends Controller
 {
+    /**
+     * Bundle completo de catálogos fiscales SAT (fuente única para web + Ionic):
+     * { regimenes, usos, matriz }. Catálogos chicos y cuasi-estáticos, cacheados.
+     */
+    public function fiscalCatalogs(SatCatalogService $catalogs)
+    {
+        return response()->json($catalogs->bundle());
+    }
+
     public function productCodes(Request $request)
     {
         $q = $request->get('q', '');

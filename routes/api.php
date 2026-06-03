@@ -703,6 +703,7 @@ Route::group([
         /* CFDI CATALOGOS SAT - Búsqueda de claves producto/unidad (autocompletado en modal móvil) */
         Route::get('cfdi/sat/product-codes', [\App\Http\Controllers\Admin\SatCatalogController::class, 'productCodes']);
         Route::get('cfdi/sat/unit-codes', [\App\Http\Controllers\Admin\SatCatalogController::class, 'unitCodes']);
+        Route::get('cfdi/sat/fiscal-catalogs', [\App\Http\Controllers\Admin\SatCatalogController::class, 'fiscalCatalogs']);
 
         /* CFDI CONFIGURACION - Datos fiscales, CSD y registro de emisor */
         Route::get('cfdi/config/get', [\App\Http\Controllers\CfdiConfigApiController::class, 'get']);

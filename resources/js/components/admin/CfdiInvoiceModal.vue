@@ -477,6 +477,7 @@
 <script>
 import ClientFiscalDataModal from '../shops/ClientFiscalDataModal.vue';
 import AbonosPreviosDialog from './AbonosPreviosDialog.vue';
+import { loadFiscalCatalogs } from '../../services/satCatalogs';
 
 export default {
     name: 'CfdiInvoiceModal',
@@ -530,73 +531,10 @@ export default {
             satUnitResults: [],
             activeSearchIdx: null,
             satSearchTimer: null,
-            catalogoRegimen: [
-                { clave: '601', nombre: 'General de Ley PM' },
-                { clave: '603', nombre: 'PM Fines no Lucrativos' },
-                { clave: '605', nombre: 'Sueldos y Salarios e Ingresos Asimilados a Salarios' },
-                { clave: '606', nombre: 'Arrendamiento' },
-                { clave: '607', nombre: 'Enajenacion o Adquisicion de Bienes' },
-                { clave: '608', nombre: 'Demas ingresos' },
-                { clave: '610', nombre: 'Residentes en el Extranjero sin EP en Mexico' },
-                { clave: '611', nombre: 'Ingresos por Dividendos' },
-                { clave: '612', nombre: 'PF con Actividades Empresariales y Profesionales' },
-                { clave: '614', nombre: 'Ingresos por intereses' },
-                { clave: '615', nombre: 'Ingresos por Obtencion de Premios' },
-                { clave: '616', nombre: 'Sin obligaciones fiscales' },
-                { clave: '620', nombre: 'Sociedades Cooperativas de Produccion' },
-                { clave: '621', nombre: 'Incorporacion Fiscal' },
-                { clave: '622', nombre: 'Actividades Agricolas, Ganaderas, Silvicolas y Pesqueras' },
-                { clave: '623', nombre: 'Opcional para Grupos de Sociedades' },
-                { clave: '624', nombre: 'Coordinados' },
-                { clave: '625', nombre: 'Plataformas Tecnologicas' },
-                { clave: '626', nombre: 'RESICO' },
-            ],
-            catalogoUsoCfdi: [
-                { clave: 'G01', nombre: 'Adquisicion de mercancias' },
-                { clave: 'G02', nombre: 'Devoluciones, descuentos o bonificaciones' },
-                { clave: 'G03', nombre: 'Gastos en general' },
-                { clave: 'I01', nombre: 'Construcciones' },
-                { clave: 'I02', nombre: 'Mobiliario y equipo de oficina por inversiones' },
-                { clave: 'I03', nombre: 'Equipo de transporte' },
-                { clave: 'I04', nombre: 'Equipo de computo y accesorios' },
-                { clave: 'I05', nombre: 'Dados, troqueles, moldes, matrices y herramental' },
-                { clave: 'I06', nombre: 'Comunicaciones telefonicas' },
-                { clave: 'I07', nombre: 'Comunicaciones satelitales' },
-                { clave: 'I08', nombre: 'Otra maquinaria y equipo' },
-                { clave: 'D01', nombre: 'Honorarios medicos, dentales y gastos hospitalarios' },
-                { clave: 'D02', nombre: 'Gastos medicos por incapacidad o discapacidad' },
-                { clave: 'D03', nombre: 'Gastos funerales' },
-                { clave: 'D04', nombre: 'Donativos' },
-                { clave: 'D05', nombre: 'Intereses reales pagados por creditos hipotecarios' },
-                { clave: 'D06', nombre: 'Aportaciones voluntarias al SAR' },
-                { clave: 'D07', nombre: 'Primas por seguros de gastos medicos' },
-                { clave: 'D08', nombre: 'Gastos de transportacion escolar obligatoria' },
-                { clave: 'D09', nombre: 'Depositos en cuentas para el ahorro / planes de pensiones' },
-                { clave: 'D10', nombre: 'Pagos por servicios educativos (colegiaturas)' },
-                { clave: 'S01', nombre: 'Sin efectos fiscales' },
-                { clave: 'CP01', nombre: 'Pagos' },
-            ],
-            matrizUsosPorRegimen: {
-                '601': ['G01','G02','G03','I01','I02','I03','I04','I05','I06','I07','I08','D10','S01','CP01'],
-                '603': ['G01','G02','G03','I01','I02','I03','I04','I05','I06','I07','I08','D10','S01','CP01'],
-                '605': ['G01','G02','G03','I01','I02','I03','I04','I05','I06','I07','I08','D01','D02','D03','D04','D05','D06','D07','D08','D09','D10','S01','CP01'],
-                '606': ['G01','G02','G03','I01','I02','I03','I04','I05','I06','I07','I08','D01','D02','D03','D04','D05','D06','D07','D08','D09','D10','S01','CP01'],
-                '607': ['CP01','S01'],
-                '608': ['G01','G02','G03','I01','I02','I03','I04','I05','I06','I07','I08','D01','D02','D03','D04','D05','D06','D07','D08','D09','D10','S01','CP01'],
-                '610': ['G01','G02','G03','I01','I02','I03','I04','I05','I06','I07','I08','S01','CP01'],
-                '611': ['CP01','S01'],
-                '612': ['G01','G02','G03','I01','I02','I03','I04','I05','I06','I07','I08','D01','D02','D03','D04','D05','D06','D07','D08','D09','D10','S01','CP01'],
-                '614': ['CP01','S01'],
-                '615': ['CP01','S01'],
-                '616': ['CP01','S01'],
-                '620': ['G01','G02','G03','I01','I02','I03','I04','I05','I06','I07','I08','D10','S01','CP01'],
-                '621': ['G01','G02','G03','I01','I02','I03','I04','I05','I06','I07','I08','D01','D02','D03','D04','D05','D06','D07','D08','D09','D10','S01','CP01'],
-                '622': ['G01','G02','G03','I01','I02','I03','I04','I05','I06','I07','I08','D10','S01','CP01'],
-                '623': ['G01','G02','G03','I01','I02','I03','I04','I05','I06','I07','I08','D10','S01','CP01'],
-                '624': ['CP01','S01'],
-                '625': ['G01','G02','G03','I01','I02','I03','I04','I05','I06','I07','I08','D01','D02','D03','D04','D05','D06','D07','D08','D09','D10','S01','CP01'],
-                '626': ['G01','G02','G03','I01','I02','I03','I04','I05','I06','I07','I08','D01','D02','D03','D04','D05','D06','D07','D08','D09','D10','S01','CP01'],
-            },
+            // Catálogos SAT: se cargan del endpoint (tablas sat_* en BD) vía services/satCatalogs.js.
+            catalogoRegimen: [],
+            catalogoUsoCfdi: [],
+            matrizUsosPorRegimen: {},
             catalogoFormaPago: [
                 { clave: '01', nombre: 'Efectivo' },
                 { clave: '02', nombre: 'Cheque nominativo' },
@@ -606,6 +544,17 @@ export default {
                 { clave: '99', nombre: 'Por definir' },
             ],
         };
+    },
+    created() {
+        loadFiscalCatalogs()
+            .then(b => {
+                this.catalogoRegimen = b.regimenes || [];
+                this.catalogoUsoCfdi = b.usos || [];
+                this.matrizUsosPorRegimen = b.matriz || {};
+            })
+            .catch(() => {
+                Swal.fire('Error', 'No se pudieron cargar los catálogos fiscales del SAT. Recarga la página e intenta de nuevo.', 'error');
+            });
     },
     computed: {
         // Tasa/nombre del impuesto CONGELADOS en la nota (snapshot), para el desglose.

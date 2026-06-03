@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Api;
 
+use App\Services\Facturacion\SatCatalogService;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 class ClientFiscalDataRequest extends FormRequest
@@ -17,10 +19,12 @@ class ClientFiscalDataRequest extends FormRequest
         $isUpdate = $this->isMethod('PUT') || $this->isMethod('PATCH');
         $req      = $isUpdate ? 'sometimes' : 'required';
 
+        $regimenesVigentes = app(SatCatalogService::class)->regimenesVigentes();
+
         return [
             'rfc'            => [$req, 'string', 'regex:/^[A-ZÑ&]{3,4}\d{6}[A-Z\d]{3}$/i'],
             'razon_social'   => [$req, 'string', 'max:255'],
-            'regimen_fiscal' => [$req, 'string', 'in:601,603,605,606,607,608,610,611,612,614,615,616,620,621,622,623,624,625,626'],
+            'regimen_fiscal' => [$req, 'string', Rule::in($regimenesVigentes)],
             'uso_cfdi'       => [$req, 'string', 'max:5'],
             'codigo_postal'  => [$req, 'string', 'size:5', 'regex:/^\d{5}$/'],
             'email'          => ['nullable', 'email', 'max:150'],
@@ -40,57 +44,21 @@ class ClientFiscalDataRequest extends FormRequest
                 return;
             }
 
-            $regimenesFisica = ['605','606','607','608','610','611','612','614','615','621','625','626','616'];
-            $regimenesMoral  = ['601','603','620','622','623','624','616'];
-
+            $catalogs = app(SatCatalogService::class);
             $esFisica = strlen($rfc) === 13;
 
-            if ($esFisica && !in_array($reg, $regimenesFisica, true)) {
-                $v->errors()->add('regimen_fiscal', 'Regimen fiscal no valido para persona fisica.');
-            }
-            if (!$esFisica && !in_array($reg, $regimenesMoral, true)) {
-                $v->errors()->add('regimen_fiscal', 'Regimen fiscal no valido para persona moral.');
+            // Régimen válido para el tipo de persona (RFC 13 = física, 12 = moral).
+            if (! in_array($reg, $catalogs->regimenesPorTipo($esFisica), true)) {
+                $tipo = $esFisica ? 'fisica' : 'moral';
+                $v->errors()->add('regimen_fiscal', "Regimen fiscal no valido para persona {$tipo}.");
             }
 
-            $matriz = self::matrizUsosCfdi();
-            if (isset($matriz[$reg]) && !in_array($uso, $matriz[$reg], true)) {
+            // Uso CFDI compatible con el régimen (matriz SAT).
+            $usosCompatibles = $catalogs->usosCompatibles($reg);
+            if (! empty($usosCompatibles) && ! in_array($uso, $usosCompatibles, true)) {
                 $v->errors()->add('uso_cfdi', "Uso CFDI {$uso} no compatible con regimen {$reg}.");
             }
         });
-    }
-
-    /**
-     * Matriz oficial SAT CFDI 4.0: usos compatibles por regimen del receptor.
-     * Fuente: SAT - https://www.sat.gob.mx/consultas/82066
-     * Sincronizar con frontend Ionic si SAT publica cambios.
-     */
-    public static function matrizUsosCfdi(): array
-    {
-        $generalEmpresa = ['G01','G02','G03','I01','I02','I03','I04','I05','I06','I07','I08','D10','S01','CP01'];
-        $generalFisicaCompleta = ['G01','G02','G03','I01','I02','I03','I04','I05','I06','I07','I08','D01','D02','D03','D04','D05','D06','D07','D08','D09','D10','S01','CP01'];
-        $soloPagosNoEfectos = ['CP01','S01'];
-
-        return [
-            '601' => $generalEmpresa,
-            '603' => $generalEmpresa,
-            '605' => $generalFisicaCompleta,
-            '606' => $generalFisicaCompleta,
-            '607' => $soloPagosNoEfectos,
-            '608' => $generalFisicaCompleta,
-            '610' => ['G01','G02','G03','I01','I02','I03','I04','I05','I06','I07','I08','S01','CP01'],
-            '611' => $soloPagosNoEfectos,
-            '612' => $generalFisicaCompleta,
-            '614' => $soloPagosNoEfectos,
-            '615' => $soloPagosNoEfectos,
-            '616' => $soloPagosNoEfectos,
-            '620' => $generalEmpresa,
-            '621' => $generalFisicaCompleta,
-            '622' => $generalEmpresa,
-            '623' => $generalEmpresa,
-            '624' => $soloPagosNoEfectos,
-            '625' => $generalFisicaCompleta,
-            '626' => $generalFisicaCompleta,
-        ];
     }
 
     protected function prepareForValidation(): void

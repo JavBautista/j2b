@@ -167,6 +167,8 @@
 </template>
 
 <script>
+import { loadFiscalCatalogs } from '../../services/satCatalogs';
+
 export default {
     name: 'ClientFiscalDataModal',
     emits: ['closed', 'seleccionado'],
@@ -183,86 +185,32 @@ export default {
             form: this.formVacio(),
             errores: {},
 
-            catalogoRegimen: [
-                { clave: '601', nombre: 'General de Ley PM' },
-                { clave: '603', nombre: 'PM Fines no Lucrativos' },
-                { clave: '605', nombre: 'Sueldos y Salarios e Ingresos Asimilados a Salarios' },
-                { clave: '606', nombre: 'Arrendamiento' },
-                { clave: '607', nombre: 'Enajenación o Adquisición de Bienes' },
-                { clave: '608', nombre: 'Demás ingresos' },
-                { clave: '610', nombre: 'Residentes en el Extranjero sin EP en México' },
-                { clave: '611', nombre: 'Ingresos por Dividendos' },
-                { clave: '612', nombre: 'PF con Actividades Empresariales y Profesionales' },
-                { clave: '614', nombre: 'Ingresos por intereses' },
-                { clave: '615', nombre: 'Ingresos por Obtención de Premios' },
-                { clave: '616', nombre: 'Sin obligaciones fiscales' },
-                { clave: '620', nombre: 'Sociedades Cooperativas de Producción' },
-                { clave: '621', nombre: 'Incorporación Fiscal' },
-                { clave: '622', nombre: 'Actividades Agrícolas, Ganaderas, Silvícolas y Pesqueras' },
-                { clave: '623', nombre: 'Opcional para Grupos de Sociedades' },
-                { clave: '624', nombre: 'Coordinados' },
-                { clave: '625', nombre: 'Régimen de Actividades Empresariales con ingresos a través de Plataformas Tecnológicas' },
-                { clave: '626', nombre: 'RESICO' },
-            ],
+            // Catálogos SAT: se cargan del endpoint (tablas sat_* en BD) vía services/satCatalogs.js.
+            // Cada régimen trae aplica_fisica / aplica_moral para el filtrado por tipo de persona.
+            catalogoRegimen: [],
 
-            catalogoUsoCfdi: [
-                { clave: 'G01', nombre: 'Adquisición de mercancías' },
-                { clave: 'G02', nombre: 'Devoluciones, descuentos o bonificaciones' },
-                { clave: 'G03', nombre: 'Gastos en general' },
-                { clave: 'I01', nombre: 'Construcciones' },
-                { clave: 'I02', nombre: 'Mobiliario y equipo de oficina por inversiones' },
-                { clave: 'I03', nombre: 'Equipo de transporte' },
-                { clave: 'I04', nombre: 'Equipo de cómputo y accesorios' },
-                { clave: 'I05', nombre: 'Dados, troqueles, moldes, matrices y herramental' },
-                { clave: 'I06', nombre: 'Comunicaciones telefónicas' },
-                { clave: 'I07', nombre: 'Comunicaciones satelitales' },
-                { clave: 'I08', nombre: 'Otra maquinaria y equipo' },
-                { clave: 'D01', nombre: 'Honorarios médicos, dentales y gastos hospitalarios' },
-                { clave: 'D02', nombre: 'Gastos médicos por incapacidad o discapacidad' },
-                { clave: 'D03', nombre: 'Gastos funerales' },
-                { clave: 'D04', nombre: 'Donativos' },
-                { clave: 'D05', nombre: 'Intereses reales pagados por créditos hipotecarios' },
-                { clave: 'D06', nombre: 'Aportaciones voluntarias al SAR' },
-                { clave: 'D07', nombre: 'Primas por seguros de gastos médicos' },
-                { clave: 'D08', nombre: 'Gastos de transportación escolar obligatoria' },
-                { clave: 'D09', nombre: 'Depósitos en cuentas para el ahorro / planes de pensiones' },
-                { clave: 'D10', nombre: 'Pagos por servicios educativos (colegiaturas)' },
-                { clave: 'S01', nombre: 'Sin efectos fiscales' },
-                { clave: 'CP01', nombre: 'Pagos' },
-            ],
+            catalogoUsoCfdi: [],
 
-            // Espejo de App\Http\Requests\Api\ClientFiscalDataRequest::matrizUsosCfdi()
-            matrizUsosPorRegimen: {
-                '601': ['G01','G02','G03','I01','I02','I03','I04','I05','I06','I07','I08','D10','S01','CP01'],
-                '603': ['G01','G02','G03','I01','I02','I03','I04','I05','I06','I07','I08','D10','S01','CP01'],
-                '605': ['G01','G02','G03','I01','I02','I03','I04','I05','I06','I07','I08','D01','D02','D03','D04','D05','D06','D07','D08','D09','D10','S01','CP01'],
-                '606': ['G01','G02','G03','I01','I02','I03','I04','I05','I06','I07','I08','D01','D02','D03','D04','D05','D06','D07','D08','D09','D10','S01','CP01'],
-                '607': ['CP01','S01'],
-                '608': ['G01','G02','G03','I01','I02','I03','I04','I05','I06','I07','I08','D01','D02','D03','D04','D05','D06','D07','D08','D09','D10','S01','CP01'],
-                '610': ['G01','G02','G03','I01','I02','I03','I04','I05','I06','I07','I08','S01','CP01'],
-                '611': ['CP01','S01'],
-                '612': ['G01','G02','G03','I01','I02','I03','I04','I05','I06','I07','I08','D01','D02','D03','D04','D05','D06','D07','D08','D09','D10','S01','CP01'],
-                '614': ['CP01','S01'],
-                '615': ['CP01','S01'],
-                '616': ['CP01','S01'],
-                '620': ['G01','G02','G03','I01','I02','I03','I04','I05','I06','I07','I08','D10','S01','CP01'],
-                '621': ['G01','G02','G03','I01','I02','I03','I04','I05','I06','I07','I08','D01','D02','D03','D04','D05','D06','D07','D08','D09','D10','S01','CP01'],
-                '622': ['G01','G02','G03','I01','I02','I03','I04','I05','I06','I07','I08','D10','S01','CP01'],
-                '623': ['G01','G02','G03','I01','I02','I03','I04','I05','I06','I07','I08','D10','S01','CP01'],
-                '624': ['CP01','S01'],
-                '625': ['G01','G02','G03','I01','I02','I03','I04','I05','I06','I07','I08','D01','D02','D03','D04','D05','D06','D07','D08','D09','D10','S01','CP01'],
-                '626': ['G01','G02','G03','I01','I02','I03','I04','I05','I06','I07','I08','D01','D02','D03','D04','D05','D06','D07','D08','D09','D10','S01','CP01'],
-            },
-
-            regimenesFisica: ['605','606','607','608','610','611','612','614','615','621','625','626','616'],
-            regimenesMoral:  ['601','603','620','622','623','624','616'],
+            // matriz régimen→uso: { regimenClave: [usoClave, ...] } — del endpoint.
+            matrizUsosPorRegimen: {},
         };
+    },
+    created() {
+        loadFiscalCatalogs()
+            .then(b => {
+                this.catalogoRegimen = b.regimenes || [];
+                this.catalogoUsoCfdi = b.usos || [];
+                this.matrizUsosPorRegimen = b.matriz || {};
+            })
+            .catch(() => {
+                Swal.fire('Error', 'No se pudieron cargar los catálogos fiscales del SAT. Recarga la página e intenta de nuevo.', 'error');
+            });
     },
     computed: {
         regimenesFiltrados() {
             const rfc = (this.form.rfc || '').toUpperCase();
-            if (rfc.length === 12) return this.catalogoRegimen.filter(r => this.regimenesMoral.includes(r.clave));
-            if (rfc.length === 13) return this.catalogoRegimen.filter(r => this.regimenesFisica.includes(r.clave));
+            if (rfc.length === 12) return this.catalogoRegimen.filter(r => r.aplica_moral);
+            if (rfc.length === 13) return this.catalogoRegimen.filter(r => r.aplica_fisica);
             return this.catalogoRegimen;
         },
         usosFiltrados() {
@@ -364,10 +312,13 @@ export default {
 
             if (!this.form.regimen_fiscal) {
                 this.errores.regimen_fiscal = 'Régimen fiscal requerido';
-            } else if (rfc.length === 13 && !this.regimenesFisica.includes(this.form.regimen_fiscal)) {
-                this.errores.regimen_fiscal = 'Régimen no válido para persona física';
-            } else if (rfc.length === 12 && !this.regimenesMoral.includes(this.form.regimen_fiscal)) {
-                this.errores.regimen_fiscal = 'Régimen no válido para persona moral';
+            } else {
+                const reg = this.catalogoRegimen.find(r => r.clave === this.form.regimen_fiscal);
+                if (reg && rfc.length === 13 && !reg.aplica_fisica) {
+                    this.errores.regimen_fiscal = 'Régimen no válido para persona física';
+                } else if (reg && rfc.length === 12 && !reg.aplica_moral) {
+                    this.errores.regimen_fiscal = 'Régimen no válido para persona moral';
+                }
             }
 
             if (!this.form.uso_cfdi) {

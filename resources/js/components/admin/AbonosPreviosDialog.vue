@@ -62,6 +62,17 @@
 
                     <!-- ESTRATEGIA SEPARAR -->
                     <div v-if="estrategia === 'separar'" class="border rounded p-3 bg-light">
+                        <!-- Fecha real por abono (va al FechaPago de cada complemento) -->
+                        <label class="form-label small fw-bold">Fecha real de cada abono</label>
+                        <div v-for="(asig, idx) in separar.asignaciones" :key="'fec' + asig.partial_payment_id"
+                             class="d-flex align-items-center gap-2 mb-1">
+                            <span class="small text-nowrap" style="min-width: 175px;">
+                                Abono #{{ idx + 1 }} — ${{ formatNumber(abonoMonto(asig.partial_payment_id)) }}
+                            </span>
+                            <input type="date" class="form-select form-select-sm" v-model="asig.fecha_pago" :max="hoyISO">
+                        </div>
+                        <small class="text-muted d-block mb-3">Fecha real en que recibiste cada abono. Va al complemento de pago del SAT.</small>
+
                         <label class="form-label small">Forma de pago (aplicada a TODOS los abonos)</label>
                         <select class="form-select form-select-sm mb-2" v-model="separar.global.payment_method" @change="aplicarGlobal">
                             <option v-for="f in formasSAT" :key="f.code" :value="f.code">{{ f.code }} — {{ f.name }}</option>
@@ -111,7 +122,7 @@
                         </select>
 
                         <label class="form-label small">Fecha del consolidado</label>
-                        <input type="date" class="form-control form-control-sm mb-2" v-model="consolidado.fecha_pago">
+                        <input type="date" class="form-control form-control-sm mb-2" v-model="consolidado.fecha_pago" :max="hoyISO">
                         <small class="text-muted d-block mb-2">Default: la fecha del último abono ({{ ultimaFechaAbono }}).</small>
 
                         <bloque-bancario
@@ -226,6 +237,11 @@ export default {
         abonosIdsList() {
             return this.abonos.map(a => a.id).join(', ');
         },
+        hoyISO() {
+            const d = new Date();
+            const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+            return local.toISOString().slice(0, 10);
+        },
         estrategiaValida() {
             if (this.estrategia === 'consolidar') {
                 return !!this.consolidado.payment_method && this.consolidado.payment_method !== '99';
@@ -269,6 +285,7 @@ export default {
             this.separar.asignaciones = this.abonos.map(a => ({
                 partial_payment_id: a.id,
                 ...this.crearAsignacionVacia(),
+                fecha_pago: a.payment_date || this.hoyISO,
             }));
             this.consolidado = this.crearAsignacionVacia();
             this.consolidado.fecha_pago = this.ultimaFechaAbono;
@@ -309,12 +326,14 @@ export default {
                     asigs = this.separar.asignaciones.map(a => ({
                         partial_payment_id: a.partial_payment_id,
                         payment_method: a.payment_method,
+                        fecha_pago: a.fecha_pago || undefined,
                         ...armarBancarios(a),
                     }));
                 } else {
-                    asigs = this.abonos.map(a => ({
-                        partial_payment_id: a.id,
+                    asigs = this.separar.asignaciones.map(a => ({
+                        partial_payment_id: a.partial_payment_id,
                         payment_method: this.separar.global.payment_method,
+                        fecha_pago: a.fecha_pago || undefined,
                         ...armarBancarios(this.separar.global),
                     }));
                 }

@@ -619,6 +619,9 @@ class CfdiInvoiceController extends Controller
             if ($consolidado['payment_method'] === '99') {
                 return ['ok' => false, 'message' => 'El SAT rechaza forma de pago 99 en complementos. Elige una forma específica.'];
             }
+            if (!empty($consolidado['fecha_pago']) && $this->fechaPagoEsFutura($consolidado['fecha_pago'])) {
+                return ['ok' => false, 'message' => 'La fecha del consolidado no puede ser futura.'];
+            }
             return null;
         }
 
@@ -629,6 +632,10 @@ class CfdiInvoiceController extends Controller
                 $asig = $asignaciones->get($a->id);
                 if (!$asig || empty($asig['payment_method']) || $asig['payment_method'] === '99') {
                     $faltan[] = $a->id;
+                    continue;
+                }
+                if (!empty($asig['fecha_pago']) && $this->fechaPagoEsFutura($asig['fecha_pago'])) {
+                    return ['ok' => false, 'message' => "La fecha del abono #{$a->id} no puede ser futura."];
                 }
             }
             if (count($faltan) > 0) {
@@ -642,6 +649,21 @@ class CfdiInvoiceController extends Controller
         }
 
         return ['ok' => false, 'message' => "Estrategia inválida: {$estrategia}. Usa 'separar' o 'consolidar'."];
+    }
+
+    /**
+     * ¿La fecha de pago capturada es futura? (límite: fin del día de hoy, TZ México).
+     * No validamos "anterior a la emisión" porque los abonos previos al timbrado PPD
+     * legítimamente tienen fecha anterior al CFDI que se está emitiendo ahora.
+     */
+    private function fechaPagoEsFutura($fecha): bool
+    {
+        try {
+            return Carbon::parse($fecha, 'America/Mexico_City')
+                ->gt(Carbon::now('America/Mexico_City')->endOfDay());
+        } catch (\Throwable $e) {
+            return false; // no parseable → el servicio la ignora y conserva la fecha guardada
+        }
     }
 
     /**

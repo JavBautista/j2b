@@ -603,6 +603,18 @@ class CfdiTimbradoService
                             $abono->cta_ordenante = !empty($asig['cta_ordenante']) ? strtoupper($asig['cta_ordenante']) : null;
                             $abono->is_foreign_bank_ord = (bool) ($asig['is_foreign_bank_ord'] ?? false);
                             $abono->num_operacion = $asig['num_operacion'] ?? null;
+                            // Fecha real del abono → FechaPago del complemento. Solo se acepta no-futura
+                            // (ya validada en CfdiInvoiceController::validarAbonosPrevios antes de timbrar).
+                            if (!empty($asig['fecha_pago'])) {
+                                try {
+                                    $fp = Carbon::parse($asig['fecha_pago'], 'America/Mexico_City');
+                                    if ($fp->lte(Carbon::now('America/Mexico_City')->endOfDay())) {
+                                        $abono->payment_date = $fp->format('Y-m-d');
+                                    }
+                                } catch (\Throwable $e) {
+                                    // Fecha inválida: conserva la guardada.
+                                }
+                            }
                             $abono->save();
                         }
 

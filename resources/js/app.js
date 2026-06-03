@@ -20,6 +20,7 @@ import SubscriptionManagementComponent from './components/superadmin/Subscriptio
 import ShopPaymentsComponent from './components/superadmin/ShopPaymentsComponent.vue'
 import ContactMessagesComponent from './components/superadmin/ContactMessagesComponent.vue'
 import LegalDocumentsComponent from './components/superadmin/LegalDocumentsComponent.vue'
+import DocumentsComponent from './components/superadmin/DocumentsComponent.vue'
 import CfdiManagementComponent from './components/superadmin/CfdiManagementComponent.vue'
 import SuperadminCfdiFacturasComponent from './components/superadmin/CfdiFacturasComponent.vue'
 import PdfPhrasesComponent from './components/superadmin/PdfPhrasesComponent.vue'
@@ -90,6 +91,7 @@ app.component('subscription-management-component', SubscriptionManagementCompone
 app.component('shop-payments-component', ShopPaymentsComponent);
 app.component('contact-messages-component', ContactMessagesComponent);
 app.component('legal-documents-component', LegalDocumentsComponent);
+app.component('superadmin-documents-component', DocumentsComponent);
 app.component('cfdi-management-component', CfdiManagementComponent);
 app.component('superadmin-cfdi-facturas-component', SuperadminCfdiFacturasComponent);
 app.component('pdf-phrases-component', PdfPhrasesComponent);

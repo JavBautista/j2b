@@ -81,6 +81,11 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="{{ route('superadmin.documents') }}">
+                            <i class="fa fa-file-contract"></i> Documentos
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="{{ route('superadmin.pdf-phrases') }}">
                             <i class="fa fa-quote-left"></i> Frases PDF
                         </a>

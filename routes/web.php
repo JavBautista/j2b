@@ -31,6 +31,7 @@ use App\Http\Controllers\DownloadController;
 use App\Http\Controllers\LegalPageController;
 use App\Http\Controllers\Superadmin\ContactMessagesController;
 use App\Http\Controllers\Superadmin\LegalDocumentsController;
+use App\Http\Controllers\Superadmin\DocumentsController;
 use App\Http\Controllers\Superadmin\PdfPhraseController;
 use App\Http\Controllers\Superadmin\CfdiController;
 use App\Http\Controllers\WebRegisterController;
@@ -237,6 +238,14 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::post('/superadmin/legal-documents/store', [LegalDocumentsController::class, 'store']);
         Route::put('/superadmin/legal-documents/update', [LegalDocumentsController::class, 'update']);
         Route::delete('/superadmin/legal-documents/{id}', [LegalDocumentsController::class, 'destroy']);
+
+        // Documentos (contratos / plantillas en Markdown con generación de PDF)
+        Route::get('/superadmin/documents', [DocumentsController::class, 'index'])->name('superadmin.documents');
+        Route::get('/superadmin/documents/get', [DocumentsController::class, 'get']);
+        Route::post('/superadmin/documents/store', [DocumentsController::class, 'store']);
+        Route::put('/superadmin/documents/update', [DocumentsController::class, 'update']);
+        Route::delete('/superadmin/documents/{id}', [DocumentsController::class, 'destroy']);
+        Route::get('/superadmin/documents/{id}/pdf', [DocumentsController::class, 'pdf'])->name('superadmin.documents.pdf');
 
         // Frases PDF (Growth Hacking en pie de página)
         Route::get('/superadmin/pdf-phrases', [PdfPhraseController::class, 'index'])->name('superadmin.pdf-phrases');

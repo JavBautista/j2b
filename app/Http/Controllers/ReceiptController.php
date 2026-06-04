@@ -107,7 +107,7 @@ class ReceiptController extends Controller
                 ->get()
             : collect();
 
-        $pdf = PDF::loadView($receipt->shop->pdfView('receipt'), [
+        $viewParams = [
             'receipt' => $receipt,
             'withImages' => $withImages,
             'receiptSettings' => $receiptSettings,
@@ -115,7 +115,28 @@ class ReceiptController extends Controller
             'pdfPhrase' => $randomPhrase['phrase'],
             'pdfPhraseUrl' => $randomPhrase['link_url'],
             'bankAccounts' => $bankAccounts,
-        ]);
+        ];
+
+        // Formato ticket 80mm (impresora térmica). Se activa con ?format=ticket.
+        // Sin el parámetro, se conserva el comportamiento normal (carta/A4).
+        if ($request->format === 'ticket') {
+            $cfdi = $receipt->cfdiInvoice;
+            $tieneFiscal = $cfdi && $cfdi->tieneDesgloseFiscal();
+            // Alto estimado del rollo según contenido (80mm = 226.77pt de ancho).
+            $altura = 300
+                + $receipt->detail->count() * 34
+                + $receipt->infoExtra->count() * 14
+                + (strlen((string) $receipt->observation) > 60 ? 30 : 0)
+                + ($tieneFiscal
+                    ? 140
+                    : (!$receipt->quotation ? ($receipt->partialPayments->count() * 14 + 45) : 0))
+                + ($bankAccounts->count() * 55);
+            $pdf = PDF::loadView('pdf_templates.ticket.receipt', $viewParams);
+            $pdf->setPaper([0, 0, 226.77, $altura]);
+        } else {
+            $pdf = PDF::loadView($receipt->shop->pdfView('receipt'), $viewParams);
+        }
+
         return $pdf->stream($name_file.'.pdf',array("Attachment" => false));
     }//printReceiptRent()
 

@@ -132,7 +132,10 @@
                                     <i class="fa fa-edit text-warning"></i> Editar
                                 </a></li>
                                 <li><a class="dropdown-item" href="#" @click.prevent="descargarPDF(receipt)">
-                                    <i class="fa fa-file-pdf-o text-danger"></i> Descargar PDF
+                                    <i class="fa fa-file-pdf-o text-danger"></i> Descargar PDF completo
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" @click.prevent="descargarTicket(receipt)">
+                                    <i class="fa fa-print text-secondary"></i> Descargar PDF ticket
                                 </a></li>
                                 <li v-if="canInvoice(receipt)"><hr class="dropdown-divider"></li>
                                 <li v-if="canInvoice(receipt)"><a class="dropdown-item" href="#" @click.prevent="facturar(receipt)">
@@ -248,8 +251,12 @@
                                             <i class="fa fa-edit"></i>
                                         </button>
                                         <button class="btn btn-outline-secondary"
-                                                @click="descargarPDF(receipt)" title="Descargar PDF">
+                                                @click="descargarPDF(receipt)" title="Descargar PDF completo">
                                             <i class="fa fa-file-pdf-o"></i>
+                                        </button>
+                                        <button class="btn btn-outline-secondary"
+                                                @click="descargarTicket(receipt)" title="Descargar PDF ticket (80mm)">
+                                            <i class="fa fa-print"></i>
                                         </button>
                                         <button v-if="canInvoice(receipt)" class="btn btn-outline-success"
                                                 @click="facturar(receipt)" title="Facturar">
@@ -510,6 +517,11 @@ export default {
                 }
                 window.open(url, '_blank');
             }
+        },
+        descargarTicket(receipt) {
+            // Formato ticket 80mm (impresora térmica). Mismo endpoint con ?format=ticket.
+            const url = `/print-receipt-rent?id=${receipt.id}&name_file=ticket_${receipt.folio}&format=ticket`;
+            window.open(url, '_blank');
         },
         canInvoice(receipt) {
             if (!this.cfdiActivo) return false;

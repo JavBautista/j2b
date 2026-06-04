@@ -118,6 +118,12 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         //Shops
         Route::get('/superadmin/shops', [SuperadminPagesController::class, 'shops'])->name('superadmin.shops');
 
+        // Catálogos SAT fiscales (régimen, uso CFDI, formas/métodos de pago)
+        Route::get('/superadmin/sat-catalogs', [SuperadminPagesController::class, 'satCatalogs'])->name('superadmin.sat-catalogs');
+        Route::get('/superadmin/sat-catalogs/data', [\App\Http\Controllers\Superadmin\SatCatalogsController::class, 'data']);
+        Route::post('/superadmin/sat-catalogs/{tipo}', [\App\Http\Controllers\Superadmin\SatCatalogsController::class, 'store']);
+        Route::put('/superadmin/sat-catalogs/{tipo}/{id}', [\App\Http\Controllers\Superadmin\SatCatalogsController::class, 'update']);
+
         Route::get('/superadmin/shops/get', [ShopsController::class, 'get']);
         Route::post('/superadmin/shops/store', [ShopsController::class, 'store']);
         Route::put('/superadmin/shops/update', [ShopsController::class, 'update']);

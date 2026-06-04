@@ -81,6 +81,10 @@ class SuperadminPagesController extends Controller
         return view('superadmin.shops');
     }
 
+    public function satCatalogs(){
+        return view('superadmin.sat-catalogs');
+    }
+
     public function plans(){
         return view('superadmin.plans');
     }

@@ -535,14 +535,7 @@ export default {
             catalogoRegimen: [],
             catalogoUsoCfdi: [],
             matrizUsosPorRegimen: {},
-            catalogoFormaPago: [
-                { clave: '01', nombre: 'Efectivo' },
-                { clave: '02', nombre: 'Cheque nominativo' },
-                { clave: '03', nombre: 'Transferencia electronica' },
-                { clave: '04', nombre: 'Tarjeta de credito' },
-                { clave: '28', nombre: 'Tarjeta de debito' },
-                { clave: '99', nombre: 'Por definir' },
-            ],
+            catalogoFormaPago: [],
         };
     },
     created() {
@@ -551,6 +544,7 @@ export default {
                 this.catalogoRegimen = b.regimenes || [];
                 this.catalogoUsoCfdi = b.usos || [];
                 this.matrizUsosPorRegimen = b.matriz || {};
+                this.catalogoFormaPago = b.formas_pago || [];
             })
             .catch(() => {
                 Swal.fire('Error', 'No se pudieron cargar los catálogos fiscales del SAT. Recarga la página e intenta de nuevo.', 'error');

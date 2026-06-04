@@ -22,6 +22,7 @@ import ContactMessagesComponent from './components/superadmin/ContactMessagesCom
 import LegalDocumentsComponent from './components/superadmin/LegalDocumentsComponent.vue'
 import DocumentsComponent from './components/superadmin/DocumentsComponent.vue'
 import CfdiManagementComponent from './components/superadmin/CfdiManagementComponent.vue'
+import SatCatalogsComponent from './components/superadmin/SatCatalogsComponent.vue'
 import SuperadminCfdiFacturasComponent from './components/superadmin/CfdiFacturasComponent.vue'
 import PdfPhrasesComponent from './components/superadmin/PdfPhrasesComponent.vue'
 import MonitorPricingTiersComponent from './components/superadmin/MonitorPricingTiersComponent.vue'
@@ -93,6 +94,7 @@ app.component('contact-messages-component', ContactMessagesComponent);
 app.component('legal-documents-component', LegalDocumentsComponent);
 app.component('superadmin-documents-component', DocumentsComponent);
 app.component('cfdi-management-component', CfdiManagementComponent);
+app.component('superadmin-sat-catalogs-component', SatCatalogsComponent);
 app.component('superadmin-cfdi-facturas-component', SuperadminCfdiFacturasComponent);
 app.component('pdf-phrases-component', PdfPhrasesComponent);
 app.component('superadmin-monitor-pricing-tiers', MonitorPricingTiersComponent);

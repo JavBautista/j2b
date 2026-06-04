@@ -2,6 +2,8 @@
 
 namespace Database\Seeders;
 
+use App\Models\SatFormaPago;
+use App\Models\SatMetodoPago;
 use App\Models\SatRegimenFiscal;
 use App\Models\SatUsoCfdi;
 use App\Services\Facturacion\SatCatalogService;
@@ -25,40 +27,95 @@ class SatFiscalCatalogSeeder extends Seeder
         $this->seedRegimenes();
         $this->seedUsos();
         $this->seedMatriz();
+        $this->seedFormasPago();
+        $this->seedMetodosPago();
 
         // Invalidar el bundle cacheado para que el endpoint sirva los datos frescos.
         Cache::forget(SatCatalogService::CACHE_KEY);
     }
 
-    /** c_RegimenFiscal: [code, description, aplica_fisica, aplica_moral] */
+    /** c_RegimenFiscal: [code, description, aplica_fisica, aplica_moral, aplica_emisor]. Emisor = subconjunto que una tienda que factura puede tener. */
     private function seedRegimenes(): void
     {
         $regimenes = [
-            ['601', 'General de Ley Personas Morales', false, true],
-            ['603', 'Personas Morales con Fines no Lucrativos', false, true],
-            ['605', 'Sueldos y Salarios e Ingresos Asimilados a Salarios', true, false],
-            ['606', 'Arrendamiento', true, false],
-            ['607', 'Régimen de Enajenación o Adquisición de Bienes', true, false],
-            ['608', 'Demás ingresos', true, false],
-            ['610', 'Residentes en el Extranjero sin Establecimiento Permanente en México', true, true],
-            ['611', 'Ingresos por Dividendos (socios y accionistas)', true, false],
-            ['612', 'Personas Físicas con Actividades Empresariales y Profesionales', true, false],
-            ['614', 'Ingresos por intereses', true, false],
-            ['615', 'Régimen de los ingresos por obtención de premios', true, false],
-            ['616', 'Sin obligaciones fiscales', true, true],
-            ['620', 'Sociedades Cooperativas de Producción que optan por diferir sus ingresos', false, true],
-            ['621', 'Incorporación Fiscal', true, false],
-            ['622', 'Actividades Agrícolas, Ganaderas, Silvícolas y Pesqueras', false, true],
-            ['623', 'Opcional para Grupos de Sociedades', false, true],
-            ['624', 'Coordinados', false, true],
-            ['625', 'Régimen de las Actividades Empresariales con ingresos a través de Plataformas Tecnológicas', true, false],
-            ['626', 'Régimen Simplificado de Confianza', true, true],
+            ['601', 'General de Ley Personas Morales', false, true, true],
+            ['603', 'Personas Morales con Fines no Lucrativos', false, true, true],
+            ['605', 'Sueldos y Salarios e Ingresos Asimilados a Salarios', true, false, true],
+            ['606', 'Arrendamiento', true, false, true],
+            ['607', 'Régimen de Enajenación o Adquisición de Bienes', true, false, false],
+            ['608', 'Demás ingresos', true, false, true],
+            ['610', 'Residentes en el Extranjero sin Establecimiento Permanente en México', true, true, false],
+            ['611', 'Ingresos por Dividendos (socios y accionistas)', true, false, false],
+            ['612', 'Personas Físicas con Actividades Empresariales y Profesionales', true, false, true],
+            ['614', 'Ingresos por intereses', true, false, false],
+            ['615', 'Régimen de los ingresos por obtención de premios', true, false, false],
+            ['616', 'Sin obligaciones fiscales', true, true, true],
+            ['620', 'Sociedades Cooperativas de Producción que optan por diferir sus ingresos', false, true, false],
+            ['621', 'Incorporación Fiscal', true, false, true],
+            ['622', 'Actividades Agrícolas, Ganaderas, Silvícolas y Pesqueras', false, true, false],
+            ['623', 'Opcional para Grupos de Sociedades', false, true, false],
+            ['624', 'Coordinados', false, true, false],
+            ['625', 'Régimen de las Actividades Empresariales con ingresos a través de Plataformas Tecnológicas', true, false, true],
+            ['626', 'Régimen Simplificado de Confianza', true, true, true],
         ];
 
-        foreach ($regimenes as [$code, $desc, $pf, $pm]) {
+        foreach ($regimenes as [$code, $desc, $pf, $pm, $emisor]) {
             SatRegimenFiscal::updateOrCreate(
                 ['code' => $code],
-                ['description' => $desc, 'aplica_fisica' => $pf, 'aplica_moral' => $pm, 'vigente' => true]
+                ['description' => $desc, 'aplica_fisica' => $pf, 'aplica_moral' => $pm, 'aplica_emisor' => $emisor, 'vigente' => true]
+            );
+        }
+    }
+
+    /** c_FormaPago: catálogo SAT completo. vigente = se ofrece en selects (comunes activas; resto lo activa superadmin). */
+    private function seedFormasPago(): void
+    {
+        // [code, description, vigente]
+        $formas = [
+            ['01', 'Efectivo', true],
+            ['02', 'Cheque nominativo', true],
+            ['03', 'Transferencia electrónica de fondos', true],
+            ['04', 'Tarjeta de crédito', true],
+            ['05', 'Monedero electrónico', false],
+            ['06', 'Dinero electrónico', false],
+            ['08', 'Vales de despensa', false],
+            ['12', 'Dación en pago', false],
+            ['13', 'Pago por subrogación', false],
+            ['14', 'Pago por consignación', false],
+            ['15', 'Condonación', false],
+            ['17', 'Compensación', false],
+            ['23', 'Novación', false],
+            ['24', 'Confusión', false],
+            ['25', 'Remisión de deuda', false],
+            ['26', 'Prescripción o caducidad', false],
+            ['27', 'A satisfacción del acreedor', false],
+            ['28', 'Tarjeta de débito', true],
+            ['29', 'Tarjeta de servicios', false],
+            ['30', 'Aplicación de anticipos', false],
+            ['31', 'Intermediario pagos', false],
+            ['99', 'Por definir', true],
+        ];
+
+        foreach ($formas as [$code, $desc, $vigente]) {
+            SatFormaPago::updateOrCreate(
+                ['code' => $code],
+                ['description' => $desc, 'vigente' => $vigente]
+            );
+        }
+    }
+
+    /** c_MetodoPago. */
+    private function seedMetodosPago(): void
+    {
+        $metodos = [
+            ['PUE', 'Pago en una sola exhibición', true],
+            ['PPD', 'Pago en parcialidades o diferido', true],
+        ];
+
+        foreach ($metodos as [$code, $desc, $vigente]) {
+            SatMetodoPago::updateOrCreate(
+                ['code' => $code],
+                ['description' => $desc, 'vigente' => $vigente]
             );
         }
     }

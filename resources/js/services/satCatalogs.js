@@ -9,7 +9,7 @@
  */
 
 const ENDPOINT = '/admin/sat/fiscal-catalogs';
-const LS_KEY = 'sat_fiscal_catalogs_v1';
+const LS_KEY = 'sat_fiscal_catalogs_v2'; // v2: bundle incluye formas_pago/metodos_pago + aplica_emisor
 const TTL_MS = 24 * 60 * 60 * 1000; // 24 h
 
 let memoryCache = null;

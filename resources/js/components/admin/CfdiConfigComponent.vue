@@ -362,6 +362,8 @@
 </template>
 
 <script>
+import { loadFiscalCatalogs } from '../../services/satCatalogs';
+
 export default {
     name: 'CfdiConfigComponent',
     data() {
@@ -398,18 +400,8 @@ export default {
                 key_file: null,
                 password: '',
             },
-            regimenes: [
-                { clave: '601', descripcion: 'General de Ley Personas Morales' },
-                { clave: '603', descripcion: 'Personas Morales con Fines no Lucrativos' },
-                { clave: '605', descripcion: 'Sueldos y Salarios' },
-                { clave: '606', descripcion: 'Arrendamiento' },
-                { clave: '608', descripcion: 'Demas ingresos' },
-                { clave: '612', descripcion: 'Personas Fisicas con Actividades Empresariales y Profesionales' },
-                { clave: '616', descripcion: 'Sin obligaciones fiscales' },
-                { clave: '621', descripcion: 'Incorporacion Fiscal' },
-                { clave: '625', descripcion: 'Regimen de las Actividades Empresariales con ingresos a traves de Plataformas Tecnologicas' },
-                { clave: '626', descripcion: 'Regimen Simplificado de Confianza' },
-            ],
+            // Régimenes del EMISOR: del endpoint (BD), filtrados por aplica_emisor. Ver services/satCatalogs.js
+            regimenes: [],
         };
     },
     computed: {
@@ -426,8 +418,18 @@ export default {
     },
     mounted() {
         this.loadData();
+        this.cargarRegimenes();
     },
     methods: {
+        cargarRegimenes() {
+            loadFiscalCatalogs()
+                .then(b => {
+                    this.regimenes = (b.regimenes || [])
+                        .filter(r => r.aplica_emisor)
+                        .map(r => ({ clave: r.clave, descripcion: r.nombre }));
+                })
+                .catch(() => {});
+        },
         async loadData() {
             this.loading = true;
             try {

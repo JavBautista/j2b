@@ -10,11 +10,12 @@ class SatRegimenFiscal extends Model
 
     protected $table = 'sat_regimenes_fiscales';
 
-    protected $fillable = ['code', 'description', 'aplica_fisica', 'aplica_moral', 'vigente'];
+    protected $fillable = ['code', 'description', 'aplica_fisica', 'aplica_moral', 'aplica_emisor', 'vigente'];
 
     protected $casts = [
         'aplica_fisica' => 'boolean',
         'aplica_moral'  => 'boolean',
+        'aplica_emisor' => 'boolean',
         'vigente'       => 'boolean',
     ];
 

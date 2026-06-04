@@ -19,6 +19,11 @@
                 </a>
             </li>
             <li class="nav-item">
+                <a href="{{ route('superadmin.sat-catalogs') }}" class="nav-link">
+                    <i class="fa fa-list"></i> Catálogos SAT
+                </a>
+            </li>
+            <li class="nav-item">
                 <a href="{{ route('superadmin.users') }}" class="nav-link">
                     <i class="fa fa-users"></i> Usuarios
                 </a>

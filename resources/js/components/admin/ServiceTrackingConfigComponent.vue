@@ -101,6 +101,9 @@
                                     <span v-if="step.is_initial" class="j2b-badge j2b-badge-success">Inicial</span>
                                     <span v-else-if="step.is_final" class="j2b-badge j2b-badge-primary">Final</span>
                                     <span v-else class="j2b-badge j2b-badge-outline">Intermedio</span>
+                                    <span v-if="step.notify_client" class="j2b-badge j2b-badge-warning" title="Notifica al cliente">
+                                        <i class="fa fa-bell"></i>
+                                    </span>
                                 </td>
                                 <td>
                                     <span v-if="step.active" class="j2b-badge j2b-badge-success">Activo</span>
@@ -241,6 +244,18 @@
                         </div>
                     </div>
                 </div>
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" v-model="form.notify_client">
+                            <label class="form-check-label">Avisar al cliente al llegar a este estatus</label>
+                        </div>
+                        <small class="text-muted d-block ms-4">
+                            <i class="fa fa-bell"></i>
+                            El cliente recibirá una notificación en su app cuando su servicio avance a este paso.
+                        </small>
+                    </div>
+                </div>
 
                 <!-- Preview -->
                 <div class="border rounded p-3 text-center" style="background: #f8f9fa;">
@@ -281,6 +296,7 @@ export default {
                 icon: '',
                 is_initial: false,
                 is_final: false,
+                notify_client: false,
             },
             dragIndex: null,
             dragOverIndex: null,
@@ -343,6 +359,7 @@ export default {
                 icon: '',
                 is_initial: this.steps.length === 0,
                 is_final: false,
+                notify_client: false,
             };
             this.showModal = true;
         },
@@ -356,6 +373,7 @@ export default {
                 icon: step.icon || '',
                 is_initial: step.is_initial,
                 is_final: step.is_final,
+                notify_client: step.notify_client ?? false,
             };
             this.showModal = true;
         },

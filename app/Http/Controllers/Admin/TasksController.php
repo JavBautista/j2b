@@ -20,6 +20,7 @@ use App\Models\ServiceTrackingEvidence;
 use App\Models\TaskInfoExtra;
 use App\Models\ExtraFieldShop;
 use App\Services\ImageService;
+use App\Services\TaskClientNotificationService;
 use App\Models\PdfPhrase;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Str;
@@ -692,6 +693,9 @@ class TasksController extends Controller
 
         // Log
         $this->storeTaskLog($task->id, $user->name, 'Seguimiento actualizado a: ' . $step->name);
+
+        // 🔔 Notificar al cliente si este estatus lo tiene activado (solo solicitudes del cliente)
+        app(TaskClientNotificationService::class)->notifyStatusChange($task, $step);
 
         $task->load('currentServiceStep');
 

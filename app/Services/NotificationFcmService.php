@@ -158,6 +158,25 @@ class NotificationFcmService
         );
     }
 
+    /**
+     * Notifica a un cliente (usuario-app) que su servicio cambió de estatus.
+     * Se usa cuando un ServiceTrackingStep tiene notify_client activo.
+     */
+    public function taskStatusChanged($userId, $taskTitle, $stepName, $taskId = null)
+    {
+        return $this->sendToUser(
+            $userId,
+            '🔔 Actualización de tu servicio',
+            "Tu servicio \"{$taskTitle}\" ahora está: {$stepName}",
+            'task_status_update',
+            array_filter([
+                'task_id' => $taskId ? (string) $taskId : null,
+                'step_name' => $stepName,
+                'action' => 'open_task',
+            ])
+        );
+    }
+
     public function serviceRequest($shopId, $clientName, $serviceTitle, $serviceId = null)
     {
         return $this->sendToShopAdmins(

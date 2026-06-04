@@ -15,12 +15,14 @@ class ServiceTrackingStep extends Model
         'sort_order',
         'is_initial',
         'is_final',
+        'notify_client',
         'active',
     ];
 
     protected $casts = [
         'is_initial' => 'boolean',
         'is_final' => 'boolean',
+        'notify_client' => 'boolean',
         'active' => 'boolean',
     ];
 

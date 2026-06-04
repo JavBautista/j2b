@@ -12,6 +12,7 @@ use App\Models\TaskChecklistItem;
 use App\Models\Notification;
 use App\Models\User;
 use App\Services\NotificationFcmService;
+use App\Services\TaskClientNotificationService;
 use App\Services\FirebaseService;
 use App\Services\ImageService;
 use Illuminate\Support\Carbon;
@@ -1557,6 +1558,9 @@ class TaskController extends Controller
         }
 
         $this->storeTaskLog($task->id, $user->name, 'Seguimiento actualizado a: ' . $step->name);
+
+        // 🔔 Notificar al cliente si este estatus lo tiene activado (solo solicitudes del cliente)
+        app(TaskClientNotificationService::class)->notifyStatusChange($task, $step);
 
         $task->load('currentServiceStep');
 

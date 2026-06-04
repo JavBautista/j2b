@@ -28,6 +28,7 @@ class ServiceTrackingConfigApiController extends Controller
             'icon' => 'nullable|string|max:50',
             'is_initial' => 'boolean',
             'is_final' => 'boolean',
+            'notify_client' => 'boolean',
         ]);
 
         $shop = $request->user()->shop;
@@ -49,6 +50,7 @@ class ServiceTrackingConfigApiController extends Controller
             'sort_order' => $maxOrder + 1,
             'is_initial' => $request->is_initial ?? false,
             'is_final' => $request->is_final ?? false,
+            'notify_client' => $request->notify_client ?? false,
         ]);
 
         return response()->json(['ok' => true, 'step' => $step, 'message' => 'Paso creado correctamente']);
@@ -63,6 +65,7 @@ class ServiceTrackingConfigApiController extends Controller
             'icon' => 'nullable|string|max:50',
             'is_initial' => 'boolean',
             'is_final' => 'boolean',
+            'notify_client' => 'boolean',
         ]);
 
         $shop = $request->user()->shop;
@@ -82,6 +85,7 @@ class ServiceTrackingConfigApiController extends Controller
             'icon' => $request->icon,
             'is_initial' => $request->is_initial ?? false,
             'is_final' => $request->is_final ?? false,
+            'notify_client' => $request->notify_client ?? false,
         ]);
 
         return response()->json(['ok' => true, 'step' => $step, 'message' => 'Paso actualizado']);

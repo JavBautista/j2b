@@ -83,4 +83,15 @@ class CfdiInvoice extends Model
             ->sum('imp_pagado');
         return max(0, (float) $this->total - (float) $pagado);
     }
+
+    /**
+     * ¿Esta factura tiene desglose fiscal especial (retenciones federales o
+     * impuestos locales) que hace que su total NO coincida con el total comercial
+     * de la nota? Se usa en el PDF del recibo para mostrar el recuadro fiscal y
+     * ocultar el "Detalle de pagos" comercial (que confundiría con el efectivo real).
+     */
+    public function tieneDesgloseFiscal(): bool
+    {
+        return (float) $this->total_retenciones > 0 || $this->impuestosLocales->isNotEmpty();
+    }
 }

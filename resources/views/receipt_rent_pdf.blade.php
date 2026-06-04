@@ -175,7 +175,13 @@
             @endif
             <p>Total a pagar <strong>{{ $receipt->shop->getCurrencySymbol() }}{{number_format($receipt->total,2)}}</strong></p>
         </div>
-        @if(!$receipt->quotation)
+
+        {{-- Resumen fiscal del CFDI (retenciones / impuestos locales) — solo si la nota está facturada con ellos --}}
+        @include('pdf_templates.partials._resumen-fiscal-cfdi', ['fiscalColor' => '#1a4d8f', 'fiscalColorSoft' => '#eef4fb'])
+
+        {{-- "Detalle de pagos" se oculta cuando la nota tiene desglose fiscal: el "RECIBIDO" comercial
+             confunde frente al total facturado neto. El recuadro fiscal de arriba ya cierra el documento. --}}
+        @if(!$receipt->quotation && !($receipt->cfdiInvoice?->tieneDesgloseFiscal()))
             <hr>
             <h2>Detalle de pagos</h2>
             <table width="50%">

@@ -345,6 +345,10 @@
         </tr>
     </table>
 
+    {{-- ============== RESUMEN FISCAL CFDI (retenciones / impuestos locales) ============== --}}
+    {{-- Solo se renderiza si la nota está facturada con retenciones o impuestos locales --}}
+    @include('pdf_templates.partials._resumen-fiscal-cfdi', ['fiscalColor' => '#16386b', 'fiscalColorSoft' => '#eef2f8'])
+
     {{-- ============== CUENTA BANCARIA (sólo cotización) ============== --}}
     @if($esCotizacion && $bancoDefault)
         <div class="banco-wrap">

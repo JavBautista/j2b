@@ -123,14 +123,15 @@ class ReceiptController extends Controller
             $cfdi = $receipt->cfdiInvoice;
             $tieneFiscal = $cfdi && $cfdi->tieneDesgloseFiscal();
             // Alto estimado del rollo según contenido (80mm = 226.77pt de ancho).
-            $altura = 300
-                + $receipt->detail->count() * 34
-                + $receipt->infoExtra->count() * 14
-                + (strlen((string) $receipt->observation) > 60 ? 30 : 0)
+            $altura = 340
+                + ($receipt->client ? 78 : 0)
+                + $receipt->detail->count() * 40
+                + $receipt->infoExtra->count() * 16
+                + (strlen((string) $receipt->observation) > 0 ? 32 : 0)
                 + ($tieneFiscal
-                    ? 140
-                    : (!$receipt->quotation ? ($receipt->partialPayments->count() * 14 + 45) : 0))
-                + ($bankAccounts->count() * 55);
+                    ? 155
+                    : (!$receipt->quotation ? ($receipt->partialPayments->count() * 16 + 58) : 0))
+                + ($bankAccounts->count() * 62);
             $pdf = PDF::loadView('pdf_templates.ticket.receipt', $viewParams);
             $pdf->setPaper([0, 0, 226.77, $altura]);
         } else {

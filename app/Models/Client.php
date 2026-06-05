@@ -9,7 +9,7 @@ class Client extends Model
 {
     use HasFactory;
     protected $guarded=[];
-    
+
     protected $fillable = [
         'name',
         'email',
@@ -23,6 +23,11 @@ class Client extends Model
         'level',
         'user_id',
         'origin'
+    ];
+
+    protected $casts = [
+        'account_balance' => 'decimal:2',
+        'credit_limit'    => 'decimal:2',
     ];
 
     public function rents(){
@@ -59,5 +64,22 @@ class Client extends Model
 
     public function user(){
         return $this->belongsTo(User::class);
+    }
+
+    /** Movimientos de la cuenta corriente (ledger del saldo a favor), más recientes primero. */
+    public function accountMovements(){
+        return $this->hasMany(ClientAccountMovement::class)->orderByDesc('created_at')->orderByDesc('id');
+    }
+
+    /** Saldo a favor disponible (= account_balance cuando es positivo, 0 si hay adeudo). */
+    public function saldoAFavor(): float
+    {
+        return max(0, (float) $this->account_balance);
+    }
+
+    /** True si la cuenta del cliente está en negativo (adeudo). */
+    public function tieneAdeudo(): bool
+    {
+        return (float) $this->account_balance < 0;
     }
 }

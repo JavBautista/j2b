@@ -1165,8 +1165,26 @@ class ReceiptController extends Controller
 
     public function devolucion(Request $request){
         $receipt = Receipt::findOrFail($request->receipt_id);
+        $yaEraDevolucion = ($receipt->status === Receipt::STATUS_DEVOLUCION);
         $receipt->status=Receipt::STATUS_DEVOLUCION;
         $receipt->save();
+
+        // Origen "devolución" (opt-in): si se solicita reembolsar a saldo a favor, lo que el
+        // cliente ya pagó (received) queda en su cuenta corriente para futuras compras.
+        // Sin el flag, el comportamiento es idéntico al anterior (no genera saldo).
+        if ($request->boolean('refund_to_balance') && !$yaEraDevolucion
+            && $receipt->client_id && (float) $receipt->received > 0) {
+            app(\App\Services\ClientAccountService::class)->registrarMovimiento(
+                $receipt->client,
+                \App\Models\ClientAccountMovement::TYPE_DEVOLUCION,
+                (float) $receipt->received,
+                [
+                    'reference'   => $receipt,
+                    'description' => 'Devolución de la nota ' . ($receipt->folio ?? $receipt->id),
+                    'created_by'  => optional(auth()->user())->id,
+                ]
+            );
+        }
 
         //Solo Si es nota de VENTA y ademas que no sea una COTIZACIÓN debemos ver si hay ajuste de stock
         if($receipt->type == 'venta' && !$receipt->quotation){

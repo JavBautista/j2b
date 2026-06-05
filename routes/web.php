@@ -448,6 +448,14 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
             Route::patch('/admin/fiscal-data/{id}/set-default', [\App\Http\Controllers\ClientFiscalDataController::class, 'setDefault'])->name('admin.fiscal-data.set-default');
         }); // ./Datos fiscales escritura (full.admin)
 
+        // Cuenta corriente del cliente (saldo a favor) — Lectura: todos los admin
+        Route::get('/admin/clients/{client}/account', [\App\Http\Controllers\Admin\ClientAccountController::class, 'index'])->name('admin.clients.account');
+        // Saldo a favor — Escritura: Solo Admin Full
+        Route::group(['middleware' => ['full.admin']], function () {
+            Route::post('/admin/clients/{client}/account/deposito', [\App\Http\Controllers\Admin\ClientAccountController::class, 'deposito'])->name('admin.clients.account.deposito');
+            Route::post('/admin/clients/{client}/account/ajuste', [\App\Http\Controllers\Admin\ClientAccountController::class, 'ajuste'])->name('admin.clients.account.ajuste');
+        }); // ./Saldo a favor escritura (full.admin)
+
         // Rutas para contratos desde clientes
         Route::get('/admin/clients/{client}/assign-contract', [ClientsController::class, 'assignContractPage'])->name('admin.clients.assign-contract');
         Route::post('/admin/clients/{client}/create-contract', [ClientsController::class, 'createContract'])->name('admin.clients.create-contract');

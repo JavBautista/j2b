@@ -923,14 +923,25 @@ class ReceiptsController extends Controller
         $fecha_pago = \App\Services\Pagos\PaymentDateResolver::resolver($request->payment_date, $receipt);
 
         $suma_actual = $receipt->partialPayments->sum('amount');
-        $nueva_suma = $suma_actual + $request->amount;
+
+        // Sobrepago: si el abono supera lo que falta para liquidar la nota, el excedente
+        // NO se aplica a la nota; se deriva al saldo a favor del cliente (cuenta corriente).
+        $saldo_pendiente = round($receipt->total - $suma_actual, 2);
+        $abono_amount    = round((float) $request->amount, 2);
+        $excedente       = 0.0;
+        if ($saldo_pendiente > 0 && $abono_amount > $saldo_pendiente) {
+            $excedente    = round($abono_amount - $saldo_pendiente, 2);
+            $abono_amount = $saldo_pendiente; // la nota se salda exacto; el resto va a saldo a favor
+        }
+
+        $nueva_suma = round($suma_actual + $abono_amount, 2);
 
         // Determinar tipo de pago
         $payment_type = ($nueva_suma >= $receipt->total) ? 'liquidacion' : 'abono';
 
         $payment = new PartialPayments();
         $payment->receipt_id = $receipt->id;
-        $payment->amount = $request->amount;
+        $payment->amount = $abono_amount;
         $payment->payment_type = $payment_type;
         $payment->payment_date = $fecha_pago;
         $payment->payment_method = $request->payment_method ?? '99';
@@ -953,6 +964,20 @@ class ReceiptsController extends Controller
         }
         $receipt->save();
 
+        // Origen "sobrepago": el excedente del abono queda como saldo a favor del cliente.
+        if ($excedente > 0 && $receipt->client) {
+            app(\App\Services\ClientAccountService::class)->registrarMovimiento(
+                $receipt->client,
+                \App\Models\ClientAccountMovement::TYPE_SOBREPAGO_NOTA,
+                $excedente,
+                [
+                    'reference'   => $receipt,
+                    'description' => 'Excedente del abono a la nota ' . ($receipt->folio ?? $receipt->id),
+                    'created_by'  => $user->id,
+                ]
+            );
+        }
+
         // Hook PPD: si la nota tiene factura PPD vigente, emitir complemento de pago
         // automáticamente por este abono. Si TBT falla, queda como 'failed' y se
         // re-emite desde la UI; no rompe el flujo del abono.
@@ -964,6 +989,8 @@ class ReceiptsController extends Controller
             'ok' => true,
             'receipt' => $receipt,
             'complemento' => $complementoResult,
+            'excedente_saldo_favor' => $excedente > 0 ? $excedente : null,
+            'account_balance' => ($excedente > 0 && $receipt->client) ? (float) $receipt->client->account_balance : null,
         ]);
     }
 

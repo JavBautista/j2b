@@ -2058,9 +2058,18 @@ export default {
                     this.receipt.received = response.data.receipt.received;
                     this.receipt.status = response.data.receipt.status;
 
-                    // Mensaje contextual según haya disparado complemento PPD
+                    // Mensaje contextual: excedente → saldo a favor y/o complemento PPD
                     const comp = response.data.complemento;
-                    if (comp && comp.ok) {
+                    const excedente = Number(response.data.excedente_saldo_favor || 0);
+                    const fmt = (v) => Number(v || 0).toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
+
+                    if (excedente > 0) {
+                        let html = `La nota se saldó y <b>${fmt(excedente)}</b> quedaron como <b>saldo a favor del cliente</b>.`;
+                        const saldo = Number(response.data.account_balance || 0);
+                        if (saldo > 0) html += `<br>Saldo a favor actual: <b>${fmt(saldo)}</b>.`;
+                        if (comp && !comp.ok) html += `<br><span style="color:#e0a800;">El complemento de pago falló: ${comp.message}. Puedes re-emitirlo desde la lista.</span>`;
+                        Swal.fire({ icon: 'success', title: 'Abono registrado con excedente', html });
+                    } else if (comp && comp.ok) {
                         Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Abono y complemento de pago registrados', showConfirmButton: false, timer: 2500 });
                     } else if (comp && !comp.ok) {
                         Swal.fire('Abono registrado', 'El abono se guardo correctamente, pero el complemento de pago fallo: ' + comp.message + '. Puedes re-emitirlo desde la lista.', 'warning');

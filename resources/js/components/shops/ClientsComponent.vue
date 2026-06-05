@@ -277,6 +277,9 @@
     <!-- Componente de datos fiscales -->
     <client-fiscal-data-modal ref="clientFiscalData"></client-fiscal-data-modal>
 
+    <!-- Componente de cuenta corriente (saldo a favor) -->
+    <client-account-component ref="clientAccount" :is-limited-user="isLimitedUser" @updated="onSaldoActualizado" @close="onCuentaCerrada"></client-account-component>
+
     <!-- Modal Ver Detalle Cliente -->
     <div class="modal fade" tabindex="-1" :class="{'mostrar':modalDetalle}" role="dialog" style="display: none;" aria-hidden="true">
         <div class="modal-dialog modal-lg" role="document">
@@ -351,6 +354,26 @@
                                     <p v-if="!clienteDetalle.email && !clienteDetalle.movil && !clienteDetalle.phone" class="text-muted mb-0">
                                         Sin información de contacto
                                     </p>
+                                </div>
+                            </div>
+
+                            <!-- Card Saldo a favor -->
+                            <div class="card mb-3">
+                                <div class="card-header bg-light">
+                                    <i class="fa fa-wallet"></i> Saldo a favor
+                                </div>
+                                <div class="card-body d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h4 class="mb-0" :class="saldoClase(clienteDetalle.account_balance)">
+                                            {{ formatSaldo(clienteDetalle.account_balance) }}
+                                        </h4>
+                                        <small v-if="Number(clienteDetalle.account_balance) < 0" class="text-danger">Adeudo</small>
+                                        <small v-else-if="Number(clienteDetalle.account_balance) > 0" class="text-success">A favor del cliente</small>
+                                        <small v-else class="text-muted">Sin saldo</small>
+                                    </div>
+                                    <button class="btn btn-outline-primary btn-sm" @click="abrirModalCuenta(clienteDetalle)">
+                                        <i class="fa fa-list"></i> Estado de cuenta
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -1354,11 +1377,13 @@
 <script>
 import ClientAddressesComponent from './ClientAddressesComponent.vue';
 import ClientFiscalDataModal from './ClientFiscalDataModal.vue';
+import ClientAccountComponent from './ClientAccountComponent.vue';
 
 export default {
         components: {
             ClientAddressesComponent,
-            ClientFiscalDataModal
+            ClientFiscalDataModal,
+            ClientAccountComponent
         },
         props: {
             shop: {
@@ -1823,6 +1848,32 @@ export default {
                 this.modalDetalle = 0;
                 this.clienteDetalle = null;
                 this.clienteDetalleUserEmail = null;
+            },
+            // ===== Saldo a favor / cuenta corriente =====
+            abrirModalCuenta(client) {
+                // Cerramos el detalle para que el modal de cuenta quede al frente
+                // (ambos modales comparten z-index; el orden en el DOM decide).
+                this.modalDetalle = 0;
+                this.$refs.clientAccount.abrir(client);
+            },
+            onCuentaCerrada() {
+                // Al cerrar el estado de cuenta, volvemos al detalle del que veníamos.
+                if (this.clienteDetalle) this.modalDetalle = 1;
+            },
+            onSaldoActualizado(payload) {
+                // Refresca el saldo mostrado en el detalle abierto y en el listado.
+                if (this.clienteDetalle && this.clienteDetalle.id === payload.clientId) {
+                    this.clienteDetalle.account_balance = payload.balance;
+                }
+                const enLista = this.arrayClients.find(c => c.id === payload.clientId);
+                if (enLista) enLista.account_balance = payload.balance;
+            },
+            saldoClase(balance) {
+                const v = Number(balance || 0);
+                return v > 0 ? 'text-success' : (v < 0 ? 'text-danger' : 'text-muted');
+            },
+            formatSaldo(balance) {
+                return Number(balance || 0).toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
             },
             // Utilidades
             truncateText(text, length) {

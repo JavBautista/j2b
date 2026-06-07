@@ -41,8 +41,17 @@ class PartialPaymentsController extends Controller
         // Fecha real del pago (FechaPago del complemento PPD). Valida no-futura y no-anterior a la factura.
         $fecha_pago = \App\Services\Pagos\PaymentDateResolver::resolver($request->payment_date, $receipt);
 
+        // Sobrepago: si el abono supera lo que falta para liquidar, el excedente va al saldo a favor del cliente.
+        $saldo_pendiente = round($receipt->total - $suma_actual, 2);
+        $abono_amount    = round((float) $request->amount, 2);
+        $excedente       = 0.0;
+        if ($saldo_pendiente > 0 && $abono_amount > $saldo_pendiente) {
+            $excedente    = round($abono_amount - $saldo_pendiente, 2);
+            $abono_amount = $saldo_pendiente; // la nota se salda exacto; el resto va a saldo a favor
+        }
+
         // Calcular nueva suma después de este pago
-        $nueva_suma = $suma_actual + $request->amount;
+        $nueva_suma = round($suma_actual + $abono_amount, 2);
 
         // Determinar tipo de pago: 'liquidacion' si completa, 'abono' si no
         $payment_type = ($nueva_suma >= $receipt->total) ? 'liquidacion' : 'abono';
@@ -50,7 +59,7 @@ class PartialPaymentsController extends Controller
         // Crear el pago
         $payment = new PartialPayments();
         $payment->receipt_id = $request->receipt_id;
-        $payment->amount = $request->amount;
+        $payment->amount = $abono_amount;
         $payment->payment_type = $payment_type;
         $payment->payment_date = $fecha_pago;
         $payment->payment_method = $request->payment_method ?? '99';
@@ -73,6 +82,20 @@ class PartialPaymentsController extends Controller
         }
         $receipt->save();
 
+        // Excedente del abono → saldo a favor del cliente (cuenta corriente).
+        if ($excedente > 0 && $receipt->client) {
+            app(\App\Services\ClientAccountService::class)->registrarMovimiento(
+                $receipt->client,
+                \App\Models\ClientAccountMovement::TYPE_SOBREPAGO_NOTA,
+                $excedente,
+                [
+                    'reference'   => $receipt,
+                    'description' => 'Excedente del abono a la nota ' . ($receipt->folio ?? $receipt->id),
+                    'created_by'  => optional($request->user())->id,
+                ]
+            );
+        }
+
         // Hook PPD: emitir complemento de pago si la nota tiene factura PPD vigente.
         $complementoResult = $this->emitirComplementoSiAplica($receipt, $payment);
 
@@ -83,6 +106,8 @@ class PartialPaymentsController extends Controller
             'ok' => true,
             'receipt' => $receipt,
             'complemento' => $complementoResult,
+            'excedente_saldo_favor' => $excedente > 0 ? $excedente : null,
+            'account_balance' => ($excedente > 0 && $receipt->client) ? (float) $receipt->client->account_balance : null,
         ]);
     }
 

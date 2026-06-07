@@ -164,6 +164,11 @@ Route::group([
         Route::post('client/update-user-app','App\Http\Controllers\ClientController@updateUserApp');
         Route::get('client/get-user-app','App\Http\Controllers\ClientController@getUserApp');
 
+        /*CUENTA CORRIENTE / SALDO A FAVOR DEL CLIENTE*/
+        Route::get('client/{client}/account','App\Http\Controllers\ClientAccountController@index');
+        Route::post('client/{client}/account/deposito','App\Http\Controllers\ClientAccountController@deposito');
+        Route::post('client/{client}/account/ajuste','App\Http\Controllers\ClientAccountController@ajuste');
+
         /*DIRECCIONES DE CLIENTES*/
         Route::get('client-address','App\Http\Controllers\ClientAddressController@index');
         Route::post('client-address','App\Http\Controllers\ClientAddressController@store');

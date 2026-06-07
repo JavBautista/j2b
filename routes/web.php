@@ -558,6 +558,7 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::post('/admin/receipts/{id}/update', [App\Http\Controllers\Admin\ReceiptsController::class, 'update'])->name('admin.receipts.update');
         Route::get('/admin/receipts/{id}/stock-detail', [App\Http\Controllers\Admin\ReceiptsController::class, 'getStockCurrentDetail'])->name('admin.receipts.stock-detail');
         Route::post('/admin/receipts/{id}/partial-payment', [App\Http\Controllers\Admin\ReceiptsController::class, 'storePartialPayment'])->name('admin.receipts.partial-payment');
+        Route::post('/admin/receipts/{id}/apply-balance', [App\Http\Controllers\Admin\ReceiptsController::class, 'aplicarSaldoFavor'])->name('admin.receipts.apply-balance');
         Route::delete('/admin/receipts/partial-payment/{paymentId}', [App\Http\Controllers\Admin\ReceiptsController::class, 'deletePartialPayment'])->name('admin.receipts.delete-partial-payment');
         Route::post('/admin/receipts/{id}/cancel', [App\Http\Controllers\Admin\ReceiptsController::class, 'cancelReceipt'])->name('admin.receipts.cancel');
         Route::patch('/admin/receipts/{id}/toggle-invoiced', [App\Http\Controllers\Admin\ReceiptsController::class, 'toggleInvoiced'])->name('admin.receipts.toggle-invoiced');

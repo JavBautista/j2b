@@ -268,7 +268,11 @@ export default {
         formatDate(dateString) {
             if (!dateString) return '-';
             const date = new Date(dateString);
-            return date.toLocaleDateString('es-MX', { year: 'numeric', month: 'short', day: 'numeric' });
+            // Incluye hora:minuto para distinguir movimientos del mismo día (ordenados más reciente primero).
+            return date.toLocaleString('es-MX', {
+                year: 'numeric', month: 'short', day: 'numeric',
+                hour: '2-digit', minute: '2-digit',
+            });
         },
         labelTipo(type) {
             const map = {

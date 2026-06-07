@@ -431,14 +431,25 @@
                         <hr>
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <h6 class="mb-0"><i class="fa fa-money me-2"></i>Abonos</h6>
-                            <button
-                                v-if="adeudo > 0"
-                                class="btn btn-success btn-sm"
-                                @click="abrirModalAbono"
-                                :disabled="agregandoAbono"
-                            >
-                                <i class="fa fa-plus me-1"></i>Abonar
-                            </button>
+                            <div class="d-flex gap-1">
+                                <button
+                                    v-if="puedeUsarSaldoFavor"
+                                    class="btn btn-outline-success btn-sm"
+                                    @click="abrirModalSaldoFavor"
+                                    :disabled="aplicandoSaldoFavor"
+                                    title="Pagar usando el saldo a favor del cliente"
+                                >
+                                    <i class="fa fa-wallet me-1"></i>Saldo a favor
+                                </button>
+                                <button
+                                    v-if="adeudo > 0"
+                                    class="btn btn-success btn-sm"
+                                    @click="abrirModalAbono"
+                                    :disabled="agregandoAbono"
+                                >
+                                    <i class="fa fa-plus me-1"></i>Abonar
+                                </button>
+                            </div>
                         </div>
 
                         <!-- Lista de pagos -->
@@ -588,6 +599,57 @@
                                     >
                                         <span v-if="agregandoAbono"><i class="fa fa-spinner fa-spin me-1"></i>Guardando...</span>
                                         <span v-else><i class="fa fa-check me-1"></i>Agregar</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Modal Pagar con saldo a favor (Fase 2) -->
+                    <div v-if="showModalSaldoFavor" class="modal d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+                        <div class="modal-dialog modal-md modal-dialog-centered">
+                            <div class="modal-content">
+                                <div class="modal-header py-2 bg-success text-white">
+                                    <h6 class="modal-title"><i class="fa fa-wallet me-2"></i>Pagar con saldo a favor</h6>
+                                    <button type="button" class="btn-close btn-close-white" @click="showModalSaldoFavor = false"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="d-flex justify-content-between small mb-1">
+                                        <span>Saldo a favor disponible:</span>
+                                        <span class="fw-bold text-success">{{ formatCurrency(clienteSaldoFavor) }}</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between small mb-3">
+                                        <span>Adeudo de la nota:</span>
+                                        <span class="fw-bold text-danger">{{ formatCurrency(adeudo) }}</span>
+                                    </div>
+
+                                    <label class="form-label small">Monto a aplicar <span class="text-danger">*</span></label>
+                                    <div class="input-group mb-1">
+                                        <span class="input-group-text">$</span>
+                                        <input
+                                            ref="inputSaldoFavor"
+                                            type="number"
+                                            class="form-control"
+                                            v-model.number="montoSaldoFavor"
+                                            min="0.01"
+                                            :max="maxAplicarSaldo"
+                                            step="0.01"
+                                        >
+                                        <button class="btn btn-outline-secondary" @click="montoSaldoFavor = maxAplicarSaldo" title="Aplicar el máximo">
+                                            Máx
+                                        </button>
+                                    </div>
+                                    <small class="text-muted d-block">Máximo a aplicar: {{ formatCurrency(maxAplicarSaldo) }}</small>
+                                </div>
+                                <div class="modal-footer py-2">
+                                    <button class="btn btn-secondary btn-sm" @click="showModalSaldoFavor = false">Cancelar</button>
+                                    <button
+                                        class="btn btn-success btn-sm"
+                                        @click="aplicarSaldoFavor"
+                                        :disabled="!montoSaldoFavor || montoSaldoFavor <= 0 || montoSaldoFavor > maxAplicarSaldo || aplicandoSaldoFavor"
+                                    >
+                                        <span v-if="aplicandoSaldoFavor"><i class="fa fa-spinner fa-spin me-1"></i>Aplicando...</span>
+                                        <span v-else><i class="fa fa-check me-1"></i>Aplicar</span>
                                     </button>
                                 </div>
                             </div>
@@ -1008,6 +1070,12 @@ export default {
             agregandoAbono: false,
             eliminandoAbono: false,
             cuentasBancarias: [],
+
+            // Saldo a favor del cliente (Fase 2: pagar/abonar usando el saldo a favor)
+            clienteSaldoFavor: 0,
+            showModalSaldoFavor: false,
+            montoSaldoFavor: 0,
+            aplicandoSaldoFavor: false,
             bancosOrdenantes: [
                 { code: '002', name: 'Banamex (Citibanamex)' },
                 { code: '012', name: 'BBVA México' },
@@ -1073,6 +1141,17 @@ export default {
         adeudo() {
             return Math.max(0, parseFloat(this.receiptOriginal?.total || 0) - this.totalPagado);
         },
+        // Fase 2: el botón "Saldo a favor" solo aplica a notas existentes, con adeudo, cliente con
+        // saldo a favor y NO facturadas (las facturadas requieren CFDI de anticipos — bloqueadas en backend).
+        puedeUsarSaldoFavor() {
+            return !this.isCreateMode
+                && this.adeudo > 0
+                && this.clienteSaldoFavor > 0
+                && !(this.receiptOriginal && this.receiptOriginal.is_tax_invoiced);
+        },
+        maxAplicarSaldo() {
+            return Math.min(Number(this.clienteSaldoFavor) || 0, this.adeudo);
+        },
         getButtonLabel() {
             if (this.isCreateMode) {
                 return this.cotizacion ? 'Guardar Cotización' : 'Guardar Nota de Venta';
@@ -1137,6 +1216,7 @@ export default {
                 if (response.data.ok) {
                     this.receiptOriginal = response.data.receipt;
                     this.clientOriginal = response.data.receipt.client;
+                    this.clienteSaldoFavor = Number(response.data.receipt.client?.account_balance || 0);
                     this.detailOriginal = response.data.receipt.detail || [];
 
                     // Cargar stock actual (solo para edición)
@@ -2026,6 +2106,52 @@ export default {
             });
         },
 
+        abrirModalSaldoFavor() {
+            this.montoSaldoFavor = this.maxAplicarSaldo;
+            this.showModalSaldoFavor = true;
+            this.$nextTick(() => {
+                if (this.$refs.inputSaldoFavor) {
+                    this.$refs.inputSaldoFavor.focus();
+                    this.$refs.inputSaldoFavor.select();
+                }
+            });
+        },
+
+        async aplicarSaldoFavor() {
+            const monto = Number(this.montoSaldoFavor);
+            if (!monto || monto <= 0) return;
+            if (monto > this.maxAplicarSaldo) {
+                Swal.fire('Atención', 'El monto excede el saldo a favor disponible o el adeudo de la nota.', 'warning');
+                return;
+            }
+
+            this.aplicandoSaldoFavor = true;
+            try {
+                const response = await axios.post(`/admin/receipts/${this.receiptId}/apply-balance`, { amount: monto });
+                if (response.data.ok) {
+                    this.showModalSaldoFavor = false;
+                    this.receiptOriginal = response.data.receipt;
+                    this.receipt.received = response.data.receipt.received;
+                    this.receipt.status = response.data.receipt.status;
+                    this.clienteSaldoFavor = Number(response.data.account_balance || 0);
+
+                    const fmt = (v) => Number(v || 0).toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Saldo aplicado',
+                        html: `Se aplicaron <b>${fmt(monto)}</b> del saldo a favor a la nota.<br>Saldo a favor restante: <b>${fmt(this.clienteSaldoFavor)}</b>.`,
+                    });
+                } else {
+                    Swal.fire('Error', response.data.message || 'No se pudo aplicar el saldo a favor', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                Swal.fire('Error', this.extraerMensajeError(error, 'No se pudo aplicar el saldo a favor'), 'error');
+            } finally {
+                this.aplicandoSaldoFavor = false;
+            }
+        },
+
         async agregarAbono() {
             if (!this.nuevoAbono.amount || this.nuevoAbono.amount <= 0) return;
             if (!this.nuevoAbono.payment_date) {
@@ -2122,6 +2248,10 @@ export default {
                     this.receiptOriginal = response.data.receipt;
                     this.receipt.received = response.data.receipt.received;
                     this.receipt.status = response.data.receipt.status;
+                    // Si el abono se había pagado con saldo a favor, el backend lo revirtió: refrescar el saldo.
+                    if (response.data.account_balance !== undefined && response.data.account_balance !== null) {
+                        this.clienteSaldoFavor = Number(response.data.account_balance);
+                    }
                     Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Abono eliminado', showConfirmButton: false, timer: 2000 });
                 } else {
                     Swal.fire('Error', response.data.message || 'Error al eliminar', 'error');

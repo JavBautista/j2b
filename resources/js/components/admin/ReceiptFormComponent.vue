@@ -2159,6 +2159,32 @@ export default {
                 return;
             }
 
+            // Paridad con Ionic: manejo del sobrepago (abono > adeudo).
+            const montoAbono = Number(this.nuevoAbono.amount);
+            if (montoAbono > this.adeudo) {
+                const excedente = montoAbono - this.adeudo;
+                const fmt = (v) => Number(v || 0).toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
+                // Sin cliente, el backend no puede guardar el excedente como saldo a favor → no permitir perder dinero.
+                if (!this.receiptOriginal || !this.receiptOriginal.client) {
+                    Swal.fire(
+                        'No se puede registrar el excedente',
+                        'Esta nota no tiene cliente asignado, por lo que el excedente no puede guardarse como saldo a favor. Captura el monto exacto del adeudo.',
+                        'warning'
+                    );
+                    return;
+                }
+                // Confirmar antes de saldar y mandar el excedente a saldo a favor (mismo wording que Ionic).
+                const result = await Swal.fire({
+                    title: 'Sobrepago',
+                    html: `La nota se saldará y <b>${fmt(excedente)}</b> quedarán como <b>saldo a favor del cliente</b>. ¿Continuar?`,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sí, continuar',
+                    cancelButtonText: 'Cancelar',
+                });
+                if (!result.isConfirmed) return;
+            }
+
             this.agregandoAbono = true;
             try {
                 // Solo enviar campos bancarios si la forma es bancarizada

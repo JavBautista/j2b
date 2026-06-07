@@ -934,6 +934,15 @@ class ReceiptsController extends Controller
             $abono_amount = $saldo_pendiente; // la nota se salda exacto; el resto va a saldo a favor
         }
 
+        // Paridad con Ionic + defensa en profundidad: si hay excedente pero la nota no tiene cliente,
+        // ese excedente no puede guardarse como saldo a favor y se perdería en silencio. Mejor rechazar.
+        if ($excedente > 0 && !$receipt->client) {
+            return response()->json([
+                'ok'      => false,
+                'message' => 'El abono supera el adeudo, pero la nota no tiene cliente asignado, por lo que el excedente no puede guardarse como saldo a favor. Captura el monto exacto del adeudo.',
+            ], 422);
+        }
+
         $nueva_suma = round($suma_actual + $abono_amount, 2);
 
         // Determinar tipo de pago

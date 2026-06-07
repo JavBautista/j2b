@@ -251,6 +251,7 @@ Route::group([
         /*PartialPayments*/
         Route::post('receipt/partial-payment/store','App\Http\Controllers\PartialPaymentsController@store');
         Route::post('receipt/partial-payment/delete','App\Http\Controllers\PartialPaymentsController@delete');
+        Route::post('receipt/{id}/apply-balance','App\Http\Controllers\PartialPaymentsController@applyBalance'); // Fase 2: aplicar saldo a favor
 
         /**EXTRA FIELDS*/
 

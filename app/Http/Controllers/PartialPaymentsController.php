@@ -156,43 +156,169 @@ class PartialPaymentsController extends Controller
         return ['ok' => $result['ok'], 'message' => $result['message']];
     }
 
+    /**
+     * Fase 2 — Aplicar saldo a favor del cliente como abono de una nota.
+     * Espejo de Admin\ReceiptsController::aplicarSaldoFavor (web). Genera un PartialPayments marcado
+     * (payment_method 99 / num_operacion SALDO-FAVOR) + un movimiento aplicacion_venta (−) en la cuenta.
+     */
+    public function applyBalance(Request $request, $id)
+    {
+        $user = $request->user();
+        $shop = $user->shop;
+
+        $receipt = Receipt::where('shop_id', $shop->id)
+            ->with('partialPayments', 'client')
+            ->findOrFail($id);
+
+        $request->validate([
+            'amount' => 'required|numeric|min:0.01',
+        ]);
+
+        // Guard fiscal (D1): aplicar saldo a una nota facturada requiere CFDI de anticipos (fuera de alcance).
+        if ($receipt->cfdiInvoice()->first()) {
+            return response()->json([
+                'ok'      => false,
+                'message' => 'Esta nota está facturada. Aplicar saldo a favor a notas facturadas requiere CFDI de anticipos (no disponible aún). Usa un abono normal.',
+            ], 422);
+        }
+
+        $client = $receipt->client;
+        if (!$client) {
+            return response()->json([
+                'ok'      => false,
+                'message' => 'La nota no tiene cliente asignado; no se puede aplicar saldo a favor.',
+            ], 422);
+        }
+
+        $monto = round((float) $request->amount, 2);
+
+        // Tope 1: el adeudo de la nota (sin sobrepago: el saldo a favor no se sobre-aplica).
+        $suma_actual     = $receipt->partialPayments->sum('amount');
+        $saldo_pendiente = round($receipt->total - $suma_actual, 2);
+        if ($saldo_pendiente <= 0) {
+            return response()->json([
+                'ok'      => false,
+                'message' => 'La nota ya está saldada.',
+            ], 422);
+        }
+        if ($monto > $saldo_pendiente) {
+            return response()->json([
+                'ok'      => false,
+                'message' => 'El monto excede el adeudo de la nota ($' . number_format($saldo_pendiente, 2) . ').',
+            ], 422);
+        }
+
+        // Tope 2: el saldo a favor disponible del cliente.
+        if (round((float) $client->account_balance, 2) < $monto) {
+            return response()->json([
+                'ok'      => false,
+                'message' => 'Saldo a favor insuficiente. Disponible: $' . number_format((float) $client->account_balance, 2) . '.',
+            ], 422);
+        }
+
+        $nueva_suma   = round($suma_actual + $monto, 2);
+        $payment_type = ($nueva_suma >= $receipt->total) ? 'liquidacion' : 'abono';
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($receipt, $client, $monto, $payment_type, $nueva_suma, $user) {
+            $payment = new PartialPayments();
+            $payment->receipt_id     = $receipt->id;
+            $payment->amount         = $monto;
+            $payment->payment_type   = $payment_type;
+            $payment->payment_date   = Carbon::today()->toDateString();
+            $payment->payment_method = '99';            // operativo: no es pago bancarizado
+            $payment->num_operacion  = 'SALDO-FAVOR';   // marcador legible del origen
+            $payment->save();
+
+            $receipt->received = $nueva_suma;
+            if ($nueva_suma >= $receipt->total) {
+                $receipt->finished = 1;
+                $receipt->status   = Receipt::STATUS_PAGADA;
+                if ($receipt->credit) {
+                    $receipt->credit           = 0;
+                    $receipt->credit_completed = 1;
+                }
+            }
+            $receipt->save();
+
+            // Consume el saldo a favor (−). Vinculado al abono para poder revertirlo si se elimina.
+            app(\App\Services\ClientAccountService::class)->registrarMovimiento(
+                $client,
+                \App\Models\ClientAccountMovement::TYPE_APLICACION_VENTA,
+                -$monto,
+                [
+                    'reference'   => $payment,
+                    'description' => 'Aplicado a la nota ' . ($receipt->folio ?? $receipt->id),
+                    'created_by'  => $user->id,
+                ]
+            );
+        });
+
+        $receipt->load('partialPayments', 'client');
+
+        return response()->json([
+            'ok'              => true,
+            'receipt'         => $receipt,
+            'account_balance' => (float) $receipt->client->account_balance,
+        ]);
+    }
+
     public function delete(Request $request)
     {
+        $user = $request->user();
+
         $payment = PartialPayments::findOrFail($request->id);
-        $receipt_id=$payment->receipt_id;
 
         // Guard: no se puede eliminar pagos de una nota con CFDI vigente
-        $receipt_check = Receipt::findOrFail($receipt_id);
-        if($receipt_check->is_tax_invoiced){
+        $receipt = Receipt::with('client')->findOrFail($payment->receipt_id);
+        if($receipt->is_tax_invoiced){
             return response()->json([
                 'ok'=>false,
                 'message'=>'No se puede eliminar pagos de una nota facturada (CFDI vigente).'
             ], 422);
         }
 
-        $payment->delete();
+        // Si este abono se pagó con saldo a favor (movimiento aplicacion_venta ligado), al eliminarlo
+        // se devuelve el monto al cliente con un movimiento de reversa. El ledger es append-only.
+        $aplicacion = \App\Models\ClientAccountMovement::where('type', \App\Models\ClientAccountMovement::TYPE_APLICACION_VENTA)
+            ->whereMorphedTo('reference', $payment)
+            ->first();
 
-        //Una vez eliminado el pago, volvemos a sumar todos los pagos actuales que quedaron para actualizar el total de la nota
-        $pagos = PartialPayments::where('receipt_id',$receipt_id)->get();
+        \Illuminate\Support\Facades\DB::transaction(function () use ($payment, $receipt, $aplicacion, $user) {
+            if ($aplicacion && $receipt->client) {
+                app(\App\Services\ClientAccountService::class)->registrarMovimiento(
+                    $receipt->client,
+                    \App\Models\ClientAccountMovement::TYPE_AJUSTE_MANUAL,
+                    abs((float) $aplicacion->amount),
+                    [
+                        'reference'   => $receipt,
+                        'description' => 'Reversa: se eliminó el abono con saldo a favor de la nota ' . ($receipt->folio ?? $receipt->id),
+                        'created_by'  => $user->id,
+                    ]
+                );
+            }
 
-        $suma_pagos=0;
-        foreach ($pagos as $data) $suma_pagos+= $data['amount'];
+            $payment->delete();
 
-        //Obtenmos el recibo para actualizar los datos del recibo
-        $receipt = Receipt::with('partialPayments')->findOrFail($receipt_id);
-        $receipt->received = $suma_pagos;
-        if($suma_pagos >= $receipt->total){
-            $receipt->finished=1;
-            $receipt->status=Receipt::STATUS_PAGADA;
-        }else{
-            $receipt->finished=0;
-            $receipt->status=Receipt::STATUS_POR_COBRAR;
-        }
-        $receipt->save();
+            // Recalcular suma de pagos restantes y actualizar la nota
+            $suma_pagos = PartialPayments::where('receipt_id', $receipt->id)->sum('amount');
+
+            $receipt->received = $suma_pagos;
+            if ($suma_pagos >= $receipt->total) {
+                $receipt->finished = 1;
+                $receipt->status = Receipt::STATUS_PAGADA;
+            } else {
+                $receipt->finished = 0;
+                $receipt->status = Receipt::STATUS_POR_COBRAR;
+            }
+            $receipt->save();
+        });
+
+        $receipt->load('partialPayments', 'client');
 
         return response()->json([
-            'ok'=>true,
-            'receipt'=>$receipt,
+            'ok' => true,
+            'receipt' => $receipt,
+            'account_balance' => $receipt->client ? (float) $receipt->client->account_balance : null,
         ]);
     }
 }

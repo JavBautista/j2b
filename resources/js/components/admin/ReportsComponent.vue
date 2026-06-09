@@ -49,10 +49,10 @@
                 </a>
             </li>
             <li class="nav-item ml-auto d-flex align-items-center">
-                <button type="button" class="btn btn-outline-info rounded-circle p-0 ayuda-btn"
+                <button type="button" class="btn btn-info ayuda-btn"
                         @click="abrirAyuda"
                         :title="ayudaActual ? ('¿Qué es ' + ayudaActual.titulo + '?') : 'Ayuda del reporte'">
-                    <i class="fa fa-question"></i>
+                    <i class="fa fa-question-circle"></i> ¿Qué veo?
                 </button>
             </li>
         </ul>
@@ -1623,11 +1623,25 @@ export default {
 .opacity-50 {
     opacity: 0.5;
 }
-/* Botón circular de ayuda en la barra de pestañas */
+/* Botón de ayuda en la barra de pestañas (píldora con pulso para que destaque) */
 .ayuda-btn {
-    width: 34px;
-    height: 34px;
-    line-height: 1;
+    border-radius: 20px;
+    font-weight: bold;
+    color: #fff !important;
+    white-space: nowrap;
+    box-shadow: 0 0 0 0 rgba(32, 168, 216, 0.7);
+    animation: ayudaPulse 2s infinite;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.ayuda-btn:hover {
+    transform: scale(1.08);
+    animation: none;
+    box-shadow: 0 2px 10px rgba(32, 168, 216, 0.6);
+}
+@keyframes ayudaPulse {
+    0%   { box-shadow: 0 0 0 0 rgba(32, 168, 216, 0.6); }
+    70%  { box-shadow: 0 0 0 12px rgba(32, 168, 216, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(32, 168, 216, 0); }
 }
 /* Modal de ayuda (mismo patrón que el resto del proyecto: showAyuda -> .mostrar) */
 .mostrar {

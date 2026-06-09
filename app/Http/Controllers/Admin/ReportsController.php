@@ -11,6 +11,9 @@ use App\Models\PurchaseOrder;
 use App\Models\Expense;
 use App\Models\PartialPayments;
 use App\Models\PurchaseOrderPartialPayments;
+use App\Models\SatFormaPago;
+use App\Models\ShopBankAccount;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
@@ -45,18 +48,23 @@ class ReportsController extends Controller
         // Modo: 'generadas' (default) o 'cobradas'
         $modo = $request->modo ?? 'generadas';
 
+        // Filtro por tipo de comprobante: todos|remision|facturado|pue|ppd
+        $comprobante = $request->comprobante ?? 'todos';
+
         if ($modo === 'cobradas') {
-            return $this->ventasResumenCobradas($shop, $fechaInicio, $fechaFin);
+            return $this->ventasResumenCobradas($shop, $fechaInicio, $fechaFin, $comprobante);
         }
 
         // === MODO GENERADAS (por fecha de creacion de nota) ===
-        $receipts = Receipt::with('partialPayments')
+        $query = Receipt::with(['partialPayments', 'cfdiInvoice'])
             ->where('shop_id', $shop->id)
             ->whereBetween('created_at', [$fechaInicio, $fechaFin])
             ->where('quotation', 0)
             ->where('status', '<>', 'CANCELADA')
-            ->orderBy('created_at', 'desc')
-            ->get();
+            ->orderBy('created_at', 'desc');
+
+        $this->aplicarFiltroComprobante($query, $comprobante);
+        $receipts = $query->get();
 
         // Calcular totales
         $totalNotas = $receipts->count();
@@ -103,6 +111,7 @@ class ReportsController extends Controller
         return response()->json([
             'ok' => true,
             'modo' => 'generadas',
+            'comprobante' => $comprobante,
             'periodo' => [
                 'inicio' => $fechaInicio->format('Y-m-d'),
                 'fin' => $fechaFin->format('Y-m-d')
@@ -127,7 +136,8 @@ class ReportsController extends Controller
                     'tipo' => $r->type,
                     'status' => $r->status,
                     'total' => $r->total,
-                    'payment' => $r->payment
+                    'payment' => $r->payment,
+                    'comprobante' => $this->tipoComprobante($r),
                 ];
             })
         ]);
@@ -137,15 +147,16 @@ class ReportsController extends Controller
      * Modo COBRADAS: Dinero realmente recibido en el periodo
      * Simplificado: TODO pago está en partial_payments
      */
-    private function ventasResumenCobradas($shop, $fechaInicio, $fechaFin)
+    private function ventasResumenCobradas($shop, $fechaInicio, $fechaFin, ?string $comprobante = 'todos')
     {
         // Todos los pagos están en partial_payments
-        $pagos = PartialPayments::with('receipt.client')
+        $pagos = PartialPayments::with(['receipt.client', 'receipt.cfdiInvoice'])
             ->whereBetween('created_at', [$fechaInicio, $fechaFin])
-            ->whereHas('receipt', function ($q) use ($shop) {
+            ->whereHas('receipt', function ($q) use ($shop, $comprobante) {
                 $q->where('shop_id', $shop->id)
                     ->where('quotation', 0)
                     ->whereNotIn('status', ['CANCELADA', 'DEVOLUCION']);
+                $this->aplicarFiltroComprobante($q, $comprobante);
             })
             ->orderBy('created_at', 'desc')
             ->get();
@@ -172,13 +183,15 @@ class ReportsController extends Controller
                 'tipo' => $r->type,
                 'tipo_pago' => $pago->payment_type ?? 'abono',
                 'monto' => round($pago->amount, 2),
-                'payment' => $r->payment
+                'payment' => $r->payment,
+                'comprobante' => $this->tipoComprobante($r),
             ];
         })->values();
 
         return response()->json([
             'ok' => true,
             'modo' => 'cobradas',
+            'comprobante' => $comprobante,
             'periodo' => [
                 'inicio' => $fechaInicio->format('Y-m-d'),
                 'fin' => $fechaFin->format('Y-m-d')
@@ -190,6 +203,45 @@ class ReportsController extends Controller
             ],
             'detalle' => $detalle
         ]);
+    }
+
+    /**
+     * Filtro por tipo de comprobante fiscal (Nivel 1). Se aplica a un query de Receipt,
+     * ya sea directo o dentro de un whereHas(). Valores: todos|remision|facturado|pue|ppd.
+     * - remision  : nota sin factura (is_tax_invoiced 0/null)
+     * - facturado : cualquier nota facturada (PUE o PPD)
+     * - pue / ppd : facturada con CFDI vigente de ese método de pago
+     */
+    private function aplicarFiltroComprobante($query, ?string $comprobante): void
+    {
+        switch ($comprobante) {
+            case 'remision':
+                $query->where(fn($q) => $q->where('is_tax_invoiced', 0)->orWhereNull('is_tax_invoiced'));
+                break;
+            case 'facturado':
+                $query->where('is_tax_invoiced', 1);
+                break;
+            case 'pue':
+                $query->whereHas('cfdiInvoices', fn($q) => $q->where('status', 'vigente')->where('metodo_pago', 'PUE'));
+                break;
+            case 'ppd':
+                $query->whereHas('cfdiInvoices', fn($q) => $q->where('status', 'vigente')->where('metodo_pago', 'PPD'));
+                break;
+            // 'todos' o null -> sin filtro
+        }
+    }
+
+    /**
+     * Tipo de comprobante de una nota para la columna del reporte: remision|pue|ppd.
+     * Usa el CFDI vigente (relación cfdiInvoice) si existe.
+     */
+    private function tipoComprobante($receipt): string
+    {
+        $cfdi = $receipt->cfdiInvoice; // hasOne status=vigente
+        if ($cfdi) {
+            return $cfdi->metodo_pago === 'PPD' ? 'ppd' : 'pue';
+        }
+        return $receipt->is_tax_invoiced ? 'pue' : 'remision';
     }
 
     /**
@@ -925,5 +977,155 @@ class ReportsController extends Controller
             'trimestral' => $carbon->format('Y') . '-T' . ceil($carbon->month / 3),
             default => $carbon->format('Y-m'), // mensual
         };
+    }
+
+    // ============================================================
+    //  CORTE DE CAJA (Opción A: read-only, sin persistencia)
+    //  Dos planos: efectivo (cajón, se arquea) vs electrónico (banco, se concilia)
+    //  Doc: xdev/reportes/09_corte_caja/PLAN.md
+    // ============================================================
+
+    /** Formas SAT que entran al cajón (único plano que se arquea físicamente). */
+    private const CORTE_PLANO_EFECTIVO = ['01'];
+    /** Formas SAT bancarizadas: no se cuentan, se concilian contra banco. */
+    private const CORTE_PLANO_ELECTRONICO = ['02', '03', '04', '05', '06', '28', '29'];
+
+    private function planoDeForma(?string $code): string
+    {
+        if (in_array($code, self::CORTE_PLANO_EFECTIVO, true)) return 'efectivo';
+        if (in_array($code, self::CORTE_PLANO_ELECTRONICO, true)) return 'electronico';
+        return 'otros';
+    }
+
+    /**
+     * Arma el dataset del corte de caja de un día. Compartido por el JSON y el PDF.
+     * El arqueo (esperado/contado/diferencia) lo calcula el front a partir de los inputs;
+     * aquí solo devolvemos los cobros en efectivo + el eco de los inputs.
+     */
+    private function buildCorteCaja($shop, $fecha, float $fondoInicial = 0, float $retiros = 0): array
+    {
+        $inicio = Carbon::parse($fecha)->startOfDay();
+        $fin = Carbon::parse($fecha)->endOfDay();
+
+        // Universo de cobros del día (mismas exclusiones que el resto de reportes)
+        $pagos = PartialPayments::with(['receipt.client', 'bankAccount'])
+            ->whereHas('receipt', function ($q) use ($shop) {
+                $q->where('shop_id', $shop->id)
+                    ->where('quotation', 0)
+                    ->whereNotIn('status', ['CANCELADA', 'DEVOLUCION']);
+            })
+            ->whereBetween('created_at', [$inicio, $fin])
+            ->orderBy('created_at')
+            ->get();
+
+        $nombresForma = SatFormaPago::pluck('description', 'code')->toArray();
+
+        // Desglose por forma de pago (null -> '99' Por definir, para que el total siempre cuadre)
+        $formasPago = $pagos->groupBy(fn($p) => $p->payment_method ?: '99')
+            ->map(function ($grupo, $code) use ($nombresForma) {
+                return [
+                    'code'   => $code,
+                    'nombre' => $nombresForma[$code] ?? "Forma {$code}",
+                    'plano'  => $this->planoDeForma($code),
+                    'total'  => round($grupo->sum('amount'), 2),
+                ];
+            })->sortBy('code')->values();
+
+        // Electrónico agrupado por cuenta bancaria (conciliación con banco)
+        $transferenciasPorCuenta = $pagos
+            ->filter(fn($p) => in_array($p->payment_method, self::CORTE_PLANO_ELECTRONICO, true) && $p->shop_bank_account_id)
+            ->groupBy('shop_bank_account_id')
+            ->map(function ($grupo) {
+                $cuenta = $grupo->first()->bankAccount;
+                return [
+                    'cuenta_id' => $grupo->first()->shop_bank_account_id,
+                    'alias'     => $cuenta?->alias ?? 'Cuenta',
+                    'banco'     => $cuenta?->bank_name ?? '',
+                    'total'     => round($grupo->sum('amount'), 2),
+                ];
+            })->values();
+
+        $cobrosEfectivo = round($pagos->where('payment_method', '01')->sum('amount'), 2);
+        $efectivoEsperado = round($fondoInicial + $cobrosEfectivo - $retiros, 2);
+        $ingresosTotal = round($pagos->sum('amount'), 2);
+
+        // Egresos del día (paridad con ingresosEgresos)
+        $egresosCompras = round(
+            PurchaseOrderPartialPayments::whereHas('purchaseOrder', fn($q) => $q->where('shop_id', $shop->id))
+                ->whereBetween('created_at', [$inicio, $fin])->sum('amount'), 2);
+        $egresosGastos = round(
+            Expense::where('shop_id', $shop->id)
+                ->whereBetween('date', [$inicio->format('Y-m-d'), $fin->format('Y-m-d')])
+                ->where('status', 'PAGADO')->where('active', 1)->sum('total'), 2);
+        $egresosTotal = round($egresosCompras + $egresosGastos, 2);
+
+        $detalle = $pagos->map(function ($p) use ($nombresForma) {
+            $code = $p->payment_method ?: '99';
+            return [
+                'hora'    => $p->created_at->format('H:i'),
+                'folio'   => $p->receipt?->folio ?? ('#' . $p->receipt_id),
+                'cliente' => $p->receipt?->client?->name ?? 'Público en general',
+                'forma'   => $nombresForma[$code] ?? "Forma {$code}",
+                'monto'   => round($p->amount, 2),
+            ];
+        })->values();
+
+        return [
+            'fecha' => $inicio->format('Y-m-d'),
+            'formas_pago' => $formasPago,
+            'transferencias_por_cuenta' => $transferenciasPorCuenta,
+            'efectivo' => [
+                'cobros'        => $cobrosEfectivo,
+                'fondo_inicial' => round($fondoInicial, 2),
+                'retiros'       => round($retiros, 2),
+                'esperado'      => $efectivoEsperado,
+            ],
+            'resumen' => [
+                'ingresos_total'  => $ingresosTotal,
+                'egresos_compras' => $egresosCompras,
+                'egresos_gastos'  => $egresosGastos,
+                'egresos_total'   => $egresosTotal,
+                'resultado'       => round($ingresosTotal - $egresosTotal, 2),
+            ],
+            'detalle' => $detalle,
+        ];
+    }
+
+    /**
+     * Reporte: Corte de Caja (JSON para el tab Vue)
+     */
+    public function corteCaja(Request $request)
+    {
+        $shop = auth()->user()->shop;
+        $fecha = $request->input('fecha', now()->format('Y-m-d'));
+        $fondo = (float) $request->input('fondo_inicial', 0);
+        $retiros = (float) $request->input('retiros', 0);
+
+        return response()->json(array_merge(
+            ['ok' => true],
+            $this->buildCorteCaja($shop, $fecha, $fondo, $retiros)
+        ));
+    }
+
+    /**
+     * Corte de Caja: PDF (abre inline en pestaña nueva)
+     */
+    public function corteCajaPdf(Request $request)
+    {
+        $shop = auth()->user()->shop;
+        $fecha = $request->input('fecha', now()->format('Y-m-d'));
+        $fondo = (float) $request->input('fondo_inicial', 0);
+        $retiros = (float) $request->input('retiros', 0);
+        $contado = $request->filled('contado') ? (float) $request->input('contado') : null;
+
+        $data = $this->buildCorteCaja($shop, $fecha, $fondo, $retiros);
+        $data['shop'] = $shop;
+        $data['contado'] = $contado;
+        $data['diferencia'] = is_null($contado)
+            ? null
+            : round($contado - $data['efectivo']['esperado'], 2);
+
+        $pdf = Pdf::loadView('admin.reports.corte_caja_pdf', $data);
+        return $pdf->stream('corte-caja-' . $data['fecha'] . '.pdf', ['Attachment' => false]);
     }
 }

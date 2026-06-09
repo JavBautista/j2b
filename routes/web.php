@@ -747,6 +747,8 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
             Route::get('/admin/reports/categorias', [\App\Http\Controllers\Admin\ReportsController::class, 'getCategorias']);
             Route::get('/admin/reports/diferencias-mensual', [\App\Http\Controllers\Admin\ReportsController::class, 'diferenciasMensual']);
             Route::get('/admin/reports/ventas-periodo', [\App\Http\Controllers\Admin\ReportsController::class, 'ventasPeriodo']);
+            Route::get('/admin/reports/corte-caja', [\App\Http\Controllers\Admin\ReportsController::class, 'corteCaja']);
+            Route::get('/admin/reports/corte-caja/pdf', [\App\Http\Controllers\Admin\ReportsController::class, 'corteCajaPdf']);
         });
 
         // ===== Agente SNMP (lecturas remotas de copiadoras/multifuncionales) =====

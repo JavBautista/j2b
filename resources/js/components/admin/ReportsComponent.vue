@@ -43,6 +43,11 @@
                     <i class="fa fa-calendar"></i> Por Período
                 </a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link" :class="{ active: tabActivo === 'corte' }" href="#" @click.prevent="cambiarTab('corte')">
+                    <i class="fa fa-calculator"></i> Corte de Caja
+                </a>
+            </li>
         </ul>
 
         <!-- Loading -->
@@ -135,6 +140,13 @@
                                 <select v-model="filtros.modo_ventas" class="form-control" @change="cargarVentas">
                                     <option value="cobradas">💰 Ingresos Reales</option>
                                     <option value="generadas">📄 Notas Creadas</option>
+                                </select>
+                                <select v-model="filtros.comprobante" class="form-control" @change="cargarVentas">
+                                    <option value="todos">Todos los comprobantes</option>
+                                    <option value="remision">📄 Solo remisión</option>
+                                    <option value="facturado">🧾 Solo facturado</option>
+                                    <option value="pue">🧾 Factura PUE</option>
+                                    <option value="ppd">🧾 Factura PPD</option>
                                 </select>
                                 <input type="date" v-model="filtros.fecha_inicio" class="form-control">
                                 <input type="date" v-model="filtros.fecha_fin" class="form-control">
@@ -263,6 +275,7 @@
                                     <th>Fecha</th>
                                     <th>Cliente</th>
                                     <th>Tipo</th>
+                                    <th>Comprobante</th>
                                     <th>Status</th>
                                     <th class="text-right">Total</th>
                                 </tr>
@@ -275,6 +288,11 @@
                                     <td>
                                         <span class="badge" :class="nota.tipo === 'venta' ? 'badge-primary' : 'badge-info'">
                                             {{ nota.tipo }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge" :class="getComprobanteBadge(nota.comprobante)">
+                                            {{ getComprobanteLabel(nota.comprobante) }}
                                         </span>
                                     </td>
                                     <td>
@@ -297,6 +315,7 @@
                                     <th>Fecha Pago</th>
                                     <th>Cliente</th>
                                     <th>Tipo</th>
+                                    <th>Comprobante</th>
                                     <th>Tipo Pago</th>
                                     <th class="text-right">Monto</th>
                                 </tr>
@@ -309,6 +328,11 @@
                                     <td>
                                         <span class="badge" :class="item.tipo === 'venta' ? 'badge-primary' : 'badge-info'">
                                             {{ item.tipo }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge" :class="getComprobanteBadge(item.comprobante)">
+                                            {{ getComprobanteLabel(item.comprobante) }}
                                         </span>
                                     </td>
                                     <td>
@@ -914,6 +938,196 @@
             </div>
         </div>
 
+        <!-- ======================= CORTE DE CAJA ======================= -->
+        <div v-if="tabActivo === 'corte' && !loading">
+            <!-- Barra de control -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="row align-items-end">
+                        <div class="col-md-4 mb-2">
+                            <label class="small text-muted mb-1">Fecha del corte</label>
+                            <input type="date" class="form-control" v-model="corteFiltros.fecha">
+                        </div>
+                        <div class="col-md-8 mb-2 text-md-right">
+                            <button class="btn btn-primary" @click="cargarCorte">
+                                <i class="fa fa-refresh"></i> Generar
+                            </button>
+                            <button class="btn btn-outline-secondary" @click="generarCortePdf">
+                                <i class="fa fa-file-pdf-o"></i> Generar PDF
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Arqueo de efectivo -->
+                <div class="col-md-5 mb-4">
+                    <div class="card h-100 border-success">
+                        <div class="card-header bg-success text-white">
+                            <i class="fa fa-money"></i> Arqueo de efectivo (cajón)
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-sm mb-0">
+                                <tbody>
+                                    <tr>
+                                        <td>(+) Fondo inicial</td>
+                                        <td class="text-right" style="width:140px">
+                                            <input type="number" min="0" step="0.01" class="form-control form-control-sm text-right" v-model.number="corteFiltros.fondo_inicial">
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>(+) Cobros en efectivo</td>
+                                        <td class="text-right align-middle">${{ formatMoney(corteData.efectivo?.cobros) }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>(&minus;) Retiros</td>
+                                        <td class="text-right">
+                                            <input type="number" min="0" step="0.01" class="form-control form-control-sm text-right" v-model.number="corteFiltros.retiros">
+                                        </td>
+                                    </tr>
+                                    <tr class="table-light font-weight-bold">
+                                        <td>(=) Efectivo esperado</td>
+                                        <td class="text-right align-middle">${{ formatMoney(efectivoEsperado) }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Efectivo contado</td>
+                                        <td class="text-right">
+                                            <input type="number" min="0" step="0.01" class="form-control form-control-sm text-right" v-model.number="corteFiltros.contado" placeholder="contar">
+                                        </td>
+                                    </tr>
+                                    <tr v-if="diferencia !== null" class="font-weight-bold">
+                                        <td>
+                                            Diferencia
+                                            <span v-if="diferencia > 0" class="badge badge-success">sobrante</span>
+                                            <span v-else-if="diferencia < 0" class="badge badge-danger">faltante</span>
+                                            <span v-else class="badge badge-secondary">cuadrado</span>
+                                        </td>
+                                        <td class="text-right align-middle"
+                                            :class="diferencia > 0 ? 'text-success' : (diferencia < 0 ? 'text-danger' : '')">
+                                            ${{ formatMoney(diferencia) }}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <small class="text-muted">El arqueo aplica solo al efectivo. Lo electrónico se concilia con el banco.</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Resumen del día -->
+                <div class="col-md-7 mb-4">
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <div class="card bg-info text-white">
+                                <div class="card-body py-3">
+                                    <h6 class="mb-1">Total ingresos del día</h6>
+                                    <h3 class="mb-0">${{ formatMoney(corteData.resumen?.ingresos_total) }}</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <div class="card bg-danger text-white">
+                                <div class="card-body py-3">
+                                    <h6 class="mb-1">Egresos del día</h6>
+                                    <h4 class="mb-0">${{ formatMoney(corteData.resumen?.egresos_total) }}</h4>
+                                    <small class="opacity-75">
+                                        Compras ${{ formatMoney(corteData.resumen?.egresos_compras) }} ·
+                                        Gastos ${{ formatMoney(corteData.resumen?.egresos_gastos) }}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <div class="card text-white" :class="(corteData.resumen?.resultado || 0) >= 0 ? 'bg-success' : 'bg-warning'">
+                                <div class="card-body py-3">
+                                    <h6 class="mb-1">Resultado del día</h6>
+                                    <h4 class="mb-0">${{ formatMoney(corteData.resumen?.resultado) }}</h4>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Desglose por forma de pago -->
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header"><i class="fa fa-list"></i> Ingresos por forma de pago</div>
+                        <div class="card-body p-0">
+                            <table class="table table-sm mb-0">
+                                <thead>
+                                    <tr><th>Forma</th><th>Plano</th><th class="text-right">Total</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="f in corteData.formas_pago" :key="f.code">
+                                        <td>{{ f.nombre }} <small class="text-muted">({{ f.code }})</small></td>
+                                        <td><span class="badge" :class="getPlanoBadge(f.plano)">{{ getPlanoLabel(f.plano) }}</span></td>
+                                        <td class="text-right">${{ formatMoney(f.total) }}</td>
+                                    </tr>
+                                    <tr v-if="!corteData.formas_pago || corteData.formas_pago.length === 0">
+                                        <td colspan="3" class="text-center text-muted py-3">Sin cobros este día.</td>
+                                    </tr>
+                                </tbody>
+                                <tfoot v-if="corteData.formas_pago && corteData.formas_pago.length">
+                                    <tr class="font-weight-bold table-light">
+                                        <td colspan="2">Total</td>
+                                        <td class="text-right">${{ formatMoney(corteData.resumen?.ingresos_total) }}</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Transferencias por cuenta -->
+                <div class="col-md-6 mb-4" v-if="corteData.transferencias_por_cuenta && corteData.transferencias_por_cuenta.length">
+                    <div class="card h-100">
+                        <div class="card-header"><i class="fa fa-university"></i> Cobros electrónicos por cuenta (conciliación)</div>
+                        <div class="card-body p-0">
+                            <table class="table table-sm mb-0">
+                                <thead>
+                                    <tr><th>Cuenta</th><th>Banco</th><th class="text-right">Total</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="c in corteData.transferencias_por_cuenta" :key="c.cuenta_id">
+                                        <td>{{ c.alias }}</td>
+                                        <td>{{ c.banco }}</td>
+                                        <td class="text-right">${{ formatMoney(c.total) }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detalle de cobros -->
+            <div class="card mb-4">
+                <div class="card-header"><i class="fa fa-file-text-o"></i> Detalle de cobros del día</div>
+                <div class="card-body p-0">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead>
+                            <tr><th>Hora</th><th>Folio</th><th>Cliente</th><th>Forma</th><th class="text-right">Monto</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(d, i) in corteData.detalle" :key="i">
+                                <td>{{ d.hora }}</td>
+                                <td>{{ d.folio }}</td>
+                                <td>{{ d.cliente }}</td>
+                                <td>{{ d.forma }}</td>
+                                <td class="text-right">${{ formatMoney(d.monto) }}</td>
+                            </tr>
+                            <tr v-if="!corteData.detalle || corteData.detalle.length === 0">
+                                <td colspan="5" class="text-center text-muted py-3">Sin cobros este día.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
     </div>
 </div>
 </template>
@@ -934,7 +1148,8 @@ export default {
                 ordenar_por: 'qty',
                 facturado: null,
                 modo_ventas: 'cobradas',
-                modo_utilidad: 'cobradas'
+                modo_utilidad: 'cobradas',
+                comprobante: 'todos'
             },
             // Data de cada reporte
             dashboardData: {
@@ -958,6 +1173,21 @@ export default {
                 tipo_venta: 'todas',
                 fecha_inicio: this.getThreeMonthsAgo(),
                 fecha_fin: this.getToday()
+            },
+            // Corte de Caja (read-only)
+            corteFiltros: {
+                fecha: this.getToday(),
+                fondo_inicial: 0,
+                retiros: 0,
+                contado: ''
+            },
+            corteData: {
+                fecha: '',
+                formas_pago: [],
+                transferencias_por_cuenta: [],
+                efectivo: { cobros: 0, fondo_inicial: 0, retiros: 0, esperado: 0 },
+                resumen: {},
+                detalle: []
             }
         }
     },
@@ -965,6 +1195,18 @@ export default {
         tieneTiposPago() {
             const pt = this.ventasData.resumen?.por_tipo;
             return pt && (pt.unico || pt.inicial || pt.abono || pt.liquidacion);
+        },
+        // Corte: efectivo esperado = fondo + cobros efectivo - retiros (cálculo en vivo)
+        efectivoEsperado() {
+            const cobros = Number(this.corteData.efectivo?.cobros || 0);
+            const fondo = Number(this.corteFiltros.fondo_inicial || 0);
+            const retiros = Number(this.corteFiltros.retiros || 0);
+            return cobros + fondo - retiros;
+        },
+        // Corte: diferencia = contado - esperado (null si no hay conteo)
+        diferencia() {
+            if (this.corteFiltros.contado === '' || this.corteFiltros.contado === null) return null;
+            return Number(this.corteFiltros.contado) - this.efectivoEsperado;
         }
     },
     mounted() {
@@ -1046,6 +1288,16 @@ export default {
             };
             return labels[tipo] || tipo;
         },
+        getComprobanteBadge(c) {
+            if (c === 'pue') return 'badge-success';
+            if (c === 'ppd') return 'badge-warning';
+            return 'badge-secondary'; // remisión
+        },
+        getComprobanteLabel(c) {
+            if (c === 'pue') return 'Factura PUE';
+            if (c === 'ppd') return 'Factura PPD';
+            return 'Remisión';
+        },
         cambiarTab(tab) {
             this.tabActivo = tab;
             // Cargar datos del tab seleccionado
@@ -1057,6 +1309,7 @@ export default {
             else if (tab === 'adeudos') this.cargarAdeudos();
             else if (tab === 'top') this.cargarTop();
             else if (tab === 'periodo') this.cargarPeriodo();
+            else if (tab === 'corte') this.cargarCorte();
         },
         cargarCategorias() {
             axios.get('/admin/reports/categorias').then(response => {
@@ -1094,7 +1347,8 @@ export default {
             const params = {
                 fecha_inicio: this.filtros.fecha_inicio,
                 fecha_fin: this.filtros.fecha_fin,
-                modo: this.filtros.modo_ventas
+                modo: this.filtros.modo_ventas,
+                comprobante: this.filtros.comprobante
             };
             axios.get('/admin/reports/ventas-resumen', { params })
                 .then(response => {
@@ -1176,6 +1430,42 @@ export default {
                     }
                 })
                 .finally(() => { this.loading = false; });
+        },
+        cargarCorte() {
+            this.loading = true;
+            const params = {
+                fecha: this.corteFiltros.fecha,
+                fondo_inicial: this.corteFiltros.fondo_inicial || 0,
+                retiros: this.corteFiltros.retiros || 0
+            };
+            axios.get('/admin/reports/corte-caja', { params })
+                .then(response => {
+                    if (response.data.ok) {
+                        this.corteData = response.data;
+                    }
+                })
+                .finally(() => { this.loading = false; });
+        },
+        generarCortePdf() {
+            const params = new URLSearchParams({
+                fecha: this.corteFiltros.fecha,
+                fondo_inicial: this.corteFiltros.fondo_inicial || 0,
+                retiros: this.corteFiltros.retiros || 0
+            });
+            if (this.corteFiltros.contado !== '' && this.corteFiltros.contado !== null) {
+                params.append('contado', this.corteFiltros.contado);
+            }
+            window.open('/admin/reports/corte-caja/pdf?' + params.toString(), '_blank');
+        },
+        getPlanoBadge(plano) {
+            if (plano === 'efectivo') return 'badge-success';
+            if (plano === 'electronico') return 'badge-info';
+            return 'badge-secondary';
+        },
+        getPlanoLabel(plano) {
+            if (plano === 'efectivo') return 'Efectivo';
+            if (plano === 'electronico') return 'Banco';
+            return 'Otros';
         }
     }
 }

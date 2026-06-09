@@ -48,6 +48,13 @@
                     <i class="fa fa-calculator"></i> Corte de Caja
                 </a>
             </li>
+            <li class="nav-item ml-auto d-flex align-items-center">
+                <button type="button" class="btn btn-outline-info rounded-circle p-0 ayuda-btn"
+                        @click="abrirAyuda"
+                        :title="ayudaActual ? ('¿Qué es ' + ayudaActual.titulo + '?') : 'Ayuda del reporte'">
+                    <i class="fa fa-question"></i>
+                </button>
+            </li>
         </ul>
 
         <!-- Loading -->
@@ -1129,6 +1136,37 @@
         </div>
 
     </div>
+
+    <!-- ======================= MODAL DE AYUDA ======================= -->
+    <div class="modal fade" tabindex="-1" :class="{'mostrar': showAyuda}" role="dialog" style="display: none;">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content" v-if="ayudaActual">
+                <div class="modal-header bg-info text-white">
+                    <h4 class="modal-title">
+                        <i class="fa" :class="ayudaActual.icono"></i> {{ ayudaActual.titulo }}
+                    </h4>
+                    <button type="button" class="close text-white" @click="cerrarAyuda" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p class="lead">{{ ayudaActual.intro }}</p>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item" v-for="(p, i) in ayudaActual.puntos" :key="i">
+                            <strong>{{ p.t }}:</strong> {{ p.d }}
+                        </li>
+                    </ul>
+                    <div v-if="ayudaActual.nota" class="alert alert-warning mt-3 mb-0">
+                        <i class="fa fa-exclamation-triangle"></i> {{ ayudaActual.nota }}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @click="cerrarAyuda">Entendido</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
 </template>
 
@@ -1188,6 +1226,99 @@ export default {
                 efectivo: { cobros: 0, fondo_inicial: 0, retiros: 0, esperado: 0 },
                 resumen: {},
                 detalle: []
+            },
+            // Ayuda contextual por pestaña (modal con botón "?")
+            showAyuda: false,
+            ayudas: {
+                dashboard: {
+                    titulo: 'Dashboard', icono: 'fa-dashboard',
+                    intro: 'Una foto rápida del mes en curso. Es un resumen; el detalle de cada número está en su pestaña.',
+                    puntos: [
+                        { t: 'Ingresos del Mes', d: 'dinero realmente cobrado este mes (lo que entró a caja).' },
+                        { t: 'Notas del Mes', d: 'cuántas notas se crearon y el monto total comprometido.' },
+                        { t: 'Valor Inventario', d: 'cuánto vale tu mercancía en existencia (a costo).' },
+                        { t: 'Bajo Stock', d: 'productos por agotarse o sin stock que conviene resurtir.' }
+                    ]
+                },
+                ventas: {
+                    titulo: 'Ventas', icono: 'fa-line-chart',
+                    intro: 'Cuánto vendiste y cobraste en un periodo. Mide el negocio, NO la ganancia.',
+                    puntos: [
+                        { t: 'Ingresos Reales', d: 'el dinero que de verdad entró, por fecha de pago. Cada cobro es un renglón (una nota puede salir varias veces si se pagó en abonos).' },
+                        { t: 'Notas Creadas', d: 'el valor de las notas emitidas, por fecha de la nota. Un renglón por nota. Es lo vendido/comprometido.' },
+                        { t: 'Tipo de pago', d: 'Único (de contado), Inicial (primer abono), Abono (intermedio), Liquidación (el que salda).' },
+                        { t: 'Comprobante', d: 'filtra y distingue Remisión (no fiscal), Factura PUE y Factura PPD.' }
+                    ],
+                    nota: 'Esto NO es tu ganancia: es lo que vendiste/cobraste. La ganancia está en Utilidades.'
+                },
+                utilidad: {
+                    titulo: 'Utilidades', icono: 'fa-money',
+                    intro: 'Cuánto GANASTE, no cuánto vendiste: a cada venta le resta lo que te costó.',
+                    puntos: [
+                        { t: 'Utilidad Bruta', d: 'Ingresos menos costo de la mercancía. El Margen es ese porcentaje sobre los ingresos.' },
+                        { t: 'Real vs Proyectada', d: 'Real = solo notas ya PAGADAS; Proyectada = todas las notas (lo que ganarías si se cobra todo).' },
+                        { t: 'Servicios y Rentas', d: 'cuentan como 100% ganancia, porque no tienen costo de mercancía.' },
+                        { t: 'Costo histórico', d: 'usa el costo congelado al momento de la venta, no el de hoy.' },
+                        { t: 'Semáforo de margen', d: 'verde ≥30%, amarillo 15-29%, rojo <15%.' }
+                    ],
+                    nota: 'Es utilidad BRUTA: no resta gastos operativos (renta, sueldos, luz). Para la ganancia neta del negocio, réstale los egresos de Flujo de Caja.'
+                },
+                inventario: {
+                    titulo: 'Inventario', icono: 'fa-cubes',
+                    intro: 'El estado y valor de tu inventario HOY.',
+                    puntos: [
+                        { t: 'Existencias', d: 'cuántas piezas tienes de cada producto.' },
+                        { t: 'Valor total', d: 'cuánto vale tu mercancía a costo (costo × existencia).' },
+                        { t: 'Alertas', d: 'productos bajo stock o agotados que conviene resurtir.' }
+                    ]
+                },
+                flujo: {
+                    titulo: 'Flujo de Caja', icono: 'fa-exchange',
+                    intro: 'Dinero que ENTRÓ vs dinero que SALIÓ en el periodo, y el balance.',
+                    puntos: [
+                        { t: 'Ingresos', d: 'todos los cobros recibidos en el periodo.' },
+                        { t: 'Egresos', d: 'compras a proveedores + gastos operativos (renta, sueldos, etc.).' },
+                        { t: 'Balance', d: 'Ingresos menos Egresos. Aquí SÍ se ven los gastos del negocio.' },
+                        { t: 'Filtro facturado', d: 'permite ver solo lo fiscal, útil para la declaración del SAT.' }
+                    ]
+                },
+                adeudos: {
+                    titulo: 'Adeudos', icono: 'fa-exclamation-circle',
+                    intro: 'Quién te debe y cuánto: las cuentas por cobrar.',
+                    puntos: [
+                        { t: 'Clientes deudores', d: 'notas en estado POR COBRAR con saldo pendiente.' },
+                        { t: 'Saldo pendiente', d: 'total de la nota menos lo ya abonado.' },
+                        { t: 'Antigüedad', d: 'hace cuánto se generó la deuda, para priorizar cobranza.' }
+                    ]
+                },
+                top: {
+                    titulo: 'Top Productos', icono: 'fa-trophy',
+                    intro: 'El ranking de tus productos más vendidos.',
+                    puntos: [
+                        { t: 'Por cantidad', d: 'los que más piezas mueven.' },
+                        { t: 'Por ingresos', d: 'los que más dinero generan.' },
+                        { t: 'Para qué sirve', d: 'saber qué impulsar, qué resurtir y qué se mueve poco.' }
+                    ]
+                },
+                periodo: {
+                    titulo: 'Por Período', icono: 'fa-calendar',
+                    intro: 'La tendencia de tus ventas en el tiempo.',
+                    puntos: [
+                        { t: 'Agrupación', d: 'ventas por semana, mes o trimestre.' },
+                        { t: 'Generadas vs Cobradas', d: 'el total de notas vs el dinero realmente recibido.' },
+                        { t: 'Comparación', d: 'mejor y peor período y si vas en alza o baja vs el período anterior.' }
+                    ]
+                },
+                corte: {
+                    titulo: 'Corte de Caja', icono: 'fa-calculator',
+                    intro: 'El corte/arqueo del día: qué entró, qué debería haber en el cajón y la diferencia.',
+                    puntos: [
+                        { t: 'Arqueo de efectivo', d: 'fondo inicial + cobros en efectivo − retiros = efectivo esperado. Capturas lo contado y te da la diferencia (sobrante/faltante).' },
+                        { t: 'Solo el efectivo se arquea', d: 'transferencias y tarjetas no están en el cajón: se concilian con el banco, por cuenta.' },
+                        { t: 'Resultado del día', d: 'ingresos del día menos egresos del día.' },
+                        { t: 'PDF', d: 'genera el corte en PDF para imprimir o enviar.' }
+                    ]
+                }
             }
         }
     },
@@ -1207,6 +1338,10 @@ export default {
         diferencia() {
             if (this.corteFiltros.contado === '' || this.corteFiltros.contado === null) return null;
             return Number(this.corteFiltros.contado) - this.efectivoEsperado;
+        },
+        // Ayuda de la pestaña activa
+        ayudaActual() {
+            return this.ayudas[this.tabActivo] || null;
         }
     },
     mounted() {
@@ -1297,6 +1432,12 @@ export default {
             if (c === 'pue') return 'Factura PUE';
             if (c === 'ppd') return 'Factura PPD';
             return 'Remisión';
+        },
+        abrirAyuda() {
+            this.showAyuda = true;
+        },
+        cerrarAyuda() {
+            this.showAyuda = false;
         },
         cambiarTab(tab) {
             this.tabActivo = tab;
@@ -1481,5 +1622,24 @@ export default {
 }
 .opacity-50 {
     opacity: 0.5;
+}
+/* Botón circular de ayuda en la barra de pestañas */
+.ayuda-btn {
+    width: 34px;
+    height: 34px;
+    line-height: 1;
+}
+/* Modal de ayuda (mismo patrón que el resto del proyecto: showAyuda -> .mostrar) */
+.mostrar {
+    display: block !important;
+    opacity: 1 !important;
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #3c29297a !important;
+    overflow: auto;
+    z-index: 1050;
 }
 </style>

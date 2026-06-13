@@ -2,18 +2,8 @@
   <div>
     <div class="container-fluid" style="padding: 1.5rem;">
 
-        <!-- Header -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <a href="/superadmin/subscription-management" class="j2b-btn j2b-btn-outline mb-2" style="font-size: 0.85rem;">
-                    <i class="fa fa-arrow-left"></i> Volver a Suscripciones
-                </a>
-                <h4 class="mb-1" style="color: var(--j2b-dark); font-weight: 600;">
-                    <i class="fa fa-th-large" style="color: var(--j2b-primary);"></i> Módulos de {{ shopName }}
-                </h4>
-                <p class="mb-0" style="color: var(--j2b-gray-500);">Activa o desactiva funcionalidades y define su precio para esta tienda</p>
-            </div>
-        </div>
+        <!-- El título y el botón "volver" los provee el page-header de la vista (página hija). -->
+        <p class="j2b-text-muted mb-4">Activa o desactiva funcionalidades y define su precio para esta tienda.</p>
 
         <!-- Info de la tienda -->
         <div class="j2b-card mb-4" v-if="shop">

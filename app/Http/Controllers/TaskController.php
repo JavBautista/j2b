@@ -30,6 +30,12 @@ use Illuminate\Support\Str;
 
 class TaskController extends Controller
 {
+    public function __construct()
+    {
+        // Modularidad: bloquea TODOS los endpoints de tareas (API) si la tienda no tiene el módulo 'tasks'.
+        $this->middleware('module:tasks');
+    }
+
     public function index(Request $request){
         $user = $request->user();
         $shop = $user->shop;

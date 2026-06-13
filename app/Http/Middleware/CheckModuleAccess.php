@@ -20,7 +20,7 @@ class CheckModuleAccess
         if ($shop && !$shop->hasModule($moduleKey)) {
             $mensaje = 'Tu plan no incluye este módulo. Contacta a soporte para activarlo.';
 
-            if ($request->expectsJson()) {
+            if ($request->expectsJson() || $request->is('api/*')) {
                 return response()->json(['ok' => false, 'message' => $mensaje], 403);
             }
 

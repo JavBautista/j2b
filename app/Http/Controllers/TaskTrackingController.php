@@ -14,6 +14,8 @@ class TaskTrackingController extends Controller
     public function __construct(TaskTrackingService $trackingService)
     {
         $this->trackingService = $trackingService;
+        // Modularidad: el tracking GPS requiere el módulo 'gps' contratado por la tienda.
+        $this->middleware('module:gps');
     }
 
     /**

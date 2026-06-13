@@ -147,6 +147,7 @@ Route::group([
         Route::get('logout', '\App\Http\Controllers\AuthController@logout');
         Route::get('user', '\App\Http\Controllers\AuthController@user');
         Route::post('user', '\App\Http\Controllers\AuthController@update');
+        Route::get('user/modules', [\App\Http\Controllers\ModuleController::class, 'mine']); // modularidad: módulos activos de la tienda
 
         Route::post('user/update-terminos', '\App\Http\Controllers\AuthController@updateTerminos');
 

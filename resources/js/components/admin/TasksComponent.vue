@@ -25,7 +25,7 @@
 
         <!-- Card principal de tareas -->
         <div class="j2b-card">
-            <div class="j2b-card-header d-flex justify-content-between align-items-center">
+            <div class="j2b-card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <h5 class="j2b-card-title mb-0"><i class="fa fa-tasks" style="color: var(--j2b-primary);"></i> Tareas de {{ shop.name }}</h5>
                 <div class="d-flex gap-2">
                     <!-- Toggle Vista -->
@@ -71,7 +71,7 @@
 
                 <!-- VISTA CARDS -->
                 <div class="row" v-if="vistaActual === 'cards'">
-                    <div class="col-md-4 col-lg-3 mb-4" v-for="task in arrayTasks" :key="task.id">
+                    <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-4" v-for="task in arrayTasks" :key="task.id">
                         <div class="card task-card h-100" :class="{'inactive-card': !task.active}">
                             <div class="card-header d-flex justify-content-between align-items-center">
                                 <div>

@@ -345,4 +345,21 @@ class Shop extends Model
             ]);
         }
     }
+
+    /**
+     * Suma mensual de los módulos vendibles activos y vigentes (precio pactado).
+     * Sirve para sugerir el monto a cobrar = renta base + módulos.
+     */
+    public function modulesMonthlyTotal(): float
+    {
+        return (float) $this->modules()
+            ->where('modules.is_core', false)
+            ->wherePivot('enabled', true)
+            ->where(function ($q) {
+                $q->whereNull('shop_modules.expires_at')
+                  ->orWhere('shop_modules.expires_at', '>', now());
+            })
+            ->get()
+            ->sum(fn ($m) => (float) ($m->pivot->price ?? 0));
+    }
 }

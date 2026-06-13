@@ -456,6 +456,9 @@
                                 <input type="number" class="j2b-input" v-model.number="nuevoForm.amount" step="0.01" min="0">
                             </div>
                             <small class="j2b-text-muted">Sugerido: ${{ formatNumber(montoSugerido) }}</small>
+                            <small v-if="shop && shop.modules_total > 0" class="j2b-text-muted d-block">
+                                incluye módulos vendibles: ${{ formatNumber(shop.modules_total) }}/mes
+                            </small>
                         </div>
                         <div class="col-md-4">
                             <label class="j2b-label"><i class="fa fa-calendar-check-o j2b-text-success"></i> Fecha del Pago</label>
@@ -732,10 +735,12 @@ export default {
         },
 
         actualizarMontoSugerido() {
+            const modulos = parseFloat(this.shop?.modules_total || 0);
             if (this.nuevoForm.billing_cycle === 'yearly') {
-                this.montoSugerido = this.shop?.yearly_price || (this.shop?.monthly_price * 12) || 0;
+                const base = this.shop?.yearly_price || (this.shop?.monthly_price * 12) || 0;
+                this.montoSugerido = base + (modulos * 12);
             } else {
-                this.montoSugerido = this.shop?.monthly_price || 0;
+                this.montoSugerido = (this.shop?.monthly_price || 0) + modulos;
             }
             this.nuevoForm.amount = this.montoSugerido;
         },

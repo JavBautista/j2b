@@ -1250,6 +1250,7 @@ class SuperAdminController extends Controller
                 'monthly_price' => $shop->monthly_price,
                 'yearly_price' => $shop->yearly_price,
                 'plan_name' => $shop->plan?->name,
+                'modules_total' => $shop->modulesMonthlyTotal(),
             ],
             'payments' => $payments->map(function ($p) {
                 return [

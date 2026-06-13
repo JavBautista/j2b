@@ -53,7 +53,7 @@
             </div>
 
             <!-- Tareas -->
-            <div class="summary-card summary-card--warning mb-3">
+            <div class="summary-card summary-card--warning mb-3" v-if="hasTasks">
                 <div class="summary-card__header">
                     <i class="fa fa-clipboard"></i>
                     <span>TAREAS DEL MES</span>
@@ -281,7 +281,7 @@
                         </div>
                         <small class="d-block mt-1 text-muted">Clientes</small>
                     </a>
-                    <a href="/admin/tasks" class="quick-btn text-center text-decoration-none">
+                    <a v-if="hasTasks" href="/admin/tasks" class="quick-btn text-center text-decoration-none">
                         <div class="quick-btn__icon bg-gradient-primary">
                             <i class="fa fa-tasks"></i>
                         </div>
@@ -300,6 +300,10 @@ export default {
         currencySymbol: {
             type: String,
             default: '$'
+        },
+        hasTasks: {
+            type: Boolean,
+            default: true
         }
     },
     data() {

@@ -34,6 +34,7 @@
         <div class="mb-4">
             <admin-dashboard-component
                 currency-symbol="{{ auth()->user()->shop ? auth()->user()->shop->getCurrencySymbol() : '$' }}"
+                :has-tasks="{{ auth()->user()->shop && auth()->user()->shop->hasModule('tasks') ? 'true' : 'false' }}"
             ></admin-dashboard-component>
         </div>
         @endif

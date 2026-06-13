@@ -276,7 +276,8 @@ class ReceiptController extends Controller
             $itemsCalc,
             floatval($rcp['discount'] ?? 0),
             $aplicarIva,
-            $taxRateModel ? (float) $taxRateModel->rate : null
+            $taxRateModel ? (float) $taxRateModel->rate : null,
+            $rcp['discount_concept'] ?? '$'
         );
 
         $cmp = ReceiptTaxCalculator::compararConCliente(
@@ -612,7 +613,8 @@ class ReceiptController extends Controller
             $itemsCalc,
             floatval($rcp['discount'] ?? 0),
             $aplicarIva,
-            $taxRateModel ? (float) $taxRateModel->rate : null
+            $taxRateModel ? (float) $taxRateModel->rate : null,
+            $rcp['discount_concept'] ?? '$'
         );
 
         $cmp = ReceiptTaxCalculator::compararConCliente(
@@ -986,7 +988,8 @@ class ReceiptController extends Controller
                 $itemsCalc,
                 floatval($rcp['discount'] ?? 0),
                 $aplicarIva,
-                $receipt->effectiveTaxRate()
+                $receipt->effectiveTaxRate(),
+                $rcp['discount_concept'] ?? $receipt->discount_concept ?? '$'
             );
 
             $cmp = ReceiptTaxCalculator::compararConCliente(

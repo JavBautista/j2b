@@ -797,7 +797,7 @@
                     <div>
                         <h6>Imagenes Alternativas ({{ task.images ? task.images.length : 0 }})</h6>
                         <div class="row" v-if="task.images && task.images.length > 0">
-                            <div class="col-md-3 mb-3" v-for="(img, index) in task.images" :key="img.id">
+                            <div class="col-4 col-md-3 mb-3" v-for="(img, index) in task.images" :key="img.id">
                                 <div class="position-relative">
                                     <img :src="getImageUrl(img.image)" class="img-thumbnail" style="width: 100%; height: 120px; object-fit: cover; cursor: pointer;" @click="verGaleriaImagenes(index)">
                                     <button class="btn btn-danger btn-sm position-absolute" style="top: 5px; right: 5px;" @click="eliminarImagenAlternativaTarea(img.id)" :disabled="eliminandoImagenTarea">

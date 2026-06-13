@@ -95,7 +95,7 @@
 
                 <!-- VISTA CARDS -->
                 <div class="row" v-if="!loading && vistaActual === 'cards'">
-                    <div class="col-md-4 col-lg-3 mb-4" v-for="user in currentList" :key="user.id">
+                    <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-4" v-for="user in currentList" :key="user.id">
                         <div class="card user-card h-100" :class="{'inactive-card': !userActivo(user)}">
                             <div class="card-header d-flex justify-content-between align-items-center">
                                 <div>

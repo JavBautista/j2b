@@ -73,7 +73,7 @@
                 <i class="fa fa-truck fa-3x text-muted mb-3"></i>
                 <p class="text-muted">No se encontraron órdenes de compra</p>
             </div>
-            <div class="col-md-4 col-lg-3 mb-4" v-for="order in orders" :key="order.id">
+            <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-4" v-for="order in orders" :key="order.id">
                 <div class="card order-card h-100">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <div>

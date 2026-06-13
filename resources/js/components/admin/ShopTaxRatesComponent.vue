@@ -24,7 +24,7 @@
         </div>
 
         <div v-if="!cargando && rates.length > 0" class="row">
-            <div class="col-md-4 mb-3" v-for="rate in rates" :key="rate.id">
+            <div class="col-12 col-sm-6 col-md-4 mb-3" v-for="rate in rates" :key="rate.id">
                 <div class="card h-100" :class="{'border-success border-2': rate.is_default, 'opacity-75': !rate.active}">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-start mb-2">

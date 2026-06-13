@@ -112,7 +112,7 @@
                 <i class="fa fa-receipt fa-3x text-muted mb-3"></i>
                 <p class="text-muted">No se encontraron registros</p>
             </div>
-            <div class="col-md-4 col-lg-3 mb-4" v-for="receipt in receipts" :key="receipt.id">
+            <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-4" v-for="receipt in receipts" :key="receipt.id">
                 <div class="card receipt-card h-100">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <div>

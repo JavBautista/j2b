@@ -75,7 +75,7 @@
 
         <!-- Grid de tarjetas -->
         <div v-else class="row">
-            <div v-for="task in tasks" :key="task.id" class="col-lg-4 col-md-6 mb-3">
+            <div v-for="task in tasks" :key="task.id" class="col-12 col-sm-6 col-md-6 col-lg-4 mb-3">
                 <div class="card task-card h-100" :class="cardClass(task)" @click="abrirTracking(task)">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-start mb-2">

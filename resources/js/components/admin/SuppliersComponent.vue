@@ -46,7 +46,7 @@
 
                 <!-- VISTA CARDS -->
                 <div class="row mt-3" v-if="vistaActual === 'cards'">
-                    <div class="col-md-4 col-lg-3 mb-4" v-for="supplier in arraySuppliers" :key="supplier.id">
+                    <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-4" v-for="supplier in arraySuppliers" :key="supplier.id">
                         <div class="card supplier-card h-100" :class="{'inactive-card': !supplier.active}">
                             <div class="card-header d-flex justify-content-between align-items-center">
                                 <div>

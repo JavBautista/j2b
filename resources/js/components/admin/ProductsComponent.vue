@@ -45,7 +45,7 @@
 
                 <!-- VISTA CARDS -->
                 <div class="row" v-if="vistaActual === 'cards'">
-                    <div class="col-md-4 col-lg-3 mb-4" v-for="product in arrayProducts" :key="product.id">
+                    <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-4" v-for="product in arrayProducts" :key="product.id">
                         <div class="card product-card h-100" :class="{'inactive-card': !product.active}">
                             <!-- Imagen del producto -->
                             <div class="product-image-container" @click="abrirModal('ver', product)" style="cursor: pointer;">
@@ -488,7 +488,7 @@
                     <div>
                         <h6>Imágenes Alternativas ({{ productoImagenes.images ? productoImagenes.images.length : 0 }})</h6>
                         <div class="row" v-if="productoImagenes.images && productoImagenes.images.length > 0">
-                            <div class="col-md-3 mb-3" v-for="(img, index) in productoImagenes.images" :key="img.id">
+                            <div class="col-4 col-md-3 mb-3" v-for="(img, index) in productoImagenes.images" :key="img.id">
                                 <div class="position-relative">
                                     <img :src="getImageUrl(img.image)" class="img-thumbnail" style="width: 100%; height: 120px; object-fit: cover; cursor: pointer;" @click="verGaleriaProducto(index)">
                                     <button class="btn btn-danger btn-sm position-absolute" style="top: 5px; right: 5px;" @click="eliminarImagenAlternativa(img.id)" :disabled="eliminandoImagen">

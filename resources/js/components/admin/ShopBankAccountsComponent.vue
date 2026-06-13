@@ -24,7 +24,7 @@
         </div>
 
         <div v-if="!cargando && cuentas.length > 0" class="row">
-            <div class="col-md-6 mb-3" v-for="cuenta in cuentas" :key="cuenta.id">
+            <div class="col-12 col-md-6 mb-3" v-for="cuenta in cuentas" :key="cuenta.id">
                 <div class="card h-100" :class="{'border-success border-2': cuenta.is_default, 'opacity-75': !cuenta.is_active}">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <div>

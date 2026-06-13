@@ -330,4 +330,19 @@ class Shop extends Model
 
         return $core->concat($contratados)->unique('id')->values();
     }
+
+    /**
+     * Asigna a la tienda los módulos vendibles por defecto al crearla.
+     * Replica el comportamiento histórico: toda tienda nueva incluye Tareas + GPS.
+     * (CFDI NO por defecto; se activa desde el panel superadmin cuando se contrata.)
+     */
+    public function assignDefaultModules(): void
+    {
+        $defaults = Module::whereIn('key', ['tasks', 'gps'])->where('active', true)->get();
+        foreach ($defaults as $m) {
+            $this->modules()->syncWithoutDetaching([
+                $m->id => ['enabled' => true, 'contracted_at' => now()],
+            ]);
+        }
+    }
 }

@@ -7,16 +7,20 @@
                 </a>
             </li>
             
+            @if(Auth::user()->shop && Auth::user()->shop->hasModule('tasks'))
             <li class="nav-item">
                 <a href="{{ route('admin.tasks') }}" class="nav-link">
                     <i class="fa fa-tasks"></i> Tareas
                 </a>
             </li>
+            @endif
+            @if(Auth::user()->shop && Auth::user()->shop->hasModule('gps'))
             <li class="nav-item">
                 <a href="{{ route('admin.monitoreo') }}" class="nav-link">
                     <i class="fa fa-map-marker"></i> Monitoreo GPS
                 </a>
             </li>
+            @endif
             <li class="nav-item">
                 <a href="{{ route('admin.receipts') }}" class="nav-link">
                     <i class="fa fa-list-alt"></i> Ventas

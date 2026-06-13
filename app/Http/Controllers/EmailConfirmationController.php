@@ -115,6 +115,9 @@ class EmailConfirmationController extends Controller
                 // Catálogo de tasas: sembrar la tasa default para que la nueva tienda no quede sin catálogo.
                 \App\Models\ShopTaxRate::seedDefaultForShop($shop);
 
+                // Modularidad: módulos vendibles por defecto (Tareas + GPS, como el comportamiento actual).
+                $shop->assignDefaultModules();
+
                 // 4. Crear usuario asociado a la tienda
                 $user = User::create([
                     'shop_id' => $shop->id,

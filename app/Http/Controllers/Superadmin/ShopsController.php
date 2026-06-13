@@ -111,6 +111,9 @@ class ShopsController extends Controller
 
         // Catálogo de tasas: sembrar la tasa default para que la nueva tienda no quede sin catálogo.
         \App\Models\ShopTaxRate::seedDefaultForShop($shop);
+
+        // Modularidad: módulos vendibles por defecto (Tareas + GPS, como el comportamiento actual).
+        $shop->assignDefaultModules();
     }//store()
 
     public function update(Request $request)

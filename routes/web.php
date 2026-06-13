@@ -350,7 +350,7 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         }); // ./Configuraciones (full.admin)
 
         // Facturación CFDI - Configuración Emisor
-        Route::get('/admin/facturacion/configuracion', [App\Http\Controllers\Admin\CfdiConfigController::class, 'index'])->name('admin.cfdi.config');
+        Route::get('/admin/facturacion/configuracion', [App\Http\Controllers\Admin\CfdiConfigController::class, 'index'])->middleware('module:cfdi')->name('admin.cfdi.config');
         Route::get('/admin/facturacion/configuracion/get', [App\Http\Controllers\Admin\CfdiConfigController::class, 'get']);
         Route::post('/admin/facturacion/configuracion/save', [App\Http\Controllers\Admin\CfdiConfigController::class, 'save']);
         Route::post('/admin/facturacion/configuracion/retenciones-defaults', [App\Http\Controllers\Admin\CfdiConfigController::class, 'saveRetencionesDefaults']);
@@ -362,7 +362,7 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::get('/admin/facturacion/configuracion/timbre-transactions', [App\Http\Controllers\Admin\CfdiConfigController::class, 'getTimbreTransactions']);
 
         // Reporte mensual de retenciones
-        Route::get('/admin/reportes/retenciones', [App\Http\Controllers\Admin\RetencionesReporteController::class, 'index'])->name('admin.reportes.retenciones');
+        Route::get('/admin/reportes/retenciones', [App\Http\Controllers\Admin\RetencionesReporteController::class, 'index'])->middleware('module:cfdi')->name('admin.reportes.retenciones');
         Route::get('/admin/reportes/retenciones/data', [App\Http\Controllers\Admin\RetencionesReporteController::class, 'data']);
         Route::get('/admin/reportes/retenciones/export', [App\Http\Controllers\Admin\RetencionesReporteController::class, 'export']);
 
@@ -387,12 +387,12 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         }); // ./Tasas de impuesto escritura (full.admin)
 
         // Facturación CFDI - Facturas Emitidas
-        Route::get('/admin/facturacion/facturas', [App\Http\Controllers\Admin\CfdiInvoiceController::class, 'indexFacturas'])->name('admin.cfdi.facturas');
+        Route::get('/admin/facturacion/facturas', [App\Http\Controllers\Admin\CfdiInvoiceController::class, 'indexFacturas'])->middleware('module:cfdi')->name('admin.cfdi.facturas');
         Route::get('/admin/facturacion/facturas/get', [App\Http\Controllers\Admin\CfdiInvoiceController::class, 'getFacturas']);
         Route::get('/admin/facturacion/facturas/export', [App\Http\Controllers\Admin\CfdiInvoiceController::class, 'exportFacturas']);
 
         // Facturación CFDI - Bitácora de timbrado (logs estructurados)
-        Route::get('/admin/facturacion/bitacora', [App\Http\Controllers\Admin\CfdiLogsController::class, 'index'])->name('admin.cfdi.bitacora');
+        Route::get('/admin/facturacion/bitacora', [App\Http\Controllers\Admin\CfdiLogsController::class, 'index'])->middleware('module:cfdi')->name('admin.cfdi.bitacora');
         Route::get('/admin/facturacion/bitacora/get', [App\Http\Controllers\Admin\CfdiLogsController::class, 'getLogs']);
         Route::get('/admin/facturacion/bitacora/{id}', [App\Http\Controllers\Admin\CfdiLogsController::class, 'show'])->whereNumber('id');
 
@@ -594,13 +594,13 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         }); // ./Órdenes de Compra escritura (full.admin)
 
         // Monitoreo GPS (admin web)
-        Route::get('/admin/monitoreo', [App\Http\Controllers\Admin\TaskMonitoringController::class, 'index'])->name('admin.monitoreo');
+        Route::get('/admin/monitoreo', [App\Http\Controllers\Admin\TaskMonitoringController::class, 'index'])->middleware('module:gps')->name('admin.monitoreo');
         Route::get('/admin/monitoreo/get', [App\Http\Controllers\Admin\TaskMonitoringController::class, 'get'])->name('admin.monitoreo.get');
         Route::get('/admin/monitoreo/counters', [App\Http\Controllers\Admin\TaskMonitoringController::class, 'counters'])->name('admin.monitoreo.counters');
         Route::get('/admin/monitoreo/{id}/history', [App\Http\Controllers\Admin\TaskMonitoringController::class, 'history'])->name('admin.monitoreo.history');
 
         // Rutas para recibos de Tareas(admin web)
-        Route::get('/admin/tasks', [TasksController::class, 'index'])->name('admin.tasks');
+        Route::get('/admin/tasks', [TasksController::class, 'index'])->middleware('module:tasks')->name('admin.tasks');
         Route::get('/admin/tasks/get', [TasksController::class, 'get'])->name('admin.tasks.get');
         Route::get('/admin/tasks/detail/{id}', [TasksController::class, 'show'])->name('admin.tasks.show');
         Route::get('/admin/tasks/{id}/checklist-pdf', [TasksController::class, 'checklistPdf'])->name('admin.tasks.checklist-pdf');

@@ -62,6 +62,7 @@ class Kernel extends HttpKernel
         'full.admin'=> \App\Http\Middleware\FullAdminOnly::class,
 
         'subscription.active' => \App\Http\Middleware\CheckSubscriptionActive::class,
+        'module' => \App\Http\Middleware\CheckModuleAccess::class,
 
         'auth.basic' => \Illuminate\Auth\Middleware\AuthenticateWithBasicAuth::class,
         'cache.headers' => \Illuminate\Http\Middleware\SetCacheHeaders::class,

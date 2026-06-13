@@ -206,6 +206,11 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::delete('/superadmin/subscription-management/{id}/payments/{paymentId}', [SuperAdminController::class, 'deletePayment']);
         Route::get('/superadmin/subscription-management/{id}/payments/{paymentId}/pdf', [SuperAdminController::class, 'generatePaymentPdf']);
 
+        // Modularidad: módulos por tienda
+        Route::get('/superadmin/subscription-management/{id}/modules', [SuperAdminController::class, 'shopModulesPage'])->name('superadmin.shop-modules');
+        Route::get('/superadmin/subscription-management/{id}/modules/get', [SuperAdminController::class, 'getShopModules']);
+        Route::put('/superadmin/subscription-management/{id}/modules/{moduleId}', [SuperAdminController::class, 'updateShopModule']);
+
         // Contact Messages (Mensajes de contacto del landing)
         Route::get('/superadmin/contact-messages', [ContactMessagesController::class, 'index'])->name('superadmin.contact-messages');
         Route::get('/superadmin/contact-messages/get', [ContactMessagesController::class, 'get']);

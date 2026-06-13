@@ -239,6 +239,9 @@
                                                         <i class="fa fa-clock-o text-primary"></i> Extender
                                                     </button>
                                                 </template>
+                                                <a :href="'/superadmin/subscription-management/' + shop.id + '/modules'" class="action-dropdown-item text-info">
+                                                    <i class="fa fa-th-large text-info"></i> Gestionar Módulos
+                                                </a>
                                                 <button type="button" class="action-dropdown-item" @click="abrirModal('cambiar_plan', shop); closeDropdown()">
                                                     <i class="fa fa-exchange text-warning"></i> Cambiar Plan
                                                 </button>

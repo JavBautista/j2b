@@ -18,6 +18,7 @@ import ShopsComponent from './components/superadmin/ShopsComponent.vue'
 import UsersComponent from './components/superadmin/UsersComponent.vue'
 import SubscriptionManagementComponent from './components/superadmin/SubscriptionManagementComponent.vue'
 import ShopPaymentsComponent from './components/superadmin/ShopPaymentsComponent.vue'
+import ShopModulesComponent from './components/superadmin/ShopModulesComponent.vue'
 import ContactMessagesComponent from './components/superadmin/ContactMessagesComponent.vue'
 import LegalDocumentsComponent from './components/superadmin/LegalDocumentsComponent.vue'
 import DocumentsComponent from './components/superadmin/DocumentsComponent.vue'
@@ -90,6 +91,7 @@ app.component('superadmin-shops-component', ShopsComponent);
 app.component('superadmin-users-component', UsersComponent);
 app.component('subscription-management-component', SubscriptionManagementComponent);
 app.component('shop-payments-component', ShopPaymentsComponent);
+app.component('shop-modules-component', ShopModulesComponent);
 app.component('contact-messages-component', ContactMessagesComponent);
 app.component('legal-documents-component', LegalDocumentsComponent);
 app.component('superadmin-documents-component', DocumentsComponent);

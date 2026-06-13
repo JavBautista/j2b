@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\SubscriptionSetting;
 use App\Models\Plan;
+use App\Models\Module;
 use App\Models\Shop;
 use App\Models\Subscription;
 use App\Models\User;
@@ -1068,6 +1069,125 @@ class SuperAdminController extends Controller
             'shopId' => $shop->id,
             'shopName' => $shop->name,
         ]);
+    }
+
+    // === Modularidad: módulos por tienda ===
+
+    public function shopModulesPage($id)
+    {
+        $shop = Shop::findOrFail($id);
+
+        return view('superadmin.shop_modules', [
+            'shopId' => $shop->id,
+            'shopName' => $shop->name,
+        ]);
+    }
+
+    /**
+     * Catálogo de módulos con el estado de cada uno para una tienda.
+     */
+    public function getShopModules($id)
+    {
+        $shop = Shop::with('modules')->findOrFail($id);
+        $contratados = $shop->modules->keyBy('id');
+
+        $modules = Module::where('active', true)
+            ->orderBy('sort_order')
+            ->get()
+            ->map(function ($m) use ($contratados) {
+                $c = $contratados->get($m->id);
+                return [
+                    'id'         => $m->id,
+                    'key'        => $m->key,
+                    'name'       => $m->name,
+                    'icon'       => $m->icon,
+                    'is_core'    => (bool) $m->is_core,
+                    'base_price' => $m->base_price,
+                    'requires'   => $m->requires ?: [],
+                    'enabled'    => $m->is_core ? true : ($c ? (bool) $c->pivot->enabled : false),
+                    'price'      => $c ? $c->pivot->price : null,
+                    'notes'      => $c ? $c->pivot->notes : null,
+                ];
+            });
+
+        return response()->json([
+            'shop' => [
+                'id'                  => $shop->id,
+                'name'                => $shop->name,
+                'subscription_status' => $shop->subscription_status,
+                'monthly_price'       => $shop->getEffectivePrice('monthly'),
+            ],
+            'modules' => $modules,
+        ]);
+    }
+
+    /**
+     * Activa/desactiva un módulo vendible para una tienda y fija su precio pactado.
+     * Respeta dependencias (requires) en ambos sentidos.
+     */
+    public function updateShopModule(Request $request, $shopId, $moduleId)
+    {
+        $shop   = Shop::with('modules')->findOrFail($shopId);
+        $module = Module::findOrFail($moduleId);
+
+        if ($module->is_core) {
+            return response()->json(['ok' => false, 'message' => 'Los módulos base están siempre incluidos y no se pueden desactivar.'], 422);
+        }
+
+        $request->validate([
+            'enabled' => 'required|boolean',
+            'price'   => 'nullable|numeric|min:0',
+            'notes'   => 'nullable|string|max:500',
+        ]);
+
+        $enabled = $request->boolean('enabled');
+
+        // Al ACTIVAR: exigir que sus dependencias (no-core) ya estén activas
+        if ($enabled && is_array($module->requires)) {
+            foreach ($module->requires as $reqKey) {
+                $req = Module::where('key', $reqKey)->first();
+                if (!$req || $req->is_core) {
+                    continue; // core siempre disponible
+                }
+                $reqPivot = $shop->modules->firstWhere('id', $req->id);
+                if (!$reqPivot || !$reqPivot->pivot->enabled) {
+                    return response()->json([
+                        'ok' => false,
+                        'message' => "El módulo \"{$module->name}\" requiere que primero actives \"{$req->name}\".",
+                    ], 422);
+                }
+            }
+        }
+
+        // Al DESACTIVAR: bloquear si algún módulo activo depende de éste
+        if (!$enabled) {
+            $dependientes = Module::where('active', true)->get()->filter(function ($m) use ($module) {
+                return is_array($m->requires) && in_array($module->key, $m->requires);
+            });
+            foreach ($dependientes as $dep) {
+                $depPivot = $shop->modules->firstWhere('id', $dep->id);
+                if ($depPivot && $depPivot->pivot->enabled) {
+                    return response()->json([
+                        'ok' => false,
+                        'message' => "No puedes desactivar \"{$module->name}\" porque \"{$dep->name}\" depende de él. Desactiva primero \"{$dep->name}\".",
+                    ], 422);
+                }
+            }
+        }
+
+        $pivot = [
+            'enabled'             => $enabled,
+            'price'               => $request->input('price'),
+            'notes'               => $request->input('notes'),
+            'assigned_by_user_id' => auth()->id(),
+        ];
+        if ($enabled) {
+            $pivot['contracted_at'] = now();   // al desactivar se preserva la fecha original
+        }
+
+        $shop->modules()->syncWithoutDetaching([$module->id => $pivot]);
+
+        return response()->json(['ok' => true, 'message' => "Módulo \"{$module->name}\" actualizado."]);
     }
 
     /**

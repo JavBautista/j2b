@@ -281,4 +281,53 @@ class Shop extends Model
     {
         return $this->belongsTo(MonitorPricingTier::class, 'monitor_tier_locked_id');
     }
+
+    // === Modularidad: módulos contratados por la tienda ===
+
+    public function modules()
+    {
+        return $this->belongsToMany(Module::class, 'shop_modules')
+            ->withPivot(['enabled', 'price', 'contracted_at', 'expires_at', 'assigned_by_user_id', 'notes'])
+            ->withTimestamps();
+    }
+
+    /**
+     * ¿La tienda tiene acceso a este módulo?
+     * - Los módulos core (is_core) están SIEMPRE incluidos (no se gatean).
+     * - Los vendibles requieren registro en shop_modules con enabled=1 y sin vencer.
+     */
+    public function hasModule(string $key): bool
+    {
+        // Core: incluido siempre
+        if (Module::where('key', $key)->where('is_core', true)->exists()) {
+            return true;
+        }
+
+        return $this->modules()
+            ->where('key', $key)
+            ->wherePivot('enabled', true)
+            ->where(function ($q) {
+                $q->whereNull('shop_modules.expires_at')
+                  ->orWhere('shop_modules.expires_at', '>', now());
+            })
+            ->exists();
+    }
+
+    /**
+     * Módulos activos de la tienda: core (siempre) + vendibles contratados vigentes.
+     */
+    public function activeModules()
+    {
+        $core = Module::where('is_core', true)->where('active', true)->get();
+
+        $contratados = $this->modules()
+            ->wherePivot('enabled', true)
+            ->where(function ($q) {
+                $q->whereNull('shop_modules.expires_at')
+                  ->orWhere('shop_modules.expires_at', '>', now());
+            })
+            ->get();
+
+        return $core->concat($contratados)->unique('id')->values();
+    }
 }

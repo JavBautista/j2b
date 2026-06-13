@@ -38,5 +38,6 @@ class DatabaseSeeder extends Seeder
 
         $this->call(RoleTableSeeder::class);
         $this->call(SatFiscalCatalogSeeder::class);
+        $this->call(ModulesSeeder::class);
     }
 }

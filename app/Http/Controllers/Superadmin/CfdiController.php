@@ -68,6 +68,16 @@ class CfdiController extends Controller
         $shop->cfdi_enabled = !$shop->cfdi_enabled;
         $shop->save();
 
+        // Mantener sincronizado el módulo 'cfdi' del catálogo de modularidad con este flag.
+        $cfdiModule = \App\Models\Module::where('key', 'cfdi')->first();
+        if ($cfdiModule) {
+            $pivot = ['enabled' => $shop->cfdi_enabled];
+            if ($shop->cfdi_enabled) {
+                $pivot['contracted_at'] = now();
+            }
+            $shop->modules()->syncWithoutDetaching([$cfdiModule->id => $pivot]);
+        }
+
         $estado = $shop->cfdi_enabled ? 'habilitado' : 'deshabilitado';
 
         return response()->json([

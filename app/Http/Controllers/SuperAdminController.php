@@ -1187,6 +1187,13 @@ class SuperAdminController extends Controller
 
         $shop->modules()->syncWithoutDetaching([$module->id => $pivot]);
 
+        // CFDI tiene un flag operativo histórico (shops.cfdi_enabled) del que dependen el botón
+        // "Facturar" en Ventas y las validaciones de timbrado del backend. Mantenerlo sincronizado.
+        if ($module->key === 'cfdi') {
+            $shop->cfdi_enabled = $enabled;
+            $shop->save();
+        }
+
         return response()->json(['ok' => true, 'message' => "Módulo \"{$module->name}\" actualizado."]);
     }
 

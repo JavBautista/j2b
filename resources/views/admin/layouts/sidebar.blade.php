@@ -110,7 +110,7 @@
                 </a>
             </li>
 
-            @if(Auth::user()->shop && Auth::user()->shop->cfdi_enabled)
+            @if(Auth::user()->shop && Auth::user()->shop->hasModule('cfdi'))
             <li class="nav-item nav-dropdown">
                 <a class="nav-link nav-dropdown-toggle" href="#"><i class="fa fa-file-text-o"></i> Facturación CFDI</a>
                 <ul class="nav-dropdown-items">

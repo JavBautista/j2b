@@ -339,6 +339,26 @@
                             <td class="lbl">TOTAL:</td>
                             <td class="val">${{ number_format($receipt->total, 2) }}</td>
                         </tr>
+                        {{-- Retención capturada en la venta (baja el neto, no el total comercial).
+                             Solo si la nota aún no está facturada con desglose fiscal. --}}
+                        @if($receipt->aplica_retencion && (float) $receipt->total_retenciones > 0 && !($receipt->cfdiInvoice?->tieneDesgloseFiscal()))
+                            @if((float) $receipt->ret_isr_monto > 0)
+                            <tr>
+                                <td class="lbl">Ret. ISR {{ rtrim(rtrim(number_format($receipt->ret_isr_tasa * 100, 4), '0'), '.') }}%:</td>
+                                <td class="val">-${{ number_format($receipt->ret_isr_monto, 2) }}</td>
+                            </tr>
+                            @endif
+                            @if((float) $receipt->ret_iva_monto > 0)
+                            <tr>
+                                <td class="lbl">Ret. IVA {{ rtrim(rtrim(number_format($receipt->ret_iva_tasa * 100, 4), '0'), '.') }}%:</td>
+                                <td class="val">-${{ number_format($receipt->ret_iva_monto, 2) }}</td>
+                            </tr>
+                            @endif
+                            <tr class="total-final">
+                                <td class="lbl">NETO A RECIBIR:</td>
+                                <td class="val">${{ number_format($receipt->saldoEfectivoEsperado(), 2) }}</td>
+                            </tr>
+                        @endif
                     </table>
                 </div>
             </td>

@@ -131,6 +131,7 @@ class ReceiptController extends Controller
                 + ($tieneFiscal
                     ? 155
                     : (!$receipt->quotation ? ($receipt->partialPayments->count() * 16 + 58) : 0))
+                + (($receipt->aplica_retencion && (float) $receipt->total_retenciones > 0 && !$tieneFiscal) ? 54 : 0)
                 + ($bankAccounts->count() * 62);
             $pdf = PDF::loadView('pdf_templates.ticket.receipt', $viewParams);
             $pdf->setPaper([0, 0, 226.77, $altura]);

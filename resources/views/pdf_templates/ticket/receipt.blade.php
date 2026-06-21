@@ -174,6 +174,18 @@
                 <td class="val">{{ $simbolo }}{{ number_format($receipt->iva, 2) }}</td></tr>
         @endif
         <tr class="row grand"><td class="lbl">TOTAL</td><td class="val">{{ $simbolo }}{{ number_format($receipt->total, 2) }}</td></tr>
+        {{-- Retención capturada en la venta (baja el neto, no el total). Solo si aún no está facturada con desglose fiscal. --}}
+        @if($receipt->aplica_retencion && (float) $receipt->total_retenciones > 0 && !$tieneFiscal)
+            @if((float) $receipt->ret_isr_monto > 0)
+                <tr class="row ret"><td class="lbl">Ret. ISR {{ rtrim(rtrim(number_format($receipt->ret_isr_tasa * 100, 4), '0'), '.') }}%</td>
+                    <td class="val">-{{ $simbolo }}{{ number_format($receipt->ret_isr_monto, 2) }}</td></tr>
+            @endif
+            @if((float) $receipt->ret_iva_monto > 0)
+                <tr class="row ret"><td class="lbl">Ret. IVA {{ rtrim(rtrim(number_format($receipt->ret_iva_tasa * 100, 4), '0'), '.') }}%</td>
+                    <td class="val">-{{ $simbolo }}{{ number_format($receipt->ret_iva_monto, 2) }}</td></tr>
+            @endif
+            <tr class="row grand"><td class="lbl">NETO A RECIBIR</td><td class="val">{{ $simbolo }}{{ number_format($receipt->saldoEfectivoEsperado(), 2) }}</td></tr>
+        @endif
     </table>
 
     {{-- ===== Desglose fiscal (solo si facturada con retenciones / impuestos locales) ===== --}}
@@ -213,8 +225,8 @@
                     <td class="val">{{ $simbolo }}{{ number_format($pago->amount, 2) }}</td></tr>
             @endforeach
             <tr class="row"><td class="lbl b">RECIBIDO</td><td class="val b">{{ $simbolo }}{{ number_format($receipt->received, 2) }}</td></tr>
-            @if($receipt->received < $receipt->total)
-                <tr class="row"><td class="lbl b">ADEUDO</td><td class="val b">{{ $simbolo }}{{ number_format($receipt->total - $receipt->received, 2) }}</td></tr>
+            @if($receipt->received < $receipt->saldoEfectivoEsperado())
+                <tr class="row"><td class="lbl b">ADEUDO</td><td class="val b">{{ $simbolo }}{{ number_format($receipt->saldoEfectivoEsperado() - $receipt->received, 2) }}</td></tr>
             @endif
         </table>
     @endif

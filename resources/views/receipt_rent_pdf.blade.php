@@ -174,6 +174,17 @@
                 <p>{{ $receipt->shop->tax_name ?? 'IVA' }} {{ $receipt->shop->tax_rate ?? 16 }}% {{ $receipt->shop->getCurrencySymbol() }}{{number_format($receipt->iva,2)}}</p>
             @endif
             <p>Total a pagar <strong>{{ $receipt->shop->getCurrencySymbol() }}{{number_format($receipt->total,2)}}</strong></p>
+            {{-- Retención capturada en la venta (no baja el total comercial; baja el neto a recibir).
+                 Solo si la nota aún no está facturada con desglose fiscal (ese recuadro ya lo muestra). --}}
+            @if($receipt->aplica_retencion && (float) $receipt->total_retenciones > 0 && !($receipt->cfdiInvoice?->tieneDesgloseFiscal()))
+                @if((float) $receipt->ret_isr_monto > 0)
+                    <p>Ret. ISR {{ rtrim(rtrim(number_format($receipt->ret_isr_tasa * 100, 4), '0'), '.') }}% -{{ $receipt->shop->getCurrencySymbol() }}{{ number_format($receipt->ret_isr_monto, 2) }}</p>
+                @endif
+                @if((float) $receipt->ret_iva_monto > 0)
+                    <p>Ret. IVA {{ rtrim(rtrim(number_format($receipt->ret_iva_tasa * 100, 4), '0'), '.') }}% -{{ $receipt->shop->getCurrencySymbol() }}{{ number_format($receipt->ret_iva_monto, 2) }}</p>
+                @endif
+                <p>Neto a recibir <strong>{{ $receipt->shop->getCurrencySymbol() }}{{ number_format($receipt->saldoEfectivoEsperado(), 2) }}</strong></p>
+            @endif
         </div>
 
         {{-- Resumen fiscal del CFDI (retenciones / impuestos locales) — solo si la nota está facturada con ellos --}}
@@ -208,10 +219,10 @@
                         <th>RECIBIDO</th>
                         <th>{{ $receipt->shop->getCurrencySymbol() }}{{number_format($receipt->received,2)}}</th>
                     </tr>
-                    @if($receipt->received < $receipt->total )
+                    @if($receipt->received < $receipt->saldoEfectivoEsperado())
                     <tr>
                         <th>ADEUDO</th>
-                        <th>{{ $receipt->shop->getCurrencySymbol() }}{{number_format(($receipt->total-$receipt->received),2)}}</th>
+                        <th>{{ $receipt->shop->getCurrencySymbol() }}{{number_format(($receipt->saldoEfectivoEsperado()-$receipt->received),2)}}</th>
                     </tr>
                     @endif
 

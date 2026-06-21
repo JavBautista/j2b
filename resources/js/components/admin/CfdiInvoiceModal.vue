@@ -852,14 +852,28 @@ export default {
                     this.emisorData = res.data.emisor;
                     this.metodoPago = res.data.metodo_pago_calculado || 'PUE';
                     this.perfilesFiscales = res.data.receipt.client?.fiscal_data || [];
-                    // Prellenar retenciones con defaults del emisor (tasas en backend son decimales)
-                    this.retIsrAplica = !!res.data.emisor.ret_isr_default_aplica;
-                    if (res.data.emisor.ret_isr_default_tasa) {
-                        this.retIsrTasa = parseFloat(res.data.emisor.ret_isr_default_tasa) * 100;
-                    }
-                    this.retIvaAplica = !!res.data.emisor.ret_iva_default_aplica;
-                    if (res.data.emisor.ret_iva_default_tasa) {
-                        this.retIvaTasa = parseFloat(res.data.emisor.ret_iva_default_tasa) * 100;
+                    // Retenciones: PREFERIR el snapshot de la NOTA (T1.7); si no trae, defaults del emisor.
+                    // (Tasas del backend en factor decimal: 0.10 = 10%.)
+                    const rcpRet = res.data.receipt;
+                    const ventaTieneRet = rcpRet.ret_isr_tasa != null || rcpRet.ret_iva_tasa != null;
+                    if (ventaTieneRet) {
+                        this.retIsrAplica = rcpRet.ret_isr_tasa != null;
+                        if (rcpRet.ret_isr_tasa != null) {
+                            this.retIsrTasa = parseFloat((parseFloat(rcpRet.ret_isr_tasa) * 100).toFixed(4));
+                        }
+                        this.retIvaAplica = rcpRet.ret_iva_tasa != null;
+                        if (rcpRet.ret_iva_tasa != null) {
+                            this.retIvaTasa = parseFloat((parseFloat(rcpRet.ret_iva_tasa) * 100).toFixed(4));
+                        }
+                    } else {
+                        this.retIsrAplica = !!res.data.emisor.ret_isr_default_aplica;
+                        if (res.data.emisor.ret_isr_default_tasa) {
+                            this.retIsrTasa = parseFloat(res.data.emisor.ret_isr_default_tasa) * 100;
+                        }
+                        this.retIvaAplica = !!res.data.emisor.ret_iva_default_aplica;
+                        if (res.data.emisor.ret_iva_default_tasa) {
+                            this.retIvaTasa = parseFloat(res.data.emisor.ret_iva_default_tasa) * 100;
+                        }
                     }
                     // Cargar defaults de impuestos locales para sugerencias rápidas en el editor
                     try {
@@ -1128,8 +1142,9 @@ export default {
                         subtotal: f.importe,
                         clave_prod_serv: claveProd,
                         clave_unidad: claveUnidad,
-                        // aplicaRet por concepto. Default desde el flag del producto.
-                        aplicaRet: !!item.product?.aplica_retencion_default,
+                        // aplicaRet por concepto. Si la venta ya traía retención (document-level),
+                        // marcar todas las partidas no-cortesía para heredar la misma base; si no, flag del producto.
+                        aplicaRet: this.receiptData.aplica_retencion ? true : !!item.product?.aplica_retencion_default,
                         editingDesc: false,
                         productSearch: claveProd,
                         unitSearch: claveUnidad,

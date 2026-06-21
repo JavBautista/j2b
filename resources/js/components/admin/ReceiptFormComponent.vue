@@ -426,6 +426,66 @@
                         <span class="h4 mb-0 text-success fw-bold">{{ formatCurrency(total) }}</span>
                     </div>
 
+                    <!-- Retenciones (fiscal): no bajan el total comercial; reducen el neto a recibir en efectivo.
+                         Por default oculto: la venta se ve igual que siempre hasta marcar "Activar retenciones". -->
+                    <template v-if="retencionDefaults.disponible">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="activarRetenciones" v-model="mostrarRetenciones" @change="toggleRetenciones" :disabled="isViewMode">
+                            <label class="form-check-label" for="activarRetenciones">
+                                <i class="fa fa-university me-1"></i>Activar retenciones (fiscal)
+                            </label>
+                        </div>
+
+                        <template v-if="mostrarRetenciones">
+                        <!-- ISR -->
+                        <div v-if="retencionDefaults.isr_tasa !== null" class="mb-2">
+                            <div class="form-check form-switch retencion-switch mb-1">
+                                <input class="form-check-input" type="checkbox" role="switch" id="chkRetIsrVenta" v-model="retIsr" @change="calcularTotales" :disabled="isViewMode">
+                                <label class="form-check-label" for="chkRetIsrVenta"><strong>Retención ISR</strong></label>
+                            </div>
+                            <template v-if="retIsr">
+                                <div class="input-group input-group-sm">
+                                    <input type="number" class="form-control text-end" v-model.number="retIsrTasa" @input="calcularTotales" step="0.0001" min="0" max="100" :disabled="isViewMode">
+                                    <span class="input-group-text">%</span>
+                                </div>
+                                <small class="text-muted d-block mt-1" style="font-size: 0.72rem;">
+                                    Comunes — Honorarios/arrendamiento: <strong>10%</strong> · RESICO PF: <strong>1.25%</strong>
+                                </small>
+                            </template>
+                        </div>
+
+                        <!-- IVA -->
+                        <div v-if="retencionDefaults.iva_tasa !== null" class="mb-2">
+                            <div class="form-check form-switch retencion-switch mb-1">
+                                <input class="form-check-input" type="checkbox" role="switch" id="chkRetIvaVenta" v-model="retIva" @change="calcularTotales" :disabled="isViewMode">
+                                <label class="form-check-label" for="chkRetIvaVenta"><strong>Retención IVA</strong></label>
+                            </div>
+                            <template v-if="retIva">
+                                <div class="input-group input-group-sm">
+                                    <input type="number" class="form-control text-end" v-model.number="retIvaTasa" @input="calcularTotales" step="0.0001" min="0" max="100" :disabled="isViewMode">
+                                    <span class="input-group-text">%</span>
+                                </div>
+                                <small class="text-muted d-block mt-1" style="font-size: 0.72rem;">
+                                    Comunes — Honorarios/arrendamiento: <strong>10.6667%</strong> · Fletes: <strong>4%</strong>
+                                </small>
+                            </template>
+                        </div>
+
+                        <div v-if="retIsrMonto > 0" class="d-flex justify-content-between mb-1 text-danger small">
+                            <span>Retención ISR:</span>
+                            <span>-{{ formatCurrency(retIsrMonto) }}</span>
+                        </div>
+                        <div v-if="retIvaMonto > 0" class="d-flex justify-content-between mb-1 text-danger small">
+                            <span>Retención IVA:</span>
+                            <span>-{{ formatCurrency(retIvaMonto) }}</span>
+                        </div>
+                        <div v-if="totalRetenciones > 0" class="d-flex justify-content-between mb-3">
+                            <span class="fw-bold">Neto a recibir:</span>
+                            <span class="h5 mb-0 text-primary fw-bold">{{ formatCurrency(netoRecibir) }}</span>
+                        </div>
+                        </template>
+                    </template>
+
                     <!-- Pagos Parciales / Abonos (solo notas existentes, no crear) -->
                     <div v-if="!cotizacion && !isCreateMode">
                         <hr>
@@ -997,6 +1057,15 @@ export default {
             taxRates: [],
             selectedTaxRateId: null,
 
+            // Retenciones (snapshot fiscal). Tasas editables (en %); el backend recalcula el monto al guardar.
+            // Por default OFF: la venta se ve igual que siempre hasta que el operador activa retenciones.
+            mostrarRetenciones: false,
+            retIsr: false,
+            retIva: false,
+            retIsrTasa: 0,
+            retIvaTasa: 0,
+            retencionDefaults: { disponible: false, isr_aplica: false, isr_tasa: null, iva_aplica: false, iva_tasa: null },
+
             // Modales
             showModalCliente: false,
             showModalProducto: false,
@@ -1046,6 +1115,10 @@ export default {
                 payment_date: this.getHoyISO(),
                 total: 0,
                 iva: 0,
+                ret_isr_aplica: false,
+                ret_isr_tasa: 0,
+                ret_iva_aplica: false,
+                ret_iva_tasa: 0,
                 quotation: false,
                 quotation_expiration: null,
                 credit: false,
@@ -1101,6 +1174,24 @@ export default {
             }
             // Fallback a la tasa global de la tienda (notas sin catálogo cargado).
             return this.$taxDecimal;
+        },
+        // Base de retención = misma base que el IVA (subtotal no-cortesía − descuento global).
+        retencionBase() {
+            return Math.max(0, this.round2(this.subtotal - this.descuentoMonto));
+        },
+        retIsrMonto() {
+            if (!this.retIsr || !this.retIsrTasa) return 0;
+            return this.round2(this.retencionBase * (parseFloat(this.retIsrTasa) / 100));
+        },
+        retIvaMonto() {
+            if (!this.retIva || !this.retIvaTasa) return 0;
+            return this.round2(this.retencionBase * (parseFloat(this.retIvaTasa) / 100));
+        },
+        totalRetenciones() {
+            return this.round2(this.retIsrMonto + this.retIvaMonto);
+        },
+        netoRecibir() {
+            return this.round2(this.total - this.totalRetenciones);
         },
         isCreateMode() {
             return this.receiptId === null;
@@ -1170,6 +1261,8 @@ export default {
         this.loadExtraFields();
         // Cargar catálogo de tasas ANTES del receipt para poder preseleccionar la del snapshot.
         await this.cargarTaxRates();
+        // Defaults de retención del emisor (preselecciona checkboxes en alta).
+        await this.cargarRetencionDefaults();
 
         if (this.receiptId) {
             this.loadReceiptData();
@@ -1205,6 +1298,44 @@ export default {
         formatTasa(rate) {
             const n = parseFloat(rate);
             return Number.isInteger(n) ? n.toString() : n.toString().replace(/\.?0+$/, '');
+        },
+
+        // ==================== RETENCIONES ====================
+        async cargarRetencionDefaults() {
+            try {
+                const res = await axios.get('/admin/receipts/retenciones-defaults');
+                if (res.data.ok && res.data.defaults) {
+                    this.retencionDefaults = res.data.defaults;
+                    // Prefill de tasas editables (factor decimal → %).
+                    if (this.retencionDefaults.isr_tasa !== null) {
+                        this.retIsrTasa = parseFloat((this.retencionDefaults.isr_tasa * 100).toFixed(4));
+                    }
+                    if (this.retencionDefaults.iva_tasa !== null) {
+                        this.retIvaTasa = parseFloat((this.retencionDefaults.iva_tasa * 100).toFixed(4));
+                    }
+                    // NO se autoactiva: el operador debe marcar "Activar retenciones" (ver toggleRetenciones).
+                }
+            } catch (e) {
+                // Tienda sin CFDI/emisor: simplemente no se ofrece retención.
+                console.warn('No se pudieron cargar los defaults de retención', e);
+            }
+        },
+
+        round2(n) {
+            return Math.round((parseFloat(n) || 0) * 100) / 100;
+        },
+
+        // Checkbox maestro "Activar retenciones": al activar, preselecciona según el default del
+        // emisor (conveniencia); al desactivar, limpia toda la retención.
+        toggleRetenciones() {
+            if (this.mostrarRetenciones) {
+                this.retIsr = !!this.retencionDefaults.isr_aplica && this.retencionDefaults.isr_tasa !== null;
+                this.retIva = !!this.retencionDefaults.iva_aplica && this.retencionDefaults.iva_tasa !== null;
+            } else {
+                this.retIsr = false;
+                this.retIva = false;
+            }
+            this.calcularTotales();
         },
 
         // ==================== CARGA DE DATOS ====================
@@ -1403,6 +1534,13 @@ export default {
                 const match = this.taxRates.find(t => parseFloat(t.rate) === parseFloat(r.tax_rate));
                 if (match) this.selectedTaxRateId = match.id;
             }
+            // Retención: reactivar toggles y tasas según el snapshot guardado en la nota.
+            this.retIsr = r.ret_isr_tasa !== null && r.ret_isr_tasa !== undefined;
+            this.retIva = r.ret_iva_tasa !== null && r.ret_iva_tasa !== undefined;
+            if (r.ret_isr_tasa) this.retIsrTasa = parseFloat((parseFloat(r.ret_isr_tasa) * 100).toFixed(4));
+            if (r.ret_iva_tasa) this.retIvaTasa = parseFloat((parseFloat(r.ret_iva_tasa) * 100).toFixed(4));
+            // Si la nota traía retención, abrir la sección (si no, queda como venta normal).
+            this.mostrarRetenciones = this.retIsr || this.retIva;
             this.esCredito = r.credit === 1 || r.credit === true;
 
             // Preservar tipo y rent_id del recibo original
@@ -1808,6 +1946,11 @@ export default {
             this.receipt.total = this.total;
             // Snapshot: la tasa elegida viaja al backend, que la congela en la nota.
             this.receipt.tax_rate_id = this.selectedTaxRateId;
+            // Retención: flags + tasa editable (factor decimal). El backend recalcula el monto server-side.
+            this.receipt.ret_isr_aplica = this.retIsr;
+            this.receipt.ret_isr_tasa = this.retIsr ? (parseFloat(this.retIsrTasa) || 0) / 100 : 0;
+            this.receipt.ret_iva_aplica = this.retIva;
+            this.receipt.ret_iva_tasa = this.retIva ? (parseFloat(this.retIvaTasa) || 0) / 100 : 0;
         },
 
         // ==================== CAMBIO COTIZACIÓN ====================
@@ -2468,6 +2611,29 @@ export default {
 .receipt-form {
     max-width: 1400px;
     margin: 0 auto;
+}
+/* Toggle de retenciones (mismo estilo que el modal de facturación) */
+.retencion-switch .form-check-input {
+    width: 2.8em;
+    height: 1.4em;
+    margin-top: 0.1em;
+    cursor: pointer;
+    background-color: #ced4da;
+    border-color: #adb5bd;
+    box-shadow: none;
+}
+.retencion-switch .form-check-input:checked {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+.retencion-switch .form-check-input:focus {
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+}
+.retencion-switch .form-check-label {
+    cursor: pointer;
+    margin-left: 0.4em;
+    padding-top: 0.15em;
+    font-size: 0.95rem;
 }
 
 /* ============ TOOLBAR COMPACTA ============ */

@@ -89,6 +89,18 @@ class Receipt extends Model
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * Saldo que se espera recibir EN EFECTIVO = total comercial - retenciones.
+     * Las retenciones no son una deuda menor: el comprador las entera al SAT a
+     * nombre del vendedor. La cobranza debe comparar lo recibido contra este valor
+     * (no contra total) cuando la nota tiene retención. Sin retención, == total.
+     * Ver xdev/ventas/PLAN_RETENCIONES_DESDE_VENTA.md (Fase 1, T1.3)
+     */
+    public function saldoEfectivoEsperado(): float
+    {
+        return round((float) $this->total - (float) ($this->total_retenciones ?? 0), 2);
+    }
+
     public function infoExtra()
     {
         return $this->hasMany(ReceiptInfoExtra::class, 'receipt_id');

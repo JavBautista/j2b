@@ -13,12 +13,16 @@ class ReceiptTaxCalculator
 {
     /**
      * @param Shop  $shop
-     * @param array $items  Cada item normalizado: ['qty'=>n, 'price'=>n, 'discount'=>n, 'is_complimentary'=>bool]
+     * @param array $items  Cada item normalizado: ['qty'=>n, 'price'=>n, 'discount'=>n, 'is_complimentary'=>bool, 'aplica_retencion'=>bool]
      *                      Soporta arrays asociativos u objetos stdClass.
      * @param float $descuentoGlobal  Descuento aplicado al subtotal (no por línea). Valor CRUDO tecleado por el usuario.
      * @param bool  $aplicarIva  Si la nota lleva IVA o no (el monto se calcula aquí).
      * @param float|null $taxRate  Tasa en porcentaje (ej. 16, 8, 0). Si es null usa la de la tienda.
      * @param string $descuentoConcepto  '%' o '$'. Define cómo interpretar $descuentoGlobal. Default '$'.
+     * @param array|null $retencion  Retenciones a aplicar (snapshot). Estructura:
+     *                      ['isr_aplica'=>bool, 'isr_tasa'=>float, 'iva_aplica'=>bool, 'iva_tasa'=>float].
+     *                      Las tasas van en FACTOR decimal (0.10 = 10%), igual que cfdi_emisores.ret_*_default_tasa.
+     *                      Si es null, no hay retenciones (comportamiento idéntico al histórico).
      * @return array{
      *   subtotal: float,
      *   iva: float,
@@ -26,13 +30,21 @@ class ReceiptTaxCalculator
      *   descuento_global: float,
      *   descuento_pesos: float,
      *   detail_subtotals: array<int, float>,
-     *   aplicar_iva: bool
+     *   aplicar_iva: bool,
+     *   aplica_retencion: bool,
+     *   ret_isr_tasa: float|null,
+     *   ret_isr_monto: float,
+     *   ret_iva_tasa: float|null,
+     *   ret_iva_monto: float,
+     *   total_retenciones: float
      * }
      */
-    public static function calcular(Shop $shop, array $items, float $descuentoGlobal, bool $aplicarIva, ?float $taxRate = null, string $descuentoConcepto = '$'): array
+    public static function calcular(Shop $shop, array $items, float $descuentoGlobal, bool $aplicarIva, ?float $taxRate = null, string $descuentoConcepto = '$', ?array $retencion = null): array
     {
         $detailSubtotals = [];
         $subtotal = 0.0;
+        // Base bruta (antes de descuento global) de las partidas que aplican retención.
+        $baseRetencionBruta = 0.0;
 
         foreach (array_values($items) as $idx => $raw) {
             $item = is_array($raw) ? $raw : (array) $raw;
@@ -50,6 +62,12 @@ class ReceiptTaxCalculator
 
             $detailSubtotals[$idx] = $subtotalLinea;
             $subtotal += $subtotalLinea;
+
+            // Solo las partidas marcadas (aplica_retencion_default del producto/servicio)
+            // y no cortesía suman a la base de retención.
+            if (!$isComplimentary && !empty($item['aplica_retencion'])) {
+                $baseRetencionBruta += $subtotalLinea;
+            }
         }
 
         $subtotal = round($subtotal, 2);
@@ -79,14 +97,38 @@ class ReceiptTaxCalculator
 
         $total = round($baseNeta + $iva, 2);
 
+        // ── Retenciones (snapshot) ───────────────────────────────────────────
+        // NO alteran subtotal/iva/total (que siguen siendo comerciales). Solo se
+        // calculan sobre la base de las partidas que aplican retención, prorrateando
+        // el descuento global de forma consistente con la base del IVA.
+        $retIsrAplica = !empty($retencion['isr_aplica']);
+        $retIvaAplica = !empty($retencion['iva_aplica']);
+        $retIsrTasa   = $retIsrAplica ? (float) ($retencion['isr_tasa'] ?? 0) : null;
+        $retIvaTasa   = $retIvaAplica ? (float) ($retencion['iva_tasa'] ?? 0) : null;
+
+        $baseRetencion = round($baseRetencionBruta, 2);
+        if ($descuentoPesos > 0 && $subtotal > 0 && $baseRetencion > 0) {
+            $baseRetencion = round($baseRetencion - ($descuentoPesos * $baseRetencion / $subtotal), 2);
+        }
+
+        $retIsrMonto      = $retIsrAplica ? round($baseRetencion * (float) $retIsrTasa, 2) : 0.0;
+        $retIvaMonto      = $retIvaAplica ? round($baseRetencion * (float) $retIvaTasa, 2) : 0.0;
+        $totalRetenciones = round($retIsrMonto + $retIvaMonto, 2);
+
         return [
-            'subtotal'         => $subtotal,
-            'iva'              => $iva,
-            'total'            => $total,
-            'descuento_global' => $descuentoCrudo,   // CRUDO (ej. 7 si es %); mismo contrato que hoy
-            'descuento_pesos'  => $descuentoPesos,   // informativo: descuento ya convertido a pesos
-            'detail_subtotals' => $detailSubtotals,
-            'aplicar_iva'      => $aplicarIva,
+            'subtotal'          => $subtotal,
+            'iva'               => $iva,
+            'total'             => $total,
+            'descuento_global'  => $descuentoCrudo,   // CRUDO (ej. 7 si es %); mismo contrato que hoy
+            'descuento_pesos'   => $descuentoPesos,   // informativo: descuento ya convertido a pesos
+            'detail_subtotals'  => $detailSubtotals,
+            'aplicar_iva'       => $aplicarIva,
+            'aplica_retencion'  => $retIsrAplica || $retIvaAplica,
+            'ret_isr_tasa'      => $retIsrTasa,
+            'ret_isr_monto'     => $retIsrMonto,
+            'ret_iva_tasa'      => $retIvaTasa,
+            'ret_iva_monto'     => $retIvaMonto,
+            'total_retenciones' => $totalRetenciones,
         ];
     }
 

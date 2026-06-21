@@ -555,6 +555,7 @@ Route::group(['middleware' => ['auth', 'web.access']], function () {
         Route::get('/admin/receipts/list/get', [App\Http\Controllers\Admin\ReceiptsController::class, 'getList'])->name('admin.receipts.list.get');
         Route::get('/admin/receipts/create', [App\Http\Controllers\Admin\ReceiptsController::class, 'create'])->name('admin.receipts.create');
         Route::post('/admin/receipts/store', [App\Http\Controllers\Admin\ReceiptsController::class, 'store'])->name('admin.receipts.store');
+        Route::get('/admin/receipts/retenciones-defaults', [App\Http\Controllers\Admin\ReceiptsController::class, 'retencionesDefaults'])->name('admin.receipts.retenciones-defaults');
         Route::get('/admin/receipts/extra-fields', [App\Http\Controllers\Admin\ReceiptsController::class, 'getExtraFields'])->name('admin.receipts.extra-fields');
         Route::get('/admin/receipts/extra-fields-filterable', [App\Http\Controllers\Admin\ReceiptsController::class, 'getFilterableExtraFields'])->name('admin.receipts.extra-fields-filterable');
         Route::get('/admin/receipts/{id}/detail', [App\Http\Controllers\Admin\ReceiptsController::class, 'getDetail'])->name('admin.receipts.detail');

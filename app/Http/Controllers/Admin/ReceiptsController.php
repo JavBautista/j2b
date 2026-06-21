@@ -13,7 +13,10 @@ use App\Models\Product;
 use App\Models\Service;
 use App\Models\RentDetail;
 use App\Models\ExtraFieldShop;
+use App\Models\CfdiEmisor;
+use App\Models\Shop;
 use App\Services\Facturacion\CfdiComplementoPagoService;
+use App\Services\Receipts\ReceiptTaxCalculator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -269,11 +272,21 @@ class ReceiptsController extends Controller
             return response()->json(['ok' => false, 'message' => 'Cliente no válido'], 422);
         }
 
-        // T9: PAGADA exige received >= total (escenario A: store, sin partial_payments aún)
+        // Parseamos el detalle antes de las validaciones: la retención (snapshot fiscal)
+        // se recalcula server-side a partir de los items.
+        $detailList = is_string($request->detail) ? json_decode($request->detail) : $request->detail;
+        $itemsValidar = is_array($detailList) ? $detailList : (is_object($detailList) ? (array) $detailList : []);
+
+        // Snapshot de retención server-side (tasas del emisor). NO altera el total comercial.
+        $retSnapshot = $this->calcularRetencionSnapshot($shop, $rcp, $itemsValidar);
+
+        // T9: PAGADA exige received >= SALDO EN EFECTIVO (total - retenciones), no contra el total.
+        // Las retenciones no son deuda menor: el comprador las entera al SAT a nombre del vendedor.
         $statusEnviado = $rcp['status'] ?? Receipt::STATUS_POR_COBRAR;
         $receivedEnviado = $rcp['received'] ?? 0;
         $totalEnviado = $rcp['total'] ?? 0;
-        if ($statusEnviado === Receipt::STATUS_PAGADA && Receipt::montoMenor($receivedEnviado, $totalEnviado)) {
+        $saldoEfectivoEnviado = round((float) $totalEnviado - $retSnapshot['total_retenciones'], 2);
+        if ($statusEnviado === Receipt::STATUS_PAGADA && Receipt::montoMenor($receivedEnviado, $saldoEfectivoEnviado)) {
             return response()->json(['ok' => false, 'message' => 'No se puede crear la nota como PAGADA si el monto recibido es menor al total.'], 422);
         }
 
@@ -281,8 +294,6 @@ class ReceiptsController extends Controller
         if ($totalEnviado < 0) {
             return response()->json(['ok' => false, 'message' => 'No se puede guardar una nota con total negativo.'], 422);
         }
-        $detailList = is_string($request->detail) ? json_decode($request->detail) : $request->detail;
-        $itemsValidar = is_array($detailList) ? $detailList : (is_object($detailList) ? (array) $detailList : []);
         if (count($itemsValidar) > 0) {
             $hayNoCortesia = false;
             foreach ($itemsValidar as $d) {
@@ -302,7 +313,7 @@ class ReceiptsController extends Controller
         // La nota no será finalizada por default
         $finished = 0;
         if (!$es_cotizacion) {
-            $finished = ($rcp['received'] >= $rcp['total']) ? 1 : 0;
+            $finished = ($rcp['received'] >= $saldoEfectivoEnviado) ? 1 : 0;
         }
 
         // Generar folio automático
@@ -331,6 +342,13 @@ class ReceiptsController extends Controller
         $taxRateModel = ShopTaxRate::resolveForShop($shop, $rcp['tax_rate_id'] ?? null);
         $receipt->tax_rate = $taxRateModel ? $taxRateModel->rate : $shop->getTaxRate();
         $receipt->tax_name = $shop->tax_name;
+        // Snapshot de retención (no afecta el total comercial; alimenta saldo efectivo y timbrado).
+        $receipt->aplica_retencion  = $retSnapshot['aplica_retencion'];
+        $receipt->ret_isr_tasa      = $retSnapshot['ret_isr_tasa'];
+        $receipt->ret_isr_monto     = $retSnapshot['ret_isr_monto'];
+        $receipt->ret_iva_tasa      = $retSnapshot['ret_iva_tasa'];
+        $receipt->ret_iva_monto     = $retSnapshot['ret_iva_monto'];
+        $receipt->total_retenciones = $retSnapshot['total_retenciones'];
         $receipt->finished = $finished;
         $receipt->status = $rcp['status'] ?? Receipt::STATUS_POR_COBRAR;
         $receipt->payment = $rcp['payment'] ?? 'EFECTIVO';
@@ -367,11 +385,12 @@ class ReceiptsController extends Controller
         // NOTA: Ahora SIEMPRE creamos partial_payment para centralizar ingresos
         //       Documentación: j2b-app/xdev/ventas/PLAN_CENTRALIZACION_PAGOS.md
         if (!$es_cotizacion && $receipt->received > 0) {
-            // Validar que no exceda el total (protección contra errores de usuario)
-            $monto_a_registrar = min($receipt->received, $receipt->total);
+            // Cap y clasificación contra el saldo en efectivo (total - retenciones).
+            $saldoEfectivo = $receipt->saldoEfectivoEsperado();
+            $monto_a_registrar = min($receipt->received, $saldoEfectivo);
 
-            // Determinar tipo de pago: 'unico' si paga todo, 'inicial' si es parcial
-            $payment_type = ($monto_a_registrar >= $receipt->total) ? 'unico' : 'inicial';
+            // 'unico' si cubre el saldo en efectivo, 'inicial' si es parcial.
+            $payment_type = ($monto_a_registrar >= $saldoEfectivo) ? 'unico' : 'inicial';
 
             // Fecha real del pago (nota recién creada → solo valida no-futura).
             $fecha_pago = \App\Services\Pagos\PaymentDateResolver::resolver(
@@ -483,6 +502,122 @@ class ReceiptsController extends Controller
             'receipt' => $rr,
             'message' => 'Nota de venta creada exitosamente'
         ]);
+    }
+
+    /**
+     * Defaults de retención del emisor para el formulario de venta web.
+     * Expone SOLO las tasas/flags de retención (no el emisor completo, que trae datos del CSD).
+     * Ver xdev/ventas/PLAN_RETENCIONES_DESDE_VENTA.md (Fase 1, T1.6)
+     */
+    public function retencionesDefaults()
+    {
+        $shop = Auth::user()->shop;
+        $emisor = $shop ? CfdiEmisor::where('shop_id', $shop->id)->orderByDesc('active')->first() : null;
+
+        $isrTasa = ($emisor && $emisor->ret_isr_default_tasa !== null) ? (float) $emisor->ret_isr_default_tasa : null;
+        $ivaTasa = ($emisor && $emisor->ret_iva_default_tasa !== null) ? (float) $emisor->ret_iva_default_tasa : null;
+
+        return response()->json([
+            'ok' => true,
+            'defaults' => [
+                'disponible' => $isrTasa !== null || $ivaTasa !== null,
+                'isr_aplica' => (bool) ($emisor->ret_isr_default_aplica ?? false),
+                'isr_tasa'   => $isrTasa, // factor decimal (0.10 = 10%)
+                'iva_aplica' => (bool) ($emisor->ret_iva_default_aplica ?? false),
+                'iva_tasa'   => $ivaTasa,
+            ],
+        ]);
+    }
+
+    /**
+     * Calcula el snapshot de retenciones (ISR/IVA) server-side para una nota web.
+     * El front web confía al cliente subtotal/total, pero la retención —dato fiscal NUEVO—
+     * se recalcula aquí con las tasas default del emisor de la tienda para que nazca confiable.
+     * Document-level (Fase 1): aplica sobre la base no-cortesía cuando el operador marca retención.
+     * El total comercial NO se toca; el resultado alimenta el saldo en efectivo y el timbrado.
+     * Ver xdev/ventas/PLAN_RETENCIONES_DESDE_VENTA.md (Fase 1, T1.5 web)
+     *
+     * @return array{aplica_retencion:bool, ret_isr_tasa:?float, ret_isr_monto:float, ret_iva_tasa:?float, ret_iva_monto:float, total_retenciones:float}
+     */
+    private function calcularRetencionSnapshot(Shop $shop, array $rcp, $detailList): array
+    {
+        $vacio = [
+            'aplica_retencion'  => false,
+            'ret_isr_tasa'      => null,
+            'ret_isr_monto'     => 0.0,
+            'ret_iva_tasa'      => null,
+            'ret_iva_monto'     => 0.0,
+            'total_retenciones' => 0.0,
+        ];
+
+        $retIsrPedida = !empty($rcp['ret_isr_aplica']);
+        $retIvaPedida = !empty($rcp['ret_iva_aplica']);
+        if (!$retIsrPedida && !$retIvaPedida) {
+            return $vacio;
+        }
+
+        // Tasas: las captura el operador en la nota (editables, como el modal de facturación),
+        // en factor decimal (0.10 = 10%). Fallback al default del emisor si no vienen; clamp [0,1].
+        $emisor = CfdiEmisor::where('shop_id', $shop->id)->orderByDesc('active')->first();
+        $isrTasa = $this->resolverTasaRetencion($rcp['ret_isr_tasa'] ?? null, $emisor?->ret_isr_default_tasa);
+        $ivaTasa = $this->resolverTasaRetencion($rcp['ret_iva_tasa'] ?? null, $emisor?->ret_iva_default_tasa);
+
+        $items = [];
+        foreach ((array) $detailList as $d) {
+            $d = (array) $d;
+            // El web confía el subtotal de línea ya calculado por el cliente (mismo criterio
+            // que al guardar el detalle). Lo pasamos como precio con qty=1 para que la base de
+            // retención coincida EXACTAMENTE con la que ve el operador (descuentos por línea incluidos).
+            $items[] = [
+                'qty'              => 1,
+                'price'            => $d['subtotal'] ?? 0,
+                'discount'         => 0,
+                'is_complimentary' => !empty($d['is_complimentary']),
+                // Document-level: toda partida no-cortesía suma a la base de retención.
+                'aplica_retencion' => true,
+            ];
+        }
+
+        $retencion = [
+            'isr_aplica' => $retIsrPedida && $isrTasa !== null,
+            'isr_tasa'   => (float) $isrTasa,
+            'iva_aplica' => $retIvaPedida && $ivaTasa !== null,
+            'iva_tasa'   => (float) $ivaTasa,
+        ];
+
+        $calc = ReceiptTaxCalculator::calcular(
+            $shop,
+            $items,
+            (float) ($rcp['discount'] ?? 0),
+            false, // no necesitamos recalcular IVA aquí, solo la retención
+            null,
+            $rcp['discount_concept'] ?? '$',
+            $retencion
+        );
+
+        return [
+            'aplica_retencion'  => $calc['aplica_retencion'],
+            'ret_isr_tasa'      => $calc['ret_isr_tasa'],
+            'ret_isr_monto'     => $calc['ret_isr_monto'],
+            'ret_iva_tasa'      => $calc['ret_iva_tasa'],
+            'ret_iva_monto'     => $calc['ret_iva_monto'],
+            'total_retenciones' => $calc['total_retenciones'],
+        ];
+    }
+
+    /**
+     * Resuelve la tasa de retención: usa la enviada por el operador (factor decimal [0,1])
+     * si es válida; si no, cae al default del emisor. Devuelve null si no hay ninguna.
+     */
+    private function resolverTasaRetencion($enviada, $default): ?float
+    {
+        if (is_numeric($enviada)) {
+            $t = (float) $enviada;
+            if ($t >= 0 && $t <= 1) {
+                return $t;
+            }
+        }
+        return $default !== null ? (float) $default : null;
     }
 
     /**
@@ -688,10 +823,18 @@ class ReceiptsController extends Controller
             return response()->json(['ok' => false, 'message' => 'Cliente no válido'], 422);
         }
 
-        // T9: PAGADA exige received >= total (escenario B: update, fuente real $receipt->received de BD)
+        // Parseamos el detalle antes de las validaciones (la retención se recalcula server-side).
+        $detailList = is_string($request->detail) ? json_decode($request->detail) : $request->detail;
+        $itemsValidar = is_array($detailList) ? $detailList : (is_object($detailList) ? (array) $detailList : []);
+
+        // Snapshot de retención server-side (tasas del emisor). NO altera el total comercial.
+        $retSnapshot = $this->calcularRetencionSnapshot($shop, $rcp, $itemsValidar);
+
+        // T9: PAGADA exige received >= SALDO EN EFECTIVO (total - retenciones).
         $statusEnviado = $rcp['status'] ?? $receipt->status;
         $totalEnviado = $rcp['total'] ?? $receipt->total;
-        if ($statusEnviado === Receipt::STATUS_PAGADA && Receipt::montoMenor($receipt->received, $totalEnviado)) {
+        $saldoEfectivoEnviado = round((float) $totalEnviado - $retSnapshot['total_retenciones'], 2);
+        if ($statusEnviado === Receipt::STATUS_PAGADA && Receipt::montoMenor($receipt->received, $saldoEfectivoEnviado)) {
             return response()->json(['ok' => false, 'message' => 'No se puede marcar como PAGADA si el monto recibido es menor al total.'], 422);
         }
 
@@ -699,8 +842,6 @@ class ReceiptsController extends Controller
         if ($totalEnviado < 0) {
             return response()->json(['ok' => false, 'message' => 'No se puede guardar una nota con total negativo.'], 422);
         }
-        $detailList = is_string($request->detail) ? json_decode($request->detail) : $request->detail;
-        $itemsValidar = is_array($detailList) ? $detailList : (is_object($detailList) ? (array) $detailList : []);
         if (count($itemsValidar) > 0) {
             $hayNoCortesia = false;
             foreach ($itemsValidar as $d) {
@@ -720,7 +861,7 @@ class ReceiptsController extends Controller
         // La nota no será finalizada por default
         $finished = 0;
         if (!$es_cotizacion) {
-            $finished = ($rcp['received'] >= $rcp['total']) ? 1 : 0;
+            $finished = ($rcp['received'] >= $saldoEfectivoEnviado) ? 1 : 0;
         }
 
         // ==================== RESTAURAR STOCK ANTERIOR ====================
@@ -770,6 +911,13 @@ class ReceiptsController extends Controller
         $taxRateModel = ShopTaxRate::resolveForShop($shop, $rcp['tax_rate_id'] ?? null);
         $receipt->tax_rate = $taxRateModel ? $taxRateModel->rate : $shop->getTaxRate();
         $receipt->tax_name = $shop->tax_name;
+        // Snapshot de retención (no afecta el total comercial; alimenta saldo efectivo y timbrado).
+        $receipt->aplica_retencion  = $retSnapshot['aplica_retencion'];
+        $receipt->ret_isr_tasa      = $retSnapshot['ret_isr_tasa'];
+        $receipt->ret_isr_monto     = $retSnapshot['ret_isr_monto'];
+        $receipt->ret_iva_tasa      = $retSnapshot['ret_iva_tasa'];
+        $receipt->ret_iva_monto     = $retSnapshot['ret_iva_monto'];
+        $receipt->total_retenciones = $retSnapshot['total_retenciones'];
         $receipt->finished = $finished;
         $receipt->status = $rcp['status'] ?? Receipt::STATUS_POR_COBRAR;
         $receipt->payment = $rcp['payment'] ?? 'EFECTIVO';

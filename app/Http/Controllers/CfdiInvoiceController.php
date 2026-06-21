@@ -380,6 +380,13 @@ class CfdiInvoiceController extends Controller
             'forma_pago' => 'required|string|max:2',
             'metodo_pago' => 'required|string|max:3',
             'client_fiscal_data_id' => 'nullable|integer',
+            // Retenciones (paridad con web). Tasas en factor decimal (0.10 = 10%).
+            'ret_isr_aplica' => 'nullable|boolean',
+            'ret_isr_tasa' => 'nullable|numeric|between:0,1',
+            'ret_iva_aplica' => 'nullable|boolean',
+            'ret_iva_tasa' => 'nullable|numeric|between:0,1',
+            'conceptos_sat' => 'nullable|array',
+            'conceptos_sat.*.aplica_retencion' => 'nullable|boolean',
         ]);
 
         $receipt = Receipt::with('detail.product')

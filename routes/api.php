@@ -230,6 +230,7 @@ Route::group([
 
         /*RECIBOS*/
         Route::get('receipt/all',[ReceiptController::class,'getAll']);
+        Route::get('receipt/retenciones-defaults',[ReceiptController::class,'retencionesDefaults']);
         Route::get('receipt/{client_id}',[ReceiptController::class,'index']);
         Route::get('receipt/detail/{receipt_id}','App\Http\Controllers\ReceiptDetailController@getDetail');
         Route::get('receipt/detail/get-stock-current/{receipt_id}','App\Http\Controllers\ReceiptDetailController@getgetStockCurrentDetail');

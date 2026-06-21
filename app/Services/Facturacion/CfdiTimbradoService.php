@@ -109,8 +109,10 @@ class CfdiTimbradoService
             $receptorRfc = strtoupper($data['receptor_rfc']);
             $esPublicoGeneral = ($receptorRfc === 'XAXX010101000');
 
-            // Detección automática PUE/PPD (regla SAT: PPD si queda saldo pendiente)
-            $esPPD = (float) $receipt->received < (float) $receipt->total;
+            // Detección automática PUE/PPD (regla SAT: PPD si queda saldo pendiente).
+            // Se compara contra el saldo EN EFECTIVO (total - retenciones): la retención no es
+            // saldo pendiente (el comprador la entera al SAT). Sin retención == total (igual que antes).
+            $esPPD = (float) $receipt->received < (float) $receipt->saldoEfectivoEsperado();
             $metodoPago = $esPPD ? 'PPD' : 'PUE';
             $formaPago = $esPPD ? '99' : $data['forma_pago'];
 

@@ -325,7 +325,7 @@ class CfdiInvoiceController extends Controller
         return response()->json([
             'ok' => true,
             'receipt' => $receipt,
-            'metodo_pago_calculado' => (float) $receipt->received < (float) $receipt->total ? 'PPD' : 'PUE',
+            'metodo_pago_calculado' => (float) $receipt->received < (float) $receipt->saldoEfectivoEsperado() ? 'PPD' : 'PUE',
             'emisor' => [
                 'rfc' => $emisor->rfc,
                 'razon_social' => $emisor->razon_social,
@@ -408,8 +408,9 @@ class CfdiInvoiceController extends Controller
             return response()->json(['ok' => false, 'message' => 'No se puede facturar una nota con total $0 (cortesía total).'], 422);
         }
 
-        // Si va a ser PPD y tiene abonos previos sin forma SAT real, exigir decisión del usuario
-        $esPPD = (float) $receipt->received < (float) $receipt->total;
+        // Si va a ser PPD y tiene abonos previos sin forma SAT real, exigir decisión del usuario.
+        // PPD se mide contra el saldo en efectivo (total - retenciones), no contra el total comercial.
+        $esPPD = (float) $receipt->received < (float) $receipt->saldoEfectivoEsperado();
         if ($esPPD) {
             $abonosPendientes = $receipt->getAbonosPreviosPendientesMetodo();
             if ($abonosPendientes->count() > 0) {

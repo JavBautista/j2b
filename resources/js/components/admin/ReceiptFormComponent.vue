@@ -427,8 +427,11 @@
                     </div>
 
                     <!-- Retenciones (fiscal): no bajan el total comercial; reducen el neto a recibir en efectivo.
-                         Por default oculto: la venta se ve igual que siempre hasta marcar "Activar retenciones". -->
-                    <template v-if="retencionDefaults.disponible">
+                         Por default oculto: la venta se ve igual que siempre hasta marcar "Activar retenciones".
+                         || mostrarRetenciones: una nota que YA trae retención (snapshot) muestra su desglose al
+                         consultarla aunque la tienda ya no ofrezca retenciones (defaults no disponibles o endpoint
+                         caído). En creación mostrarRetenciones arranca en false → sin cambios. -->
+                    <template v-if="retencionDefaults.disponible || mostrarRetenciones">
                         <div class="form-check mb-2">
                             <input class="form-check-input" type="checkbox" id="activarRetenciones" v-model="mostrarRetenciones" @change="toggleRetenciones" :disabled="isViewMode">
                             <label class="form-check-label" for="activarRetenciones">

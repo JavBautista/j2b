@@ -574,11 +574,14 @@ class ReceiptController extends Controller
         //NOTA: Ahora SIEMPRE creamos partial_payment para centralizar ingresos
         //      Documentación: j2b-app/xdev/ventas/PLAN_CENTRALIZACION_PAGOS.md
         if(!$es_cotizacion && $receipt->received > 0){
-            // Validar que no exceda el total (protección contra errores de usuario)
-            $monto_a_registrar = min($receipt->received, $receipt->total);
+            // Cap y clasificación contra el saldo en efectivo (total - retenciones).
+            // Paridad con web (Admin/ReceiptsController::store). Sin retención == total,
+            // así que cero cambio para notas normales. Ver SPEC_2026-06-22 §3.
+            $saldoEfectivo = $receipt->saldoEfectivoEsperado();
+            $monto_a_registrar = min($receipt->received, $saldoEfectivo);
 
-            // Determinar tipo de pago: 'unico' si paga todo, 'inicial' si es parcial
-            $payment_type = ($monto_a_registrar >= $receipt->total) ? 'unico' : 'inicial';
+            // 'unico' si cubre el saldo en efectivo, 'inicial' si es parcial.
+            $payment_type = ($monto_a_registrar >= $saldoEfectivo) ? 'unico' : 'inicial';
 
             // Fecha real del pago (nota recién creada → solo valida no-futura).
             $fecha_pago = \App\Services\Pagos\PaymentDateResolver::resolver(

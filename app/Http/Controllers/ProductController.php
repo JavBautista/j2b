@@ -36,12 +36,18 @@ class ProductController extends Controller
             ->where('shop_id', $shop->id)
             ->where('active', '1');
 
-        // Búsqueda por palabras separadas en el campo 'name'
+        // Búsqueda por palabras separadas: cada término debe coincidir (AND)
+        // en name O key (código) O barcode (código de barras).
         if (!empty($buscar)) {
-            $terms = explode(' ', $buscar); // Dividir la búsqueda en palabras
+            $terms = preg_split('/\s+/', trim($buscar)); // palabras, sin vacíos por espacios dobles
             $query->where(function ($q) use ($terms) {
                 foreach ($terms as $term) {
-                    $q->where('name', 'like', "%$term%");
+                    if ($term === '') continue;
+                    $q->where(function ($sub) use ($term) {
+                        $sub->where('name', 'like', "%$term%")
+                            ->orWhere('key', 'like', "%$term%")
+                            ->orWhere('barcode', 'like', "%$term%");
+                    });
                 }
             });
         }

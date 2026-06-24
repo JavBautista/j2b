@@ -804,58 +804,20 @@ class SuperAdminController extends Controller
             $totalAmount = $subtotal;
         }
 
-        // Determinar día de corte (cutoff)
-        // REGLA: El cutoff se RECALCULA solo en estos casos:
-        //   1. Primer pago (tienda no tiene cutoff)
-        //   2. Reactivación (tienda estaba bloqueada/expired)
-        // En pagos normales (antes, el día, o en gracia), el cutoff NO cambia
-        $isReactivation = $shop->subscription_status === 'expired';
+        // Día de corte FIJO + período canónico (fuente única de verdad).
+        // REGLA DE ORO: el cutoff se fija SOLO en el primer pago; NUNCA lo mueve la
+        // reactivación, el pago tardío ni la gracia. Toda la lógica de fechas vive en
+        // App\Services\Suscripciones\SubscriptionPeriodService.
+        $periodSvc = app(\App\Services\Suscripciones\SubscriptionPeriodService::class);
+
         $isFirstPayment = !$shop->cutoff;
+        $isReactivation = $shop->subscription_status === 'expired';
 
-        if ($isReactivation || $isFirstPayment) {
-            // Reactivación o primer pago: el día del pago se vuelve el nuevo cutoff
-            $cutoff = $paymentDate->day;
-        } else {
-            // Pago normal: mantener cutoff existente
-            $cutoff = $shop->cutoff;
-        }
-
-        // =====================================================
-        // CALCULAR EL PERÍODO QUE CORRESPONDE A ESTE PAGO
-        // =====================================================
-        // El período se calcula basándose en:
-        // - Primer pago/Reactivación: desde la fecha del pago
-        // - Pago normal: desde el subscription_ends_at actual (la fecha de corte)
-
-        if ($isReactivation || $isFirstPayment) {
-            // Primer pago o reactivación: período empieza desde el día del pago
-            $periodStart = $paymentDate->copy()->startOfDay();
-        } else {
-            // Pago normal: el período empieza desde el subscription_ends_at
-            // (que es la fecha de corte del período actual)
-            $periodStart = $shop->subscription_ends_at
-                ? $shop->subscription_ends_at->copy()->startOfDay()
-                : $paymentDate->copy()->startOfDay();
-        }
-
-        // Calcular fin del período (period_end = ends_at)
-        if ($billingCycle === 'yearly') {
-            $periodEnd = $periodStart->copy()->addYear();
-            $periodLabel = '12 meses';
-        } else {
-            $periodEnd = $periodStart->copy()->addMonth();
-            $periodLabel = '1 mes';
-        }
-
-        // Ajustar al día de corte
-        if ($periodEnd->day != $cutoff) {
-            try {
-                $periodEnd->day($cutoff);
-            } catch (\Exception $e) {
-                // Si el día no existe en el mes (ej: 31 en febrero), usar fin de mes
-                $periodEnd = $periodEnd->endOfMonth();
-            }
-        }
+        $cutoff = $periodSvc->resolveCutoff($shop, $paymentDate);
+        $period = $periodSvc->resolveNextPeriod($shop, $billingCycle, $paymentDate);
+        $periodStart = $period['start'];
+        $periodEnd = $period['end'];
+        $periodLabel = $billingCycle === 'yearly' ? '12 meses' : '1 mes';
 
         // =====================================================
         // VALIDAR QUE NO EXISTA PAGO DUPLICADO PARA ESTE PERÍODO
@@ -955,38 +917,19 @@ class SuperAdminController extends Controller
         $shop = Shop::findOrFail($id);
         $billingCycle = $request->get('billing_cycle', $shop->billing_cycle ?? 'monthly');
 
-        $isReactivation = $shop->subscription_status === 'expired';
+        // Mismo cálculo canónico que registerPaymentJson (sin duplicar lógica).
+        $periodSvc = app(\App\Services\Suscripciones\SubscriptionPeriodService::class);
+        $paymentDate = now();
+
         $isFirstPayment = !$shop->cutoff;
+        $isReactivation = $shop->subscription_status === 'expired';
+        $periodType = $isFirstPayment ? 'primer_pago' : ($isReactivation ? 'reactivacion' : 'renovacion');
 
-        // Calcular período
-        if ($isReactivation || $isFirstPayment) {
-            $periodStart = now()->startOfDay();
-            $cutoff = now()->day;
-            $periodType = $isFirstPayment ? 'primer_pago' : 'reactivacion';
-        } else {
-            $periodStart = $shop->subscription_ends_at
-                ? $shop->subscription_ends_at->copy()->startOfDay()
-                : now()->startOfDay();
-            $cutoff = $shop->cutoff;
-            $periodType = 'renovacion';
-        }
-
-        if ($billingCycle === 'yearly') {
-            $periodEnd = $periodStart->copy()->addYear();
-            $periodLabel = '12 meses';
-        } else {
-            $periodEnd = $periodStart->copy()->addMonth();
-            $periodLabel = '1 mes';
-        }
-
-        // Ajustar al día de corte
-        if ($periodEnd->day != $cutoff) {
-            try {
-                $periodEnd->day($cutoff);
-            } catch (\Exception $e) {
-                $periodEnd = $periodEnd->endOfMonth();
-            }
-        }
+        $cutoff = $periodSvc->resolveCutoff($shop, $paymentDate);
+        $period = $periodSvc->resolveNextPeriod($shop, $billingCycle, $paymentDate);
+        $periodStart = $period['start'];
+        $periodEnd = $period['end'];
+        $periodLabel = $billingCycle === 'yearly' ? '12 meses' : '1 mes';
 
         // Verificar si ya existe pago para este período
         $existingPayment = Subscription::where('shop_id', $shop->id)
@@ -1363,6 +1306,11 @@ class SuperAdminController extends Controller
             'starts_at' => $request->filled('starts_at') ? \Carbon\Carbon::parse($request->starts_at) : $payment->starts_at,
         ]);
 
+        // Resincronizar el estado de la tienda con el ledger (BUG 3: editar un pago dejaba
+        // subscription_ends_at desincronizado del ledger).
+        app(\App\Services\Suscripciones\SubscriptionPeriodService::class)
+            ->rebuildShopFromLedger(Shop::findOrFail($shopId));
+
         // Log de cambio (en admin_notes agregamos historial)
         $logEntry = "\n[Editado " . now()->format('d/m/Y H:i') . " por " . auth()->user()->name . "]";
         if ($oldValues['total_amount'] != $amount) {
@@ -1387,6 +1335,12 @@ class SuperAdminController extends Controller
             'status' => 'cancelled',
             'admin_notes' => $payment->admin_notes . "\n[Cancelado " . now()->format('d/m/Y H:i') . " por " . auth()->user()->name . "]",
         ]);
+
+        // Reconstruir el estado de la tienda desde el ledger activo.
+        // (BUG 2: antes, cancelar dejaba subscription_ends_at/status inflados y el siguiente
+        //  pago apilaba encima → vencimientos de 78+ días.)
+        app(\App\Services\Suscripciones\SubscriptionPeriodService::class)
+            ->rebuildShopFromLedger(Shop::findOrFail($shopId));
 
         return response()->json([
             'success' => true,

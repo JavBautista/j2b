@@ -804,14 +804,15 @@ class SuperAdminController extends Controller
             $totalAmount = $subtotal;
         }
 
-        // Día de corte FIJO + período canónico (fuente única de verdad).
-        // REGLA DE ORO: el cutoff se fija SOLO en el primer pago; NUNCA lo mueve la
-        // reactivación, el pago tardío ni la gracia. Toda la lógica de fechas vive en
-        // App\Services\Suscripciones\SubscriptionPeriodService.
+        // Día de corte + período canónico (fuente única de verdad).
+        // REGLA (modelo Spotify): el corte se fija en el 1er pago y se respeta mientras la tienda
+        // NO se corte (pago tardío en gracia no lo mueve); si se CORTÓ (expired/cancelled) y
+        // reactiva pagando, el corte se RE-ANCLA al día del pago. Toda la lógica de fechas vive
+        // en App\Services\Suscripciones\SubscriptionPeriodService.
         $periodSvc = app(\App\Services\Suscripciones\SubscriptionPeriodService::class);
 
         $isFirstPayment = !$shop->cutoff;
-        $isReactivation = $shop->subscription_status === 'expired';
+        $isReactivation = $periodSvc->wasCutOff($shop); // expired o cancelled (tienda cortada)
 
         $cutoff = $periodSvc->resolveCutoff($shop, $paymentDate);
         $period = $periodSvc->resolveNextPeriod($shop, $billingCycle, $paymentDate);
@@ -922,7 +923,7 @@ class SuperAdminController extends Controller
         $paymentDate = now();
 
         $isFirstPayment = !$shop->cutoff;
-        $isReactivation = $shop->subscription_status === 'expired';
+        $isReactivation = $periodSvc->wasCutOff($shop); // expired o cancelled (tienda cortada)
         $periodType = $isFirstPayment ? 'primer_pago' : ($isReactivation ? 'reactivacion' : 'renovacion');
 
         $cutoff = $periodSvc->resolveCutoff($shop, $paymentDate);
@@ -1296,6 +1297,13 @@ class SuperAdminController extends Controller
             $ivaAmount = 0;
         }
 
+        $oldStartsAt = $payment->starts_at;
+        $newStartsAt = $request->filled('starts_at')
+            ? \Carbon\Carbon::parse($request->starts_at)
+            : $payment->starts_at;
+        $dateChanged = $request->filled('starts_at')
+            && (!$oldStartsAt || $oldStartsAt->format('Y-m-d') !== $newStartsAt->format('Y-m-d'));
+
         $payment->update([
             'price_without_iva' => $priceWithoutIva,
             'iva_amount' => $ivaAmount,
@@ -1303,13 +1311,36 @@ class SuperAdminController extends Controller
             'payment_method' => $request->payment_method,
             'transaction_id' => $request->transaction_id ?: $payment->transaction_id,
             'admin_notes' => $request->admin_notes,
-            'starts_at' => $request->filled('starts_at') ? \Carbon\Carbon::parse($request->starts_at) : $payment->starts_at,
+            'starts_at' => $newStartsAt,
         ]);
+
+        $periodSvc = app(\App\Services\Suscripciones\SubscriptionPeriodService::class);
+
+        // Si cambió la FECHA del pago, recalcular su período (ends_at) con la regla canónica.
+        // Antes solo se guardaba la fecha nueva y el ends_at quedaba desfasado del ledger.
+        // (Recalcula este pago contra la cobertura previa; ediciones de pagos intermedios no
+        //  re-propagan a los posteriores, pero el estado de la tienda lo fija el último pago.)
+        if ($dateChanged) {
+            $shop = Shop::findOrFail($shopId);
+            $prev = Subscription::where('shop_id', $shopId)
+                ->where('status', 'active')
+                ->where('id', '<>', $payment->id)
+                ->where('ends_at', '<', $payment->ends_at)
+                ->orderByDesc('ends_at')
+                ->first();
+            $cutoff = (int) ($shop->cutoff ?: $newStartsAt->day);
+            $period = $periodSvc->computePeriod(
+                $cutoff,
+                $prev?->ends_at,
+                $payment->billing_period ?: 'monthly',
+                $newStartsAt
+            );
+            $payment->update(['ends_at' => $period['end']]);
+        }
 
         // Resincronizar el estado de la tienda con el ledger (BUG 3: editar un pago dejaba
         // subscription_ends_at desincronizado del ledger).
-        app(\App\Services\Suscripciones\SubscriptionPeriodService::class)
-            ->rebuildShopFromLedger(Shop::findOrFail($shopId));
+        $periodSvc->rebuildShopFromLedger(Shop::findOrFail($shopId));
 
         // Log de cambio (en admin_notes agregamos historial)
         $logEntry = "\n[Editado " . now()->format('d/m/Y H:i') . " por " . auth()->user()->name . "]";

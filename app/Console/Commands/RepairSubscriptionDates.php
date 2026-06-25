@@ -13,6 +13,13 @@ use Illuminate\Support\Facades\DB;
  * Repara (de forma IDEMPOTENTE) las fechas de suscripción que quedaron infladas o con el
  * día de corte driftado por los bugs de cálculo (ver xdev/suscripciones/fix-fechas-pagos/).
  *
+ * ⚠️  LIMITACIÓN (2026-06-24): este comando hace REPLAY con UN SOLO día de corte para toda la
+ *     historia de la tienda. Bajo la regla correcta (modelo Spotify), el corte se RE-ANCLA cada
+ *     vez que la tienda se corta y reactiva → una tienda con reactivaciones tiene VARIOS cortes
+ *     a lo largo de su ledger, y este replay los aplastaría. Por eso NO debe usarse para
+ *     "arreglar" tiendas que se reactivaron (ej. Taval): daría fechas falsas. Úsalo solo para
+ *     inflación pura por apilamiento en tiendas sin reactivación, y siempre revisando el dry-run.
+ *
  * Método: REPLAY del ledger. Para cada tienda recalcula, en orden cronológico, el `ends_at`
  * de cada pago activo con la regla canónica (SubscriptionPeriodService), infiriendo el día de
  * corte real del PRIMER pago. Luego sincroniza `shops.subscription_ends_at` y `shops.cutoff`.
